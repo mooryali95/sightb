@@ -190,7 +190,7 @@ export default function ProjectDetail() {
 // ---- Sub-components ----
 
 function ExpensesSection({ projectId, durationMonths, expenses }: {
-  projectId: string; durationMonths: number; expenses: typeof import('@/types/project').Expense extends never ? never : any[];
+  projectId: string; durationMonths: number; expenses: any[];
 }) {
   const { addExpense, deleteExpense } = useStore();
   const [open, setOpen] = useState(false);
