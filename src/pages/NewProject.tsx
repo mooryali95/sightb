@@ -29,13 +29,13 @@ export default function NewProject() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !companyId || !portfolioId || !contractValue) return;
+    if (!name.trim() || !companyId || !contractValue) return;
 
     addProject({
       name: name.trim(),
       description: description.trim() || undefined,
       companyId,
-      portfolioId,
+      portfolioId: portfolioId || undefined,
       contractValue: parseFloat(contractValue),
       currency,
       startDate: startDate || new Date().toISOString().split('T')[0],
@@ -52,7 +52,7 @@ export default function NewProject() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl">
         <div className="page-header">
           <h1 className="page-title flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center">
               <Briefcase className="w-5 h-5 text-primary-foreground" />
             </div>
             إنشاء مشروع جديد
@@ -63,7 +63,7 @@ export default function NewProject() {
           {/* Company & Portfolio */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>الشركة</Label>
+              <Label>الشركة <span className="text-destructive">*</span></Label>
               <Select value={companyId} onValueChange={(v) => { setCompanyId(v); setPortfolioId(''); }}>
                 <SelectTrigger><SelectValue placeholder="اختر الشركة" /></SelectTrigger>
                 <SelectContent>
@@ -74,10 +74,11 @@ export default function NewProject() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>المحفظة</Label>
+              <Label>المحفظة <span className="text-muted-foreground text-xs">(اختياري)</span></Label>
               <Select value={portfolioId} onValueChange={setPortfolioId} disabled={!companyId}>
-                <SelectTrigger><SelectValue placeholder="اختر المحفظة" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="بدون محفظة (مشروع مستقل)" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">بدون محفظة (مشروع مستقل)</SelectItem>
                   {filteredPortfolios.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}

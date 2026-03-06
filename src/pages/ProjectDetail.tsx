@@ -18,11 +18,11 @@ import {
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell,
 } from 'recharts';
 
 const COLORS = [
-  'hsl(215, 90%, 42%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)',
+  'hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)',
   'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)', 'hsl(190, 80%, 42%)',
   'hsl(330, 70%, 50%)', 'hsl(50, 80%, 45%)',
 ];
@@ -48,7 +48,7 @@ export default function ProjectDetail() {
   }
 
   const company = companies.find((c) => c.id === project.companyId);
-  const portfolio = portfolios.find((p) => p.id === project.portfolioId);
+  const portfolio = project.portfolioId ? portfolios.find((p) => p.id === project.portfolioId) : null;
   const pBudget = budgetItems.filter((b) => b.projectId === project.id);
   const pExpenses = expenses.filter((e) => e.projectId === project.id);
   const pRevenues = revenues.filter((r) => r.projectId === project.id);
@@ -73,8 +73,12 @@ export default function ProjectDetail() {
         <div className="page-header">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <span>{company?.name}</span>
-            <span>←</span>
-            <span>{portfolio?.name}</span>
+            {portfolio && (
+              <>
+                <span>←</span>
+                <span>{portfolio.name}</span>
+              </>
+            )}
           </div>
           <h1 className="page-title">{project.name}</h1>
           <p className="page-subtitle">
@@ -83,7 +87,7 @@ export default function ProjectDetail() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
             title="قيمة العقد"
             value={formatCurrency(project.contractValue)}
@@ -116,19 +120,19 @@ export default function ProjectDetail() {
           <TabsList className="grid w-full grid-cols-4 max-w-lg">
             <TabsTrigger value="expenses" className="gap-1.5 text-xs">
               <Receipt className="w-3.5 h-3.5" />
-              المصروفات
+              <span className="hidden sm:inline">المصروفات</span>
             </TabsTrigger>
             <TabsTrigger value="budget" className="gap-1.5 text-xs">
               <PiggyBank className="w-3.5 h-3.5" />
-              الموازنة
+              <span className="hidden sm:inline">الموازنة</span>
             </TabsTrigger>
             <TabsTrigger value="revenue" className="gap-1.5 text-xs">
               <DollarSign className="w-3.5 h-3.5" />
-              الإيرادات
+              <span className="hidden sm:inline">الإيرادات</span>
             </TabsTrigger>
             <TabsTrigger value="charts" className="gap-1.5 text-xs">
               <BarChart3 className="w-3.5 h-3.5" />
-              التحليلات
+              <span className="hidden sm:inline">التحليلات</span>
             </TabsTrigger>
           </TabsList>
 
@@ -290,21 +294,21 @@ function ExpensesSection({ projectId, durationMonths, expenses }: {
                 <th>الفئة</th>
                 <th>الوصف</th>
                 <th>المبلغ</th>
-                <th>الشهر</th>
-                <th>التاريخ</th>
-                <th>المسؤول</th>
+                <th className="hidden sm:table-cell">الشهر</th>
+                <th className="hidden md:table-cell">التاريخ</th>
+                <th className="hidden lg:table-cell">المسؤول</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {expenses.map((exp) => (
                 <tr key={exp.id}>
-                  <td><span className="badge-warning">{EXPENSE_CATEGORY_LABELS[exp.category as ExpenseCategory]}</span></td>
+                  <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[exp.category as ExpenseCategory]}</span></td>
                   <td>{exp.description}</td>
                   <td className="font-mono text-sm">{formatCurrency(exp.amount)}</td>
-                  <td>شهر {exp.month}</td>
-                  <td className="text-muted-foreground text-xs">{exp.date}</td>
-                  <td className="text-muted-foreground">{exp.responsible || '—'}</td>
+                  <td className="hidden sm:table-cell">شهر {exp.month}</td>
+                  <td className="text-muted-foreground text-xs hidden md:table-cell">{exp.date}</td>
+                  <td className="text-muted-foreground hidden lg:table-cell">{exp.responsible || '—'}</td>
                   <td>
                     <Button variant="ghost" size="icon" onClick={() => deleteExpense(exp.id)}>
                       <Trash2 className="w-3.5 h-3.5 text-destructive" />
@@ -393,8 +397,8 @@ function BudgetSection({ projectId, budgetItems, expenses }: {
                 <th>الوصف</th>
                 <th>المخطط</th>
                 <th>الفعلي</th>
-                <th>المتبقي</th>
-                <th>نسبة الصرف</th>
+                <th className="hidden sm:table-cell">المتبقي</th>
+                <th className="hidden md:table-cell">نسبة الصرف</th>
                 <th></th>
               </tr>
             </thead>
@@ -408,16 +412,16 @@ function BudgetSection({ projectId, budgetItems, expenses }: {
 
                 return (
                   <tr key={item.id}>
-                    <td><span className="badge-warning">{EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory]}</span></td>
+                    <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory]}</span></td>
                     <td>{item.description}</td>
                     <td className="font-mono text-sm">{formatCurrency(item.plannedAmount)}</td>
                     <td className="font-mono text-sm">{formatCurrency(actual)}</td>
-                    <td>
+                    <td className="hidden sm:table-cell">
                       <span className={remaining >= 0 ? 'badge-profit' : 'badge-loss'}>
                         {formatCurrency(remaining)}
                       </span>
                     </td>
-                    <td>
+                    <td className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
@@ -531,8 +535,8 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
               <tr>
                 <th>الوصف</th>
                 <th>المبلغ</th>
-                <th>الشهر</th>
-                <th>التاريخ</th>
+                <th className="hidden sm:table-cell">الشهر</th>
+                <th className="hidden sm:table-cell">التاريخ</th>
                 <th></th>
               </tr>
             </thead>
@@ -541,8 +545,8 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
                 <tr key={rev.id}>
                   <td>{rev.description}</td>
                   <td className="font-mono text-sm profit-text">{formatCurrency(rev.amount)}</td>
-                  <td>شهر {rev.month}</td>
-                  <td className="text-muted-foreground text-xs">{rev.date}</td>
+                  <td className="hidden sm:table-cell">شهر {rev.month}</td>
+                  <td className="text-muted-foreground text-xs hidden sm:table-cell">{rev.date}</td>
                   <td>
                     <Button variant="ghost" size="icon" onClick={() => deleteRevenue(rev.id)}>
                       <Trash2 className="w-3.5 h-3.5 text-destructive" />

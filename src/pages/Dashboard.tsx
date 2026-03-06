@@ -5,7 +5,7 @@ import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
 import {
   Building2, FolderKanban, Briefcase, TrendingUp, Plus,
-  ArrowLeft, DollarSign, Users,
+  ArrowLeft, DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -13,8 +13,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
+import basserhLogo from '@/assets/basserh-logo.jpg';
 
-const COLORS = ['hsl(215, 90%, 42%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)'];
+const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)'];
 
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues } = useStore();
@@ -45,7 +46,7 @@ export default function Dashboard() {
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         {/* Header */}
-        <div className="page-header flex items-center justify-between">
+        <div className="page-header flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="page-title">لوحة التحكم</h1>
             <p className="page-subtitle">نظرة شاملة على جميع المحافظ والمشاريع</p>
@@ -59,11 +60,12 @@ export default function Dashboard() {
         {!hasData ? (
           /* Empty State */
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center mb-6">
-              <Briefcase className="w-10 h-10 text-primary-foreground" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">مرحباً بك في نظام إدارة المحافظ</h2>
-            <p className="text-muted-foreground mb-8 text-center max-w-md">
+            <img src={basserhLogo} alt="بصيرة" className="w-24 h-24 rounded-2xl object-cover mb-6 shadow-lg" />
+            <h2 className="text-xl font-bold mb-2">مرحباً بك في بصيرة</h2>
+            <p className="text-muted-foreground mb-2 text-center max-w-md">
+              نظام إدارة المحافظ والمشاريع المالية
+            </p>
+            <p className="text-muted-foreground mb-8 text-center max-w-md text-sm">
               ابدأ بإضافة شركة، ثم أنشئ محافظ ومشاريع لتتبع الميزانيات والمصروفات والربحية
             </p>
             <Button onClick={() => navigate('/companies/new')} size="lg" className="gap-2">
@@ -74,7 +76,7 @@ export default function Dashboard() {
         ) : (
           <>
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <StatCard
                 title="إجمالي قيمة العقود"
                 value={formatCurrency(totalContractValue)}
@@ -155,11 +157,11 @@ export default function Dashboard() {
                   <thead>
                     <tr>
                       <th>المشروع</th>
-                      <th>الشركة</th>
+                      <th className="hidden sm:table-cell">الشركة</th>
                       <th>قيمة العقد</th>
-                      <th>المصروفات</th>
+                      <th className="hidden md:table-cell">المصروفات</th>
                       <th>الربح</th>
-                      <th>الحالة</th>
+                      <th className="hidden sm:table-cell">الحالة</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -174,17 +176,17 @@ export default function Dashboard() {
                       return (
                         <tr key={project.id} className="cursor-pointer" onClick={() => navigate(`/project/${project.id}`)}>
                           <td className="font-medium">{project.name}</td>
-                          <td className="text-muted-foreground">{company?.name}</td>
+                          <td className="text-muted-foreground hidden sm:table-cell">{company?.name}</td>
                           <td className="font-mono text-sm">{formatCurrency(project.contractValue)}</td>
-                          <td className="font-mono text-sm">{formatCurrency(summary.totalActual)}</td>
+                          <td className="font-mono text-sm hidden md:table-cell">{formatCurrency(summary.totalActual)}</td>
                           <td>
                             <span className={summary.netProfit >= 0 ? 'badge-profit' : 'badge-loss'}>
                               {formatCurrency(summary.netProfit)}
                             </span>
                           </td>
-                          <td>
+                          <td className="hidden sm:table-cell">
                             <span className={
-                              project.status === 'active' ? 'badge-profit' :
+                              project.status === 'active' ? 'badge-gold' :
                               project.status === 'completed' ? 'badge-profit' : 'badge-warning'
                             }>
                               {project.status === 'active' ? 'نشط' :

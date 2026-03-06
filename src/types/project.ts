@@ -2,6 +2,7 @@ export interface Company {
   id: string;
   name: string;
   description?: string;
+  logo?: string;
   createdAt: string;
 }
 
@@ -15,7 +16,7 @@ export interface Portfolio {
 
 export interface Project {
   id: string;
-  portfolioId: string;
+  portfolioId?: string; // optional - can be directly under company
   companyId: string;
   name: string;
   description?: string;
@@ -26,6 +27,7 @@ export interface Project {
   durationMonths: number;
   resourceCount: number;
   status: 'active' | 'completed' | 'on-hold' | 'cancelled';
+  clientLogo?: string;
   createdAt: string;
 }
 
@@ -70,7 +72,7 @@ export interface BudgetItem {
   category: ExpenseCategory;
   description: string;
   plannedAmount: number;
-  month?: number; // 1-based month index
+  month?: number;
 }
 
 export interface Expense {

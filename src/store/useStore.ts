@@ -81,12 +81,18 @@ export const useStore = create<AppState>()(
       deletePortfolio: (id) =>
         set((s) => ({
           portfolios: s.portfolios.filter((x) => x.id !== id),
-          projects: s.projects.filter((x) => x.portfolioId !== id),
+          projects: s.projects.map((x) => (x.portfolioId === id ? { ...x, portfolioId: undefined } : x)),
         })),
 
       addProject: (p) => {
         const id = uid();
-        set((s) => ({ projects: [...s.projects, { ...p, id, createdAt: new Date().toISOString() }] }));
+        const project = {
+          ...p,
+          id,
+          portfolioId: p.portfolioId === 'none' ? undefined : p.portfolioId,
+          createdAt: new Date().toISOString(),
+        };
+        set((s) => ({ projects: [...s.projects, project] }));
         return id;
       },
       updateProject: (id, p) =>
@@ -127,6 +133,6 @@ export const useStore = create<AppState>()(
       deleteRevenue: (id) =>
         set((s) => ({ revenues: s.revenues.filter((x) => x.id !== id) })),
     }),
-    { name: 'portfolio-manager-store' }
+    { name: 'basserh-portfolio-manager' }
   )
 );
