@@ -522,7 +522,7 @@ function mapProject(d: any): Project {
 }
 
 function mapBudgetItem(d: any): BudgetItem {
-  return { id: d.id, projectId: d.project_id, category: d.category, description: d.description, plannedAmount: Number(d.planned_amount), month: d.month || undefined };
+  return { id: d.id, projectId: d.project_id, category: d.category, description: d.description, plannedAmount: Number(d.planned_amount), month: d.month || undefined, resourceId: d.resource_id || undefined };
 }
 
 function mapExpense(d: any): Expense {
@@ -530,6 +530,24 @@ function mapExpense(d: any): Expense {
     id: d.id, projectId: d.project_id, budgetItemId: d.budget_item_id || undefined,
     category: d.category, description: d.description, amount: Number(d.amount),
     date: d.date, month: d.month, responsible: d.responsible || undefined, notes: d.notes || undefined,
+    resourceId: d.resource_id || undefined, custodyId: d.custody_id || undefined,
+  };
+}
+
+function mapResource(d: any): Resource {
+  return {
+    id: d.id, projectId: d.project_id, name: d.name,
+    role: d.role || undefined, monthlyCost: Number(d.monthly_cost), createdAt: d.created_at,
+  };
+}
+
+function mapCustody(d: any, expenses: Expense[]): Custody {
+  const spent = expenses.filter(e => e.custodyId === d.id).reduce((s, e) => s + e.amount, 0);
+  return {
+    id: d.id, projectId: d.project_id || undefined, companyId: d.company_id || undefined,
+    resourceName: d.resource_name, amount: Number(d.amount),
+    spent, remaining: Number(d.amount) - spent,
+    notes: d.notes || undefined, createdAt: d.created_at,
   };
 }
 
