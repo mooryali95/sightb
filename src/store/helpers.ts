@@ -19,7 +19,7 @@ export async function logDeletion(tableName: string, recordId: string, recordDat
       action: 'delete',
       table_name: tableName,
       record_id: recordId,
-      record_data: recordData as Record<string, unknown>,
+      record_data: recordData as Json,
       project_id: projectId || null,
     }]);
   } catch (e) {
