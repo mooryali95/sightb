@@ -178,7 +178,7 @@ export default function ProjectDetail() {
 
           {/* Budget Tab */}
           <TabsContent value="budget">
-            <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} />
+            <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={project.contractValue} currency={project.currency} />
           </TabsContent>
 
           {/* Baseline Tab */}
