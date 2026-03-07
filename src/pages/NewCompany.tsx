@@ -9,8 +9,13 @@ import { motion } from 'framer-motion';
 import { Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { companySchema } from '@/lib/validations';
+import { useRole } from '@/hooks/useRole';
+import { Navigate } from 'react-router-dom';
 
 export default function NewCompany() {
+  const { isAdmin, loading: roleLoading } = useRole();
+  if (roleLoading) return null;
+  if (!isAdmin) return <Navigate to="/" replace />;
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);

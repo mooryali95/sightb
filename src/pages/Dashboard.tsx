@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect } from 'react';
 import basserhLogo from '@/assets/basserh-logo.jpg';
+import { useRole } from '@/hooks/useRole';
 
 const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)'];
 
@@ -30,6 +31,7 @@ const stagger = {
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, loading, loadAll } = useStore();
   const navigate = useNavigate();
+  const { isAdmin, canEdit } = useRole();
 
   useEffect(() => {
     loadAll();
@@ -101,10 +103,12 @@ export default function Dashboard() {
             <h1 className="page-title">لوحة التحكم</h1>
             <p className="page-subtitle">نظرة شاملة على جميع المحافظ والمشاريع</p>
           </div>
-          <Button onClick={() => navigate('/companies/new')} className="gap-2">
-            <Plus className="w-4 h-4" />
-            شركة جديدة
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => navigate('/companies/new')} className="gap-2">
+              <Plus className="w-4 h-4" />
+              شركة جديدة
+            </Button>
+          )}
         </motion.div>
 
         {!hasData ? (
@@ -123,10 +127,12 @@ export default function Dashboard() {
             <p className="text-muted-foreground mb-8 text-center max-w-md text-sm">
               ابدأ بإضافة شركة، ثم أنشئ محافظ ومشاريع لتتبع الميزانيات والمصروفات والربحية
             </p>
-            <Button onClick={() => navigate('/companies/new')} size="lg" className="gap-2">
-              <Plus className="w-5 h-5" />
-              إضافة أول شركة
-            </Button>
+            {isAdmin && (
+              <Button onClick={() => navigate('/companies/new')} size="lg" className="gap-2">
+                <Plus className="w-5 h-5" />
+                إضافة أول شركة
+              </Button>
+            )}
           </motion.div>
         ) : (
           <>
