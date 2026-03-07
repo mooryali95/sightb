@@ -34,7 +34,6 @@ export default function Dashboard() {
   useEffect(() => {
     loadAll();
   }, []);
-  const navigate = useNavigate();
 
   const [filterCompany, setFilterCompany] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
