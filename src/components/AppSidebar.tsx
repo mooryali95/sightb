@@ -15,7 +15,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
   const { companies, portfolios, projects } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAdmin } = useRole();
+  const { isAdmin, canEdit } = useRole();
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set());
 
@@ -104,12 +104,14 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
               <span className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider">
                 الشركات
               </span>
-              <button
-                onClick={() => navigate('/companies/new')}
-                className="text-sidebar-foreground/40 hover:text-primary transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => navigate('/companies/new')}
+                  className="text-sidebar-foreground/40 hover:text-primary transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {companies.map((company) => (
@@ -205,33 +207,39 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                                     <span className="truncate">{project.name}</span>
                                   </button>
                                 ))}
-                              <button
-                                onClick={() => navigate(`/project/new?portfolio=${portfolio.id}&company=${company.id}`)}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
-                              >
-                                <Plus className="w-3 h-3" />
-                                <span>مشروع جديد</span>
-                              </button>
+                              {canEdit('company', company.id) && (
+                                <button
+                                  onClick={() => navigate(`/project/new?portfolio=${portfolio.id}&company=${company.id}`)}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>مشروع جديد</span>
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
                       ))}
 
                     {/* Add project directly under company */}
-                    <button
-                      onClick={() => navigate(`/project/new?company=${company.id}`)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>مشروع مستقل</span>
-                    </button>
-                    <button
-                      onClick={() => navigate(`/portfolio/new?company=${company.id}`)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>محفظة جديدة</span>
-                    </button>
+                    {canEdit('company', company.id) && (
+                      <>
+                        <button
+                          onClick={() => navigate(`/project/new?company=${company.id}`)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>مشروع مستقل</span>
+                        </button>
+                        <button
+                          onClick={() => navigate(`/portfolio/new?company=${company.id}`)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>محفظة جديدة</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

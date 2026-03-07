@@ -9,13 +9,19 @@ import { motion } from 'framer-motion';
 import { Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { companySchema } from '@/lib/validations';
+import { useRole } from '@/hooks/useRole';
+import { Navigate } from 'react-router-dom';
 
 export default function NewCompany() {
+  const { isAdmin, loading: roleLoading } = useRole();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const { addCompany } = useStore();
   const navigate = useNavigate();
+
+  if (roleLoading) return null;
+  if (!isAdmin) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
