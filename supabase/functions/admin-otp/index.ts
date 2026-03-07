@@ -6,6 +6,30 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function sendViaResend(to: string, subject: string, html: string) {
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) {
+    console.error("[admin-otp] RESEND_API_KEY not set");
+    return false;
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${resendKey}`,
+    },
+    body: JSON.stringify({
+      from: "SightB <onboarding@resend.dev>",
+      to: [to],
+      subject,
+      html,
+    }),
+  });
+  const data = await res.json();
+  console.log("[admin-otp] Resend response:", JSON.stringify(data));
+  return res.ok;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -16,7 +40,6 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get user from auth header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -36,7 +59,6 @@ Deno.serve(async (req) => {
 
     const { action, code, fingerprint } = await req.json();
 
-    // Check if user is admin
     const { data: isAdmin } = await supabase.rpc("has_role", {
       _user_id: user.id,
       _role: "admin",
@@ -49,7 +71,6 @@ Deno.serve(async (req) => {
     }
 
     if (action === "check") {
-      // Check if device is trusted
       if (fingerprint) {
         const { data: trusted } = await supabase
           .from("trusted_devices")
@@ -65,85 +86,50 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Generate 6-digit OTP
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-      // Mark old codes as used
       await supabase
         .from("admin_otp_codes")
         .update({ used: true })
         .eq("user_id", user.id)
         .eq("used", false);
 
-      // Insert new code
       await supabase.from("admin_otp_codes").insert({
         user_id: user.id,
         code: otpCode,
         expires_at: expiresAt.toISOString(),
       });
 
-      // Send email using Supabase Auth admin API
-      // We'll use the built-in SMTP to send a simple email
       const { data: profile } = await supabase
         .from("profiles")
         .select("email, full_name")
         .eq("id", user.id)
         .single();
 
+      let emailSent = false;
       if (profile?.email) {
-        // Use Resend or a simple fetch to send email
-        // Since we have LOVABLE_API_KEY, we'll use Supabase's built-in
-        // For now, use the admin auth API to send a magic link style email
-        // Actually, let's use a direct SMTP approach via the auth.admin
-        
-        // We'll use Supabase Auth's admin.generateLink to trigger an email
-        // But simpler: just use fetch to send via a mail service
-        // For Lovable Cloud, we can use the admin API to send an OTP
-        
-        // Store the OTP and let the frontend show it needs verification
-        // The OTP will be sent via Supabase Auth's built-in email
-        
-        // Use auth.admin to send a custom email with the OTP
         const emailHtml = `
-          <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #1a1a1a; text-align: center;">رمز التحقق - رؤية</h2>
+          <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 20px; background: #ffffff;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h2 style="color: #1a1a1a;">رمز التحقق - SightB</h2>
+            </div>
             <p style="color: #555;">مرحباً ${profile.full_name || ''},</p>
             <p style="color: #555;">رمز التحقق الخاص بك لتسجيل الدخول:</p>
-            <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
-              <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1a1a1a;">${otpCode}</span>
+            <div style="background: #f0f4ff; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0; border: 1px solid #d0d8ff;">
+              <span style="font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #1a1a1a;">${otpCode}</span>
             </div>
             <p style="color: #888; font-size: 13px;">هذا الرمز صالح لمدة 10 دقائق. إذا لم تطلب هذا الرمز، يرجى تجاهل هذا البريد.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+            <p style="color: #aaa; font-size: 11px; text-align: center;">SightB - نظام إدارة المشاريع المالية</p>
           </div>
         `;
-
-        // Send via Supabase Auth admin inviteUserByEmail won't work for this
-        // Let's use edge function to call an external email API
-        // Since LOVABLE_API_KEY exists, try the Lovable email endpoint
-        const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-        if (lovableApiKey) {
-          try {
-            await fetch("https://api.lovable.dev/v1/email/send", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${lovableApiKey}`,
-              },
-              body: JSON.stringify({
-                to: profile.email,
-                subject: `رمز التحقق: ${otpCode} - رؤية`,
-                html: emailHtml,
-                purpose: "transactional",
-              }),
-            });
-          } catch (emailErr) {
-            console.error("Email send error:", emailErr);
-          }
-        }
+        emailSent = await sendViaResend(profile.email, `رمز التحقق: ${otpCode} - SightB`, emailHtml);
+        console.log("[admin-otp] Email sent:", emailSent, "to:", profile.email);
       }
 
       return new Response(
-        JSON.stringify({ requiresOtp: true, sent: true }),
+        JSON.stringify({ requiresOtp: true, sent: emailSent }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -174,13 +160,11 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Mark as used
       await supabase
         .from("admin_otp_codes")
         .update({ used: true })
         .eq("id", otpRecord.id);
 
-      // Trust the device
       if (fingerprint) {
         await supabase.from("trusted_devices").upsert(
           { user_id: user.id, fingerprint },
@@ -199,7 +183,7 @@ Deno.serve(async (req) => {
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("OTP error:", err);
+    console.error("[admin-otp] Error:", err);
     return new Response(
       JSON.stringify({ error: "حدث خطأ" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
