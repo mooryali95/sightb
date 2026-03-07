@@ -602,7 +602,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
           {/* Budget utilization bar */}
           <div className="mb-4">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>استخدام الميزانية ({budgetUtilization.toFixed(1)}%)</span>
+              <span>نسبة ما خُطط للصرف من الموازنة ({budgetUtilization.toFixed(1)}%)</span>
               <span>{formatCurrency(totalPlanned)} / {formatCurrency(contractValue)}</span>
             </div>
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
@@ -617,7 +617,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
           {totalActual > 0 && (
             <div className="mb-4">
               <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>نسبة الصرف الفعلي ({spendRate.toFixed(1)}%)</span>
+                <span>نسبة ما صُرف من الموازنة المخططة ({spendRate.toFixed(1)}%)</span>
                 <span>{formatCurrency(totalActual)} / {formatCurrency(totalPlanned)}</span>
               </div>
               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
