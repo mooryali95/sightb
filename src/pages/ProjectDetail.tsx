@@ -307,8 +307,45 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
     }
   });
 
+  const totalExpenses = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+  const totalRevenue = revenues.reduce((s: number, r: any) => s + r.amount, 0);
+  const spendFromRevenue = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0;
+  const spendFromContract = contractValue > 0 ? (totalExpenses / contractValue) * 100 : 0;
+
   return (
     <div className="space-y-4">
+      {/* Spend ratios */}
+      <div className="stat-card space-y-3">
+        <div>
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <span>نسبة ما صُرف من قيمة العقد ({spendFromContract.toFixed(1)}%)</span>
+            <span>{formatCurrency(totalExpenses)} / {formatCurrency(contractValue)}</span>
+          </div>
+          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all bg-primary"
+              style={{ width: `${Math.min(spendFromContract, 100)}%` }}
+            />
+          </div>
+        </div>
+        {totalRevenue > 0 && (
+          <div>
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>نسبة ما صُرف من الإيراد ({spendFromRevenue.toFixed(1)}%)</span>
+              <span>{formatCurrency(totalExpenses)} / {formatCurrency(totalRevenue)}</span>
+            </div>
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(spendFromRevenue, 100)}%`,
+                  backgroundColor: spendFromRevenue > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
       {/* Resource Spending Summary */}
       {resourceSpendMap.size > 0 && (
         <div className="stat-card">
