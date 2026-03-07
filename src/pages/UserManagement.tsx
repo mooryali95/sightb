@@ -14,7 +14,6 @@ import { UserPlus, Trash2, Users, Shield, Eye, Pencil } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
-import { motion } from 'framer-motion';
 
 interface Profile {
   id: string;
