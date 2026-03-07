@@ -123,15 +123,23 @@ export default function ProjectDetail() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="expenses" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 max-w-2xl">
-            <TabsTrigger value="expenses" className="gap-1.5 text-xs">
-              <Receipt className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">المصروفات</span>
+        <Tabs defaultValue="resources" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-7 max-w-4xl">
+            <TabsTrigger value="resources" className="gap-1.5 text-xs">
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">الموارد</span>
             </TabsTrigger>
             <TabsTrigger value="budget" className="gap-1.5 text-xs">
               <PiggyBank className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">الموازنة</span>
+            </TabsTrigger>
+            <TabsTrigger value="expenses" className="gap-1.5 text-xs">
+              <Receipt className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">المصروفات</span>
+            </TabsTrigger>
+            <TabsTrigger value="custody" className="gap-1.5 text-xs">
+              <Wallet className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">العهد</span>
             </TabsTrigger>
             <TabsTrigger value="baseline" className="gap-1.5 text-xs">
               <Baseline className="w-3.5 h-3.5" />
@@ -147,14 +155,24 @@ export default function ProjectDetail() {
             </TabsTrigger>
           </TabsList>
 
+          {/* Resources Tab */}
+          <TabsContent value="resources">
+            <ResourcesSection projectId={project.id} resources={pResources} />
+          </TabsContent>
+
           {/* Expenses Tab */}
           <TabsContent value="expenses">
-            <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} />
+            <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} />
           </TabsContent>
 
           {/* Budget Tab */}
           <TabsContent value="budget">
-            <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} />
+            <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} />
+          </TabsContent>
+
+          {/* Custody Tab */}
+          <TabsContent value="custody">
+            <CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} />
           </TabsContent>
 
           {/* Baseline Tab */}
