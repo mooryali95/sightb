@@ -68,10 +68,6 @@ export default function Dashboard() {
             <p className="text-muted-foreground mb-8 text-center max-w-md text-sm">
               ابدأ بإضافة شركة، ثم أنشئ محافظ ومشاريع لتتبع الميزانيات والمصروفات والربحية
             </p>
-            </p>
-            <p className="text-muted-foreground mb-8 text-center max-w-md text-sm">
-              ابدأ بإضافة شركة، ثم أنشئ محافظ ومشاريع لتتبع الميزانيات والمصروفات والربحية
-            </p>
             <Button onClick={() => navigate('/companies/new')} size="lg" className="gap-2">
               <Plus className="w-5 h-5" />
               إضافة أول شركة
