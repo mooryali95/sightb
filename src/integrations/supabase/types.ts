@@ -61,6 +61,7 @@ export type Database = {
           month: number | null
           planned_amount: number
           project_id: string
+          resource_id: string | null
           user_id: string
         }
         Insert: {
@@ -71,6 +72,7 @@ export type Database = {
           month?: number | null
           planned_amount?: number
           project_id: string
+          resource_id?: string | null
           user_id: string
         }
         Update: {
@@ -81,6 +83,7 @@ export type Database = {
           month?: number | null
           planned_amount?: number
           project_id?: string
+          resource_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -89,6 +92,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_items_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
             referencedColumns: ["id"]
           },
         ]
@@ -161,18 +171,68 @@ export type Database = {
           },
         ]
       }
+      custodies: {
+        Row: {
+          amount: number
+          company_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string | null
+          resource_name: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string | null
+          resource_name: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string | null
+          resource_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custodies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custodies_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
           budget_item_id: string | null
           category: string
           created_at: string
+          custody_id: string | null
           date: string
           description: string
           id: string
           month: number
           notes: string | null
           project_id: string
+          resource_id: string | null
           responsible: string | null
           user_id: string
         }
@@ -181,12 +241,14 @@ export type Database = {
           budget_item_id?: string | null
           category: string
           created_at?: string
+          custody_id?: string | null
           date: string
           description: string
           id?: string
           month?: number
           notes?: string | null
           project_id: string
+          resource_id?: string | null
           responsible?: string | null
           user_id: string
         }
@@ -195,12 +257,14 @@ export type Database = {
           budget_item_id?: string | null
           category?: string
           created_at?: string
+          custody_id?: string | null
           date?: string
           description?: string
           id?: string
           month?: number
           notes?: string | null
           project_id?: string
+          resource_id?: string | null
           responsible?: string | null
           user_id?: string
         }
@@ -213,10 +277,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "expenses_custody_id_fkey"
+            columns: ["custody_id"]
+            isOneToOne: false
+            referencedRelation: "custodies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "expenses_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
             referencedColumns: ["id"]
           },
         ]
@@ -345,6 +423,44 @@ export type Database = {
             columns: ["portfolio_id"]
             isOneToOne: false
             referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resources: {
+        Row: {
+          created_at: string
+          id: string
+          monthly_cost: number
+          name: string
+          project_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monthly_cost?: number
+          name: string
+          project_id: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monthly_cost?: number
+          name?: string
+          project_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resources_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]

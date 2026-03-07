@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
-  CostBaseline, BaselineItem,
+  CostBaseline, BaselineItem, Resource, Custody,
   type ExpenseCategory,
 } from '@/types/project';
 
@@ -14,9 +14,10 @@ interface AppState {
   expenses: Expense[];
   revenues: Revenue[];
   baselines: CostBaseline[];
+  resources: Resource[];
+  custodies: Custody[];
   loading: boolean;
 
-  // Load all data
   loadAll: () => Promise<void>;
 
   // Company
@@ -48,6 +49,14 @@ interface AppState {
   addRevenue: (r: Omit<Revenue, 'id'>) => Promise<string>;
   deleteRevenue: (id: string) => Promise<void>;
 
+  // Resources
+  addResource: (r: Omit<Resource, 'id' | 'createdAt'>) => Promise<string>;
+  deleteResource: (id: string) => Promise<void>;
+
+  // Custodies
+  addCustody: (c: Omit<Custody, 'id' | 'createdAt' | 'spent' | 'remaining'>) => Promise<string>;
+  deleteCustody: (id: string) => Promise<void>;
+
   // Baselines
   createBaseline: (projectId: string, name: string) => Promise<string>;
   deleteBaseline: (id: string) => Promise<void>;
@@ -69,26 +78,34 @@ export const useStore = create<AppState>()((set, get) => ({
   expenses: [],
   revenues: [],
   baselines: [],
+  resources: [],
+  custodies: [],
   loading: true,
 
   loadAll: async () => {
     set({ loading: true });
-    const [companies, portfolios, projects, budgetItems, expenses, revenues] = await Promise.all([
+    const [companies, portfolios, projects, budgetItems, expenses, revenues, resources, custodies] = await Promise.all([
       supabase.from('companies').select('*').order('created_at', { ascending: false }),
       supabase.from('portfolios').select('*').order('created_at', { ascending: false }),
       supabase.from('projects').select('*').order('created_at', { ascending: false }),
       supabase.from('budget_items').select('*').order('created_at', { ascending: false }),
       supabase.from('expenses').select('*').order('created_at', { ascending: false }),
       supabase.from('revenues').select('*').order('created_at', { ascending: false }),
+      supabase.from('resources').select('*').order('created_at', { ascending: false }),
+      supabase.from('custodies').select('*').order('created_at', { ascending: false }),
     ]);
+
+    const expenseList = (expenses.data || []).map(mapExpense);
 
     set({
       companies: (companies.data || []).map(mapCompany),
       portfolios: (portfolios.data || []).map(mapPortfolio),
       projects: (projects.data || []).map(mapProject),
       budgetItems: (budgetItems.data || []).map(mapBudgetItem),
-      expenses: (expenses.data || []).map(mapExpense),
+      expenses: expenseList,
       revenues: (revenues.data || []).map(mapRevenue),
+      resources: (resources.data || []).map(mapResource),
+      custodies: (custodies.data || []).map((c: any) => mapCustody(c, expenseList)),
       loading: false,
     });
   },
@@ -221,6 +238,7 @@ export const useStore = create<AppState>()((set, get) => ({
       description: b.description,
       planned_amount: b.plannedAmount,
       month: b.month || null,
+      resource_id: b.resourceId || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapBudgetItem(data);
@@ -234,6 +252,7 @@ export const useStore = create<AppState>()((set, get) => ({
     if (b.description !== undefined) updates.description = b.description;
     if (b.plannedAmount !== undefined) updates.planned_amount = b.plannedAmount;
     if (b.month !== undefined) updates.month = b.month;
+    if (b.resourceId !== undefined) updates.resource_id = b.resourceId;
     const { error } = await supabase.from('budget_items').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ budgetItems: s.budgetItems.map((x) => (x.id === id ? { ...x, ...b } : x)) }));
@@ -258,6 +277,8 @@ export const useStore = create<AppState>()((set, get) => ({
       month: e.month,
       responsible: e.responsible || null,
       notes: e.notes || null,
+      resource_id: e.resourceId || null,
+      custody_id: e.custodyId || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapExpense(data);
@@ -305,6 +326,51 @@ export const useStore = create<AppState>()((set, get) => ({
     const { error } = await supabase.from('revenues').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ revenues: s.revenues.filter((x) => x.id !== id) }));
+  },
+
+  // Resources
+  addResource: async (r) => {
+    const userId = await getUserId();
+    const { data, error } = await supabase.from('resources').insert({
+      user_id: userId,
+      project_id: r.projectId,
+      name: r.name,
+      role: r.role || null,
+      monthly_cost: r.monthlyCost,
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapResource(data);
+    set((s) => ({ resources: [mapped, ...s.resources] }));
+    return mapped.id;
+  },
+
+  deleteResource: async (id) => {
+    const { error } = await supabase.from('resources').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ resources: s.resources.filter((x) => x.id !== id) }));
+  },
+
+  // Custodies
+  addCustody: async (c) => {
+    const userId = await getUserId();
+    const { data, error } = await supabase.from('custodies').insert({
+      user_id: userId,
+      project_id: c.projectId || null,
+      company_id: c.companyId || null,
+      resource_name: c.resourceName,
+      amount: c.amount,
+      notes: c.notes || null,
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapCustody(data, get().expenses);
+    set((s) => ({ custodies: [mapped, ...s.custodies] }));
+    return mapped.id;
+  },
+
+  deleteCustody: async (id) => {
+    const { error } = await supabase.from('custodies').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ custodies: s.custodies.filter((x) => x.id !== id) }));
   },
 
   createBaseline: async (projectId, name) => {
@@ -456,7 +522,7 @@ function mapProject(d: any): Project {
 }
 
 function mapBudgetItem(d: any): BudgetItem {
-  return { id: d.id, projectId: d.project_id, category: d.category, description: d.description, plannedAmount: Number(d.planned_amount), month: d.month || undefined };
+  return { id: d.id, projectId: d.project_id, category: d.category, description: d.description, plannedAmount: Number(d.planned_amount), month: d.month || undefined, resourceId: d.resource_id || undefined };
 }
 
 function mapExpense(d: any): Expense {
@@ -464,6 +530,24 @@ function mapExpense(d: any): Expense {
     id: d.id, projectId: d.project_id, budgetItemId: d.budget_item_id || undefined,
     category: d.category, description: d.description, amount: Number(d.amount),
     date: d.date, month: d.month, responsible: d.responsible || undefined, notes: d.notes || undefined,
+    resourceId: d.resource_id || undefined, custodyId: d.custody_id || undefined,
+  };
+}
+
+function mapResource(d: any): Resource {
+  return {
+    id: d.id, projectId: d.project_id, name: d.name,
+    role: d.role || undefined, monthlyCost: Number(d.monthly_cost), createdAt: d.created_at,
+  };
+}
+
+function mapCustody(d: any, expenses: Expense[]): Custody {
+  const spent = expenses.filter(e => e.custodyId === d.id).reduce((s, e) => s + e.amount, 0);
+  return {
+    id: d.id, projectId: d.project_id || undefined, companyId: d.company_id || undefined,
+    resourceName: d.resource_name, amount: Number(d.amount),
+    spent, remaining: Number(d.amount) - spent,
+    notes: d.notes || undefined, createdAt: d.created_at,
   };
 }
 
