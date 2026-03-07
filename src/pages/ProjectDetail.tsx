@@ -232,8 +232,8 @@ export default function ProjectDetail() {
 
 // ---- Sub-components ----
 
-function ExpensesSection({ projectId, durationMonths, expenses }: {
-  projectId: string; durationMonths: number; expenses: any[];
+function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies }: {
+  projectId: string; durationMonths: number; expenses: any[]; resources: Resource[]; custodies: Custody[];
 }) {
   const { addExpense, deleteExpense } = useStore();
   const [open, setOpen] = useState(false);
@@ -243,6 +243,8 @@ function ExpensesSection({ projectId, durationMonths, expenses }: {
   const [month, setMonth] = useState('1');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [responsible, setResponsible] = useState('');
+  const [resourceId, setResourceId] = useState<string>('');
+  const [custodyId, setCustodyId] = useState<string>('');
 
   const handleAdd = async () => {
     if (!description.trim() || !amount) return;
@@ -254,111 +256,173 @@ function ExpensesSection({ projectId, durationMonths, expenses }: {
       date,
       month: parseInt(month),
       responsible: responsible.trim() || undefined,
+      resourceId: resourceId || undefined,
+      custodyId: custodyId || undefined,
     });
-    setDescription(''); setAmount(''); setResponsible('');
+    setDescription(''); setAmount(''); setResponsible(''); setResourceId(''); setCustodyId('');
     setOpen(false);
   };
 
+  // Responsible summary
+  const responsibleMap = new Map<string, number>();
+  expenses.forEach((e: any) => {
+    const key = e.responsible || 'غير محدد';
+    responsibleMap.set(key, (responsibleMap.get(key) || 0) + e.amount);
+  });
+
   return (
-    <div className="stat-card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">سجل المصروفات</h3>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5">
-              <Plus className="w-3.5 h-3.5" />
-              إضافة مصروف
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>إضافة مصروف جديد</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>الفئة</Label>
-                <Select value={category} onValueChange={(v) => setCategory(v as ExpenseCategory)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+    <div className="space-y-4">
+      {/* Responsible Summary */}
+      {responsibleMap.size > 1 && (
+        <div className="stat-card">
+          <h3 className="text-sm font-semibold mb-3">ملخص الصرف حسب المسؤول</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from(responsibleMap.entries()).map(([name, total]) => (
+              <div key={name} className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs text-muted-foreground">{name}</p>
+                <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(total)}</p>
               </div>
-              <div className="space-y-2">
-                <Label>الوصف</Label>
-                <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب شهر يناير — أحمد" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="stat-card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold">سجل المصروفات</h3>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5">
+                <Plus className="w-3.5 h-3.5" />
+                إضافة مصروف
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>إضافة مصروف جديد</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
                 <div className="space-y-2">
-                  <Label>المبلغ</Label>
-                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
-                </div>
-                <div className="space-y-2">
-                  <Label>الشهر</Label>
-                  <Select value={month} onValueChange={setMonth}>
+                  <Label>الفئة</Label>
+                  <Select value={category} onValueChange={(v) => setCategory(v as ExpenseCategory)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: durationMonths }, (_, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
+                      {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>التاريخ</Label>
-                  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  <Label>الوصف</Label>
+                  <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب شهر يناير — أحمد" />
                 </div>
-                <div className="space-y-2">
-                  <Label>المسؤول</Label>
-                  <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} placeholder="اختياري" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>المبلغ</Label>
+                    <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الشهر</Label>
+                    <Select value={month} onValueChange={setMonth}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: durationMonths }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>التاريخ</Label>
+                    <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>المسؤول</Label>
+                    <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} placeholder="اختياري" />
+                  </div>
+                </div>
+                {/* Resource selection */}
+                {resources.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>المورد (اختياري)</Label>
+                    <Select value={resourceId} onValueChange={setResourceId}>
+                      <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">بدون مورد</SelectItem>
+                        {resources.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>{r.name} {r.role ? `(${r.role})` : ''}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {/* Custody selection */}
+                {custodies.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>خصم من عهدة (اختياري)</Label>
+                    <Select value={custodyId} onValueChange={setCustodyId}>
+                      <SelectTrigger><SelectValue placeholder="اختر العهدة" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">بدون عهدة</SelectItem>
+                        {custodies.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.resourceName} — متبقي: {formatCurrency(c.remaining)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <Button onClick={handleAdd} className="w-full">إضافة</Button>
               </div>
-              <Button onClick={handleAdd} className="w-full">إضافة</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {expenses.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">لا توجد مصروفات مسجلة بعد</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>الفئة</th>
-                <th>الوصف</th>
-                <th>المبلغ</th>
-                <th className="hidden sm:table-cell">الشهر</th>
-                <th className="hidden md:table-cell">التاريخ</th>
-                <th className="hidden lg:table-cell">المسؤول</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map((exp) => (
-                <tr key={exp.id}>
-                  <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[exp.category as ExpenseCategory]}</span></td>
-                  <td>{exp.description}</td>
-                  <td className="font-mono text-sm">{formatCurrency(exp.amount)}</td>
-                  <td className="hidden sm:table-cell">شهر {exp.month}</td>
-                  <td className="text-muted-foreground text-xs hidden md:table-cell">{exp.date}</td>
-                  <td className="text-muted-foreground hidden lg:table-cell">{exp.responsible || '—'}</td>
-                  <td>
-                    <Button variant="ghost" size="icon" onClick={() => deleteExpense(exp.id)}>
-                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            </DialogContent>
+          </Dialog>
         </div>
-      )}
+
+        {expenses.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">لا توجد مصروفات مسجلة بعد</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>الفئة</th>
+                  <th>الوصف</th>
+                  <th>المبلغ</th>
+                  <th className="hidden sm:table-cell">الشهر</th>
+                  <th className="hidden md:table-cell">المورد</th>
+                  <th className="hidden lg:table-cell">المسؤول</th>
+                  <th className="hidden lg:table-cell">العهدة</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((exp) => {
+                  const resource = resources.find(r => r.id === exp.resourceId);
+                  const custody = custodies.find(c => c.id === exp.custodyId);
+                  return (
+                    <tr key={exp.id}>
+                      <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[exp.category as ExpenseCategory]}</span></td>
+                      <td>{exp.description}</td>
+                      <td className="font-mono text-sm">{formatCurrency(exp.amount)}</td>
+                      <td className="hidden sm:table-cell">شهر {exp.month}</td>
+                      <td className="hidden md:table-cell text-xs">{resource?.name || '—'}</td>
+                      <td className="text-muted-foreground hidden lg:table-cell">{exp.responsible || '—'}</td>
+                      <td className="hidden lg:table-cell text-xs">{custody?.resourceName || '—'}</td>
+                      <td>
+                        <Button variant="ghost" size="icon" onClick={() => deleteExpense(exp.id)}>
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
