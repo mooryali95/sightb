@@ -32,7 +32,7 @@ export default function NewCompany() {
     }
     setLoading(true);
     try {
-      await addCompany({ name: result.data.name, description: result.data.description });
+      await addCompany({ name: result.data.name, description: result.data.description, status: 'active' });
       navigate('/');
     } catch (error: any) {
       console.error('[add-company]', error);

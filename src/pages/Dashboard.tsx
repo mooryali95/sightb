@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
+import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ProjectStatus } from '@/types/project';
 import {
   Building2, FolderKanban, Briefcase, TrendingUp, Plus,
-  ArrowLeft, DollarSign, Filter, Search, X,
+  ArrowLeft, DollarSign, Filter, Search, X, Archive, ArchiveRestore,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -29,9 +31,12 @@ const stagger = {
 };
 
 export default function Dashboard() {
-  const { companies, portfolios, projects, budgetItems, expenses, revenues, loading, loadAll } = useStore();
+  const { companies, portfolios, projects, budgetItems, expenses, revenues, loading, loadAll, archiveCompany, unarchiveCompany } = useStore();
   const navigate = useNavigate();
   const { isAdmin, canEdit } = useRole();
+
+  const activeCompanies = useMemo(() => companies.filter(c => c.status !== 'archived'), [companies]);
+  const archivedCompanies = useMemo(() => companies.filter(c => c.status === 'archived'), [companies]);
 
   useEffect(() => {
     loadAll();
@@ -44,12 +49,17 @@ export default function Dashboard() {
   // Filtered projects
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
+      // Hide projects from archived companies unless filtering by that company
+      if (filterCompany === 'all') {
+        const comp = companies.find(c => c.id === p.companyId);
+        if (comp?.status === 'archived') return false;
+      }
       if (filterCompany !== 'all' && p.companyId !== filterCompany) return false;
       if (filterStatus !== 'all' && p.status !== filterStatus) return false;
       if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [projects, filterCompany, filterStatus, searchQuery]);
+  }, [projects, companies, filterCompany, filterStatus, searchQuery]);
 
   const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '';
 
@@ -77,11 +87,12 @@ export default function Dashboard() {
     })
     .filter((d) => d.value > 0);
 
-  const statusData = [
-    { name: 'نشط', value: filteredProjects.filter((p) => p.status === 'active').length },
-    { name: 'مكتمل', value: filteredProjects.filter((p) => p.status === 'completed').length },
-    { name: 'معلق', value: filteredProjects.filter((p) => p.status === 'on-hold').length },
-  ].filter((d) => d.value > 0);
+  const statusData = Object.entries(PROJECT_STATUS_LABELS)
+    .map(([key, label]) => ({
+      name: label,
+      value: filteredProjects.filter((p) => p.status === key).length,
+    }))
+    .filter((d) => d.value > 0);
 
   const hasData = companies.length > 0;
 
@@ -181,10 +192,9 @@ export default function Dashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">جميع الحالات</SelectItem>
-                      <SelectItem value="active">نشط</SelectItem>
-                      <SelectItem value="completed">مكتمل</SelectItem>
-                      <SelectItem value="on-hold">معلق</SelectItem>
-                      <SelectItem value="cancelled">ملغي</SelectItem>
+                      {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 
@@ -337,13 +347,8 @@ export default function Dashboard() {
                           <h4 className="text-sm font-semibold">{project.name}</h4>
                           <p className="text-xs text-muted-foreground">{company?.name}</p>
                         </div>
-                        <span className={
-                          project.status === 'active' ? 'badge-gold' :
-                          project.status === 'completed' ? 'badge-profit' : 'badge-warning'
-                        }>
-                          {project.status === 'active' ? 'نشط' :
-                           project.status === 'completed' ? 'مكتمل' :
-                           project.status === 'on-hold' ? 'معلق' : 'ملغي'}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
+                          {PROJECT_STATUS_LABELS[project.status]}
                         </span>
                       </div>
 
@@ -472,13 +477,8 @@ export default function Dashboard() {
                               </span>
                             </td>
                             <td className="hidden sm:table-cell">
-                              <span className={
-                                project.status === 'active' ? 'badge-gold' :
-                                project.status === 'completed' ? 'badge-profit' : 'badge-warning'
-                              }>
-                                {project.status === 'active' ? 'نشط' :
-                                 project.status === 'completed' ? 'مكتمل' :
-                                 project.status === 'on-hold' ? 'معلق' : 'ملغي'}
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
+                                {PROJECT_STATUS_LABELS[project.status]}
                               </span>
                             </td>
                             <td>
@@ -506,6 +506,67 @@ export default function Dashboard() {
                 )}
               </div>
             </motion.div>
+
+            {/* Company Management - Admin only */}
+            {isAdmin && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="stat-card mt-6"
+              >
+                <h3 className="text-sm font-semibold mb-4">إدارة الشركات</h3>
+                <div className="space-y-2">
+                  {activeCompanies.map((company) => (
+                    <div key={company.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium">{company.name}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">نشطة</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-xs text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          archiveCompany(company.id);
+                          toast.success(`تم أرشفة "${company.name}"`);
+                        }}
+                      >
+                        <Archive className="w-3.5 h-3.5" />
+                        أرشفة
+                      </Button>
+                    </div>
+                  ))}
+                  {archivedCompanies.length > 0 && (
+                    <>
+                      <div className="text-xs text-muted-foreground pt-3 pb-1 font-semibold">الشركات المؤرشفة</div>
+                      {archivedCompanies.map((company) => (
+                        <div key={company.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/40 opacity-70">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm">{company.name}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">مؤرشفة</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-xs text-muted-foreground hover:text-primary"
+                            onClick={() => {
+                              unarchiveCompany(company.id);
+                              toast.success(`تم إعادة تفعيل "${company.name}"`);
+                            }}
+                          >
+                            <ArchiveRestore className="w-3.5 h-3.5" />
+                            إعادة تفعيل
+                          </Button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
           </>
         )}
       </motion.div>

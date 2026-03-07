@@ -114,7 +114,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
               )}
             </div>
 
-            {companies.map((company) => (
+            {companies.filter(c => c.status !== 'archived').map((company) => (
               <div key={company.id}>
                 <button
                   onClick={() => toggleCompany(company.id)}
@@ -152,8 +152,9 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                           <div
                             className={cn(
                               'w-1.5 h-1.5 rounded-full shrink-0',
-                              project.status === 'active' ? 'bg-success' : 
-                              project.status === 'completed' ? 'bg-primary' : 'bg-warning'
+                              project.status === 'active' || project.status === 'approved' ? 'bg-success' : 
+                              project.status === 'completed' ? 'bg-primary' :
+                              project.status === 'archived' ? 'bg-muted-foreground' : 'bg-warning'
                             )}
                           />
                           <span className="truncate">{project.name}</span>
@@ -200,8 +201,9 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                                     <div
                                       className={cn(
                                         'w-1.5 h-1.5 rounded-full shrink-0',
-                                        project.status === 'active' ? 'bg-success' : 
-                                        project.status === 'completed' ? 'bg-primary' : 'bg-warning'
+                                        project.status === 'active' || project.status === 'approved' ? 'bg-success' : 
+                                        project.status === 'completed' ? 'bg-primary' :
+                                        project.status === 'archived' ? 'bg-muted-foreground' : 'bg-warning'
                                       )}
                                     />
                                     <span className="truncate">{project.name}</span>

@@ -1,8 +1,11 @@
+export type CompanyStatus = 'active' | 'archived';
+
 export interface Company {
   id: string;
   name: string;
   description?: string;
   logo?: string;
+  status: CompanyStatus;
   createdAt: string;
 }
 
@@ -14,9 +17,33 @@ export interface Portfolio {
   createdAt: string;
 }
 
+export type ProjectStatus = 'planning' | 'pending_approval' | 'approved' | 'active' | 'on-hold' | 'completed' | 'archived' | 'cancelled';
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  planning: 'تخطيط',
+  pending_approval: 'قيد التعميد',
+  approved: 'تم التعميد',
+  active: 'تشغيل',
+  'on-hold': 'معلق',
+  completed: 'مكتمل',
+  archived: 'مؤرشف',
+  cancelled: 'ملغي',
+};
+
+export const PROJECT_STATUS_COLORS: Record<ProjectStatus, string> = {
+  planning: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  pending_approval: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  active: 'bg-primary/10 text-primary',
+  'on-hold': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  archived: 'bg-muted text-muted-foreground',
+  cancelled: 'bg-destructive/10 text-destructive',
+};
+
 export interface Project {
   id: string;
-  portfolioId?: string; // optional - can be directly under company
+  portfolioId?: string;
   companyId: string;
   name: string;
   description?: string;
@@ -26,7 +53,7 @@ export interface Project {
   endDate: string;
   durationMonths: number;
   resourceCount: number;
-  status: 'active' | 'completed' | 'on-hold' | 'cancelled';
+  status: ProjectStatus;
   clientLogo?: string;
   createdAt: string;
 }
