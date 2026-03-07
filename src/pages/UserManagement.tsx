@@ -113,13 +113,14 @@ export default function UserManagement() {
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('user_invites').insert({
+      const insertData = {
         email: invEmail.trim().toLowerCase(),
         role: invRole,
         scope_type: invScopeType,
         scope_id: invScopeType === 'system' ? null : invScopeId,
         invited_by: user!.id,
-      });
+      };
+      const { error } = await (supabase as any).from('user_invites').insert(insertData);
       if (error) throw error;
       toast.success(`تمت دعوة ${invEmail} بنجاح`);
       setInvEmail('');
