@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { Building2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { companySchema } from '@/lib/validations';
 
 export default function NewCompany() {
   const [name, setName] = useState('');
@@ -18,10 +19,14 @@ export default function NewCompany() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const result = companySchema.safeParse({ name, description: description || undefined });
+    if (!result.success) {
+      toast.error(result.error.errors[0]?.message || 'بيانات غير صالحة');
+      return;
+    }
     setLoading(true);
     try {
-      await addCompany({ name: name.trim(), description: description.trim() || undefined });
+      await addCompany({ name: result.data.name, description: result.data.description });
       navigate('/');
     } catch (error: any) {
       console.error('[add-company]', error);
