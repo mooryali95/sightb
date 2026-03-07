@@ -15,12 +15,15 @@ import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, TrendingDown, Target, Plus, Trash2,
   BarChart3, Receipt, PiggyBank, Baseline, CheckCircle2, Users, Wallet, History,
+  Download, FileSpreadsheet, FileText,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend,
 } from 'recharts';
 import { toast } from 'sonner';
+import { BudgetAlerts } from '@/components/BudgetAlerts';
+import { exportToExcel, exportToPDF } from '@/lib/export';
 
 const COLORS = [
   'hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)',
