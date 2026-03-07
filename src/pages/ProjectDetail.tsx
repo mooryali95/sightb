@@ -193,7 +193,7 @@ export default function ProjectDetail() {
 
           {/* Expenses Tab */}
           <TabsContent value="expenses">
-            <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} />
+            <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={project.contractValue} />
           </TabsContent>
 
           {/* Custody Tab */}
@@ -253,8 +253,8 @@ export default function ProjectDetail() {
 
 // ---- Sub-components ----
 
-function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems }: {
-  projectId: string; durationMonths: number; expenses: any[]; resources: Resource[]; custodies: Custody[]; budgetItems: BudgetItem[];
+function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue }: {
+  projectId: string; durationMonths: number; expenses: any[]; resources: Resource[]; custodies: Custody[]; budgetItems: BudgetItem[]; revenues: any[]; contractValue: number;
 }) {
   const { addExpense, deleteExpense } = useStore();
   const [open, setOpen] = useState(false);
