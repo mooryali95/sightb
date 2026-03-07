@@ -129,7 +129,8 @@ export default function UserManagement() {
       setInvScopeId('');
       loadData();
     } catch (err: any) {
-      toast.error(err.message || 'حدث خطأ');
+      console.error('[invite]', err);
+      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
       setSubmitting(false);
     }

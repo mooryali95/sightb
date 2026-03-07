@@ -29,7 +29,8 @@ export default function NewPortfolio() {
       await addPortfolio({ name: name.trim(), companyId, description: description.trim() || undefined });
       navigate('/');
     } catch (error: any) {
-      toast.error(error.message || 'حدث خطأ');
+      console.error('[add-portfolio]', error);
+      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
       setLoading(false);
     }

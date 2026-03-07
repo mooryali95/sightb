@@ -51,7 +51,8 @@ export default function NewProject() {
       });
       navigate('/');
     } catch (error: any) {
-      toast.error(error.message || 'حدث خطأ');
+      console.error('[add-project]', error);
+      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
       setLoading(false);
     }

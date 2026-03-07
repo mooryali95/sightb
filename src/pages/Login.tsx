@@ -29,7 +29,8 @@ export default function Login() {
       if (error) throw error;
       navigate('/', { replace: true });
     } catch (error: any) {
-      toast.error(error.message || 'حدث خطأ');
+      console.error('[login]', error);
+      toast.error('بيانات الدخول غير صحيحة');
     } finally {
       setLoading(false);
     }
@@ -50,7 +51,8 @@ export default function Login() {
       toast.success('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني');
       setIsForgotPassword(false);
     } catch (error: any) {
-      toast.error(error.message || 'حدث خطأ');
+      console.error('[forgot-password]', error);
+      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
       setLoading(false);
     }

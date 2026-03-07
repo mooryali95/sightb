@@ -24,7 +24,8 @@ export default function NewCompany() {
       await addCompany({ name: name.trim(), description: description.trim() || undefined });
       navigate('/');
     } catch (error: any) {
-      toast.error(error.message || 'حدث خطأ');
+      console.error('[add-company]', error);
+      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
       setLoading(false);
     }

@@ -1229,7 +1229,8 @@ function BaselineSection({ projectId, durationMonths, expenses, budgetItems }: {
       setBaselineName('');
       setOpenDialog(false);
     } catch (err: any) {
-      toast.error(err.message || 'خطأ في إنشاء خط الأساس');
+      console.error('[baseline]', err);
+      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
       setCreating(false);
     }
