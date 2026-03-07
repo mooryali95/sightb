@@ -32,8 +32,9 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
-    projects, companies, portfolios, budgetItems, expenses, revenues,
+    projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     addBudgetItem, deleteBudgetItem, addExpense, deleteExpense, addRevenue, deleteRevenue,
+    addResource, deleteResource, addCustody, deleteCustody,
     loadAll,
   } = useStore();
 
@@ -56,6 +57,8 @@ export default function ProjectDetail() {
   const pBudget = budgetItems.filter((b) => b.projectId === project.id);
   const pExpenses = expenses.filter((e) => e.projectId === project.id);
   const pRevenues = revenues.filter((r) => r.projectId === project.id);
+  const pResources = resources.filter((r) => r.projectId === project.id);
+  const pCustodies = custodies.filter((c) => c.projectId === project.id);
   const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues);
   const categoryBreakdown = getExpensesByCategory(pExpenses);
   const monthlyData = getMonthlyBreakdown(pExpenses, project.durationMonths);
