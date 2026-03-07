@@ -240,3 +240,26 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
     </aside>
   );
 }
+
+function SignOutButton({ collapsed }: { collapsed?: boolean }) {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <button
+      onClick={handleSignOut}
+      className={cn(
+        'flex items-center gap-2 rounded-lg text-sm transition-colors text-sidebar-foreground/60 hover:text-destructive hover:bg-sidebar-accent',
+        collapsed ? 'w-full justify-center p-2' : 'w-full px-3 py-2'
+      )}
+    >
+      <LogOut className="w-4 h-4 shrink-0" />
+      {!collapsed && <span className="text-xs">تسجيل الخروج</span>}
+    </button>
+  );
+}
