@@ -60,6 +60,7 @@ interface AppState {
 
   // Revenue
   addRevenue: (r: Omit<Revenue, 'id'>) => Promise<string>;
+  updateRevenue: (id: string, r: Partial<Revenue>) => Promise<void>;
   deleteRevenue: (id: string) => Promise<void>;
 
   // Resources
@@ -356,6 +357,17 @@ export const useStore = create<AppState>()((set, get) => ({
     const mapped = mapRevenue(data);
     set((s) => ({ revenues: [mapped, ...s.revenues] }));
     return mapped.id;
+  },
+
+  updateRevenue: async (id, r) => {
+    const updates: any = {};
+    if (r.description !== undefined) updates.description = r.description;
+    if (r.amount !== undefined) updates.amount = r.amount;
+    if (r.date !== undefined) updates.date = r.date;
+    if (r.month !== undefined) updates.month = r.month;
+    const { error } = await supabase.from('revenues').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ revenues: s.revenues.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
   },
 
   deleteRevenue: async (id) => {
