@@ -179,8 +179,6 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteCompany: async (id) => {
-    const company = get().companies.find(x => x.id === id);
-    if (company) await logDeletion('companies', id, company);
     const { error } = await supabase.from('companies').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
@@ -213,8 +211,6 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deletePortfolio: async (id) => {
-    const portfolio = get().portfolios.find(x => x.id === id);
-    if (portfolio) await logDeletion('portfolios', id, portfolio);
     const { error } = await supabase.from('portfolios').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
@@ -260,8 +256,6 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteProject: async (id) => {
-    const project = get().projects.find(x => x.id === id);
-    if (project) await logDeletion('projects', id, project);
     const { error } = await supabase.from('projects').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
@@ -299,8 +293,6 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteBudgetItem: async (id) => {
-    const item = get().budgetItems.find(x => x.id === id);
-    if (item) await logDeletion('budget_items', id, item, item.projectId);
     const { error } = await supabase.from('budget_items').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ budgetItems: s.budgetItems.filter((x) => x.id !== id) }));
@@ -338,8 +330,6 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteExpense: async (id) => {
-    const expense = get().expenses.find(x => x.id === id);
-    if (expense) await logDeletion('expenses', id, expense, expense.projectId);
     const { error } = await supabase.from('expenses').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) }));
@@ -370,8 +360,6 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteRevenue: async (id) => {
-    const rev = get().revenues.find(x => x.id === id);
-    if (rev) await logDeletion('revenues', id, rev, rev.projectId);
     const { error } = await supabase.from('revenues').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ revenues: s.revenues.filter((x) => x.id !== id) }));
@@ -391,8 +379,6 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteResource: async (id) => {
-    const res = get().resources.find(x => x.id === id);
-    if (res) await logDeletion('resources', id, res, res.projectId);
     const { error } = await supabase.from('resources').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ resources: s.resources.filter((x) => x.id !== id) }));
@@ -413,8 +399,6 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteCustody: async (id) => {
-    const cust = get().custodies.find(x => x.id === id);
-    if (cust) await logDeletion('custodies', id, cust, cust.projectId);
     const { error } = await supabase.from('custodies').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ custodies: s.custodies.filter((x) => x.id !== id) }));
