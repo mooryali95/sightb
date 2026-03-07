@@ -48,12 +48,17 @@ export default function Dashboard() {
   // Filtered projects
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
+      // Hide projects from archived companies unless filtering by that company
+      if (filterCompany === 'all') {
+        const comp = companies.find(c => c.id === p.companyId);
+        if (comp?.status === 'archived') return false;
+      }
       if (filterCompany !== 'all' && p.companyId !== filterCompany) return false;
       if (filterStatus !== 'all' && p.status !== filterStatus) return false;
       if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [projects, filterCompany, filterStatus, searchQuery]);
+  }, [projects, companies, filterCompany, filterStatus, searchQuery]);
 
   const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '';
 
