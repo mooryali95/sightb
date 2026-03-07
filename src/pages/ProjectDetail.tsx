@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
 import { exportToExcel, exportToPDF } from '@/lib/export';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 
 const COLORS = [
   'hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)',
@@ -675,9 +676,7 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                           <Button variant="ghost" size="icon" onClick={() => openEdit(exp)}>
                             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteExpense(exp.id)}>
-                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                          </Button>
+                          <ConfirmDeleteDialog title="حذف المصروف" description="هل أنت متأكد من حذف هذا المصروف؟" onConfirm={() => deleteExpense(exp.id)} />
                         </div>
                       </td>
                     </tr>
@@ -1007,9 +1006,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
                         </div>
                       </td>
                       <td>
-                        <Button variant="ghost" size="icon" onClick={() => deleteBudgetItem(item.id)}>
-                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                        </Button>
+                        <ConfirmDeleteDialog title="حذف بند الموازنة" description="هل أنت متأكد من حذف هذا البند؟" onConfirm={() => deleteBudgetItem(item.id)} />
                       </td>
                     </tr>
                   );
@@ -1189,9 +1186,7 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
                       <Button variant="ghost" size="icon" onClick={() => openEdit(rev)}>
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deleteRevenue(rev.id)}>
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                      </Button>
+                      <ConfirmDeleteDialog title="حذف الإيراد" description="هل أنت متأكد من حذف هذا الإيراد؟" onConfirm={() => deleteRevenue(rev.id)} />
                     </div>
                   </td>
                 </tr>
@@ -1316,9 +1311,7 @@ function BaselineSection({ projectId, durationMonths, expenses, budgetItems }: {
                       تفعيل
                     </Button>
                   )}
-                  <Button size="icon" variant="ghost" onClick={() => deleteBaseline(bl.id)}>
-                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                  </Button>
+                  <ConfirmDeleteDialog title="حذف خط الأساس" description="هل أنت متأكد من حذف خط الأساس هذا؟" onConfirm={() => deleteBaseline(bl.id)} />
                 </div>
               </div>
             ))}
@@ -1493,9 +1486,7 @@ function ResourcesSection({ projectId, resources }: {
                     <td className="font-mono text-sm">{formatCurrency(r.monthlyCost)}</td>
                     <td className="font-mono text-sm">{formatCurrency(totalSpent)}</td>
                     <td>
-                      <Button variant="ghost" size="icon" onClick={() => deleteResource(r.id)}>
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                      </Button>
+                      <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />
                     </td>
                   </tr>
                 );
@@ -1623,9 +1614,7 @@ function CustodySection({ projectId, companyId, custodies, expenses }: {
                     </td>
                     <td className="text-muted-foreground text-xs hidden md:table-cell">{c.notes || '—'}</td>
                     <td>
-                      <Button variant="ghost" size="icon" onClick={() => deleteCustody(c.id)}>
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                      </Button>
+                      <ConfirmDeleteDialog title="حذف العهدة" description="هل أنت متأكد من حذف هذه العهدة؟" onConfirm={() => deleteCustody(c.id)} />
                     </td>
                   </tr>
                 );
