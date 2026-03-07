@@ -2,18 +2,20 @@ import { useStore } from '@/store/useStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Building2, FolderKanban, LayoutDashboard, Plus, ChevronDown, ChevronLeft,
-  Briefcase, Menu, LogOut,
+  Briefcase, Menu, LogOut, Users,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useRole } from '@/hooks/useRole';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 
 export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const { companies, portfolios, projects } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useRole();
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set());
 
@@ -78,6 +80,22 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           <LayoutDashboard className="w-4 h-4 shrink-0" />
           {!collapsed && <span>لوحة التحكم</span>}
         </button>
+
+        {/* User Management - Admin only */}
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/users')}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+              isActive('/users')
+                ? 'bg-primary/20 text-primary font-semibold'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent'
+            )}
+          >
+            <Users className="w-4 h-4 shrink-0" />
+            {!collapsed && <span>إدارة المستخدمين</span>}
+          </button>
+        )}
 
         {/* Companies Section */}
         {!collapsed && (
