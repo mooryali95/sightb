@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["IBM Plex Sans Arabic", "sans-serif"],
+        display: ["Noto Kufi Arabic", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
       colors: {
