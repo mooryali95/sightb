@@ -9,6 +9,7 @@ import { Eye, EyeOff, LogIn, ShieldCheck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { loginSchema } from '@/lib/validations';
 
 function getDeviceFingerprint(): string {
   const key = 'rouya_device_fp';
@@ -69,7 +70,11 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) return;
+    const validation = loginSchema.safeParse({ email: email.trim(), password });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0]?.message || 'بيانات غير صالحة');
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
