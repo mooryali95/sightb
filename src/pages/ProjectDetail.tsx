@@ -4,7 +4,7 @@ import { useStore } from '@/store/useStore';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown, getBaselineMonthlyPV, calculateEVM } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type CostBaseline } from '@/types/project';
+import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type CostBaseline, type Resource, type Custody } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, TrendingDown, Target, Plus, Trash2,
-  BarChart3, Receipt, PiggyBank, Baseline, CheckCircle2,
+  BarChart3, Receipt, PiggyBank, Baseline, CheckCircle2, Users, Wallet,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
