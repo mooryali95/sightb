@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 
 export default function Login() {
   const navigate = useNavigate();
-  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,24 +21,13 @@ export default function Login() {
     e.preventDefault();
     if (!email.trim() || !password.trim()) return;
     setLoading(true);
-
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        toast.success('تم إنشاء الحساب بنجاح! يرجى التحقق من بريدك الإلكتروني لتفعيل الحساب.');
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (error) throw error;
-        navigate('/', { replace: true });
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) throw error;
+      navigate('/', { replace: true });
     } catch (error: any) {
       toast.error(error.message || 'حدث خطأ');
     } finally {
@@ -99,9 +87,7 @@ export default function Login() {
             </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <h2 className="text-lg font-semibold text-center">
-                {isSignUp ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
-              </h2>
+              <h2 className="text-lg font-semibold text-center">تسجيل الدخول</h2>
               <div className="space-y-2">
                 <Label>البريد الإلكتروني</Label>
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
@@ -128,26 +114,15 @@ export default function Login() {
                 </div>
               </div>
 
-              {!isSignUp && (
-                <button type="button" onClick={() => setIsForgotPassword(true)} className="text-xs text-primary hover:underline">
-                  نسيت كلمة المرور؟
-                </button>
-              )}
+              <button type="button" onClick={() => setIsForgotPassword(true)} className="text-xs text-primary hover:underline">
+                نسيت كلمة المرور؟
+              </button>
 
               <Button type="submit" className="w-full gap-2" disabled={loading}>
-                {loading ? 'جاري التحميل...' : isSignUp ? (
-                  <><UserPlus className="w-4 h-4" /> إنشاء حساب</>
-                ) : (
+                {loading ? 'جاري التحميل...' : (
                   <><LogIn className="w-4 h-4" /> تسجيل الدخول</>
                 )}
               </Button>
-
-              <p className="text-center text-sm text-muted-foreground">
-                {isSignUp ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟'}{' '}
-                <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-primary hover:underline font-medium">
-                  {isSignUp ? 'تسجيل الدخول' : 'إنشاء حساب'}
-                </button>
-              </p>
             </form>
           )}
         </div>
