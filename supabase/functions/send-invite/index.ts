@@ -14,11 +14,13 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    console.log("[send-invite] URL exists:", !!supabaseUrl, "Key exists:", !!serviceRoleKey);
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     // Verify the calling user is authenticated
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.log("[send-invite] No auth header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -30,6 +32,9 @@ Deno.serve(async (req) => {
       data: { user },
       error: userError,
     } = await supabaseAdmin.auth.getUser(token);
+    
+    console.log("[send-invite] User:", user?.id, "Error:", userError?.message);
+    
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -38,10 +43,11 @@ Deno.serve(async (req) => {
     }
 
     // Verify the user is an admin
-    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+    const { data: isAdmin, error: roleError } = await supabaseAdmin.rpc("has_role", {
       _user_id: user.id,
       _role: "admin",
     });
+    console.log("[send-invite] isAdmin:", isAdmin, "roleError:", roleError?.message);
 
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -51,6 +57,7 @@ Deno.serve(async (req) => {
     }
 
     const { email, role, scope_type, scope_id } = await req.json();
+    console.log("[send-invite] Inviting:", email, "role:", role, "scope:", scope_type);
 
     if (!email) {
       return new Response(JSON.stringify({ error: "البريد الإلكتروني مطلوب" }), {
@@ -71,25 +78,25 @@ Deno.serve(async (req) => {
       });
 
     if (inviteError) {
-      console.error("[invite-insert]", inviteError);
+      console.error("[send-invite] Insert error:", JSON.stringify(inviteError));
       return new Response(
         JSON.stringify({ error: "حدث خطأ في حفظ الدعوة" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    console.log("[send-invite] Invite record saved");
 
     // 2. Check if user already exists
-    const { data: existingUsers } =
+    const { data: existingUsers, error: listError } =
       await supabaseAdmin.auth.admin.listUsers();
+    console.log("[send-invite] listUsers error:", listError?.message, "count:", existingUsers?.users?.length);
+    
     const existingUser = existingUsers?.users?.find(
       (u) => u.email?.toLowerCase() === email.toLowerCase().trim()
     );
 
     if (existingUser) {
-      // User already has an account - assign the role directly
+      console.log("[send-invite] User exists:", existingUser.id);
       await supabaseAdmin.from("user_roles").insert({
         user_id: existingUser.id,
         role: role || "viewer",
@@ -97,7 +104,6 @@ Deno.serve(async (req) => {
         scope_id: scope_type === "system" ? null : scope_id || null,
       });
 
-      // Mark invite as accepted
       await supabaseAdmin
         .from("user_invites")
         .update({ status: "accepted" })
@@ -114,10 +120,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Invite new user via Supabase Auth (sends an email automatically)
+    // 3. Invite new user via Supabase Auth
+    console.log("[send-invite] Calling inviteUserByEmail for:", email.trim());
+    const origin = req.headers.get("origin") || req.headers.get("referer") || "https://sightb.lovable.app";
+    const redirectUrl = origin.replace(/\/$/, "") + "/login";
+    console.log("[send-invite] redirectTo:", redirectUrl);
+    
     const { data: inviteData, error: authInviteError } =
       await supabaseAdmin.auth.admin.inviteUserByEmail(email.trim(), {
-        redirectTo: `${req.headers.get("origin") || "https://sightb.lovable.app"}/login`,
+        redirectTo: redirectUrl,
         data: {
           invited_role: role,
           invited_scope_type: scope_type,
@@ -125,19 +136,23 @@ Deno.serve(async (req) => {
         },
       });
 
+    console.log("[send-invite] inviteResult data:", JSON.stringify(inviteData));
+    console.log("[send-invite] inviteResult error:", JSON.stringify(authInviteError));
+
     if (authInviteError) {
-      console.error("[auth-invite]", authInviteError);
-      // The invite record is still saved, so the user can still sign up manually
+      console.error("[send-invite] Auth invite error:", authInviteError.message);
       return new Response(
         JSON.stringify({
           success: true,
-          message: "تم حفظ الدعوة ولكن قد لا يصل البريد. يمكن للمستخدم التسجيل مباشرة.",
+          message: "تم حفظ الدعوة ولكن لم يتم إرسال البريد: " + authInviteError.message,
           emailSent: false,
+          errorDetail: authInviteError.message,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    console.log("[send-invite] SUCCESS - invite email sent to:", email);
     return new Response(
       JSON.stringify({
         success: true,
@@ -147,7 +162,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[send-invite]", err);
+    console.error("[send-invite] Unhandled error:", err?.message || err);
     return new Response(JSON.stringify({ error: "حدث خطأ" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
