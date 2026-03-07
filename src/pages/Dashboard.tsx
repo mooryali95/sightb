@@ -528,9 +528,13 @@ export default function Dashboard() {
                         variant="ghost"
                         size="sm"
                         className="gap-1 text-xs text-muted-foreground hover:text-destructive"
-                        onClick={() => {
-                          archiveCompany(company.id);
-                          toast.success(`تم أرشفة "${company.name}"`);
+                        onClick={async () => {
+                          try {
+                            await archiveCompany(company.id);
+                            toast.success(`تم أرشفة "${company.name}"`);
+                          } catch (e: any) {
+                            toast.error(`فشل أرشفة الشركة: ${e.message}`);
+                          }
                         }}
                       >
                         <Archive className="w-3.5 h-3.5" />
@@ -552,9 +556,13 @@ export default function Dashboard() {
                             variant="ghost"
                             size="sm"
                             className="gap-1 text-xs text-muted-foreground hover:text-primary"
-                            onClick={() => {
-                              unarchiveCompany(company.id);
-                              toast.success(`تم إعادة تفعيل "${company.name}"`);
+                            onClick={async () => {
+                              try {
+                                await unarchiveCompany(company.id);
+                                toast.success(`تم إعادة تفعيل "${company.name}"`);
+                              } catch (e: any) {
+                                toast.error(`فشل إعادة التفعيل: ${e.message}`);
+                              }
                             }}
                           >
                             <ArchiveRestore className="w-3.5 h-3.5" />
