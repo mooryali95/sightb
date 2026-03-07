@@ -137,6 +137,65 @@ export default function ProjectDetail() {
           />
         </div>
 
+        {/* Budget Overspend Alerts */}
+        <BudgetAlerts
+          totalPlanned={summary.totalPlanned}
+          totalActual={summary.totalActual}
+          contractValue={project.contractValue}
+          budgetItems={pBudget}
+          expenses={pExpenses}
+        />
+
+        {/* Export Buttons */}
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              const getActualForItem = (item: any) =>
+                pExpenses.filter((e: any) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
+              exportToExcel({
+                projectName: project.name,
+                contractValue: project.contractValue,
+                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                expenses: pExpenses,
+                revenues: pRevenues,
+                totalPlanned: summary.totalPlanned,
+                totalActual: summary.totalActual,
+                totalRevenue: summary.totalRevenue,
+              });
+              toast.success('تم تصدير التقرير إلى Excel');
+            }}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            تصدير Excel
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              const getActualForItem = (item: any) =>
+                pExpenses.filter((e: any) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
+              exportToPDF({
+                projectName: project.name,
+                contractValue: project.contractValue,
+                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                expenses: pExpenses,
+                revenues: pRevenues,
+                totalPlanned: summary.totalPlanned,
+                totalActual: summary.totalActual,
+                totalRevenue: summary.totalRevenue,
+              });
+              toast.success('تم تصدير التقرير إلى PDF');
+            }}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            تصدير PDF
+          </Button>
+        </div>
+
         {/* Tabs - Ordered by workflow: Resources → Budget → Baseline → Expenses → Custody → Revenue → Charts → Log */}
         <Tabs defaultValue="resources" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 max-w-5xl">
