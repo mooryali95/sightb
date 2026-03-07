@@ -7,18 +7,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { Building2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function NewCompany() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
   const { addCompany } = useStore();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addCompany({ name: name.trim(), description: description.trim() || undefined });
-    navigate('/');
+    setLoading(true);
+    try {
+      await addCompany({ name: name.trim(), description: description.trim() || undefined });
+      navigate('/');
+    } catch (error: any) {
+      toast.error(error.message || 'حدث خطأ');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,7 +52,9 @@ export default function NewCompany() {
             <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف مختصر عن الشركة" />
           </div>
           <div className="flex gap-3 pt-2">
-            <Button type="submit" className="flex-1">إضافة الشركة</Button>
+            <Button type="submit" className="flex-1" disabled={loading}>
+              {loading ? 'جاري الإضافة...' : 'إضافة الشركة'}
+            </Button>
             <Button type="button" variant="outline" onClick={() => navigate('/')}>إلغاء</Button>
           </div>
         </form>

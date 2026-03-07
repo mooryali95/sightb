@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { AppLayout } from '@/components/AppLayout';
@@ -8,11 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
 import { Briefcase } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function NewProject() {
   const [searchParams] = useSearchParams();
-  const { companies, portfolios, addProject } = useStore();
+  const { companies, portfolios, addProject, loadAll } = useStore();
   const navigate = useNavigate();
+
+  useEffect(() => { loadAll(); }, []);
 
   const [companyId, setCompanyId] = useState(searchParams.get('company') || '');
   const [portfolioId, setPortfolioId] = useState(searchParams.get('portfolio') || '');
@@ -24,27 +27,34 @@ export default function NewProject() {
   const [durationMonths, setDurationMonths] = useState('4');
   const [resourceCount, setResourceCount] = useState('1');
   const [currency] = useState('ر.س');
+  const [loading, setLoading] = useState(false);
 
   const filteredPortfolios = portfolios.filter((p) => p.companyId === companyId);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !companyId || !contractValue) return;
-
-    addProject({
-      name: name.trim(),
-      description: description.trim() || undefined,
-      companyId,
-      portfolioId: portfolioId || undefined,
-      contractValue: parseFloat(contractValue),
-      currency,
-      startDate: startDate || new Date().toISOString().split('T')[0],
-      endDate: endDate || '',
-      durationMonths: parseInt(durationMonths) || 4,
-      resourceCount: parseInt(resourceCount) || 1,
-      status: 'active',
-    });
-    navigate('/');
+    setLoading(true);
+    try {
+      await addProject({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        companyId,
+        portfolioId: portfolioId || undefined,
+        contractValue: parseFloat(contractValue),
+        currency,
+        startDate: startDate || new Date().toISOString().split('T')[0],
+        endDate: endDate || '',
+        durationMonths: parseInt(durationMonths) || 4,
+        resourceCount: parseInt(resourceCount) || 1,
+        status: 'active',
+      });
+      navigate('/');
+    } catch (error: any) {
+      toast.error(error.message || 'حدث خطأ');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,7 +70,6 @@ export default function NewProject() {
         </div>
 
         <form onSubmit={handleSubmit} className="stat-card space-y-5">
-          {/* Company & Portfolio */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>الشركة <span className="text-destructive">*</span></Label>
@@ -87,7 +96,6 @@ export default function NewProject() {
             </div>
           </div>
 
-          {/* Project Info */}
           <div className="space-y-2">
             <Label>اسم المشروع</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مشروع الرواد — ألبانيا 2026" required />
@@ -97,7 +105,6 @@ export default function NewProject() {
             <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف مختصر" />
           </div>
 
-          {/* Financial */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>قيمة العقد ({currency})</Label>
@@ -113,7 +120,6 @@ export default function NewProject() {
             </div>
           </div>
 
-          {/* Dates */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>تاريخ البداية</Label>
@@ -126,7 +132,9 @@ export default function NewProject() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" className="flex-1">إنشاء المشروع</Button>
+            <Button type="submit" className="flex-1" disabled={loading}>
+              {loading ? 'جاري الإنشاء...' : 'إنشاء المشروع'}
+            </Button>
             <Button type="button" variant="outline" onClick={() => navigate('/')}>إلغاء</Button>
           </div>
         </form>

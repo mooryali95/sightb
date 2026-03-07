@@ -14,7 +14,279 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      budget_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          month: number | null
+          planned_amount: number
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          month?: number | null
+          planned_amount?: number
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          month?: number | null
+          planned_amount?: number
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          logo: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          budget_item_id: string | null
+          category: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          month: number
+          notes: string | null
+          project_id: string
+          responsible: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          budget_item_id?: string | null
+          category: string
+          created_at?: string
+          date: string
+          description: string
+          id?: string
+          month?: number
+          notes?: string | null
+          project_id: string
+          responsible?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          budget_item_id?: string | null
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          month?: number
+          notes?: string | null
+          project_id?: string
+          responsible?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_budget_item_id_fkey"
+            columns: ["budget_item_id"]
+            isOneToOne: false
+            referencedRelation: "budget_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolios: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolios_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          client_logo: string | null
+          company_id: string
+          contract_value: number
+          created_at: string
+          currency: string
+          description: string | null
+          duration_months: number
+          end_date: string | null
+          id: string
+          name: string
+          portfolio_id: string | null
+          resource_count: number
+          start_date: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          client_logo?: string | null
+          company_id: string
+          contract_value?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_months?: number
+          end_date?: string | null
+          id?: string
+          name: string
+          portfolio_id?: string | null
+          resource_count?: number
+          start_date?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          client_logo?: string | null
+          company_id?: string
+          contract_value?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_months?: number
+          end_date?: string | null
+          id?: string
+          name?: string
+          portfolio_id?: string | null
+          resource_count?: number
+          start_date?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      revenues: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          description: string
+          id: string
+          month: number
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          date: string
+          description: string
+          id?: string
+          month?: number
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          month?: number
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenues_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

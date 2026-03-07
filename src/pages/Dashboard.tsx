@@ -17,7 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 
 const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)'];
@@ -28,8 +28,12 @@ const stagger = {
 };
 
 export default function Dashboard() {
-  const { companies, portfolios, projects, budgetItems, expenses, revenues } = useStore();
+  const { companies, portfolios, projects, budgetItems, expenses, revenues, loading, loadAll } = useStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    loadAll();
+  }, []);
 
   const [filterCompany, setFilterCompany] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');

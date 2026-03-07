@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { AppLayout } from '@/components/AppLayout';
@@ -8,20 +8,31 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
 import { FolderKanban } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function NewPortfolio() {
   const [searchParams] = useSearchParams();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [companyId, setCompanyId] = useState(searchParams.get('company') || '');
-  const { companies, addPortfolio } = useStore();
+  const [loading, setLoading] = useState(false);
+  const { companies, addPortfolio, loadAll } = useStore();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => { loadAll(); }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !companyId) return;
-    addPortfolio({ name: name.trim(), companyId, description: description.trim() || undefined });
-    navigate('/');
+    setLoading(true);
+    try {
+      await addPortfolio({ name: name.trim(), companyId, description: description.trim() || undefined });
+      navigate('/');
+    } catch (error: any) {
+      toast.error(error.message || 'حدث خطأ');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,7 +68,9 @@ export default function NewPortfolio() {
             <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف المحفظة" />
           </div>
           <div className="flex gap-3 pt-2">
-            <Button type="submit" className="flex-1">إضافة المحفظة</Button>
+            <Button type="submit" className="flex-1" disabled={loading}>
+              {loading ? 'جاري الإضافة...' : 'إضافة المحفظة'}
+            </Button>
             <Button type="button" variant="outline" onClick={() => navigate('/')}>إلغاء</Button>
           </div>
         </form>
