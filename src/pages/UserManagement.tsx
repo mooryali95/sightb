@@ -113,16 +113,26 @@ export default function UserManagement() {
     }
     setSubmitting(true);
     try {
-      const insertData = {
-        email: invEmail.trim().toLowerCase(),
-        role: invRole,
-        scope_type: invScopeType,
-        scope_id: invScopeType === 'system' ? null : invScopeId,
-        invited_by: user!.id,
-      };
-      const { error } = await (supabase as any).from('user_invites').insert(insertData);
-      if (error) throw error;
-      toast.success(`تمت دعوة ${invEmail} بنجاح`);
+      const res = await supabase.functions.invoke('send-invite', {
+        body: {
+          email: invEmail.trim().toLowerCase(),
+          role: invRole,
+          scope_type: invScopeType,
+          scope_id: invScopeType === 'system' ? null : invScopeId,
+        },
+      });
+
+      if (res.error) throw res.error;
+
+      const data = res.data;
+      if (data?.existingUser) {
+        toast.success('المستخدم موجود بالفعل، تم منحه الصلاحيات مباشرة');
+      } else if (data?.emailSent) {
+        toast.success(`تم إرسال دعوة إلى ${invEmail} بنجاح`);
+      } else {
+        toast.success('تم حفظ الدعوة. يمكن للمستخدم التسجيل مباشرة.');
+      }
+
       setInvEmail('');
       setInvRole('viewer');
       setInvScopeType('system');

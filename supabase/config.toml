@@ -2,3 +2,6 @@ project_id = "krhvqowmhthokqvmnvxj"
 
 [functions.admin-otp]
 verify_jwt = false
+
+[functions.send-invite]
+verify_jwt = false
