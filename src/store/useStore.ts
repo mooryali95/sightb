@@ -2,9 +2,13 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
-  CostBaseline, BaselineItem, Resource, Custody,
-  type ExpenseCategory,
+  CostBaseline, Resource, Custody,
 } from '@/types/project';
+import {
+  getUserId, logDeletion,
+  mapCompany, mapPortfolio, mapProject, mapBudgetItem,
+  mapExpense, mapResource, mapCustody, mapRevenue, mapBaselineItem,
+} from './helpers';
 
 export interface AuditLogEntry {
   id: string;
@@ -17,7 +21,8 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
-interface AppState {
+// ---- Slice types ----
+interface DataState {
   companies: Company[];
   portfolios: Portfolio[];
   projects: Project[];
@@ -29,79 +34,71 @@ interface AppState {
   custodies: Custody[];
   auditLog: AuditLogEntry[];
   loading: boolean;
+}
 
+interface LoadActions {
   loadAll: () => Promise<void>;
   loadAuditLog: (projectId: string) => Promise<void>;
+}
 
-  // Company
+interface CompanyActions {
   addCompany: (c: Omit<Company, 'id' | 'createdAt'>) => Promise<string>;
   updateCompany: (id: string, c: Partial<Company>) => Promise<void>;
   deleteCompany: (id: string) => Promise<void>;
+}
 
-  // Portfolio
+interface PortfolioActions {
   addPortfolio: (p: Omit<Portfolio, 'id' | 'createdAt'>) => Promise<string>;
   updatePortfolio: (id: string, p: Partial<Portfolio>) => Promise<void>;
   deletePortfolio: (id: string) => Promise<void>;
+}
 
-  // Project
+interface ProjectActions {
   addProject: (p: Omit<Project, 'id' | 'createdAt'>) => Promise<string>;
   updateProject: (id: string, p: Partial<Project>) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
+}
 
-  // Budget
+interface BudgetActions {
   addBudgetItem: (b: Omit<BudgetItem, 'id'>) => Promise<string>;
   updateBudgetItem: (id: string, b: Partial<BudgetItem>) => Promise<void>;
   deleteBudgetItem: (id: string) => Promise<void>;
+}
 
-  // Expenses
+interface ExpenseActions {
   addExpense: (e: Omit<Expense, 'id'>) => Promise<string>;
   updateExpense: (id: string, e: Partial<Expense>) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
+}
 
-  // Revenue
+interface RevenueActions {
   addRevenue: (r: Omit<Revenue, 'id'>) => Promise<string>;
   updateRevenue: (id: string, r: Partial<Revenue>) => Promise<void>;
   deleteRevenue: (id: string) => Promise<void>;
+}
 
-  // Resources
+interface ResourceActions {
   addResource: (r: Omit<Resource, 'id' | 'createdAt'>) => Promise<string>;
   deleteResource: (id: string) => Promise<void>;
+}
 
-  // Custodies
+interface CustodyActions {
   addCustody: (c: Omit<Custody, 'id' | 'createdAt' | 'spent' | 'remaining'>) => Promise<string>;
   deleteCustody: (id: string) => Promise<void>;
+}
 
-  // Baselines
+interface BaselineActions {
   createBaseline: (projectId: string, name: string) => Promise<string>;
   deleteBaseline: (id: string) => Promise<void>;
   setActiveBaseline: (id: string, projectId: string) => Promise<void>;
   loadBaselines: (projectId: string) => Promise<CostBaseline[]>;
 }
 
-async function getUserId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-  return user.id;
-}
-
-/** Save a snapshot of the record to audit_log before deleting */
-async function logDeletion(tableName: string, recordId: string, recordData: any, projectId?: string) {
-  try {
-    const userId = await getUserId();
-    await supabase.from('audit_log').insert({
-      user_id: userId,
-      action: 'delete',
-      table_name: tableName,
-      record_id: recordId,
-      record_data: recordData,
-      project_id: projectId || null,
-    });
-  } catch (e) {
-    console.warn('Audit log failed:', e);
-  }
-}
+type AppState = DataState & LoadActions & CompanyActions & PortfolioActions & ProjectActions &
+  BudgetActions & ExpenseActions & RevenueActions & ResourceActions & CustodyActions & BaselineActions;
 
 export const useStore = create<AppState>()((set, get) => ({
+  // ---- Initial state ----
   companies: [],
   portfolios: [],
   projects: [],
@@ -114,6 +111,7 @@ export const useStore = create<AppState>()((set, get) => ({
   auditLog: [],
   loading: true,
 
+  // ---- Load slice ----
   loadAll: async () => {
     set({ loading: true });
     const [companies, portfolios, projects, budgetItems, expenses, revenues, resources, custodies] = await Promise.all([
@@ -137,32 +135,28 @@ export const useStore = create<AppState>()((set, get) => ({
       expenses: expenseList,
       revenues: (revenues.data || []).map(mapRevenue),
       resources: (resources.data || []).map(mapResource),
-      custodies: (custodies.data || []).map((c: any) => mapCustody(c, expenseList)),
+      custodies: (custodies.data || []).map((c) => mapCustody(c, expenseList)),
       loading: false,
     });
   },
 
   loadAuditLog: async (projectId: string) => {
     const { data } = await supabase
-      .from('audit_log')
-      .select('*')
+      .from('audit_log').select('*')
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
       .limit(100);
     set({
-      auditLog: (data || []).map((d: any) => ({
-        id: d.id,
-        userId: d.user_id,
-        action: d.action,
-        tableName: d.table_name,
-        recordId: d.record_id,
-        recordData: d.record_data,
-        projectId: d.project_id || undefined,
+      auditLog: (data || []).map((d) => ({
+        id: d.id, userId: d.user_id, action: d.action,
+        tableName: d.table_name, recordId: d.record_id,
+        recordData: d.record_data, projectId: d.project_id || undefined,
         createdAt: d.created_at,
       })),
     });
   },
 
+  // ---- Company slice ----
   addCompany: async (c) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('companies').insert({
@@ -175,7 +169,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateCompany: async (id, c) => {
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (c.name !== undefined) updates.name = c.name;
     if (c.description !== undefined) updates.description = c.description;
     if (c.logo !== undefined) updates.logo = c.logo;
@@ -196,6 +190,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
   },
 
+  // ---- Portfolio slice ----
   addPortfolio: async (p) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('portfolios').insert({
@@ -208,7 +203,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updatePortfolio: async (id, p) => {
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (p.name !== undefined) updates.name = p.name;
     if (p.description !== undefined) updates.description = p.description;
     if (p.companyId !== undefined) updates.company_id = p.companyId;
@@ -228,6 +223,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
   },
 
+  // ---- Project slice ----
   addProject: async (p) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('projects').insert({
@@ -246,7 +242,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateProject: async (id, p) => {
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (p.name !== undefined) updates.name = p.name;
     if (p.description !== undefined) updates.description = p.description;
     if (p.companyId !== undefined) updates.company_id = p.companyId;
@@ -276,6 +272,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
   },
 
+  // ---- Budget slice ----
   addBudgetItem: async (b) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('budget_items').insert({
@@ -290,7 +287,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateBudgetItem: async (id, b) => {
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (b.category !== undefined) updates.category = b.category;
     if (b.description !== undefined) updates.description = b.description;
     if (b.plannedAmount !== undefined) updates.planned_amount = b.plannedAmount;
@@ -309,6 +306,7 @@ export const useStore = create<AppState>()((set, get) => ({
     set((s) => ({ budgetItems: s.budgetItems.filter((x) => x.id !== id) }));
   },
 
+  // ---- Expense slice ----
   addExpense: async (e) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('expenses').insert({
@@ -326,7 +324,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateExpense: async (id, e) => {
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (e.category !== undefined) updates.category = e.category;
     if (e.description !== undefined) updates.description = e.description;
     if (e.amount !== undefined) updates.amount = e.amount;
@@ -347,6 +345,7 @@ export const useStore = create<AppState>()((set, get) => ({
     set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) }));
   },
 
+  // ---- Revenue slice ----
   addRevenue: async (r) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('revenues').insert({
@@ -360,7 +359,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateRevenue: async (id, r) => {
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (r.description !== undefined) updates.description = r.description;
     if (r.amount !== undefined) updates.amount = r.amount;
     if (r.date !== undefined) updates.date = r.date;
@@ -378,6 +377,7 @@ export const useStore = create<AppState>()((set, get) => ({
     set((s) => ({ revenues: s.revenues.filter((x) => x.id !== id) }));
   },
 
+  // ---- Resource slice ----
   addResource: async (r) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('resources').insert({
@@ -398,6 +398,7 @@ export const useStore = create<AppState>()((set, get) => ({
     set((s) => ({ resources: s.resources.filter((x) => x.id !== id) }));
   },
 
+  // ---- Custody slice ----
   addCustody: async (c) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('custodies').insert({
@@ -419,6 +420,7 @@ export const useStore = create<AppState>()((set, get) => ({
     set((s) => ({ custodies: s.custodies.filter((x) => x.id !== id) }));
   },
 
+  // ---- Baseline slice ----
   createBaseline: async (projectId, name) => {
     const userId = await getUserId();
     const currentBudget = get().budgetItems.filter(b => b.projectId === projectId);
@@ -521,57 +523,3 @@ export const useStore = create<AppState>()((set, get) => ({
     return baselines;
   },
 }));
-
-// Mappers
-function mapCompany(d: any): Company {
-  return { id: d.id, name: d.name, description: d.description || undefined, logo: d.logo || undefined, createdAt: d.created_at };
-}
-function mapPortfolio(d: any): Portfolio {
-  return { id: d.id, companyId: d.company_id, name: d.name, description: d.description || undefined, createdAt: d.created_at };
-}
-function mapProject(d: any): Project {
-  return {
-    id: d.id, companyId: d.company_id, portfolioId: d.portfolio_id || undefined,
-    name: d.name, description: d.description || undefined,
-    contractValue: Number(d.contract_value), currency: d.currency,
-    startDate: d.start_date || '', endDate: d.end_date || '',
-    durationMonths: d.duration_months, resourceCount: d.resource_count,
-    status: d.status, clientLogo: d.client_logo || undefined, createdAt: d.created_at,
-  };
-}
-function mapBudgetItem(d: any): BudgetItem {
-  return { id: d.id, projectId: d.project_id, category: d.category, description: d.description, plannedAmount: Number(d.planned_amount), month: d.month || undefined, resourceId: d.resource_id || undefined };
-}
-function mapExpense(d: any): Expense {
-  return {
-    id: d.id, projectId: d.project_id, budgetItemId: d.budget_item_id || undefined,
-    category: d.category, description: d.description, amount: Number(d.amount),
-    date: d.date, month: d.month, responsible: d.responsible || undefined, notes: d.notes || undefined,
-    resourceId: d.resource_id || undefined, custodyId: d.custody_id || undefined,
-  };
-}
-function mapResource(d: any): Resource {
-  return {
-    id: d.id, projectId: d.project_id, name: d.name,
-    role: d.role || undefined, monthlyCost: Number(d.monthly_cost), createdAt: d.created_at,
-  };
-}
-function mapCustody(d: any, expenses: Expense[]): Custody {
-  const spent = expenses.filter(e => e.custodyId === d.id).reduce((s, e) => s + e.amount, 0);
-  return {
-    id: d.id, projectId: d.project_id || undefined, companyId: d.company_id || undefined,
-    resourceName: d.resource_name, amount: Number(d.amount),
-    spent, remaining: Number(d.amount) - spent,
-    notes: d.notes || undefined, createdAt: d.created_at,
-  };
-}
-function mapRevenue(d: any): Revenue {
-  return { id: d.id, projectId: d.project_id, description: d.description, amount: Number(d.amount), date: d.date, month: d.month };
-}
-function mapBaselineItem(d: any): BaselineItem {
-  return {
-    id: d.id, baselineId: d.baseline_id, category: d.category,
-    description: d.description, plannedAmount: Number(d.planned_amount),
-    month: d.month || undefined,
-  };
-}
