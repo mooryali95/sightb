@@ -9,6 +9,7 @@ import { Eye, EyeOff, LogIn, ShieldCheck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { loginSchema } from '@/lib/validations';
 
 function getDeviceFingerprint(): string {
   const key = 'rouya_device_fp';
@@ -52,7 +53,16 @@ export default function Login() {
 
     if (res.error) {
       console.error('[otp-check]', res.error);
-      return false; // allow login on error
+      // On error, sign out and block — don't allow bypass
+      await supabase.auth.signOut();
+      toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى.');
+      return 'error';
+    }
+
+    if (res.data?.rateLimited) {
+      await supabase.auth.signOut();
+      toast.error(res.data?.error || 'تم تجاوز الحد الأقصى للمحاولات');
+      return 'error';
     }
 
     return res.data?.requiresOtp === true;
@@ -60,7 +70,11 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) return;
+    const validation = loginSchema.safeParse({ email: email.trim(), password });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0]?.message || 'بيانات غير صالحة');
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -71,6 +85,10 @@ export default function Login() {
 
       // Check if OTP is required (admin on untrusted device)
       const needsOtp = await checkAndSendOtp();
+      if (needsOtp === 'error') {
+        // Already signed out and error shown
+        return;
+      }
       if (needsOtp) {
         setOtpRequired(true);
         setResendCooldown(60);
@@ -95,6 +113,13 @@ export default function Login() {
       const res = await supabase.functions.invoke('admin-otp', {
         body: { action: 'verify', code: otpCode, fingerprint },
       });
+
+      if (res.data?.rateLimited) {
+        await supabase.auth.signOut();
+        setOtpRequired(false);
+        toast.error(res.data?.error || 'تم تجاوز الحد الأقصى للمحاولات');
+        return;
+      }
 
       if (res.error || !res.data?.verified) {
         toast.error(res.data?.error || 'الرمز غير صحيح');

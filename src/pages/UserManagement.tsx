@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { UserPlus, Trash2, Users, Shield, Eye, Pencil } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 
 interface Profile {
   id: string;
@@ -287,9 +288,11 @@ export default function UserManagement() {
                         {scopeLabels[invite.scopeType]}: {getScopeName(invite.scopeType, invite.scopeId)}
                       </span>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => deleteInvite(invite.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    <ConfirmDeleteDialog
+                      title="حذف الدعوة"
+                      description={`هل تريد حذف الدعوة المرسلة إلى ${invite.email}؟`}
+                      onConfirm={() => deleteInvite(invite.id)}
+                    />
                   </div>
                 ))}
             </div>
@@ -336,9 +339,12 @@ export default function UserManagement() {
                               — {getScopeName(role.scopeType, role.scopeId)}
                             </span>
                             {!(role.role === 'admin' && role.userId === user?.id) && (
-                              <button onClick={() => deleteRole(role.id)} className="text-destructive hover:text-destructive/80 mr-1">
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+                              <ConfirmDeleteDialog
+                                title="إزالة الصلاحية"
+                                description="هل تريد إزالة هذه الصلاحية من المستخدم؟"
+                                onConfirm={() => deleteRole(role.id)}
+                                variant="inline"
+                              />
                             )}
                           </div>
                         );

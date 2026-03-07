@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { resetPasswordSchema } from '@/lib/validations';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -31,8 +32,9 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+    const result = resetPasswordSchema.safeParse({ password });
+    if (!result.success) {
+      toast.error(result.error.errors[0]?.message || 'بيانات غير صالحة');
       return;
     }
     setLoading(true);

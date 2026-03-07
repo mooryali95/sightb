@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { motion } from 'framer-motion';
 import { FolderKanban } from 'lucide-react';
 import { toast } from 'sonner';
+import { portfolioSchema } from '@/lib/validations';
 
 export default function NewPortfolio() {
   const [searchParams] = useSearchParams();
@@ -23,10 +24,14 @@ export default function NewPortfolio() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !companyId) return;
+    const result = portfolioSchema.safeParse({ name, companyId, description: description || undefined });
+    if (!result.success) {
+      toast.error(result.error.errors[0]?.message || 'بيانات غير صالحة');
+      return;
+    }
     setLoading(true);
     try {
-      await addPortfolio({ name: name.trim(), companyId, description: description.trim() || undefined });
+      await addPortfolio({ name: result.data.name, companyId: result.data.companyId, description: result.data.description });
       navigate('/');
     } catch (error: any) {
       console.error('[add-portfolio]', error);

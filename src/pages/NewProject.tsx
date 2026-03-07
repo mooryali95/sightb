@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { motion } from 'framer-motion';
 import { Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
+import { projectSchema } from '@/lib/validations';
 
 export default function NewProject() {
   const [searchParams] = useSearchParams();
@@ -33,20 +34,34 @@ export default function NewProject() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !companyId || !contractValue) return;
+    const result = projectSchema.safeParse({
+      name,
+      companyId,
+      portfolioId: portfolioId && portfolioId !== 'none' ? portfolioId : undefined,
+      description: description || undefined,
+      contractValue: parseFloat(contractValue) || 0,
+      durationMonths: parseInt(durationMonths) || 4,
+      resourceCount: parseInt(resourceCount) || 1,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    });
+    if (!result.success) {
+      toast.error(result.error.errors[0]?.message || 'بيانات غير صالحة');
+      return;
+    }
     setLoading(true);
     try {
       await addProject({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        companyId,
-        portfolioId: portfolioId || undefined,
-        contractValue: parseFloat(contractValue),
+        name: result.data.name,
+        description: result.data.description,
+        companyId: result.data.companyId,
+        portfolioId: result.data.portfolioId,
+        contractValue: result.data.contractValue,
         currency,
-        startDate: startDate || new Date().toISOString().split('T')[0],
-        endDate: endDate || '',
-        durationMonths: parseInt(durationMonths) || 4,
-        resourceCount: parseInt(resourceCount) || 1,
+        startDate: result.data.startDate || new Date().toISOString().split('T')[0],
+        endDate: result.data.endDate || '',
+        durationMonths: result.data.durationMonths,
+        resourceCount: result.data.resourceCount,
         status: 'active',
       });
       navigate('/');
