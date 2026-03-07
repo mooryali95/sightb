@@ -13,7 +13,7 @@ export async function getUserId(): Promise<string> {
 export async function logDeletion(tableName: string, recordId: string, recordData: unknown, projectId?: string) {
   try {
     const userId = await getUserId();
-    await supabase.from('audit_log').insert({
+    await supabase.from('audit_log').insert([{
       user_id: userId,
       action: 'delete',
       table_name: tableName,
