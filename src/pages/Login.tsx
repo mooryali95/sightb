@@ -29,7 +29,8 @@ export default function Login() {
       if (error) throw error;
       navigate('/', { replace: true });
     } catch (error: any) {
-      toast.error(error.message || 'حدث خطأ');
+      console.error('[login]', error);
+      toast.error('بيانات الدخول غير صحيحة');
     } finally {
       setLoading(false);
     }
