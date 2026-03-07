@@ -11,7 +11,7 @@ import basserhLogo from '@/assets/basserh-logo.jpg';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [isSignUp, setIsSignUp] = useState(false);
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
