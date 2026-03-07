@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
+  CostBaseline, BaselineItem,
   type ExpenseCategory,
 } from '@/types/project';
 
@@ -12,6 +13,7 @@ interface AppState {
   budgetItems: BudgetItem[];
   expenses: Expense[];
   revenues: Revenue[];
+  baselines: CostBaseline[];
   loading: boolean;
 
   // Load all data
@@ -45,6 +47,12 @@ interface AppState {
   // Revenue
   addRevenue: (r: Omit<Revenue, 'id'>) => Promise<string>;
   deleteRevenue: (id: string) => Promise<void>;
+
+  // Baselines
+  createBaseline: (projectId: string, name: string) => Promise<string>;
+  deleteBaseline: (id: string) => Promise<void>;
+  setActiveBaseline: (id: string, projectId: string) => Promise<void>;
+  loadBaselines: (projectId: string) => Promise<CostBaseline[]>;
 }
 
 async function getUserId(): Promise<string> {
@@ -53,13 +61,14 @@ async function getUserId(): Promise<string> {
   return user.id;
 }
 
-export const useStore = create<AppState>()((set) => ({
+export const useStore = create<AppState>()((set, get) => ({
   companies: [],
   portfolios: [],
   projects: [],
   budgetItems: [],
   expenses: [],
   revenues: [],
+  baselines: [],
   loading: true,
 
   loadAll: async () => {
@@ -297,6 +306,133 @@ export const useStore = create<AppState>()((set) => ({
     if (error) throw error;
     set((s) => ({ revenues: s.revenues.filter((x) => x.id !== id) }));
   },
+
+  createBaseline: async (projectId, name) => {
+    const userId = await getUserId();
+    // Get current budget items for this project
+    const currentBudget = get().budgetItems.filter(b => b.projectId === projectId);
+    if (currentBudget.length === 0) throw new Error('لا توجد بنود موازنة لإنشاء خط أساس');
+
+    // Get next version number
+    const existingBaselines = get().baselines.filter(b => b.projectId === projectId);
+    const nextVersion = existingBaselines.length > 0
+      ? Math.max(...existingBaselines.map(b => b.version)) + 1
+      : 1;
+
+    const totalPlanned = currentBudget.reduce((s, b) => s + b.plannedAmount, 0);
+
+    // Deactivate existing baselines
+    if (existingBaselines.length > 0) {
+      await supabase.from('cost_baselines')
+        .update({ is_active: false })
+        .eq('project_id', projectId);
+    }
+
+    // Create baseline
+    const { data: bl, error: blErr } = await supabase.from('cost_baselines').insert({
+      project_id: projectId,
+      user_id: userId,
+      name,
+      version: nextVersion,
+      is_active: true,
+      total_planned: totalPlanned,
+    }).select().single();
+    if (blErr) throw blErr;
+
+    // Create baseline items (snapshot of current budget)
+    const itemsToInsert = currentBudget.map(b => ({
+      baseline_id: bl.id,
+      category: b.category,
+      description: b.description,
+      planned_amount: b.plannedAmount,
+      month: b.month || null,
+    }));
+
+    const { data: items, error: itemsErr } = await supabase
+      .from('baseline_items')
+      .insert(itemsToInsert)
+      .select();
+    if (itemsErr) throw itemsErr;
+
+    const mapped: CostBaseline = {
+      id: bl.id,
+      projectId: bl.project_id,
+      name: bl.name,
+      version: bl.version,
+      isActive: bl.is_active,
+      totalPlanned: Number(bl.total_planned),
+      createdAt: bl.created_at,
+      items: (items || []).map(mapBaselineItem),
+    };
+
+    set((s) => ({
+      baselines: [
+        mapped,
+        ...s.baselines.map(b => b.projectId === projectId ? { ...b, isActive: false } : b),
+      ],
+    }));
+    return mapped.id;
+  },
+
+  deleteBaseline: async (id) => {
+    const { error } = await supabase.from('cost_baselines').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ baselines: s.baselines.filter(b => b.id !== id) }));
+  },
+
+  setActiveBaseline: async (id, projectId) => {
+    // Deactivate all for project
+    await supabase.from('cost_baselines')
+      .update({ is_active: false })
+      .eq('project_id', projectId);
+    // Activate selected
+    const { error } = await supabase.from('cost_baselines')
+      .update({ is_active: true })
+      .eq('id', id);
+    if (error) throw error;
+    set((s) => ({
+      baselines: s.baselines.map(b =>
+        b.projectId === projectId
+          ? { ...b, isActive: b.id === id }
+          : b
+      ),
+    }));
+  },
+
+  loadBaselines: async (projectId) => {
+    const { data: bls, error } = await supabase
+      .from('cost_baselines')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('version', { ascending: false });
+    if (error) throw error;
+
+    const baselines: CostBaseline[] = [];
+    for (const bl of (bls || [])) {
+      const { data: items } = await supabase
+        .from('baseline_items')
+        .select('*')
+        .eq('baseline_id', bl.id);
+      baselines.push({
+        id: bl.id,
+        projectId: bl.project_id,
+        name: bl.name,
+        version: bl.version,
+        isActive: bl.is_active,
+        totalPlanned: Number(bl.total_planned),
+        createdAt: bl.created_at,
+        items: (items || []).map(mapBaselineItem),
+      });
+    }
+
+    set((s) => ({
+      baselines: [
+        ...s.baselines.filter(b => b.projectId !== projectId),
+        ...baselines,
+      ],
+    }));
+    return baselines;
+  },
 }));
 
 // Mappers from DB snake_case to app camelCase
@@ -333,4 +469,15 @@ function mapExpense(d: any): Expense {
 
 function mapRevenue(d: any): Revenue {
   return { id: d.id, projectId: d.project_id, description: d.description, amount: Number(d.amount), date: d.date, month: d.month };
+}
+
+function mapBaselineItem(d: any): BaselineItem {
+  return {
+    id: d.id,
+    baselineId: d.baseline_id,
+    category: d.category,
+    description: d.description,
+    plannedAmount: Number(d.planned_amount),
+    month: d.month || undefined,
+  };
 }

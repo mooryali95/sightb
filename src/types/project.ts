@@ -97,6 +97,26 @@ export interface Revenue {
   month: number;
 }
 
+export interface CostBaseline {
+  id: string;
+  projectId: string;
+  name: string;
+  version: number;
+  isActive: boolean;
+  totalPlanned: number;
+  createdAt: string;
+  items: BaselineItem[];
+}
+
+export interface BaselineItem {
+  id: string;
+  baselineId: string;
+  category: ExpenseCategory;
+  description: string;
+  plannedAmount: number;
+  month?: number;
+}
+
 export interface ProjectSummary {
   totalBudget: number;
   totalPlanned: number;
@@ -105,4 +125,18 @@ export interface ProjectSummary {
   netProfit: number;
   profitMargin: number;
   remaining: number;
+}
+
+export interface EVMMetrics {
+  pv: number; // Planned Value (cumulative baseline planned up to current month)
+  ev: number; // Earned Value (% complete × BAC)
+  ac: number; // Actual Cost
+  bac: number; // Budget at Completion (total baseline)
+  cv: number; // Cost Variance (EV - AC)
+  sv: number; // Schedule Variance (EV - PV)
+  cpi: number; // Cost Performance Index (EV / AC)
+  spi: number; // Schedule Performance Index (EV / PV)
+  eac: number; // Estimate at Completion (BAC / CPI)
+  etc: number; // Estimate to Complete (EAC - AC)
+  vac: number; // Variance at Completion (BAC - EAC)
 }
