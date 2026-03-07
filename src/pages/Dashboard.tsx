@@ -24,7 +24,7 @@ const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 
 
 const stagger = {
   container: { hidden: {}, show: { transition: { staggerChildren: 0.08 } } },
-  item: { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } } },
+  item: { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' as const } } },
 };
 
 export default function Dashboard() {
