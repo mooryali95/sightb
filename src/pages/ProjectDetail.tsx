@@ -121,7 +121,7 @@ export default function ProjectDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="expenses" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 max-w-lg">
+          <TabsList className="grid w-full grid-cols-5 max-w-2xl">
             <TabsTrigger value="expenses" className="gap-1.5 text-xs">
               <Receipt className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">المصروفات</span>
@@ -129,6 +129,10 @@ export default function ProjectDetail() {
             <TabsTrigger value="budget" className="gap-1.5 text-xs">
               <PiggyBank className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">الموازنة</span>
+            </TabsTrigger>
+            <TabsTrigger value="baseline" className="gap-1.5 text-xs">
+              <Baseline className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">خط الأساس</span>
             </TabsTrigger>
             <TabsTrigger value="revenue" className="gap-1.5 text-xs">
               <DollarSign className="w-3.5 h-3.5" />
@@ -148,6 +152,16 @@ export default function ProjectDetail() {
           {/* Budget Tab */}
           <TabsContent value="budget">
             <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} />
+          </TabsContent>
+
+          {/* Baseline Tab */}
+          <TabsContent value="baseline">
+            <BaselineSection
+              projectId={project.id}
+              durationMonths={project.durationMonths}
+              expenses={pExpenses}
+              budgetItems={pBudget}
+            />
           </TabsContent>
 
           {/* Revenue Tab */}
