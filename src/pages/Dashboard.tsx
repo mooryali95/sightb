@@ -61,9 +61,13 @@ export default function Dashboard() {
           /* Empty State */
           <div className="flex flex-col items-center justify-center py-24">
             <img src={basserhLogo} alt="بصيرة" className="w-24 h-24 rounded-2xl object-cover mb-6 shadow-lg" />
-            <h2 className="text-xl font-bold mb-2">مرحباً بك في بصيرة</h2>
+            <h2 className="text-xl font-bold mb-2">مرحباً بك في رؤية</h2>
             <p className="text-muted-foreground mb-2 text-center max-w-md">
               نظام إدارة المحافظ والمشاريع المالية
+            </p>
+            <p className="text-muted-foreground mb-8 text-center max-w-md text-sm">
+              ابدأ بإضافة شركة، ثم أنشئ محافظ ومشاريع لتتبع الميزانيات والمصروفات والربحية
+            </p>
             </p>
             <p className="text-muted-foreground mb-8 text-center max-w-md text-sm">
               ابدأ بإضافة شركة، ثم أنشئ محافظ ومشاريع لتتبع الميزانيات والمصروفات والربحية
