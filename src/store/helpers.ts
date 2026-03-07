@@ -20,7 +20,7 @@ export async function logDeletion(tableName: string, recordId: string, recordDat
       record_id: recordId,
       record_data: recordData as Record<string, unknown>,
       project_id: projectId || null,
-    });
+    }]);
   } catch (e) {
     console.warn('Audit log failed:', e);
   }
