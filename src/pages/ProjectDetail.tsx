@@ -193,7 +193,7 @@ export default function ProjectDetail() {
 
           {/* Expenses Tab */}
           <TabsContent value="expenses">
-            <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} />
+            <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={project.contractValue} />
           </TabsContent>
 
           {/* Custody Tab */}
@@ -253,8 +253,8 @@ export default function ProjectDetail() {
 
 // ---- Sub-components ----
 
-function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems }: {
-  projectId: string; durationMonths: number; expenses: any[]; resources: Resource[]; custodies: Custody[]; budgetItems: BudgetItem[];
+function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue }: {
+  projectId: string; durationMonths: number; expenses: any[]; resources: Resource[]; custodies: Custody[]; budgetItems: BudgetItem[]; revenues: any[]; contractValue: number;
 }) {
   const { addExpense, deleteExpense } = useStore();
   const [open, setOpen] = useState(false);
@@ -307,8 +307,45 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
     }
   });
 
+  const totalExpenses = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+  const totalRevenue = revenues.reduce((s: number, r: any) => s + r.amount, 0);
+  const spendFromRevenue = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0;
+  const spendFromContract = contractValue > 0 ? (totalExpenses / contractValue) * 100 : 0;
+
   return (
     <div className="space-y-4">
+      {/* Spend ratios */}
+      <div className="stat-card space-y-3">
+        <div>
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <span>نسبة ما صُرف من قيمة العقد ({spendFromContract.toFixed(1)}%)</span>
+            <span>{formatCurrency(totalExpenses)} / {formatCurrency(contractValue)}</span>
+          </div>
+          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all bg-primary"
+              style={{ width: `${Math.min(spendFromContract, 100)}%` }}
+            />
+          </div>
+        </div>
+        {totalRevenue > 0 && (
+          <div>
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>نسبة ما صُرف من الإيراد ({spendFromRevenue.toFixed(1)}%)</span>
+              <span>{formatCurrency(totalExpenses)} / {formatCurrency(totalRevenue)}</span>
+            </div>
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(spendFromRevenue, 100)}%`,
+                  backgroundColor: spendFromRevenue > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
       {/* Resource Spending Summary */}
       {resourceSpendMap.size > 0 && (
         <div className="stat-card">
@@ -602,7 +639,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
           {/* Budget utilization bar */}
           <div className="mb-4">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>استخدام الميزانية ({budgetUtilization.toFixed(1)}%)</span>
+              <span>نسبة ما خُطط للصرف من الموازنة ({budgetUtilization.toFixed(1)}%)</span>
               <span>{formatCurrency(totalPlanned)} / {formatCurrency(contractValue)}</span>
             </div>
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
@@ -617,7 +654,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
           {totalActual > 0 && (
             <div className="mb-4">
               <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>نسبة الصرف الفعلي ({spendRate.toFixed(1)}%)</span>
+                <span>نسبة ما صُرف من الموازنة المخططة ({spendRate.toFixed(1)}%)</span>
                 <span>{formatCurrency(totalActual)} / {formatCurrency(totalPlanned)}</span>
               </div>
               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
