@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
+import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ProjectStatus } from '@/types/project';
 import {
   Building2, FolderKanban, Briefcase, TrendingUp, Plus,
   ArrowLeft, DollarSign, Filter, Search, X,
@@ -77,11 +78,12 @@ export default function Dashboard() {
     })
     .filter((d) => d.value > 0);
 
-  const statusData = [
-    { name: 'نشط', value: filteredProjects.filter((p) => p.status === 'active').length },
-    { name: 'مكتمل', value: filteredProjects.filter((p) => p.status === 'completed').length },
-    { name: 'معلق', value: filteredProjects.filter((p) => p.status === 'on-hold').length },
-  ].filter((d) => d.value > 0);
+  const statusData = Object.entries(PROJECT_STATUS_LABELS)
+    .map(([key, label]) => ({
+      name: label,
+      value: filteredProjects.filter((p) => p.status === key).length,
+    }))
+    .filter((d) => d.value > 0);
 
   const hasData = companies.length > 0;
 
@@ -181,10 +183,9 @@ export default function Dashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">جميع الحالات</SelectItem>
-                      <SelectItem value="active">نشط</SelectItem>
-                      <SelectItem value="completed">مكتمل</SelectItem>
-                      <SelectItem value="on-hold">معلق</SelectItem>
-                      <SelectItem value="cancelled">ملغي</SelectItem>
+                      {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 
@@ -337,13 +338,8 @@ export default function Dashboard() {
                           <h4 className="text-sm font-semibold">{project.name}</h4>
                           <p className="text-xs text-muted-foreground">{company?.name}</p>
                         </div>
-                        <span className={
-                          project.status === 'active' ? 'badge-gold' :
-                          project.status === 'completed' ? 'badge-profit' : 'badge-warning'
-                        }>
-                          {project.status === 'active' ? 'نشط' :
-                           project.status === 'completed' ? 'مكتمل' :
-                           project.status === 'on-hold' ? 'معلق' : 'ملغي'}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
+                          {PROJECT_STATUS_LABELS[project.status]}
                         </span>
                       </div>
 
@@ -472,13 +468,8 @@ export default function Dashboard() {
                               </span>
                             </td>
                             <td className="hidden sm:table-cell">
-                              <span className={
-                                project.status === 'active' ? 'badge-gold' :
-                                project.status === 'completed' ? 'badge-profit' : 'badge-warning'
-                              }>
-                                {project.status === 'active' ? 'نشط' :
-                                 project.status === 'completed' ? 'مكتمل' :
-                                 project.status === 'on-hold' ? 'معلق' : 'ملغي'}
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
+                                {PROJECT_STATUS_LABELS[project.status]}
                               </span>
                             </td>
                             <td>
