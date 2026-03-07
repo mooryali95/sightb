@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { AppLayout } from '@/components/AppLayout';
@@ -33,7 +33,10 @@ export default function ProjectDetail() {
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues,
     addBudgetItem, deleteBudgetItem, addExpense, deleteExpense, addRevenue, deleteRevenue,
+    loadAll,
   } = useStore();
+
+  useEffect(() => { loadAll(); }, []);
 
   const project = projects.find((p) => p.id === id);
   if (!project) {
@@ -205,9 +208,9 @@ function ExpensesSection({ projectId, durationMonths, expenses }: {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [responsible, setResponsible] = useState('');
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!description.trim() || !amount) return;
-    addExpense({
+    await addExpense({
       projectId,
       category,
       description: description.trim(),
@@ -333,9 +336,9 @@ function BudgetSection({ projectId, budgetItems, expenses }: {
   const [description, setDescription] = useState('');
   const [plannedAmount, setPlannedAmount] = useState('');
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!description.trim() || !plannedAmount) return;
-    addBudgetItem({
+    await addBudgetItem({
       projectId,
       category,
       description: description.trim(),
@@ -461,9 +464,9 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
   const [month, setMonth] = useState('1');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!description.trim() || !amount) return;
-    addRevenue({
+    await addRevenue({
       projectId,
       description: description.trim(),
       amount: parseFloat(amount),
