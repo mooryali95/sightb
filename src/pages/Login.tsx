@@ -1,13 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { motion } from 'framer-motion';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, LogIn, ShieldCheck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import basserhLogo from '@/assets/basserh-logo.jpg';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+
+function getDeviceFingerprint(): string {
+  const key = 'rouya_device_fp';
+  let fp = localStorage.getItem(key);
+  if (!fp) {
+    fp = crypto.randomUUID();
+    localStorage.setItem(key, fp);
+  }
+  return fp;
+}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,6 +27,36 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+
+  // OTP state
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  const checkAndSendOtp = async () => {
+    const fingerprint = getDeviceFingerprint();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return false;
+
+    const res = await supabase.functions.invoke('admin-otp', {
+      body: { action: 'check', fingerprint },
+    });
+
+    if (res.error) {
+      console.error('[otp-check]', res.error);
+      return false; // allow login on error
+    }
+
+    return res.data?.requiresOtp === true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,13 +68,73 @@ export default function Login() {
         password,
       });
       if (error) throw error;
-      navigate('/', { replace: true });
+
+      // Check if OTP is required (admin on untrusted device)
+      const needsOtp = await checkAndSendOtp();
+      if (needsOtp) {
+        setOtpRequired(true);
+        setResendCooldown(60);
+        toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (error: any) {
       console.error('[login]', error);
       toast.error('بيانات الدخول غير صحيحة');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpCode.length !== 6) return;
+    setOtpLoading(true);
+    try {
+      const fingerprint = getDeviceFingerprint();
+      const res = await supabase.functions.invoke('admin-otp', {
+        body: { action: 'verify', code: otpCode, fingerprint },
+      });
+
+      if (res.error || !res.data?.verified) {
+        toast.error(res.data?.error || 'الرمز غير صحيح');
+        setOtpCode('');
+        return;
+      }
+
+      toast.success('تم التحقق بنجاح');
+      navigate('/', { replace: true });
+    } catch (error: any) {
+      console.error('[otp-verify]', error);
+      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    setOtpLoading(true);
+    try {
+      const fingerprint = getDeviceFingerprint();
+      await supabase.functions.invoke('admin-otp', {
+        body: { action: 'check', fingerprint },
+      });
+      setResendCooldown(60);
+      setOtpCode('');
+      toast.success('تم إرسال رمز جديد');
+    } catch (error) {
+      console.error('[otp-resend]', error);
+      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleCancelOtp = async () => {
+    await supabase.auth.signOut();
+    setOtpRequired(false);
+    setOtpCode('');
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -73,60 +174,127 @@ export default function Login() {
         </div>
 
         <div className="stat-card">
-          {isForgotPassword ? (
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <h2 className="text-lg font-semibold text-center">استعادة كلمة المرور</h2>
-              <div className="space-y-2">
-                <Label>البريد الإلكتروني</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'جاري الإرسال...' : 'إرسال رابط الاستعادة'}
-              </Button>
-              <Button type="button" variant="ghost" className="w-full text-sm" onClick={() => setIsForgotPassword(false)}>
-                العودة لتسجيل الدخول
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <h2 className="text-lg font-semibold text-center">تسجيل الدخول</h2>
-              <div className="space-y-2">
-                <Label>البريد الإلكتروني</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
-              </div>
-              <div className="space-y-2">
-                <Label>كلمة المرور</Label>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    dir="ltr"
-                    required
-                    minLength={6}
-                  />
+          <AnimatePresence mode="wait">
+            {otpRequired ? (
+              <motion.form
+                key="otp"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                onSubmit={handleVerifyOtp}
+                className="space-y-5"
+              >
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                    <ShieldCheck className="w-6 h-6 text-primary" />
+                  </div>
+                  <h2 className="text-lg font-semibold">التحقق بخطوتين</h2>
+                  <p className="text-sm text-muted-foreground">أدخل الرمز المرسل إلى بريدك الإلكتروني</p>
+                </div>
+
+                <div className="flex justify-center" dir="ltr">
+                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+
+                <Button type="submit" className="w-full gap-2" disabled={otpLoading || otpCode.length !== 6}>
+                  {otpLoading ? 'جاري التحقق...' : (
+                    <><ShieldCheck className="w-4 h-4" /> تأكيد الرمز</>
+                  )}
+                </Button>
+
+                <div className="flex items-center justify-between">
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={handleResendOtp}
+                    disabled={resendCooldown > 0 || otpLoading}
+                    className="text-xs text-primary hover:underline disabled:opacity-50 disabled:no-underline flex items-center gap-1"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    <RefreshCw className="w-3 h-3" />
+                    {resendCooldown > 0 ? `إعادة الإرسال (${resendCooldown}ث)` : 'إعادة إرسال الرمز'}
+                  </button>
+                  <button type="button" onClick={handleCancelOtp} className="text-xs text-muted-foreground hover:underline">
+                    إلغاء
                   </button>
                 </div>
-              </div>
+              </motion.form>
+            ) : isForgotPassword ? (
+              <motion.form
+                key="forgot"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                onSubmit={handleForgotPassword}
+                className="space-y-4"
+              >
+                <h2 className="text-lg font-semibold text-center">استعادة كلمة المرور</h2>
+                <div className="space-y-2">
+                  <Label>البريد الإلكتروني</Label>
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'جاري الإرسال...' : 'إرسال رابط الاستعادة'}
+                </Button>
+                <Button type="button" variant="ghost" className="w-full text-sm" onClick={() => setIsForgotPassword(false)}>
+                  العودة لتسجيل الدخول
+                </Button>
+              </motion.form>
+            ) : (
+              <motion.form
+                key="login"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                onSubmit={handleSubmit}
+                className="space-y-4"
+              >
+                <h2 className="text-lg font-semibold text-center">تسجيل الدخول</h2>
+                <div className="space-y-2">
+                  <Label>البريد الإلكتروني</Label>
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>كلمة المرور</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      dir="ltr"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
 
-              <button type="button" onClick={() => setIsForgotPassword(true)} className="text-xs text-primary hover:underline">
-                نسيت كلمة المرور؟
-              </button>
+                <button type="button" onClick={() => setIsForgotPassword(true)} className="text-xs text-primary hover:underline">
+                  نسيت كلمة المرور؟
+                </button>
 
-              <Button type="submit" className="w-full gap-2" disabled={loading}>
-                {loading ? 'جاري التحميل...' : (
-                  <><LogIn className="w-4 h-4" /> تسجيل الدخول</>
-                )}
-              </Button>
-            </form>
-          )}
+                <Button type="submit" className="w-full gap-2" disabled={loading}>
+                  {loading ? 'جاري التحميل...' : (
+                    <><LogIn className="w-4 h-4" /> تسجيل الدخول</>
+                  )}
+                </Button>
+              </motion.form>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     </div>
