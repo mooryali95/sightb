@@ -328,6 +328,51 @@ export const useStore = create<AppState>()((set, get) => ({
     set((s) => ({ revenues: s.revenues.filter((x) => x.id !== id) }));
   },
 
+  // Resources
+  addResource: async (r) => {
+    const userId = await getUserId();
+    const { data, error } = await supabase.from('resources').insert({
+      user_id: userId,
+      project_id: r.projectId,
+      name: r.name,
+      role: r.role || null,
+      monthly_cost: r.monthlyCost,
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapResource(data);
+    set((s) => ({ resources: [mapped, ...s.resources] }));
+    return mapped.id;
+  },
+
+  deleteResource: async (id) => {
+    const { error } = await supabase.from('resources').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ resources: s.resources.filter((x) => x.id !== id) }));
+  },
+
+  // Custodies
+  addCustody: async (c) => {
+    const userId = await getUserId();
+    const { data, error } = await supabase.from('custodies').insert({
+      user_id: userId,
+      project_id: c.projectId || null,
+      company_id: c.companyId || null,
+      resource_name: c.resourceName,
+      amount: c.amount,
+      notes: c.notes || null,
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapCustody(data, get().expenses);
+    set((s) => ({ custodies: [mapped, ...s.custodies] }));
+    return mapped.id;
+  },
+
+  deleteCustody: async (id) => {
+    const { error } = await supabase.from('custodies').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ custodies: s.custodies.filter((x) => x.id !== id) }));
+  },
+
   createBaseline: async (projectId, name) => {
     const userId = await getUserId();
     // Get current budget items for this project
