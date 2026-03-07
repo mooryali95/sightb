@@ -38,7 +38,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
-          <span className="font-bold text-sm">بصيرة</span>
+          <span className="font-bold text-sm">رؤية</span>
         </div>
 
         <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto">

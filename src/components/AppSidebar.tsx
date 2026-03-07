@@ -47,8 +47,8 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           <div className="flex items-center gap-3">
             <img src={basserhLogo} alt="بصيرة" className="w-9 h-9 rounded-lg object-cover" />
             <div>
-              <span className="font-bold text-sidebar-foreground text-sm block">بصيرة</span>
-              <span className="text-[10px] text-sidebar-foreground/40">إدارة المحافظ والمشاريع</span>
+              <span className="font-bold text-sidebar-foreground text-sm block">رؤية</span>
+              <span className="text-[10px] text-sidebar-foreground/40">نظام إدارة المحافظ والمشاريع</span>
             </div>
           </div>
         )}
