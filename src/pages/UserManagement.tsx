@@ -68,9 +68,9 @@ export default function UserManagement() {
   const loadData = async () => {
     setLoading(true);
     const [profilesRes, rolesRes, invitesRes] = await Promise.all([
-      supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-      supabase.from('user_roles').select('*'),
-      supabase.from('user_invites').select('*').order('created_at', { ascending: false }),
+      (supabase as any).from('profiles').select('*').order('created_at', { ascending: false }),
+      (supabase as any).from('user_roles').select('*'),
+      (supabase as any).from('user_invites').select('*').order('created_at', { ascending: false }),
     ]);
 
     setProfiles(
