@@ -331,6 +331,18 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
   const [custodyId, setCustodyId] = useState<string>('');
   const [budgetItemId, setBudgetItemId] = useState<string>('');
 
+  // Search & filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterMonth, setFilterMonth] = useState<string>('all');
+
+  const filteredExpenses = expenses.filter((exp: any) => {
+    const matchesSearch = !searchQuery || exp.description?.toLowerCase().includes(searchQuery.toLowerCase()) || exp.responsible?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = filterCategory === 'all' || exp.category === filterCategory;
+    const matchesMonth = filterMonth === 'all' || String(exp.month) === filterMonth;
+    return matchesSearch && matchesCategory && matchesMonth;
+  });
+
   const matchingBudgetItems = budgetItems.filter(b => b.category === category);
 
   const resetForm = () => {
@@ -590,8 +602,43 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
           </Dialog>
         </div>
 
+        {/* Search & Filter Bar */}
+        {expenses.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            <Input
+              placeholder="بحث بالوصف أو المسؤول..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-xs h-8 text-xs"
+            />
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="كل الفئات" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل الفئات</SelectItem>
+                {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterMonth} onValueChange={setFilterMonth}>
+              <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue placeholder="كل الأشهر" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل الأشهر</SelectItem>
+                {Array.from({ length: durationMonths }, (_, i) => (
+                  <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(searchQuery || filterCategory !== 'all' || filterMonth !== 'all') && (
+              <span className="text-xs text-muted-foreground self-center">({filteredExpenses.length} نتيجة)</span>
+            )}
+          </div>
+        )}
+
         {expenses.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">لا توجد مصروفات مسجلة بعد</p>
+        ) : filteredExpenses.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">لا توجد نتائج مطابقة للبحث</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table">
@@ -609,7 +656,7 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                 </tr>
               </thead>
               <tbody>
-                {expenses.map((exp) => {
+                {filteredExpenses.map((exp) => {
                   const resource = resources.find(r => r.id === exp.resourceId);
                   const custody = custodies.find(c => c.id === exp.custodyId);
                   const budgetItem = budgetItems.find(b => b.id === exp.budgetItemId);
@@ -1028,6 +1075,16 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
     setOpen(false);
   };
 
+  // Search & filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterMonth, setFilterMonth] = useState<string>('all');
+
+  const filteredRevenues = revenues.filter((rev: any) => {
+    const matchesSearch = !searchQuery || rev.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesMonth = filterMonth === 'all' || String(rev.month) === filterMonth;
+    return matchesSearch && matchesMonth;
+  });
+
   const total = revenues.reduce((s: number, r: any) => s + r.amount, 0);
 
   return (
@@ -1080,8 +1137,34 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
         </Dialog>
       </div>
 
+      {/* Search & Filter Bar */}
+      {revenues.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          <Input
+            placeholder="بحث بالوصف..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-xs h-8 text-xs"
+          />
+          <Select value={filterMonth} onValueChange={setFilterMonth}>
+            <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue placeholder="كل الأشهر" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الأشهر</SelectItem>
+              {Array.from({ length: durationMonths }, (_, i) => (
+                <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(searchQuery || filterMonth !== 'all') && (
+            <span className="text-xs text-muted-foreground self-center">({filteredRevenues.length} نتيجة)</span>
+          )}
+        </div>
+      )}
+
       {revenues.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-8">لا توجد إيرادات مسجلة</p>
+      ) : filteredRevenues.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">لا توجد نتائج مطابقة للبحث</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -1095,7 +1178,7 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
               </tr>
             </thead>
             <tbody>
-              {revenues.map((rev: any) => (
+              {filteredRevenues.map((rev: any) => (
                 <tr key={rev.id}>
                   <td>{rev.description}</td>
                   <td className="font-mono text-sm profit-text">{formatCurrency(rev.amount)}</td>
