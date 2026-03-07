@@ -142,7 +142,7 @@ export default function UserManagement() {
   };
 
   const deleteRole = async (id: string) => {
-    const { error } = await supabase.from('user_roles').delete().eq('id', id);
+    const { error } = await (supabase as any).from('user_roles').delete().eq('id', id);
     if (error) toast.error('حدث خطأ');
     else loadData();
   };
