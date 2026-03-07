@@ -238,6 +238,7 @@ export const useStore = create<AppState>()((set, get) => ({
       description: b.description,
       planned_amount: b.plannedAmount,
       month: b.month || null,
+      resource_id: b.resourceId || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapBudgetItem(data);
@@ -251,6 +252,7 @@ export const useStore = create<AppState>()((set, get) => ({
     if (b.description !== undefined) updates.description = b.description;
     if (b.plannedAmount !== undefined) updates.planned_amount = b.plannedAmount;
     if (b.month !== undefined) updates.month = b.month;
+    if (b.resourceId !== undefined) updates.resource_id = b.resourceId;
     const { error } = await supabase.from('budget_items').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ budgetItems: s.budgetItems.map((x) => (x.id === id ? { ...x, ...b } : x)) }));
@@ -275,6 +277,8 @@ export const useStore = create<AppState>()((set, get) => ({
       month: e.month,
       responsible: e.responsible || null,
       notes: e.notes || null,
+      resource_id: e.resourceId || null,
+      custody_id: e.custodyId || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapExpense(data);
