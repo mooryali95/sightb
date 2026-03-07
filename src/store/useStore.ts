@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
-  CostBaseline, BaselineItem,
+  CostBaseline, BaselineItem, Resource, Custody,
   type ExpenseCategory,
 } from '@/types/project';
 
@@ -14,9 +14,10 @@ interface AppState {
   expenses: Expense[];
   revenues: Revenue[];
   baselines: CostBaseline[];
+  resources: Resource[];
+  custodies: Custody[];
   loading: boolean;
 
-  // Load all data
   loadAll: () => Promise<void>;
 
   // Company
@@ -48,6 +49,14 @@ interface AppState {
   addRevenue: (r: Omit<Revenue, 'id'>) => Promise<string>;
   deleteRevenue: (id: string) => Promise<void>;
 
+  // Resources
+  addResource: (r: Omit<Resource, 'id' | 'createdAt'>) => Promise<string>;
+  deleteResource: (id: string) => Promise<void>;
+
+  // Custodies
+  addCustody: (c: Omit<Custody, 'id' | 'createdAt' | 'spent' | 'remaining'>) => Promise<string>;
+  deleteCustody: (id: string) => Promise<void>;
+
   // Baselines
   createBaseline: (projectId: string, name: string) => Promise<string>;
   deleteBaseline: (id: string) => Promise<void>;
@@ -69,26 +78,34 @@ export const useStore = create<AppState>()((set, get) => ({
   expenses: [],
   revenues: [],
   baselines: [],
+  resources: [],
+  custodies: [],
   loading: true,
 
   loadAll: async () => {
     set({ loading: true });
-    const [companies, portfolios, projects, budgetItems, expenses, revenues] = await Promise.all([
+    const [companies, portfolios, projects, budgetItems, expenses, revenues, resources, custodies] = await Promise.all([
       supabase.from('companies').select('*').order('created_at', { ascending: false }),
       supabase.from('portfolios').select('*').order('created_at', { ascending: false }),
       supabase.from('projects').select('*').order('created_at', { ascending: false }),
       supabase.from('budget_items').select('*').order('created_at', { ascending: false }),
       supabase.from('expenses').select('*').order('created_at', { ascending: false }),
       supabase.from('revenues').select('*').order('created_at', { ascending: false }),
+      supabase.from('resources').select('*').order('created_at', { ascending: false }),
+      supabase.from('custodies').select('*').order('created_at', { ascending: false }),
     ]);
+
+    const expenseList = (expenses.data || []).map(mapExpense);
 
     set({
       companies: (companies.data || []).map(mapCompany),
       portfolios: (portfolios.data || []).map(mapPortfolio),
       projects: (projects.data || []).map(mapProject),
       budgetItems: (budgetItems.data || []).map(mapBudgetItem),
-      expenses: (expenses.data || []).map(mapExpense),
+      expenses: expenseList,
       revenues: (revenues.data || []).map(mapRevenue),
+      resources: (resources.data || []).map(mapResource),
+      custodies: (custodies.data || []).map((c: any) => mapCustody(c, expenseList)),
       loading: false,
     });
   },
