@@ -979,23 +979,52 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
 function RevenueSection({ projectId, revenues, durationMonths }: {
   projectId: string; revenues: any[]; durationMonths: number;
 }) {
-  const { addRevenue, deleteRevenue } = useStore();
+  const { addRevenue, deleteRevenue, updateRevenue } = useStore();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [month, setMonth] = useState('1');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setEditingId(null);
+    setDescription('');
+    setAmount('');
+    setMonth('1');
+    setDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const openEdit = (rev: any) => {
+    setEditingId(rev.id);
+    setDescription(rev.description);
+    setAmount(String(rev.amount));
+    setMonth(String(rev.month));
+    setDate(rev.date);
+    setOpen(true);
+  };
+
+  const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
-    await addRevenue({
-      projectId,
-      description: description.trim(),
-      amount: parseFloat(amount),
-      date,
-      month: parseInt(month),
-    });
-    setDescription(''); setAmount('');
+    if (editingId) {
+      await updateRevenue(editingId, {
+        description: description.trim(),
+        amount: parseFloat(amount),
+        date,
+        month: parseInt(month),
+      });
+      toast.success('تم تعديل الإيراد');
+    } else {
+      await addRevenue({
+        projectId,
+        description: description.trim(),
+        amount: parseFloat(amount),
+        date,
+        month: parseInt(month),
+      });
+      toast.success('تمت إضافة الإيراد');
+    }
+    resetForm();
     setOpen(false);
   };
 
@@ -1008,7 +1037,7 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
           <h3 className="text-sm font-semibold">الإيرادات</h3>
           <p className="text-xs text-muted-foreground">الإجمالي: {formatCurrency(total)}</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
@@ -1017,7 +1046,7 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>إضافة إيراد</DialogTitle>
+              <DialogTitle>{editingId ? 'تعديل الإيراد' : 'إضافة إيراد'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
@@ -1045,7 +1074,7 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
                 <Label>التاريخ</Label>
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </div>
-              <Button onClick={handleAdd} className="w-full">إضافة</Button>
+              <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -1073,9 +1102,14 @@ function RevenueSection({ projectId, revenues, durationMonths }: {
                   <td className="hidden sm:table-cell">شهر {rev.month}</td>
                   <td className="text-muted-foreground text-xs hidden sm:table-cell">{rev.date}</td>
                   <td>
-                    <Button variant="ghost" size="icon" onClick={() => deleteRevenue(rev.id)}>
-                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(rev)}>
+                        <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteRevenue(rev.id)}>
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
