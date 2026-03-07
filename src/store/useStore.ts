@@ -159,8 +159,8 @@ export const useStore = create<AppState>()((set, get) => ({
   // ---- Company slice ----
   addCompany: async (c) => {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('companies').insert({
-      user_id: userId, name: c.name, description: c.description || null, logo: c.logo || null,
+    const { data, error } = await (supabase as any).from('companies').insert({
+      user_id: userId, name: c.name, description: c.description || null, logo: c.logo || null, status: 'active',
     }).select().single();
     if (error) throw error;
     const mapped = mapCompany(data);

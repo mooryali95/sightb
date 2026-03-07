@@ -29,7 +29,7 @@ export async function logDeletion(tableName: string, recordId: string, recordDat
 
 // ---- Mappers ----
 export function mapCompany(d: Tables<'companies'>): Company {
-  return { id: d.id, name: d.name, description: d.description || undefined, logo: d.logo || undefined, createdAt: d.created_at };
+  return { id: d.id, name: d.name, description: d.description || undefined, logo: d.logo || undefined, status: (d as any).status || 'active', createdAt: d.created_at };
 }
 
 export function mapPortfolio(d: Tables<'portfolios'>): Portfolio {
