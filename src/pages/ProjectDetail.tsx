@@ -318,8 +318,9 @@ export default function ProjectDetail() {
 function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue }: {
   projectId: string; durationMonths: number; expenses: any[]; resources: Resource[]; custodies: Custody[]; budgetItems: BudgetItem[]; revenues: any[]; contractValue: number;
 }) {
-  const { addExpense, deleteExpense } = useStore();
+  const { addExpense, deleteExpense, updateExpense } = useStore();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -330,36 +331,72 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
   const [custodyId, setCustodyId] = useState<string>('');
   const [budgetItemId, setBudgetItemId] = useState<string>('');
 
-  // Filter budget items matching current category
   const matchingBudgetItems = budgetItems.filter(b => b.category === category);
 
-  const handleAdd = async () => {
-    if (!description.trim() || !amount) return;
-    await addExpense({
-      projectId,
-      category,
-      description: description.trim(),
-      amount: parseFloat(amount),
-      date,
-      month: parseInt(month),
-      responsible: responsible.trim() || undefined,
-      resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
-      custodyId: custodyId && custodyId !== 'none' ? custodyId : undefined,
-      budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : undefined,
-    });
-    setDescription(''); setAmount(''); setResponsible(''); setResourceId(''); setCustodyId(''); setBudgetItemId('');
-    setOpen(false);
-    toast.success('تمت إضافة المصروف');
+  const resetForm = () => {
+    setEditingId(null);
+    setCategory('salary');
+    setDescription('');
+    setAmount('');
+    setMonth('1');
+    setDate(new Date().toISOString().split('T')[0]);
+    setResponsible('');
+    setResourceId('');
+    setCustodyId('');
+    setBudgetItemId('');
   };
 
-  // Responsible summary
+  const openEdit = (exp: any) => {
+    setEditingId(exp.id);
+    setCategory(exp.category);
+    setDescription(exp.description);
+    setAmount(String(exp.amount));
+    setMonth(String(exp.month));
+    setDate(exp.date);
+    setResponsible(exp.responsible || '');
+    setResourceId(exp.resourceId || '');
+    setCustodyId(exp.custodyId || '');
+    setBudgetItemId(exp.budgetItemId || '');
+    setOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!description.trim() || !amount) return;
+    if (editingId) {
+      await updateExpense(editingId, {
+        category,
+        description: description.trim(),
+        amount: parseFloat(amount),
+        date,
+        month: parseInt(month),
+        responsible: responsible.trim() || undefined,
+      });
+      toast.success('تم تعديل المصروف');
+    } else {
+      await addExpense({
+        projectId,
+        category,
+        description: description.trim(),
+        amount: parseFloat(amount),
+        date,
+        month: parseInt(month),
+        responsible: responsible.trim() || undefined,
+        resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
+        custodyId: custodyId && custodyId !== 'none' ? custodyId : undefined,
+        budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : undefined,
+      });
+      toast.success('تمت إضافة المصروف');
+    }
+    resetForm();
+    setOpen(false);
+  };
+
   const responsibleMap = new Map<string, number>();
   expenses.forEach((e: any) => {
     const key = e.responsible || 'غير محدد';
     responsibleMap.set(key, (responsibleMap.get(key) || 0) + e.amount);
   });
 
-  // Resource spending summary
   const resourceSpendMap = new Map<string, number>();
   expenses.forEach((e: any) => {
     if (e.resourceId) {
@@ -441,7 +478,7 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
       <div className="stat-card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold">سجل المصروفات</h3>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5">
                 <Plus className="w-3.5 h-3.5" />
@@ -450,7 +487,7 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>إضافة مصروف جديد</DialogTitle>
+                <DialogTitle>{editingId ? 'تعديل المصروف' : 'إضافة مصروف جديد'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
                 <div className="space-y-2">
@@ -466,7 +503,7 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                 </div>
 
                 {/* Link to budget item */}
-                {matchingBudgetItems.length > 0 && (
+                {!editingId && matchingBudgetItems.length > 0 && (
                   <div className="space-y-2">
                     <Label>ربط ببند الموازنة <span className="text-muted-foreground text-xs">(مهم للتتبع)</span></Label>
                     <Select value={budgetItemId} onValueChange={setBudgetItemId}>
@@ -517,8 +554,8 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                     <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} placeholder="اختياري" />
                   </div>
                 </div>
-                {/* Resource selection */}
-                {resources.length > 0 && (
+                {/* Resource selection - only for new */}
+                {!editingId && resources.length > 0 && (
                   <div className="space-y-2">
                     <Label>المورد (اختياري)</Label>
                     <Select value={resourceId} onValueChange={setResourceId}>
@@ -532,8 +569,8 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                     </Select>
                   </div>
                 )}
-                {/* Custody selection */}
-                {custodies.length > 0 && (
+                {/* Custody selection - only for new */}
+                {!editingId && custodies.length > 0 && (
                   <div className="space-y-2">
                     <Label>خصم من عهدة (اختياري)</Label>
                     <Select value={custodyId} onValueChange={setCustodyId}>
@@ -547,7 +584,7 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                     </Select>
                   </div>
                 )}
-                <Button onClick={handleAdd} className="w-full">إضافة</Button>
+                <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -587,9 +624,14 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                       <td className="text-muted-foreground hidden lg:table-cell">{exp.responsible || '—'}</td>
                       <td className="hidden lg:table-cell text-xs">{custody?.resourceName || '—'}</td>
                       <td>
-                        <Button variant="ghost" size="icon" onClick={() => deleteExpense(exp.id)}>
-                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                        </Button>
+                        <div className="flex items-center gap-0.5">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(exp)}>
+                            <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteExpense(exp.id)}>
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
