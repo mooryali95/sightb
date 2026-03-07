@@ -13,6 +13,7 @@ interface AppState {
   budgetItems: BudgetItem[];
   expenses: Expense[];
   revenues: Revenue[];
+  baselines: CostBaseline[];
   loading: boolean;
 
   // Load all data
@@ -46,6 +47,12 @@ interface AppState {
   // Revenue
   addRevenue: (r: Omit<Revenue, 'id'>) => Promise<string>;
   deleteRevenue: (id: string) => Promise<void>;
+
+  // Baselines
+  createBaseline: (projectId: string, name: string) => Promise<string>;
+  deleteBaseline: (id: string) => Promise<void>;
+  setActiveBaseline: (id: string, projectId: string) => Promise<void>;
+  loadBaselines: (projectId: string) => Promise<CostBaseline[]>;
 }
 
 async function getUserId(): Promise<string> {
