@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
+  CostBaseline, BaselineItem,
   type ExpenseCategory,
 } from '@/types/project';
 
