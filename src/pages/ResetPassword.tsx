@@ -42,7 +42,8 @@ export default function ResetPassword() {
       toast.success('تم تغيير كلمة المرور بنجاح');
       navigate('/', { replace: true });
     } catch (error: any) {
-      toast.error(error.message || 'حدث خطأ');
+      console.error('[reset-password]', error);
+      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
       setLoading(false);
     }
