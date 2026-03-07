@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectSchema } from '@/lib/validations';
+import { PROJECT_STATUS_LABELS, type ProjectStatus } from '@/types/project';
 
 export default function NewProject() {
   const [searchParams] = useSearchParams();
@@ -62,7 +63,7 @@ export default function NewProject() {
         endDate: result.data.endDate || '',
         durationMonths: result.data.durationMonths,
         resourceCount: result.data.resourceCount,
-        status: 'active',
+        status: 'planning',
       });
       navigate('/');
     } catch (error: any) {

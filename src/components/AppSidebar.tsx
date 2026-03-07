@@ -114,7 +114,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
               )}
             </div>
 
-            {companies.map((company) => (
+            {companies.filter(c => c.status !== 'archived').map((company) => (
               <div key={company.id}>
                 <button
                   onClick={() => toggleCompany(company.id)}
