@@ -6,7 +6,7 @@ import { formatCurrency, getProjectSummary } from '@/lib/finance';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ProjectStatus } from '@/types/project';
 import {
   Building2, FolderKanban, Briefcase, TrendingUp, Plus,
-  ArrowLeft, DollarSign, Filter, Search, X,
+  ArrowLeft, DollarSign, Filter, Search, X, Archive, ArchiveRestore,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,9 +30,12 @@ const stagger = {
 };
 
 export default function Dashboard() {
-  const { companies, portfolios, projects, budgetItems, expenses, revenues, loading, loadAll } = useStore();
+  const { companies, portfolios, projects, budgetItems, expenses, revenues, loading, loadAll, archiveCompany, unarchiveCompany } = useStore();
   const navigate = useNavigate();
   const { isAdmin, canEdit } = useRole();
+
+  const activeCompanies = useMemo(() => companies.filter(c => c.status !== 'archived'), [companies]);
+  const archivedCompanies = useMemo(() => companies.filter(c => c.status === 'archived'), [companies]);
 
   useEffect(() => {
     loadAll();
