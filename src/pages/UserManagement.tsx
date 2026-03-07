@@ -136,7 +136,7 @@ export default function UserManagement() {
   };
 
   const deleteInvite = async (id: string) => {
-    const { error } = await supabase.from('user_invites').delete().eq('id', id);
+    const { error } = await (supabase as any).from('user_invites').delete().eq('id', id);
     if (error) toast.error('حدث خطأ');
     else loadData();
   };
