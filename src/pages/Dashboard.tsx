@@ -303,6 +303,101 @@ export default function Dashboard() {
               )}
             </motion.div>
 
+            {/* Per-Project Financial KPI Cards */}
+            {filteredProjects.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.35 }}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"
+              >
+                {filteredProjects.slice(0, 6).map((project) => {
+                  const pExpenses = expenses.filter((e) => e.projectId === project.id);
+                  const pRevenues = revenues.filter((r) => r.projectId === project.id);
+                  const pBudget = budgetItems.filter((b) => b.projectId === project.id);
+                  const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues);
+                  const company = companies.find((c) => c.id === project.companyId);
+                  const spendRate = project.contractValue > 0 ? (summary.totalActual / project.contractValue) * 100 : 0;
+                  const budgetUtilization = project.contractValue > 0 ? (summary.totalPlanned / project.contractValue) * 100 : 0;
+
+                  return (
+                    <div
+                      key={project.id}
+                      className="stat-card cursor-pointer hover:border-primary/40 transition-colors"
+                      onClick={() => navigate(`/project/${project.id}`)}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="text-sm font-semibold">{project.name}</h4>
+                          <p className="text-xs text-muted-foreground">{company?.name}</p>
+                        </div>
+                        <span className={
+                          project.status === 'active' ? 'badge-gold' :
+                          project.status === 'completed' ? 'badge-profit' : 'badge-warning'
+                        }>
+                          {project.status === 'active' ? 'نشط' :
+                           project.status === 'completed' ? 'مكتمل' :
+                           project.status === 'on-hold' ? 'معلق' : 'ملغي'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="text-center p-2 rounded-lg bg-muted/30">
+                          <p className="text-[10px] text-muted-foreground">قيمة العقد</p>
+                          <p className="text-xs font-mono font-bold">{formatCurrency(project.contractValue)}</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-muted/30">
+                          <p className="text-[10px] text-muted-foreground">المصروفات</p>
+                          <p className="text-xs font-mono font-bold">{formatCurrency(summary.totalActual)}</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-muted/30">
+                          <p className="text-[10px] text-muted-foreground">الإيرادات</p>
+                          <p className="text-xs font-mono font-bold">{formatCurrency(summary.totalRevenue)}</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-muted/30">
+                          <p className="text-[10px] text-muted-foreground">صافي الربح</p>
+                          <p className={`text-xs font-mono font-bold ${summary.netProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                            {formatCurrency(summary.netProfit)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Spend Rate Bar */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span>نسبة الصرف من العقد</span>
+                          <span>{spendRate.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(spendRate, 100)}%`,
+                              backgroundColor: spendRate > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',
+                            }}
+                          />
+                        </div>
+                        {budgetUtilization > 0 && (
+                          <>
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                              <span>تخصيص الموازنة</span>
+                              <span>{budgetUtilization.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all bg-primary/60"
+                                style={{ width: `${Math.min(budgetUtilization, 100)}%` }}
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
+
             {/* Projects List */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -311,7 +406,7 @@ export default function Dashboard() {
               className="stat-card"
             >
               <h3 className="text-sm font-semibold mb-4">
-                {hasActiveFilters ? `المشاريع المصفاة (${filteredProjects.length})` : 'أحدث المشاريع'}
+                {hasActiveFilters ? `المشاريع المصفاة (${filteredProjects.length})` : 'جميع المشاريع'}
               </h3>
               <div className="overflow-x-auto">
                 <table className="data-table">
@@ -321,6 +416,7 @@ export default function Dashboard() {
                       <th className="hidden sm:table-cell">الشركة</th>
                       <th>قيمة العقد</th>
                       <th className="hidden md:table-cell">المصروفات</th>
+                      <th className="hidden md:table-cell">نسبة الصرف</th>
                       <th>الربح</th>
                       <th className="hidden sm:table-cell">الحالة</th>
                       <th></th>
@@ -328,12 +424,13 @@ export default function Dashboard() {
                   </thead>
                   <tbody>
                     <AnimatePresence mode="popLayout">
-                      {filteredProjects.slice(0, 10).map((project, idx) => {
+                      {filteredProjects.map((project, idx) => {
                         const pExpenses = expenses.filter((e) => e.projectId === project.id);
                         const pRevenues = revenues.filter((r) => r.projectId === project.id);
                         const pBudget = budgetItems.filter((b) => b.projectId === project.id);
                         const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues);
                         const company = companies.find((c) => c.id === project.companyId);
+                        const spendRate = project.contractValue > 0 ? (summary.totalActual / project.contractValue) * 100 : 0;
 
                         return (
                           <motion.tr
@@ -349,6 +446,20 @@ export default function Dashboard() {
                             <td className="text-muted-foreground hidden sm:table-cell">{company?.name}</td>
                             <td className="font-mono text-sm">{formatCurrency(project.contractValue)}</td>
                             <td className="font-mono text-sm hidden md:table-cell">{formatCurrency(summary.totalActual)}</td>
+                            <td className="hidden md:table-cell">
+                              <div className="flex items-center gap-2">
+                                <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all"
+                                    style={{
+                                      width: `${Math.min(spendRate, 100)}%`,
+                                      backgroundColor: spendRate > 90 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-xs text-muted-foreground">{spendRate.toFixed(0)}%</span>
+                              </div>
+                            </td>
                             <td>
                               <span className={summary.netProfit >= 0 ? 'badge-profit' : 'badge-loss'}>
                                 {formatCurrency(summary.netProfit)}
