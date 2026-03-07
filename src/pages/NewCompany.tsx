@@ -26,7 +26,7 @@ export default function NewCompany() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-lg">
         <div className="page-header">
           <h1 className="page-title flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center">
               <Building2 className="w-5 h-5 text-primary-foreground" />
             </div>
             إضافة شركة جديدة
