@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { Company, Portfolio, Project, BudgetItem, Expense, Revenue, CostBaseline, BaselineItem, Resource, Custody } from '@/types/project';
 import type { Tables } from '@/integrations/supabase/types';
 
