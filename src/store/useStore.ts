@@ -470,3 +470,14 @@ function mapExpense(d: any): Expense {
 function mapRevenue(d: any): Revenue {
   return { id: d.id, projectId: d.project_id, description: d.description, amount: Number(d.amount), date: d.date, month: d.month };
 }
+
+function mapBaselineItem(d: any): BaselineItem {
+  return {
+    id: d.id,
+    baselineId: d.baseline_id,
+    category: d.category,
+    description: d.description,
+    plannedAmount: Number(d.planned_amount),
+    month: d.month || undefined,
+  };
+}
