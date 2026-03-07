@@ -9,7 +9,8 @@ const ALLOWED_ORIGINS = [
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".lovable.app");
+  const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers":
@@ -177,8 +178,7 @@ Deno.serve(async (req) => {
     console.log("[send-invite] User created:", newUser.user?.id);
 
     // 4. Generate a password reset link
-    const origin = req.headers.get("origin") || req.headers.get("referer") || "https://sightb.lovable.app";
-    const redirectUrl = origin.replace(/\/$/, "") + "/reset-password";
+    const redirectUrl = "https://sight.basserh.com/reset-password";
 
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
