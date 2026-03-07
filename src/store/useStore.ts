@@ -61,13 +61,14 @@ async function getUserId(): Promise<string> {
   return user.id;
 }
 
-export const useStore = create<AppState>()((set) => ({
+export const useStore = create<AppState>()((set, get) => ({
   companies: [],
   portfolios: [],
   projects: [],
   budgetItems: [],
   expenses: [],
   revenues: [],
+  baselines: [],
   loading: true,
 
   loadAll: async () => {
