@@ -1,10 +1,24 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = [
+  "https://sightb.lovable.app",
+  "https://sight.basserh.com",
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
+
+const MAX_OTP_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW_MINUTES = 10;
 
 async function sendViaResend(to: string, subject: string, html: string) {
   const resendKey = Deno.env.get("RESEND_API_KEY");
@@ -31,6 +45,8 @@ async function sendViaResend(to: string, subject: string, html: string) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -84,6 +100,23 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+      }
+
+      // Rate limiting: check recent OTP codes in the last N minutes
+      const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("admin_otp_codes")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", windowStart);
+
+      if ((count ?? 0) >= MAX_OTP_ATTEMPTS) {
+        // Sign out the user to prevent session abuse
+        await supabase.auth.admin.signOut(user.id);
+        return new Response(
+          JSON.stringify({ error: "تم تجاوز الحد الأقصى للمحاولات. يرجى المحاولة بعد 10 دقائق.", rateLimited: true }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -142,6 +175,22 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Rate limiting on verify attempts too
+      const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("admin_otp_codes")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", windowStart);
+
+      if ((count ?? 0) >= MAX_OTP_ATTEMPTS * 2) {
+        await supabase.auth.admin.signOut(user.id);
+        return new Response(
+          JSON.stringify({ verified: false, error: "تم تجاوز الحد الأقصى للمحاولات.", rateLimited: true }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const { data: otpRecord } = await supabase
         .from("admin_otp_codes")
         .select("*")
@@ -183,6 +232,7 @@ Deno.serve(async (req) => {
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    const corsHeaders = getCorsHeaders(req);
     console.error("[admin-otp] Error:", err);
     return new Response(
       JSON.stringify({ error: "حدث خطأ" }),

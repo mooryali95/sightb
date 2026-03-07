@@ -1,10 +1,21 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = [
+  "https://sightb.lovable.app",
+  "https://sight.basserh.com",
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
 
 async function sendViaResend(to: string, subject: string, html: string) {
   const resendKey = Deno.env.get("RESEND_API_KEY");
@@ -32,6 +43,8 @@ async function sendViaResend(to: string, subject: string, html: string) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -42,7 +55,6 @@ Deno.serve(async (req) => {
     console.log("[send-invite] Starting. URL:", !!supabaseUrl, "Key:", !!serviceRoleKey);
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Verify the calling user is authenticated
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -53,7 +65,7 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-    
+
     if (userError || !user) {
       console.log("[send-invite] Auth failed:", userError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -62,7 +74,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify the user is an admin
     const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
       _user_id: user.id,
       _role: "admin",
@@ -78,12 +89,17 @@ Deno.serve(async (req) => {
     const { email, role, scope_type, scope_id } = await req.json();
     console.log("[send-invite] Inviting:", email, "role:", role);
 
-    if (!email) {
-      return new Response(JSON.stringify({ error: "البريد الإلكتروني مطلوب" }), {
+    if (!email || typeof email !== "string" || !email.includes("@") || email.length > 255) {
+      return new Response(JSON.stringify({ error: "البريد الإلكتروني غير صالح" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const validRoles = ["admin", "editor", "viewer"];
+    const validScopes = ["system", "company", "project"];
+    const safeRole = validRoles.includes(role) ? role : "viewer";
+    const safeScopeType = validScopes.includes(scope_type) ? scope_type : "system";
 
     const normalizedEmail = email.toLowerCase().trim();
 
@@ -92,9 +108,9 @@ Deno.serve(async (req) => {
       .from("user_invites")
       .insert({
         email: normalizedEmail,
-        role: role || "viewer",
-        scope_type: scope_type || "system",
-        scope_id: scope_type === "system" ? null : scope_id || null,
+        role: safeRole,
+        scope_type: safeScopeType,
+        scope_id: safeScopeType === "system" ? null : scope_id || null,
         invited_by: user.id,
       });
 
@@ -116,9 +132,9 @@ Deno.serve(async (req) => {
       console.log("[send-invite] User exists:", existingUser.id);
       await supabaseAdmin.from("user_roles").insert({
         user_id: existingUser.id,
-        role: role || "viewer",
-        scope_type: scope_type || "system",
-        scope_id: scope_type === "system" ? null : scope_id || null,
+        role: safeRole,
+        scope_type: safeScopeType,
+        scope_id: safeScopeType === "system" ? null : scope_id || null,
       });
 
       await supabaseAdmin
@@ -144,8 +160,8 @@ Deno.serve(async (req) => {
       password: tempPassword,
       email_confirm: true,
       user_metadata: {
-        invited_role: role,
-        invited_scope_type: scope_type,
+        invited_role: safeRole,
+        invited_scope_type: safeScopeType,
         invited_scope_id: scope_id,
       },
     });
@@ -153,17 +169,17 @@ Deno.serve(async (req) => {
     if (createError) {
       console.error("[send-invite] Create user error:", createError.message);
       return new Response(
-        JSON.stringify({ error: "خطأ في إنشاء المستخدم: " + createError.message }),
+        JSON.stringify({ error: "خطأ في إنشاء المستخدم" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log("[send-invite] User created:", newUser.user?.id);
 
-    // 4. Generate a password reset link so the user can set their own password
+    // 4. Generate a password reset link
     const origin = req.headers.get("origin") || req.headers.get("referer") || "https://sightb.lovable.app";
     const redirectUrl = origin.replace(/\/$/, "") + "/reset-password";
-    
+
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: normalizedEmail,
@@ -177,7 +193,7 @@ Deno.serve(async (req) => {
     console.log("[send-invite] Reset link generated:", !!linkData, "error:", linkError?.message);
 
     // 5. Send invitation email via Resend
-    const roleLabel = role === "admin" ? "مدير النظام" : role === "editor" ? "محرر" : "مشاهد";
+    const roleLabel = safeRole === "admin" ? "مدير النظام" : safeRole === "editor" ? "محرر" : "مشاهد";
     const emailHtml = `
       <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; background: #ffffff;">
         <div style="text-align: center; margin-bottom: 24px;">
@@ -215,8 +231,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: resendResult.ok 
-          ? "تم إرسال الدعوة بنجاح" 
+        message: resendResult.ok
+          ? "تم إرسال الدعوة بنجاح"
           : "تم إنشاء الحساب ولكن لم يتم إرسال البريد",
         emailSent: resendResult.ok,
         errorDetail: resendResult.error,
@@ -224,6 +240,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    const corsHeaders = getCorsHeaders(req);
     console.error("[send-invite] Unhandled error:", err?.message || err);
     return new Response(JSON.stringify({ error: "حدث خطأ" }), {
       status: 500,
