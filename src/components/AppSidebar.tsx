@@ -15,7 +15,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
   const { companies, portfolios, projects } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAdmin } = useRole();
+  const { isAdmin, canEdit } = useRole();
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set());
 
