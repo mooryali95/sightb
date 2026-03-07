@@ -66,6 +66,27 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   other: 'أخرى',
 };
 
+export interface Resource {
+  id: string;
+  projectId: string;
+  name: string;
+  role?: string;
+  monthlyCost: number;
+  createdAt: string;
+}
+
+export interface Custody {
+  id: string;
+  projectId?: string;
+  companyId?: string;
+  resourceName: string;
+  amount: number;
+  spent: number; // calculated client-side
+  remaining: number; // calculated client-side
+  notes?: string;
+  createdAt: string;
+}
+
 export interface BudgetItem {
   id: string;
   projectId: string;
@@ -73,6 +94,7 @@ export interface BudgetItem {
   description: string;
   plannedAmount: number;
   month?: number;
+  resourceId?: string;
 }
 
 export interface Expense {
@@ -86,6 +108,8 @@ export interface Expense {
   month: number;
   responsible?: string;
   notes?: string;
+  resourceId?: string;
+  custodyId?: string;
 }
 
 export interface Revenue {
