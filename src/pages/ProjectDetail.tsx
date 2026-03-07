@@ -15,12 +15,15 @@ import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, TrendingDown, Target, Plus, Trash2,
   BarChart3, Receipt, PiggyBank, Baseline, CheckCircle2, Users, Wallet, History,
+  Download, FileSpreadsheet, FileText,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend,
 } from 'recharts';
 import { toast } from 'sonner';
+import { BudgetAlerts } from '@/components/BudgetAlerts';
+import { exportToExcel, exportToPDF } from '@/lib/export';
 
 const COLORS = [
   'hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)',
@@ -132,6 +135,65 @@ export default function ProjectDetail() {
             icon={<Target className="w-4 h-4" />}
             trend={summary.remaining >= 0 ? 'up' : 'down'}
           />
+        </div>
+
+        {/* Budget Overspend Alerts */}
+        <BudgetAlerts
+          totalPlanned={summary.totalPlanned}
+          totalActual={summary.totalActual}
+          contractValue={project.contractValue}
+          budgetItems={pBudget}
+          expenses={pExpenses}
+        />
+
+        {/* Export Buttons */}
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              const getActualForItem = (item: any) =>
+                pExpenses.filter((e: any) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
+              exportToExcel({
+                projectName: project.name,
+                contractValue: project.contractValue,
+                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                expenses: pExpenses,
+                revenues: pRevenues,
+                totalPlanned: summary.totalPlanned,
+                totalActual: summary.totalActual,
+                totalRevenue: summary.totalRevenue,
+              });
+              toast.success('تم تصدير التقرير إلى Excel');
+            }}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            تصدير Excel
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              const getActualForItem = (item: any) =>
+                pExpenses.filter((e: any) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
+              exportToPDF({
+                projectName: project.name,
+                contractValue: project.contractValue,
+                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                expenses: pExpenses,
+                revenues: pRevenues,
+                totalPlanned: summary.totalPlanned,
+                totalActual: summary.totalActual,
+                totalRevenue: summary.totalRevenue,
+              });
+              toast.success('تم تصدير التقرير إلى PDF');
+            }}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            تصدير PDF
+          </Button>
         </div>
 
         {/* Tabs - Ordered by workflow: Resources → Budget → Baseline → Expenses → Custody → Revenue → Charts → Log */}
