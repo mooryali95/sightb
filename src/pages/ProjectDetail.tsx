@@ -427,8 +427,8 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
   );
 }
 
-function BudgetSection({ projectId, budgetItems, expenses, durationMonths }: {
-  projectId: string; budgetItems: any[]; expenses: any[]; durationMonths: number;
+function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources }: {
+  projectId: string; budgetItems: any[]; expenses: any[]; durationMonths: number; resources: Resource[];
 }) {
   const { addBudgetItem, deleteBudgetItem } = useStore();
   const [open, setOpen] = useState(false);
@@ -436,6 +436,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths }: {
   const [description, setDescription] = useState('');
   const [plannedAmount, setPlannedAmount] = useState('');
   const [month, setMonth] = useState<string>('');
+  const [resourceId, setResourceId] = useState<string>('');
 
   const handleAdd = async () => {
     if (!description.trim() || !plannedAmount) return;
@@ -445,8 +446,9 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths }: {
       description: description.trim(),
       plannedAmount: parseFloat(plannedAmount),
       month: month ? parseInt(month) : undefined,
+      resourceId: resourceId || undefined,
     });
-    setDescription(''); setPlannedAmount(''); setMonth('');
+    setDescription(''); setPlannedAmount(''); setMonth(''); setResourceId('');
     setOpen(false);
   };
 
