@@ -21,16 +21,20 @@ export function getProjectSummary(
   const totalPlanned = budgetItems.reduce((sum, b) => sum + b.plannedAmount, 0);
   const totalActual = expenses.reduce((sum, e) => sum + e.amount, 0);
   const totalRevenue = revenues.reduce((sum, r) => sum + r.amount, 0);
-  const effectiveRevenue = totalRevenue || project.contractValue;
-  const netProfit = effectiveRevenue - totalActual;
-  const profitMargin = effectiveRevenue > 0 ? (netProfit / effectiveRevenue) * 100 : 0;
-  const remaining = totalPlanned - totalActual;
+  
+  // المتبقي = قيمة العقد - المصروفات الفعلية
+  const remaining = project.contractValue - totalActual;
+  
+  // صافي الربح = الإيرادات الفعلية - المصروفات الفعلية
+  // إذا لم يكن هناك إيرادات مسجلة، الربح = سالب المصروفات
+  const netProfit = totalRevenue - totalActual;
+  const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   return {
     totalBudget: project.contractValue,
     totalPlanned,
     totalActual,
-    totalRevenue: effectiveRevenue,
+    totalRevenue,
     netProfit,
     profitMargin,
     remaining,
