@@ -4,9 +4,10 @@ import { useStore } from '@/store/useStore';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@/types/project';
+import { EXPENSE_CATEGORY_LABELS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ExpenseCategory, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
@@ -32,7 +33,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
-    loadAll,
+    loadAll, updateProject,
   } = useStore();
 
   useEffect(() => { loadAll(); }, []);
@@ -82,10 +83,30 @@ export default function ProjectDetail() {
             <span>{company?.name}</span>
             {portfolio && (<><span>←</span><span>{portfolio.name}</span></>)}
           </div>
-          <h1 className="page-title">{project.name}</h1>
-          <p className="page-subtitle">
-            {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="page-title">{project.name}</h1>
+              <p className="page-subtitle">
+                {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
+              </p>
+            </div>
+            <Select
+              value={project.status}
+              onValueChange={(val) => {
+                updateProject(project.id, { status: val as ProjectStatus });
+                toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
+              }}
+            >
+              <SelectTrigger className={`w-[140px] h-8 text-xs ${PROJECT_STATUS_COLORS[project.status]}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Stats */}
