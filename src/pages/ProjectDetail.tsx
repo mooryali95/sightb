@@ -566,6 +566,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
               <tr>
                 <th>الفئة</th>
                 <th>الوصف</th>
+                <th>المورد</th>
                 <th>الشهر</th>
                 <th>المخطط</th>
                 <th>الفعلي</th>
@@ -577,15 +578,17 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
             <tbody>
               {budgetItems.map((item) => {
                 const actual = expenses
-                  .filter((e: any) => e.category === item.category)
+                  .filter((e: any) => item.resourceId ? e.resourceId === item.resourceId && e.category === item.category : e.category === item.category)
                   .reduce((s: number, e: any) => s + e.amount, 0);
                 const remaining = item.plannedAmount - actual;
                 const spentPct = item.plannedAmount > 0 ? (actual / item.plannedAmount) * 100 : 0;
+                const resource = resources.find(r => r.id === item.resourceId);
 
                 return (
                   <tr key={item.id} className={spentPct > 100 ? 'bg-destructive/5' : ''}>
                     <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory]}</span></td>
                     <td>{item.description}</td>
+                    <td className="text-xs">{resource?.name || '—'}</td>
                     <td className="text-xs text-muted-foreground">{item.month ? `شهر ${item.month}` : 'موزع'}</td>
                     <td className="font-mono text-sm">{formatCurrency(item.plannedAmount)}</td>
                     <td className="font-mono text-sm">{formatCurrency(actual)}</td>
