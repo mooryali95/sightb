@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
 import {
-  DollarSign, TrendingUp, TrendingDown, Target, Plus, Trash2,
+  DollarSign, TrendingUp, TrendingDown, Target, Plus, Trash2, Pencil,
   BarChart3, Receipt, PiggyBank, Baseline, CheckCircle2, Users, Wallet, History,
   Download, FileSpreadsheet, FileText,
 } from 'lucide-react';
