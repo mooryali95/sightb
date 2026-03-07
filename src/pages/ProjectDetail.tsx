@@ -151,7 +151,7 @@ export default function ProjectDetail() {
 
           {/* Budget Tab */}
           <TabsContent value="budget">
-            <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} />
+            <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} />
           </TabsContent>
 
           {/* Baseline Tab */}
@@ -342,14 +342,15 @@ function ExpensesSection({ projectId, durationMonths, expenses }: {
   );
 }
 
-function BudgetSection({ projectId, budgetItems, expenses }: {
-  projectId: string; budgetItems: any[]; expenses: any[];
+function BudgetSection({ projectId, budgetItems, expenses, durationMonths }: {
+  projectId: string; budgetItems: any[]; expenses: any[]; durationMonths: number;
 }) {
   const { addBudgetItem, deleteBudgetItem } = useStore();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
   const [description, setDescription] = useState('');
   const [plannedAmount, setPlannedAmount] = useState('');
+  const [month, setMonth] = useState<string>('');
 
   const handleAdd = async () => {
     if (!description.trim() || !plannedAmount) return;
@@ -358,15 +359,31 @@ function BudgetSection({ projectId, budgetItems, expenses }: {
       category,
       description: description.trim(),
       plannedAmount: parseFloat(plannedAmount),
+      month: month ? parseInt(month) : undefined,
     });
-    setDescription(''); setPlannedAmount('');
+    setDescription(''); setPlannedAmount(''); setMonth('');
     setOpen(false);
   };
+
+  // Calculate totals for summary
+  const totalPlanned = budgetItems.reduce((s: number, b: any) => s + b.plannedAmount, 0);
+  const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+  const overBudgetCategories = budgetItems.filter((item: any) => {
+    const actual = expenses
+      .filter((e: any) => e.category === item.category)
+      .reduce((s: number, e: any) => s + e.amount, 0);
+    return actual > item.plannedAmount;
+  });
 
   return (
     <div className="stat-card">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">بنود الموازنة</h3>
+        <div>
+          <h3 className="text-sm font-semibold">بنود الموازنة</h3>
+          <p className="text-xs text-muted-foreground">
+            الإجمالي المخطط: {formatCurrency(totalPlanned)} · الفعلي: {formatCurrency(totalActual)}
+          </p>
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5">
@@ -394,15 +411,49 @@ function BudgetSection({ projectId, budgetItems, expenses }: {
                 <Label>الوصف</Label>
                 <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: الموارد البشرية — 4 موارد × 8,000" />
               </div>
-              <div className="space-y-2">
-                <Label>المبلغ المخطط</Label>
-                <Input type="number" value={plannedAmount} onChange={(e) => setPlannedAmount(e.target.value)} placeholder="0" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>المبلغ المخطط</Label>
+                  <Input type="number" value={plannedAmount} onChange={(e) => setPlannedAmount(e.target.value)} placeholder="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>الشهر <span className="text-muted-foreground text-xs">(اختياري)</span></Label>
+                  <Select value={month} onValueChange={setMonth}>
+                    <SelectTrigger><SelectValue placeholder="موزع على الكل" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">موزع على كل الأشهر</SelectItem>
+                      {Array.from({ length: durationMonths }, (_, i) => (
+                        <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <Button onClick={handleAdd} className="w-full">إضافة</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Overspend Alert */}
+      {overBudgetCategories.length > 0 && (
+        <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5">
+          <p className="text-sm font-medium text-destructive flex items-center gap-2">
+            <TrendingDown className="w-4 h-4" />
+            تجاوز الميزانية في {overBudgetCategories.length} {overBudgetCategories.length === 1 ? 'بند' : 'بنود'}
+          </p>
+          <ul className="mt-1 text-xs text-destructive/80 space-y-0.5">
+            {overBudgetCategories.map((item: any) => {
+              const actual = expenses.filter((e: any) => e.category === item.category).reduce((s: number, e: any) => s + e.amount, 0);
+              return (
+                <li key={item.id}>
+                  {EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory]}: تجاوز بـ {formatCurrency(actual - item.plannedAmount)}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {budgetItems.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-8">لا توجد بنود موازنة بعد</p>
@@ -413,6 +464,7 @@ function BudgetSection({ projectId, budgetItems, expenses }: {
               <tr>
                 <th>الفئة</th>
                 <th>الوصف</th>
+                <th>الشهر</th>
                 <th>المخطط</th>
                 <th>الفعلي</th>
                 <th className="hidden sm:table-cell">المتبقي</th>
@@ -429,9 +481,10 @@ function BudgetSection({ projectId, budgetItems, expenses }: {
                 const spentPct = item.plannedAmount > 0 ? (actual / item.plannedAmount) * 100 : 0;
 
                 return (
-                  <tr key={item.id}>
+                  <tr key={item.id} className={spentPct > 100 ? 'bg-destructive/5' : ''}>
                     <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory]}</span></td>
                     <td>{item.description}</td>
+                    <td className="text-xs text-muted-foreground">{item.month ? `شهر ${item.month}` : 'موزع'}</td>
                     <td className="font-mono text-sm">{formatCurrency(item.plannedAmount)}</td>
                     <td className="font-mono text-sm">{formatCurrency(actual)}</td>
                     <td className="hidden sm:table-cell">
