@@ -515,7 +515,22 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+               </div>
+              {/* Resource selection */}
+              {resources.length > 0 && (
+                <div className="space-y-2">
+                  <Label>المورد (اختياري)</Label>
+                  <Select value={resourceId} onValueChange={setResourceId}>
+                    <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">بدون مورد</SelectItem>
+                      {resources.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>{r.name} {r.role ? `(${r.role})` : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <Button onClick={handleAdd} className="w-full">إضافة</Button>
             </div>
           </DialogContent>
