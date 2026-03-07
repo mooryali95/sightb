@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      baseline_items: {
+        Row: {
+          baseline_id: string
+          category: string
+          created_at: string
+          description: string
+          id: string
+          month: number | null
+          planned_amount: number
+        }
+        Insert: {
+          baseline_id: string
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          month?: number | null
+          planned_amount?: number
+        }
+        Update: {
+          baseline_id?: string
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          month?: number | null
+          planned_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "baseline_items_baseline_id_fkey"
+            columns: ["baseline_id"]
+            isOneToOne: false
+            referencedRelation: "cost_baselines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budget_items: {
         Row: {
           category: string
@@ -81,6 +119,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      cost_baselines: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          project_id: string
+          total_planned: number
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          project_id: string
+          total_planned?: number
+          user_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          project_id?: string
+          total_planned?: number
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_baselines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expenses: {
         Row: {
