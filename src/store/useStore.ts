@@ -6,6 +6,17 @@ import {
   type ExpenseCategory,
 } from '@/types/project';
 
+export interface AuditLogEntry {
+  id: string;
+  userId: string;
+  action: string;
+  tableName: string;
+  recordId: string;
+  recordData: any;
+  projectId?: string;
+  createdAt: string;
+}
+
 interface AppState {
   companies: Company[];
   portfolios: Portfolio[];
@@ -16,9 +27,11 @@ interface AppState {
   baselines: CostBaseline[];
   resources: Resource[];
   custodies: Custody[];
+  auditLog: AuditLogEntry[];
   loading: boolean;
 
   loadAll: () => Promise<void>;
+  loadAuditLog: (projectId: string) => Promise<void>;
 
   // Company
   addCompany: (c: Omit<Company, 'id' | 'createdAt'>) => Promise<string>;
@@ -70,6 +83,23 @@ async function getUserId(): Promise<string> {
   return user.id;
 }
 
+/** Save a snapshot of the record to audit_log before deleting */
+async function logDeletion(tableName: string, recordId: string, recordData: any, projectId?: string) {
+  try {
+    const userId = await getUserId();
+    await supabase.from('audit_log').insert({
+      user_id: userId,
+      action: 'delete',
+      table_name: tableName,
+      record_id: recordId,
+      record_data: recordData,
+      project_id: projectId || null,
+    });
+  } catch (e) {
+    console.warn('Audit log failed:', e);
+  }
+}
+
 export const useStore = create<AppState>()((set, get) => ({
   companies: [],
   portfolios: [],
@@ -80,6 +110,7 @@ export const useStore = create<AppState>()((set, get) => ({
   baselines: [],
   resources: [],
   custodies: [],
+  auditLog: [],
   loading: true,
 
   loadAll: async () => {
@@ -110,13 +141,31 @@ export const useStore = create<AppState>()((set, get) => ({
     });
   },
 
+  loadAuditLog: async (projectId: string) => {
+    const { data } = await supabase
+      .from('audit_log')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    set({
+      auditLog: (data || []).map((d: any) => ({
+        id: d.id,
+        userId: d.user_id,
+        action: d.action,
+        tableName: d.table_name,
+        recordId: d.record_id,
+        recordData: d.record_data,
+        projectId: d.project_id || undefined,
+        createdAt: d.created_at,
+      })),
+    });
+  },
+
   addCompany: async (c) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('companies').insert({
-      user_id: userId,
-      name: c.name,
-      description: c.description || null,
-      logo: c.logo || null,
+      user_id: userId, name: c.name, description: c.description || null, logo: c.logo || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapCompany(data);
@@ -135,6 +184,8 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteCompany: async (id) => {
+    const company = get().companies.find(x => x.id === id);
+    if (company) await logDeletion('companies', id, company);
     const { error } = await supabase.from('companies').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
@@ -147,10 +198,7 @@ export const useStore = create<AppState>()((set, get) => ({
   addPortfolio: async (p) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('portfolios').insert({
-      user_id: userId,
-      company_id: p.companyId,
-      name: p.name,
-      description: p.description || null,
+      user_id: userId, company_id: p.companyId, name: p.name, description: p.description || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapPortfolio(data);
@@ -169,6 +217,8 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deletePortfolio: async (id) => {
+    const portfolio = get().portfolios.find(x => x.id === id);
+    if (portfolio) await logDeletion('portfolios', id, portfolio);
     const { error } = await supabase.from('portfolios').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
@@ -180,19 +230,13 @@ export const useStore = create<AppState>()((set, get) => ({
   addProject: async (p) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('projects').insert({
-      user_id: userId,
-      company_id: p.companyId,
+      user_id: userId, company_id: p.companyId,
       portfolio_id: p.portfolioId === 'none' ? null : (p.portfolioId || null),
-      name: p.name,
-      description: p.description || null,
-      contract_value: p.contractValue,
-      currency: p.currency,
-      start_date: p.startDate || null,
-      end_date: p.endDate || null,
-      duration_months: p.durationMonths,
-      resource_count: p.resourceCount,
-      status: p.status,
-      client_logo: p.clientLogo || null,
+      name: p.name, description: p.description || null,
+      contract_value: p.contractValue, currency: p.currency,
+      start_date: p.startDate || null, end_date: p.endDate || null,
+      duration_months: p.durationMonths, resource_count: p.resourceCount,
+      status: p.status, client_logo: p.clientLogo || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapProject(data);
@@ -219,6 +263,8 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteProject: async (id) => {
+    const project = get().projects.find(x => x.id === id);
+    if (project) await logDeletion('projects', id, project);
     const { error } = await supabase.from('projects').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
@@ -232,13 +278,9 @@ export const useStore = create<AppState>()((set, get) => ({
   addBudgetItem: async (b) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('budget_items').insert({
-      user_id: userId,
-      project_id: b.projectId,
-      category: b.category,
-      description: b.description,
-      planned_amount: b.plannedAmount,
-      month: b.month || null,
-      resource_id: b.resourceId || null,
+      user_id: userId, project_id: b.projectId, category: b.category,
+      description: b.description, planned_amount: b.plannedAmount,
+      month: b.month || null, resource_id: b.resourceId || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapBudgetItem(data);
@@ -259,6 +301,8 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteBudgetItem: async (id) => {
+    const item = get().budgetItems.find(x => x.id === id);
+    if (item) await logDeletion('budget_items', id, item, item.projectId);
     const { error } = await supabase.from('budget_items').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ budgetItems: s.budgetItems.filter((x) => x.id !== id) }));
@@ -267,18 +311,12 @@ export const useStore = create<AppState>()((set, get) => ({
   addExpense: async (e) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('expenses').insert({
-      user_id: userId,
-      project_id: e.projectId,
+      user_id: userId, project_id: e.projectId,
       budget_item_id: e.budgetItemId || null,
-      category: e.category,
-      description: e.description,
-      amount: e.amount,
-      date: e.date,
-      month: e.month,
-      responsible: e.responsible || null,
-      notes: e.notes || null,
-      resource_id: e.resourceId || null,
-      custody_id: e.custodyId || null,
+      category: e.category, description: e.description,
+      amount: e.amount, date: e.date, month: e.month,
+      responsible: e.responsible || null, notes: e.notes || null,
+      resource_id: e.resourceId || null, custody_id: e.custodyId || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapExpense(data);
@@ -301,6 +339,8 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteExpense: async (id) => {
+    const expense = get().expenses.find(x => x.id === id);
+    if (expense) await logDeletion('expenses', id, expense, expense.projectId);
     const { error } = await supabase.from('expenses').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) }));
@@ -309,12 +349,8 @@ export const useStore = create<AppState>()((set, get) => ({
   addRevenue: async (r) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('revenues').insert({
-      user_id: userId,
-      project_id: r.projectId,
-      description: r.description,
-      amount: r.amount,
-      date: r.date,
-      month: r.month,
+      user_id: userId, project_id: r.projectId,
+      description: r.description, amount: r.amount, date: r.date, month: r.month,
     }).select().single();
     if (error) throw error;
     const mapped = mapRevenue(data);
@@ -323,20 +359,18 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteRevenue: async (id) => {
+    const rev = get().revenues.find(x => x.id === id);
+    if (rev) await logDeletion('revenues', id, rev, rev.projectId);
     const { error } = await supabase.from('revenues').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ revenues: s.revenues.filter((x) => x.id !== id) }));
   },
 
-  // Resources
   addResource: async (r) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('resources').insert({
-      user_id: userId,
-      project_id: r.projectId,
-      name: r.name,
-      role: r.role || null,
-      monthly_cost: r.monthlyCost,
+      user_id: userId, project_id: r.projectId,
+      name: r.name, role: r.role || null, monthly_cost: r.monthlyCost,
     }).select().single();
     if (error) throw error;
     const mapped = mapResource(data);
@@ -345,21 +379,19 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteResource: async (id) => {
+    const res = get().resources.find(x => x.id === id);
+    if (res) await logDeletion('resources', id, res, res.projectId);
     const { error } = await supabase.from('resources').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ resources: s.resources.filter((x) => x.id !== id) }));
   },
 
-  // Custodies
   addCustody: async (c) => {
     const userId = await getUserId();
     const { data, error } = await supabase.from('custodies').insert({
-      user_id: userId,
-      project_id: c.projectId || null,
-      company_id: c.companyId || null,
-      resource_name: c.resourceName,
-      amount: c.amount,
-      notes: c.notes || null,
+      user_id: userId, project_id: c.projectId || null,
+      company_id: c.companyId || null, resource_name: c.resourceName,
+      amount: c.amount, notes: c.notes || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapCustody(data, get().expenses);
@@ -368,6 +400,8 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteCustody: async (id) => {
+    const cust = get().custodies.find(x => x.id === id);
+    if (cust) await logDeletion('custodies', id, cust, cust.projectId);
     const { error } = await supabase.from('custodies').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ custodies: s.custodies.filter((x) => x.id !== id) }));
@@ -375,11 +409,9 @@ export const useStore = create<AppState>()((set, get) => ({
 
   createBaseline: async (projectId, name) => {
     const userId = await getUserId();
-    // Get current budget items for this project
     const currentBudget = get().budgetItems.filter(b => b.projectId === projectId);
     if (currentBudget.length === 0) throw new Error('لا توجد بنود موازنة لإنشاء خط أساس');
 
-    // Get next version number
     const existingBaselines = get().baselines.filter(b => b.projectId === projectId);
     const nextVersion = existingBaselines.length > 0
       ? Math.max(...existingBaselines.map(b => b.version)) + 1
@@ -387,47 +419,32 @@ export const useStore = create<AppState>()((set, get) => ({
 
     const totalPlanned = currentBudget.reduce((s, b) => s + b.plannedAmount, 0);
 
-    // Deactivate existing baselines
     if (existingBaselines.length > 0) {
       await supabase.from('cost_baselines')
         .update({ is_active: false })
         .eq('project_id', projectId);
     }
 
-    // Create baseline
     const { data: bl, error: blErr } = await supabase.from('cost_baselines').insert({
-      project_id: projectId,
-      user_id: userId,
-      name,
-      version: nextVersion,
-      is_active: true,
-      total_planned: totalPlanned,
+      project_id: projectId, user_id: userId, name,
+      version: nextVersion, is_active: true, total_planned: totalPlanned,
     }).select().single();
     if (blErr) throw blErr;
 
-    // Create baseline items (snapshot of current budget)
     const itemsToInsert = currentBudget.map(b => ({
-      baseline_id: bl.id,
-      category: b.category,
-      description: b.description,
-      planned_amount: b.plannedAmount,
+      baseline_id: bl.id, category: b.category,
+      description: b.description, planned_amount: b.plannedAmount,
       month: b.month || null,
     }));
 
     const { data: items, error: itemsErr } = await supabase
-      .from('baseline_items')
-      .insert(itemsToInsert)
-      .select();
+      .from('baseline_items').insert(itemsToInsert).select();
     if (itemsErr) throw itemsErr;
 
     const mapped: CostBaseline = {
-      id: bl.id,
-      projectId: bl.project_id,
-      name: bl.name,
-      version: bl.version,
-      isActive: bl.is_active,
-      totalPlanned: Number(bl.total_planned),
-      createdAt: bl.created_at,
+      id: bl.id, projectId: bl.project_id, name: bl.name,
+      version: bl.version, isActive: bl.is_active,
+      totalPlanned: Number(bl.total_planned), createdAt: bl.created_at,
       items: (items || []).map(mapBaselineItem),
     };
 
@@ -441,34 +458,31 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteBaseline: async (id) => {
+    const bl = get().baselines.find(b => b.id === id);
+    if (bl) await logDeletion('cost_baselines', id, bl, bl.projectId);
     const { error } = await supabase.from('cost_baselines').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ baselines: s.baselines.filter(b => b.id !== id) }));
   },
 
   setActiveBaseline: async (id, projectId) => {
-    // Deactivate all for project
     await supabase.from('cost_baselines')
       .update({ is_active: false })
       .eq('project_id', projectId);
-    // Activate selected
     const { error } = await supabase.from('cost_baselines')
       .update({ is_active: true })
       .eq('id', id);
     if (error) throw error;
     set((s) => ({
       baselines: s.baselines.map(b =>
-        b.projectId === projectId
-          ? { ...b, isActive: b.id === id }
-          : b
+        b.projectId === projectId ? { ...b, isActive: b.id === id } : b
       ),
     }));
   },
 
   loadBaselines: async (projectId) => {
     const { data: bls, error } = await supabase
-      .from('cost_baselines')
-      .select('*')
+      .from('cost_baselines').select('*')
       .eq('project_id', projectId)
       .order('version', { ascending: false });
     if (error) throw error;
@@ -476,17 +490,12 @@ export const useStore = create<AppState>()((set, get) => ({
     const baselines: CostBaseline[] = [];
     for (const bl of (bls || [])) {
       const { data: items } = await supabase
-        .from('baseline_items')
-        .select('*')
+        .from('baseline_items').select('*')
         .eq('baseline_id', bl.id);
       baselines.push({
-        id: bl.id,
-        projectId: bl.project_id,
-        name: bl.name,
-        version: bl.version,
-        isActive: bl.is_active,
-        totalPlanned: Number(bl.total_planned),
-        createdAt: bl.created_at,
+        id: bl.id, projectId: bl.project_id, name: bl.name,
+        version: bl.version, isActive: bl.is_active,
+        totalPlanned: Number(bl.total_planned), createdAt: bl.created_at,
         items: (items || []).map(mapBaselineItem),
       });
     }
@@ -501,15 +510,13 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 }));
 
-// Mappers from DB snake_case to app camelCase
+// Mappers
 function mapCompany(d: any): Company {
   return { id: d.id, name: d.name, description: d.description || undefined, logo: d.logo || undefined, createdAt: d.created_at };
 }
-
 function mapPortfolio(d: any): Portfolio {
   return { id: d.id, companyId: d.company_id, name: d.name, description: d.description || undefined, createdAt: d.created_at };
 }
-
 function mapProject(d: any): Project {
   return {
     id: d.id, companyId: d.company_id, portfolioId: d.portfolio_id || undefined,
@@ -520,11 +527,9 @@ function mapProject(d: any): Project {
     status: d.status, clientLogo: d.client_logo || undefined, createdAt: d.created_at,
   };
 }
-
 function mapBudgetItem(d: any): BudgetItem {
   return { id: d.id, projectId: d.project_id, category: d.category, description: d.description, plannedAmount: Number(d.planned_amount), month: d.month || undefined, resourceId: d.resource_id || undefined };
 }
-
 function mapExpense(d: any): Expense {
   return {
     id: d.id, projectId: d.project_id, budgetItemId: d.budget_item_id || undefined,
@@ -533,14 +538,12 @@ function mapExpense(d: any): Expense {
     resourceId: d.resource_id || undefined, custodyId: d.custody_id || undefined,
   };
 }
-
 function mapResource(d: any): Resource {
   return {
     id: d.id, projectId: d.project_id, name: d.name,
     role: d.role || undefined, monthlyCost: Number(d.monthly_cost), createdAt: d.created_at,
   };
 }
-
 function mapCustody(d: any, expenses: Expense[]): Custody {
   const spent = expenses.filter(e => e.custodyId === d.id).reduce((s, e) => s + e.amount, 0);
   return {
@@ -550,18 +553,13 @@ function mapCustody(d: any, expenses: Expense[]): Custody {
     notes: d.notes || undefined, createdAt: d.created_at,
   };
 }
-
 function mapRevenue(d: any): Revenue {
   return { id: d.id, projectId: d.project_id, description: d.description, amount: Number(d.amount), date: d.date, month: d.month };
 }
-
 function mapBaselineItem(d: any): BaselineItem {
   return {
-    id: d.id,
-    baselineId: d.baseline_id,
-    category: d.category,
-    description: d.description,
-    plannedAmount: Number(d.planned_amount),
+    id: d.id, baselineId: d.baseline_id, category: d.category,
+    description: d.description, plannedAmount: Number(d.planned_amount),
     month: d.month || undefined,
   };
 }

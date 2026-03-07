@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useStore } from '@/store/useStore';
+import { useStore, type AuditLogEntry } from '@/store/useStore';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown, getBaselineMonthlyPV, calculateEVM } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type CostBaseline, type Resource, type Custody } from '@/types/project';
+import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type CostBaseline, type Resource, type Custody, type BudgetItem } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, TrendingDown, Target, Plus, Trash2,
-  BarChart3, Receipt, PiggyBank, Baseline, CheckCircle2, Users, Wallet,
+  BarChart3, Receipt, PiggyBank, Baseline, CheckCircle2, Users, Wallet, History,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -27,6 +27,18 @@ const COLORS = [
   'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)', 'hsl(190, 80%, 42%)',
   'hsl(330, 70%, 50%)', 'hsl(50, 80%, 45%)',
 ];
+
+const TABLE_NAME_LABELS: Record<string, string> = {
+  expenses: 'مصروف',
+  budget_items: 'بند موازنة',
+  revenues: 'إيراد',
+  resources: 'مورد',
+  custodies: 'عهدة',
+  cost_baselines: 'خط أساس',
+  projects: 'مشروع',
+  companies: 'شركة',
+  portfolios: 'محفظة',
+};
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -122,36 +134,40 @@ export default function ProjectDetail() {
           />
         </div>
 
-        {/* Tabs */}
+        {/* Tabs - Ordered by workflow: Resources → Budget → Baseline → Expenses → Custody → Revenue → Charts → Log */}
         <Tabs defaultValue="resources" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 max-w-4xl">
-            <TabsTrigger value="resources" className="gap-1.5 text-xs">
+          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 max-w-5xl">
+            <TabsTrigger value="resources" className="gap-1 text-xs">
               <Users className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">الموارد</span>
             </TabsTrigger>
-            <TabsTrigger value="budget" className="gap-1.5 text-xs">
+            <TabsTrigger value="budget" className="gap-1 text-xs">
               <PiggyBank className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">الموازنة</span>
             </TabsTrigger>
-            <TabsTrigger value="expenses" className="gap-1.5 text-xs">
-              <Receipt className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">المصروفات</span>
-            </TabsTrigger>
-            <TabsTrigger value="custody" className="gap-1.5 text-xs">
-              <Wallet className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">العهد</span>
-            </TabsTrigger>
-            <TabsTrigger value="baseline" className="gap-1.5 text-xs">
+            <TabsTrigger value="baseline" className="gap-1 text-xs">
               <Baseline className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">خط الأساس</span>
             </TabsTrigger>
-            <TabsTrigger value="revenue" className="gap-1.5 text-xs">
+            <TabsTrigger value="expenses" className="gap-1 text-xs">
+              <Receipt className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">المصروفات</span>
+            </TabsTrigger>
+            <TabsTrigger value="custody" className="gap-1 text-xs">
+              <Wallet className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">العهد</span>
+            </TabsTrigger>
+            <TabsTrigger value="revenue" className="gap-1 text-xs">
               <DollarSign className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">الإيرادات</span>
             </TabsTrigger>
-            <TabsTrigger value="charts" className="gap-1.5 text-xs">
+            <TabsTrigger value="charts" className="gap-1 text-xs">
               <BarChart3 className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">التحليلات</span>
+            </TabsTrigger>
+            <TabsTrigger value="auditlog" className="gap-1 text-xs">
+              <History className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">السجل</span>
             </TabsTrigger>
           </TabsList>
 
@@ -160,19 +176,9 @@ export default function ProjectDetail() {
             <ResourcesSection projectId={project.id} resources={pResources} />
           </TabsContent>
 
-          {/* Expenses Tab */}
-          <TabsContent value="expenses">
-            <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} />
-          </TabsContent>
-
           {/* Budget Tab */}
           <TabsContent value="budget">
             <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} />
-          </TabsContent>
-
-          {/* Custody Tab */}
-          <TabsContent value="custody">
-            <CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} />
           </TabsContent>
 
           {/* Baseline Tab */}
@@ -183,6 +189,16 @@ export default function ProjectDetail() {
               expenses={pExpenses}
               budgetItems={pBudget}
             />
+          </TabsContent>
+
+          {/* Expenses Tab */}
+          <TabsContent value="expenses">
+            <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} />
+          </TabsContent>
+
+          {/* Custody Tab */}
+          <TabsContent value="custody">
+            <CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} />
           </TabsContent>
 
           {/* Revenue Tab */}
@@ -224,6 +240,11 @@ export default function ProjectDetail() {
               )}
             </div>
           </TabsContent>
+
+          {/* Audit Log Tab */}
+          <TabsContent value="auditlog">
+            <AuditLogSection projectId={project.id} />
+          </TabsContent>
         </Tabs>
       </motion.div>
     </AppLayout>
@@ -232,8 +253,8 @@ export default function ProjectDetail() {
 
 // ---- Sub-components ----
 
-function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies }: {
-  projectId: string; durationMonths: number; expenses: any[]; resources: Resource[]; custodies: Custody[];
+function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems }: {
+  projectId: string; durationMonths: number; expenses: any[]; resources: Resource[]; custodies: Custody[]; budgetItems: BudgetItem[];
 }) {
   const { addExpense, deleteExpense } = useStore();
   const [open, setOpen] = useState(false);
@@ -245,6 +266,10 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
   const [responsible, setResponsible] = useState('');
   const [resourceId, setResourceId] = useState<string>('');
   const [custodyId, setCustodyId] = useState<string>('');
+  const [budgetItemId, setBudgetItemId] = useState<string>('');
+
+  // Filter budget items matching current category
+  const matchingBudgetItems = budgetItems.filter(b => b.category === category);
 
   const handleAdd = async () => {
     if (!description.trim() || !amount) return;
@@ -256,11 +281,13 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
       date,
       month: parseInt(month),
       responsible: responsible.trim() || undefined,
-      resourceId: resourceId || undefined,
-      custodyId: custodyId || undefined,
+      resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
+      custodyId: custodyId && custodyId !== 'none' ? custodyId : undefined,
+      budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : undefined,
     });
-    setDescription(''); setAmount(''); setResponsible(''); setResourceId(''); setCustodyId('');
+    setDescription(''); setAmount(''); setResponsible(''); setResourceId(''); setCustodyId(''); setBudgetItemId('');
     setOpen(false);
+    toast.success('تمت إضافة المصروف');
   };
 
   // Responsible summary
@@ -270,8 +297,33 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
     responsibleMap.set(key, (responsibleMap.get(key) || 0) + e.amount);
   });
 
+  // Resource spending summary
+  const resourceSpendMap = new Map<string, number>();
+  expenses.forEach((e: any) => {
+    if (e.resourceId) {
+      const res = resources.find(r => r.id === e.resourceId);
+      const key = res?.name || e.resourceId;
+      resourceSpendMap.set(key, (resourceSpendMap.get(key) || 0) + e.amount);
+    }
+  });
+
   return (
     <div className="space-y-4">
+      {/* Resource Spending Summary */}
+      {resourceSpendMap.size > 0 && (
+        <div className="stat-card">
+          <h3 className="text-sm font-semibold mb-3">ملخص الصرف حسب المورد</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from(resourceSpendMap.entries()).map(([name, total]) => (
+              <div key={name} className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs text-muted-foreground">{name}</p>
+                <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(total)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Responsible Summary */}
       {responsibleMap.size > 1 && (
         <div className="stat-card">
@@ -297,14 +349,14 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                 إضافة مصروف
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>إضافة مصروف جديد</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
                 <div className="space-y-2">
                   <Label>الفئة</Label>
-                  <Select value={category} onValueChange={(v) => setCategory(v as ExpenseCategory)}>
+                  <Select value={category} onValueChange={(v) => { setCategory(v as ExpenseCategory); setBudgetItemId(''); }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
@@ -313,6 +365,28 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Link to budget item */}
+                {matchingBudgetItems.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>ربط ببند الموازنة <span className="text-muted-foreground text-xs">(مهم للتتبع)</span></Label>
+                    <Select value={budgetItemId} onValueChange={setBudgetItemId}>
+                      <SelectTrigger><SelectValue placeholder="اختر بند الموازنة" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">بدون ربط</SelectItem>
+                        {matchingBudgetItems.map((b) => {
+                          const spent = expenses.filter((e: any) => e.budgetItemId === b.id).reduce((s: number, e: any) => s + e.amount, 0);
+                          return (
+                            <SelectItem key={b.id} value={b.id}>
+                              {b.description} — متبقي: {formatCurrency(b.plannedAmount - spent)}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label>الوصف</Label>
                   <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب شهر يناير — أحمد" />
@@ -391,6 +465,7 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                   <th>الوصف</th>
                   <th>المبلغ</th>
                   <th className="hidden sm:table-cell">الشهر</th>
+                  <th className="hidden md:table-cell">بند الموازنة</th>
                   <th className="hidden md:table-cell">المورد</th>
                   <th className="hidden lg:table-cell">المسؤول</th>
                   <th className="hidden lg:table-cell">العهدة</th>
@@ -401,12 +476,14 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
                 {expenses.map((exp) => {
                   const resource = resources.find(r => r.id === exp.resourceId);
                   const custody = custodies.find(c => c.id === exp.custodyId);
+                  const budgetItem = budgetItems.find(b => b.id === exp.budgetItemId);
                   return (
                     <tr key={exp.id}>
                       <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[exp.category as ExpenseCategory]}</span></td>
                       <td>{exp.description}</td>
                       <td className="font-mono text-sm">{formatCurrency(exp.amount)}</td>
                       <td className="hidden sm:table-cell">شهر {exp.month}</td>
+                      <td className="hidden md:table-cell text-xs">{budgetItem?.description || '—'}</td>
                       <td className="hidden md:table-cell text-xs">{resource?.name || '—'}</td>
                       <td className="text-muted-foreground hidden lg:table-cell">{exp.responsible || '—'}</td>
                       <td className="hidden lg:table-cell text-xs">{custody?.resourceName || '—'}</td>
@@ -445,21 +522,29 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
       category,
       description: description.trim(),
       plannedAmount: parseFloat(plannedAmount),
-      month: month ? parseInt(month) : undefined,
-      resourceId: resourceId || undefined,
+      month: month && month !== 'all' ? parseInt(month) : undefined,
+      resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
     });
     setDescription(''); setPlannedAmount(''); setMonth(''); setResourceId('');
     setOpen(false);
+    toast.success('تمت إضافة بند الموازنة');
   };
 
-  // Calculate totals for summary
   const totalPlanned = budgetItems.reduce((s: number, b: any) => s + b.plannedAmount, 0);
   const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
-  const overBudgetCategories = budgetItems.filter((item: any) => {
-    const actual = expenses
-      .filter((e: any) => e.category === item.category)
-      .reduce((s: number, e: any) => s + e.amount, 0);
-    return actual > item.plannedAmount;
+
+  // Compute actual per budget item using budgetItemId link (correct approach)
+  const getActualForItem = (item: any) => {
+    // Primary: match by budget_item_id (direct link)
+    const linked = expenses.filter((e: any) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
+    return linked;
+  };
+
+  // Also show unlinked expenses per category as a warning
+  const unlinkedExpenses = expenses.filter((e: any) => !e.budgetItemId);
+  const unlinkedByCategory = new Map<string, number>();
+  unlinkedExpenses.forEach((e: any) => {
+    unlinkedByCategory.set(e.category, (unlinkedByCategory.get(e.category) || 0) + e.amount);
   });
 
   return (
@@ -468,7 +553,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
         <div>
           <h3 className="text-sm font-semibold">بنود الموازنة</h3>
           <p className="text-xs text-muted-foreground">
-            الإجمالي المخطط: {formatCurrency(totalPlanned)} · الفعلي: {formatCurrency(totalActual)}
+            الإجمالي المخطط: {formatCurrency(totalPlanned)} · الفعلي: {formatCurrency(totalActual)} · المتبقي: {formatCurrency(totalPlanned - totalActual)}
           </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -496,7 +581,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
               </div>
               <div className="space-y-2">
                 <Label>الوصف</Label>
-                <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: الموارد البشرية — 4 موارد × 8,000" />
+                <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب أحمد × 4 أشهر" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -515,7 +600,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
                     </SelectContent>
                   </Select>
                 </div>
-               </div>
+              </div>
               {/* Resource selection */}
               {resources.length > 0 && (
                 <div className="space-y-2">
@@ -537,28 +622,27 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
         </Dialog>
       </div>
 
-      {/* Overspend Alert */}
-      {overBudgetCategories.length > 0 && (
-        <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5">
-          <p className="text-sm font-medium text-destructive flex items-center gap-2">
-            <TrendingDown className="w-4 h-4" />
-            تجاوز الميزانية في {overBudgetCategories.length} {overBudgetCategories.length === 1 ? 'بند' : 'بنود'}
+      {/* Unlinked expenses warning */}
+      {unlinkedByCategory.size > 0 && (
+        <div className="mb-4 p-3 rounded-lg border border-orange-500/30 bg-orange-500/5">
+          <p className="text-sm font-medium text-orange-700 dark:text-orange-400 flex items-center gap-2">
+            ⚠️ مصروفات غير مربوطة ببنود الموازنة
           </p>
-          <ul className="mt-1 text-xs text-destructive/80 space-y-0.5">
-            {overBudgetCategories.map((item: any) => {
-              const actual = expenses.filter((e: any) => e.category === item.category).reduce((s: number, e: any) => s + e.amount, 0);
-              return (
-                <li key={item.id}>
-                  {EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory]}: تجاوز بـ {formatCurrency(actual - item.plannedAmount)}
-                </li>
-              );
-            })}
+          <ul className="mt-1 text-xs text-orange-600/80 dark:text-orange-400/80 space-y-0.5">
+            {Array.from(unlinkedByCategory.entries()).map(([cat, total]) => (
+              <li key={cat}>
+                {EXPENSE_CATEGORY_LABELS[cat as ExpenseCategory]}: {formatCurrency(total)}
+              </li>
+            ))}
           </ul>
         </div>
       )}
 
       {budgetItems.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">لا توجد بنود موازنة بعد</p>
+        <div className="text-center py-8">
+          <p className="text-sm text-muted-foreground mb-2">لا توجد بنود موازنة بعد</p>
+          <p className="text-xs text-muted-foreground">ابدأ بإضافة بنود الموازنة، ثم أنشئ خط أساس، ثم سجّل المصروفات</p>
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -569,7 +653,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
                 <th>المورد</th>
                 <th>الشهر</th>
                 <th>المخطط</th>
-                <th>الفعلي</th>
+                <th>الفعلي (مربوط)</th>
                 <th className="hidden sm:table-cell">المتبقي</th>
                 <th className="hidden md:table-cell">نسبة الصرف</th>
                 <th></th>
@@ -577,9 +661,7 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
             </thead>
             <tbody>
               {budgetItems.map((item) => {
-                const actual = expenses
-                  .filter((e: any) => item.resourceId ? e.resourceId === item.resourceId && e.category === item.category : e.category === item.category)
-                  .reduce((s: number, e: any) => s + e.amount, 0);
+                const actual = getActualForItem(item);
                 const remaining = item.plannedAmount - actual;
                 const spentPct = item.plannedAmount > 0 ? (actual / item.plannedAmount) * 100 : 0;
                 const resource = resources.find(r => r.id === item.resourceId);
@@ -769,12 +851,10 @@ function BaselineSection({ projectId, durationMonths, expenses, budgetItems }: {
     }
   };
 
-  // EVM calculations
   const evm = activeBaseline
     ? calculateEVM(activeBaseline.items, expenses, durationMonths, Math.min(durationMonths, getCurrentMonth(durationMonths)))
     : null;
 
-  // S-Curve data
   const sCurveData = activeBaseline ? buildSCurveData(activeBaseline, expenses, durationMonths) : [];
 
   if (loading) {
@@ -783,7 +863,6 @@ function BaselineSection({ projectId, durationMonths, expenses, budgetItems }: {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="stat-card">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -823,11 +902,11 @@ function BaselineSection({ projectId, durationMonths, expenses, budgetItems }: {
           </Dialog>
         </div>
 
-        {/* Baselines list */}
         {projectBaselines.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            لم يتم إنشاء خط أساس بعد. أضف بنود الموازنة أولاً ثم أنشئ خط الأساس.
-          </p>
+          <div className="text-center py-8">
+            <p className="text-sm text-muted-foreground">لم يتم إنشاء خط أساس بعد.</p>
+            <p className="text-xs text-muted-foreground mt-1">أضف بنود الموازنة أولاً ← ثم أنشئ خط أساس ← ثم ابدأ بتسجيل المصروفات</p>
+          </div>
         ) : (
           <div className="space-y-2">
             {projectBaselines.map((bl) => (
@@ -866,52 +945,18 @@ function BaselineSection({ projectId, durationMonths, expenses, budgetItems }: {
       {evm && activeBaseline && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatCard
-              title="التكلفة المخططة (PV)"
-              value={formatCurrency(evm.pv)}
-              icon={<Target className="w-4 h-4" />}
-            />
-            <StatCard
-              title="التكلفة الفعلية (AC)"
-              value={formatCurrency(evm.ac)}
-              icon={<TrendingDown className="w-4 h-4" />}
-            />
-            <StatCard
-              title="انحراف التكلفة (CV)"
-              value={formatCurrency(evm.cv)}
-              icon={evm.cv >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              trend={evm.cv >= 0 ? 'up' : 'down'}
-            />
-            <StatCard
-              title="مؤشر الأداء (CPI)"
-              value={evm.cpi.toFixed(2)}
-              icon={<BarChart3 className="w-4 h-4" />}
-              trend={evm.cpi >= 1 ? 'up' : 'down'}
-              subtitle={evm.cpi >= 1 ? 'ضمن الميزانية' : 'تجاوز الميزانية'}
-            />
+            <StatCard title="التكلفة المخططة (PV)" value={formatCurrency(evm.pv)} icon={<Target className="w-4 h-4" />} />
+            <StatCard title="التكلفة الفعلية (AC)" value={formatCurrency(evm.ac)} icon={<TrendingDown className="w-4 h-4" />} />
+            <StatCard title="انحراف التكلفة (CV)" value={formatCurrency(evm.cv)} icon={evm.cv >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />} trend={evm.cv >= 0 ? 'up' : 'down'} />
+            <StatCard title="مؤشر الأداء (CPI)" value={evm.cpi.toFixed(2)} icon={<BarChart3 className="w-4 h-4" />} trend={evm.cpi >= 1 ? 'up' : 'down'} subtitle={evm.cpi >= 1 ? 'ضمن الميزانية' : 'تجاوز الميزانية'} />
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <StatCard
-              title="الميزانية الكلية (BAC)"
-              value={formatCurrency(evm.bac)}
-              icon={<DollarSign className="w-4 h-4" />}
-            />
-            <StatCard
-              title="التقدير للإنجاز (EAC)"
-              value={formatCurrency(evm.eac)}
-              icon={<Target className="w-4 h-4" />}
-              trend={evm.eac <= evm.bac ? 'up' : 'down'}
-            />
-            <StatCard
-              title="الانحراف عند الإنجاز (VAC)"
-              value={formatCurrency(evm.vac)}
-              icon={evm.vac >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              trend={evm.vac >= 0 ? 'up' : 'down'}
-            />
+            <StatCard title="الميزانية الكلية (BAC)" value={formatCurrency(evm.bac)} icon={<DollarSign className="w-4 h-4" />} />
+            <StatCard title="التقدير للإنجاز (EAC)" value={formatCurrency(evm.eac)} icon={<Target className="w-4 h-4" />} trend={evm.eac <= evm.bac ? 'up' : 'down'} />
+            <StatCard title="الانحراف عند الإنجاز (VAC)" value={formatCurrency(evm.vac)} icon={evm.vac >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />} trend={evm.vac >= 0 ? 'up' : 'down'} />
           </div>
 
-          {/* S-Curve Chart */}
           {sCurveData.length > 0 && (
             <div className="stat-card">
               <h3 className="text-sm font-semibold mb-4">منحنى S — التكلفة المخططة مقابل الفعلية</h3>
@@ -922,35 +967,16 @@ function BaselineSection({ projectId, durationMonths, expenses, budgetItems }: {
                   <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip
                     formatter={(v: number) => formatCurrency(v)}
-                    contentStyle={{
-                      background: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: 8,
-                    }}
+                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
                   />
                   <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="planned"
-                    name="المخطط (PV)"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="actual"
-                    name="الفعلي (AC)"
-                    stroke="hsl(0, 72%, 51%)"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
+                  <Line type="monotone" dataKey="planned" name="المخطط (PV)" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="actual" name="الفعلي (AC)" stroke="hsl(0, 72%, 51%)" strokeWidth={2} dot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           )}
 
-          {/* Baseline Items Detail */}
           <div className="stat-card">
             <h3 className="text-sm font-semibold mb-4">
               تفاصيل خط الأساس النشط: {activeBaseline.name}
@@ -992,7 +1018,7 @@ function BaselineSection({ projectId, durationMonths, expenses, budgetItems }: {
 function ResourcesSection({ projectId, resources }: {
   projectId: string; resources: Resource[];
 }) {
-  const { addResource, deleteResource } = useStore();
+  const { addResource, deleteResource, expenses } = useStore();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
@@ -1012,6 +1038,9 @@ function ResourcesSection({ projectId, resources }: {
   };
 
   const totalMonthlyCost = resources.reduce((s, r) => s + r.monthlyCost, 0);
+
+  // Calculate total spent per resource
+  const pExpenses = expenses.filter(e => e.projectId === projectId);
 
   return (
     <div className="stat-card">
@@ -1053,7 +1082,10 @@ function ResourcesSection({ projectId, resources }: {
       </div>
 
       {resources.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">لا توجد موارد مسجلة بعد</p>
+        <div className="text-center py-8">
+          <p className="text-sm text-muted-foreground mb-2">لا توجد موارد مسجلة بعد</p>
+          <p className="text-xs text-muted-foreground">ابدأ بتسجيل الموارد البشرية ← ثم أضف بنود الموازنة</p>
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -1062,22 +1094,27 @@ function ResourcesSection({ projectId, resources }: {
                 <th>الاسم</th>
                 <th>الدور</th>
                 <th>التكلفة الشهرية</th>
+                <th>إجمالي الصرف</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {resources.map((r) => (
-                <tr key={r.id}>
-                  <td className="font-medium">{r.name}</td>
-                  <td className="text-muted-foreground">{r.role || '—'}</td>
-                  <td className="font-mono text-sm">{formatCurrency(r.monthlyCost)}</td>
-                  <td>
-                    <Button variant="ghost" size="icon" onClick={() => deleteResource(r.id)}>
-                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {resources.map((r) => {
+                const totalSpent = pExpenses.filter(e => e.resourceId === r.id).reduce((s, e) => s + e.amount, 0);
+                return (
+                  <tr key={r.id}>
+                    <td className="font-medium">{r.name}</td>
+                    <td className="text-muted-foreground">{r.role || '—'}</td>
+                    <td className="font-mono text-sm">{formatCurrency(r.monthlyCost)}</td>
+                    <td className="font-mono text-sm">{formatCurrency(totalSpent)}</td>
+                    <td>
+                      <Button variant="ghost" size="icon" onClick={() => deleteResource(r.id)}>
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1109,7 +1146,6 @@ function CustodySection({ projectId, companyId, custodies, expenses }: {
     toast.success('تمت إضافة العهدة');
   };
 
-  // Recalculate spent/remaining for each custody from current expenses
   const enrichedCustodies = custodies.map(c => {
     const spent = expenses.filter((e: any) => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
     return { ...c, spent, remaining: c.amount - spent };
@@ -1217,6 +1253,61 @@ function CustodySection({ projectId, companyId, custodies, expenses }: {
   );
 }
 
+// ---- Audit Log Section ----
+function AuditLogSection({ projectId }: { projectId: string }) {
+  const { auditLog, loadAuditLog } = useStore();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadAuditLog(projectId).finally(() => setLoading(false));
+  }, [projectId]);
+
+  if (loading) {
+    return <div className="stat-card text-center py-8 text-sm text-muted-foreground">جاري التحميل...</div>;
+  }
+
+  return (
+    <div className="stat-card">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold">سجل العمليات المحذوفة</h3>
+        <p className="text-xs text-muted-foreground">يمكنك مراجعة جميع العناصر التي تم حذفها من هذا المشروع</p>
+      </div>
+
+      {auditLog.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">لا توجد عمليات حذف مسجلة</p>
+      ) : (
+        <div className="space-y-3">
+          {auditLog.map((entry) => {
+            const data = entry.recordData;
+            return (
+              <div key={entry.id} className="p-3 rounded-lg border border-border bg-muted/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium px-2 py-0.5 rounded bg-destructive/10 text-destructive">
+                    حذف {TABLE_NAME_LABELS[entry.tableName] || entry.tableName}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(entry.createdAt).toLocaleDateString('ar-SA')} — {new Date(entry.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <div className="text-xs space-y-1">
+                  {data.description && <p><span className="text-muted-foreground">الوصف:</span> {data.description}</p>}
+                  {data.name && <p><span className="text-muted-foreground">الاسم:</span> {data.name}</p>}
+                  {data.resourceName && <p><span className="text-muted-foreground">المستلم:</span> {data.resourceName}</p>}
+                  {(data.amount !== undefined || data.plannedAmount !== undefined) && (
+                    <p><span className="text-muted-foreground">المبلغ:</span> {formatCurrency(data.amount || data.plannedAmount || 0)}</p>
+                  )}
+                  {data.category && <p><span className="text-muted-foreground">الفئة:</span> {EXPENSE_CATEGORY_LABELS[data.category as ExpenseCategory] || data.category}</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Helpers
 function getCurrentMonth(durationMonths: number): number {
   return Math.ceil(durationMonths / 2);
 }
@@ -1227,7 +1318,6 @@ function buildSCurveData(baseline: CostBaseline, expenses: any[], durationMonths
 
   let cumPV = 0;
   let cumAC = 0;
-
   return Array.from({ length: durationMonths }, (_, i) => {
     cumPV += monthlyPV[i];
     cumAC += monthlyAC[i];
