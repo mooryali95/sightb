@@ -1,0 +1,77 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+
+export default function ResetPassword() {
+  const navigate = useNavigate();
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Check for recovery token in URL hash
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery')) {
+      setReady(true);
+    } else {
+      // Listen for PASSWORD_RECOVERY event
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setReady(true);
+        }
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 6) {
+      toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      toast.success('تم تغيير كلمة المرور بنجاح');
+      navigate('/', { replace: true });
+    } catch (error: any) {
+      toast.error(error.message || 'حدث خطأ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">جاري التحقق من الرابط...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+        <div className="stat-card">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <h2 className="text-lg font-semibold text-center">تعيين كلمة مرور جديدة</h2>
+            <div className="space-y-2">
+              <Label>كلمة المرور الجديدة</Label>
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" required minLength={6} />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'جاري الحفظ...' : 'حفظ كلمة المرور'}
+            </Button>
+          </form>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
