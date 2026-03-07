@@ -504,8 +504,8 @@ function ExpensesSection({ projectId, durationMonths, expenses, resources, custo
   );
 }
 
-function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources }: {
-  projectId: string; budgetItems: any[]; expenses: any[]; durationMonths: number; resources: Resource[];
+function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency }: {
+  projectId: string; budgetItems: any[]; expenses: any[]; durationMonths: number; resources: Resource[]; contractValue: number; currency: string;
 }) {
   const { addBudgetItem, deleteBudgetItem } = useStore();
   const [open, setOpen] = useState(false);
@@ -532,19 +532,22 @@ function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resou
 
   const totalPlanned = budgetItems.reduce((s: number, b: any) => s + b.plannedAmount, 0);
   const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+  const unallocated = contractValue - totalPlanned;
+  const plannedProfit = contractValue - totalPlanned;
+  const actualProfit = contractValue - totalActual;
+  const plannedProfitMargin = contractValue > 0 ? (plannedProfit / contractValue) * 100 : 0;
 
-  // Compute actual per budget item using budgetItemId link (correct approach)
-  const getActualForItem = (item: any) => {
-    // Primary: match by budget_item_id (direct link)
-    const linked = expenses.filter((e: any) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
-    return linked;
-  };
-
-  // Also show unlinked expenses per category as a warning
-  const unlinkedExpenses = expenses.filter((e: any) => !e.budgetItemId);
-  const unlinkedByCategory = new Map<string, number>();
-  unlinkedExpenses.forEach((e: any) => {
-    unlinkedByCategory.set(e.category, (unlinkedByCategory.get(e.category) || 0) + e.amount);
+  // Category summary
+  const categoryMap = new Map<string, { planned: number; actual: number }>();
+  budgetItems.forEach((b: any) => {
+    const entry = categoryMap.get(b.category) || { planned: 0, actual: 0 };
+    entry.planned += b.plannedAmount;
+    categoryMap.set(b.category, entry);
+  });
+  expenses.forEach((e: any) => {
+    const entry = categoryMap.get(e.category) || { planned: 0, actual: 0 };
+    entry.actual += e.amount;
+    categoryMap.set(e.category, entry);
   });
 
   return (
