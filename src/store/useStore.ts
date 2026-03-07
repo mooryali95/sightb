@@ -45,6 +45,8 @@ interface CompanyActions {
   addCompany: (c: Omit<Company, 'id' | 'createdAt'>) => Promise<string>;
   updateCompany: (id: string, c: Partial<Company>) => Promise<void>;
   deleteCompany: (id: string) => Promise<void>;
+  archiveCompany: (id: string) => Promise<void>;
+  unarchiveCompany: (id: string) => Promise<void>;
 }
 
 interface PortfolioActions {
@@ -173,7 +175,8 @@ export const useStore = create<AppState>()((set, get) => ({
     if (c.name !== undefined) updates.name = c.name;
     if (c.description !== undefined) updates.description = c.description;
     if (c.logo !== undefined) updates.logo = c.logo;
-    const { error } = await supabase.from('companies').update(updates).eq('id', id);
+    if (c.status !== undefined) updates.status = c.status;
+    const { error } = await (supabase as any).from('companies').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ companies: s.companies.map((x) => (x.id === id ? { ...x, ...c } : x)) }));
   },
@@ -186,6 +189,18 @@ export const useStore = create<AppState>()((set, get) => ({
       portfolios: s.portfolios.filter((x) => x.companyId !== id),
       projects: s.projects.filter((x) => x.companyId !== id),
     }));
+  },
+
+  archiveCompany: async (id) => {
+    const { error } = await (supabase as any).from('companies').update({ status: 'archived' }).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ companies: s.companies.map((x) => (x.id === id ? { ...x, status: 'archived' as const } : x)) }));
+  },
+
+  unarchiveCompany: async (id) => {
+    const { error } = await (supabase as any).from('companies').update({ status: 'active' }).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ companies: s.companies.map((x) => (x.id === id ? { ...x, status: 'active' as const } : x)) }));
   },
 
   // ---- Portfolio slice ----
