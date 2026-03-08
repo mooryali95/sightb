@@ -26,7 +26,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears, isWithinInterval, parseISO } from 'date-fns';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 import { useRole } from '@/hooks/useRole';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,6 +54,41 @@ export default function Dashboard() {
   const [filterCompany, setFilterCompany] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [timePeriod, setTimePeriod] = useState<string>('all');
+
+  // Time period date ranges
+  const { currentRange, previousRange } = useMemo(() => {
+    const now = new Date();
+    let currentStart: Date, currentEnd: Date, prevStart: Date, prevEnd: Date;
+    switch (timePeriod) {
+      case 'month':
+        currentStart = startOfMonth(now); currentEnd = endOfMonth(now);
+        prevStart = startOfMonth(subMonths(now, 1)); prevEnd = endOfMonth(subMonths(now, 1));
+        break;
+      case 'quarter':
+        currentStart = startOfQuarter(now); currentEnd = endOfQuarter(now);
+        prevStart = startOfQuarter(subQuarters(now, 1)); prevEnd = endOfQuarter(subQuarters(now, 1));
+        break;
+      case 'year':
+        currentStart = startOfYear(now); currentEnd = endOfYear(now);
+        prevStart = startOfYear(subYears(now, 1)); prevEnd = endOfYear(subYears(now, 1));
+        break;
+      default:
+        return { currentRange: null, previousRange: null };
+    }
+    return {
+      currentRange: { start: currentStart, end: currentEnd },
+      previousRange: { start: prevStart, end: prevEnd },
+    };
+  }, [timePeriod]);
+
+  const isInRange = useCallback((dateStr: string, range: { start: Date; end: Date } | null) => {
+    if (!range) return true;
+    try {
+      const d = parseISO(dateStr);
+      return isWithinInterval(d, range);
+    } catch { return true; }
+  }, []);
 
   // Filtered projects
   const filteredProjects = useMemo(() => {
@@ -68,17 +104,18 @@ export default function Dashboard() {
     });
   }, [projects, companies, filterCompany, filterStatus, searchQuery]);
 
-  const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '';
+  const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '' || timePeriod !== 'all';
 
   const clearFilters = () => {
     setFilterCompany('all');
     setFilterStatus('all');
     setSearchQuery('');
+    setTimePeriod('all');
   };
 
-  // Stats based on filtered projects
+  // Stats based on filtered projects + time period
   const totalContractValue = filteredProjects.reduce((s, p) => s + p.contractValue, 0);
-  const filteredExpenses = expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId));
+  const filteredExpenses = expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId) && isInRange(e.date, currentRange));
   const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
   const filteredBudgetItems = budgetItems.filter((b) => filteredProjects.some((p) => p.id === b.projectId));
   const totalPlanned = filteredBudgetItems.reduce((s, b) => s + b.plannedAmount, 0);
@@ -88,8 +125,19 @@ export default function Dashboard() {
   const plannedProfit = effectiveTotalContract - totalPlanned;
   const plannedProfitMargin = effectiveTotalContract > 0 ? (plannedProfit / effectiveTotalContract) * 100 : 0;
 
-  const filteredRevenues = revenues.filter((r) => filteredProjects.some((p) => p.id === r.projectId));
+  const filteredRevenues = revenues.filter((r) => filteredProjects.some((p) => p.id === r.projectId) && isInRange(r.date, currentRange));
   const collectedRevenue = filteredRevenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
+
+  // Previous period comparison
+  const prevExpenses = previousRange
+    ? expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId) && isInRange(e.date, previousRange)).reduce((s, e) => s + e.amount, 0)
+    : 0;
+  const prevRevenue = previousRange
+    ? revenues.filter((r) => filteredProjects.some((p) => p.id === r.projectId) && r.status === 'collected' && isInRange(r.date, previousRange)).reduce((s, r) => s + r.amount, 0)
+    : 0;
+
+  const expenseChange = prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : null;
+  const revenueChange = prevRevenue > 0 ? ((collectedRevenue - prevRevenue) / prevRevenue) * 100 : null;
 
   const companyData = companies
     .map((c) => {
@@ -207,6 +255,18 @@ export default function Dashboard() {
                     </SelectContent>
                   </Select>
 
+                  <Select value={timePeriod} onValueChange={setTimePeriod}>
+                    <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+                      <SelectValue placeholder="كل الفترات" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل الفترات</SelectItem>
+                      <SelectItem value="month">هذا الشهر</SelectItem>
+                      <SelectItem value="quarter">هذا الربع</SelectItem>
+                      <SelectItem value="year">هذه السنة</SelectItem>
+                    </SelectContent>
+                  </Select>
+
                   <AnimatePresence>
                     {hasActiveFilters && (
                       <motion.div
@@ -255,7 +315,8 @@ export default function Dashboard() {
                   title="إجمالي المصروفات"
                   value={formatCurrency(totalExpenses)}
                   icon={<TrendingUp className="w-4 h-4" />}
-                  trend="down"
+                  trend={expenseChange !== null ? (expenseChange > 0 ? 'up' : 'down') : undefined}
+                  subtitle={expenseChange !== null ? `${expenseChange > 0 ? '↑' : '↓'} ${Math.abs(expenseChange).toFixed(1)}% عن الفترة السابقة` : undefined}
                 />
               </motion.div>
               <motion.div variants={stagger.item}>
@@ -269,10 +330,15 @@ export default function Dashboard() {
               </motion.div>
               <motion.div variants={stagger.item}>
                 <StatCard
-                  title="المشاريع"
-                  value={filteredProjects.length.toString()}
+                  title={timePeriod !== 'all' ? 'الإيرادات المحصّلة' : 'المشاريع'}
+                  value={timePeriod !== 'all' ? formatCurrency(collectedRevenue) : filteredProjects.length.toString()}
                   icon={<Briefcase className="w-4 h-4" />}
-                  subtitle={collectedRevenue > 0 ? `محصّل: ${formatCurrency(collectedRevenue)}` : `${activeCompanies.length} نشطة${archivedCompanies.length > 0 ? ` · ${archivedCompanies.length} مؤرشفة` : ''} · ${portfolios.length} محفظة`}
+                  trend={revenueChange !== null ? (revenueChange > 0 ? 'up' : 'down') : undefined}
+                  subtitle={
+                    timePeriod !== 'all' && revenueChange !== null
+                      ? `${revenueChange > 0 ? '↑' : '↓'} ${Math.abs(revenueChange).toFixed(1)}% عن الفترة السابقة`
+                      : collectedRevenue > 0 ? `محصّل: ${formatCurrency(collectedRevenue)}` : `${activeCompanies.length} نشطة${archivedCompanies.length > 0 ? ` · ${archivedCompanies.length} مؤرشفة` : ''} · ${portfolios.length} محفظة`
+                  }
                 />
               </motion.div>
             </motion.div>
