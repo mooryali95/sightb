@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
@@ -9,11 +10,18 @@ import { getProjectSummary, getCashFlowForecast } from '@/lib/finance';
 import { exportPortfolioToExcel } from '@/lib/export';
 import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, RISK_PROBABILITY_LABELS, RISK_STATUS_LABELS, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, Target, BarChart3,
   FileSpreadsheet, ArrowLeft, AlertTriangle,
+  FolderKanban, Pencil, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -27,15 +35,51 @@ const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 
 export default function PortfolioDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAdmin } = useRole();
   const {
     portfolios, companies, projects, budgetItems, expenses, revenues,
     changeOrders, milestones, risks, loading, loadAll,
+    updatePortfolio, deletePortfolio,
   } = useStore();
 
   useEffect(() => { loadAll(); }, []);
 
   const portfolio = portfolios.find(p => p.id === id);
   const company = portfolio ? companies.find(c => c.id === portfolio.companyId) : null;
+
+  // Edit state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editTargetRevenue, setEditTargetRevenue] = useState('');
+  const [editTargetMargin, setEditTargetMargin] = useState('');
+  const [editFiscalYear, setEditFiscalYear] = useState('');
+
+  const openEdit = () => {
+    if (portfolio) {
+      setEditName(portfolio.name);
+      setEditDescription(portfolio.description || '');
+      setEditTargetRevenue(String(portfolio.targetRevenue || 0));
+      setEditTargetMargin(String(portfolio.targetMargin || 0));
+      setEditFiscalYear(portfolio.fiscalYear || '');
+      setEditOpen(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editName.trim()) { toast.error('اسم المحفظة مطلوب'); return; }
+    try {
+      await updatePortfolio(id!, {
+        name: editName,
+        description: editDescription || undefined,
+        targetRevenue: parseFloat(editTargetRevenue) || 0,
+        targetMargin: parseFloat(editTargetMargin) || 0,
+        fiscalYear: editFiscalYear || undefined,
+      });
+      toast.success('تم تحديث بيانات المحفظة');
+      setEditOpen(false);
+    } catch { toast.error('فشل التحديث'); }
+  };
 
   const summary = useMemo(() => {
     if (!portfolio) return null;
@@ -65,7 +109,6 @@ export default function PortfolioDetail() {
     });
   }, [portfolioProjects, budgetItems, expenses, revenues, changeOrders]);
 
-  // Charts data
   const pieData = useMemo(() =>
     projectSummaries.filter(ps => ps.summary.totalActual > 0).map(ps => ({
       name: ps.project.name, value: ps.summary.totalActual,
@@ -77,7 +120,6 @@ export default function PortfolioDetail() {
       'الربح المخطط': ps.summary.plannedProfit,
     })), [projectSummaries]);
 
-  // Aggregated cash flow
   const cashFlowData = useMemo(() => {
     if (portfolioProjects.length === 0) return [];
     const maxMonths = Math.max(...portfolioProjects.map(p => p.durationMonths), 1);
@@ -121,49 +163,110 @@ export default function PortfolioDetail() {
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header */}
-        <div className="page-header">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
-            <span>←</span>
-            {company && <button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-primary transition-colors">{company.name}</button>}
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h1 className="page-title">{portfolio.name}</h1>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${HEALTH_STATUS_COLORS[summary.healthStatus]}`}>
-                {HEALTH_STATUS_LABELS[summary.healthStatus]}
-              </span>
+        {/* Header with Purple Theme */}
+        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-to-l from-violet-500/10 via-purple-500/5 to-transparent">
+          <div className="p-6">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+              <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
+              <span>←</span>
+              {company && <button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-primary transition-colors">{company.name}</button>}
             </div>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-              exportPortfolioToExcel({
-                portfolioName: portfolio.name,
-                summary: { ...summary },
-                projectSummaries: projectSummaries.map(ps => ({
-                  name: ps.project.name,
-                  contractValue: ps.summary.effectiveContractValue,
-                  planned: ps.summary.totalPlanned,
-                  actual: ps.summary.totalActual,
-                  plannedProfit: ps.summary.plannedProfit,
-                  percentComplete: ps.project.percentComplete,
-                  health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
-                })),
-                risks: portfolioRisks.map(r => ({
-                  title: r.title,
-                  project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
-                  probability: RISK_PROBABILITY_LABELS[r.probability],
-                  impact: r.impact,
-                  financialImpact: r.financialImpact,
-                  status: RISK_STATUS_LABELS[r.status],
-                })),
-              });
-              toast.success('تم تصدير تقرير المحفظة');
-            }}>
-              <FileSpreadsheet className="w-3.5 h-3.5" />تصدير Excel
-            </Button>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center">
+                  <FolderKanban className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-bold">{portfolio.name}</h1>
+                    <Badge className={`text-[10px] ${HEALTH_STATUS_COLORS[summary.healthStatus]}`}>
+                      {HEALTH_STATUS_LABELS[summary.healthStatus]}
+                    </Badge>
+                  </div>
+                  {portfolio.fiscalYear && <p className="text-xs text-muted-foreground mt-0.5">السنة المالية: {portfolio.fiscalYear}</p>}
+                  <p className="text-xs text-muted-foreground">{summary.projectCount} مشروع</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
+                  <Pencil className="w-3.5 h-3.5" />تعديل
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                  exportPortfolioToExcel({
+                    portfolioName: portfolio.name,
+                    summary: { ...summary },
+                    projectSummaries: projectSummaries.map(ps => ({
+                      name: ps.project.name,
+                      contractValue: ps.summary.effectiveContractValue,
+                      planned: ps.summary.totalPlanned,
+                      actual: ps.summary.totalActual,
+                      plannedProfit: ps.summary.plannedProfit,
+                      percentComplete: ps.project.percentComplete,
+                      health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
+                    })),
+                    risks: portfolioRisks.map(r => ({
+                      title: r.title,
+                      project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
+                      probability: RISK_PROBABILITY_LABELS[r.probability],
+                      impact: r.impact,
+                      financialImpact: r.financialImpact,
+                      status: RISK_STATUS_LABELS[r.status],
+                    })),
+                  });
+                  toast.success('تم تصدير تقرير المحفظة');
+                }}>
+                  <FileSpreadsheet className="w-3.5 h-3.5" />تصدير
+                </Button>
+                {isAdmin && (
+                  <ConfirmDeleteDialog
+                    title="حذف المحفظة"
+                    description={`هل أنت متأكد من حذف "${portfolio.name}"؟ ستصبح المشاريع بدون محفظة.`}
+                    onConfirm={async () => {
+                      try { await deletePortfolio(id!); toast.success('تم الحذف'); navigate('/'); } catch { toast.error('فشل الحذف'); }
+                    }}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
+            </div>
           </div>
-          {portfolio.fiscalYear && <p className="text-xs text-muted-foreground mt-1">السنة المالية: {portfolio.fiscalYear}</p>}
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>تعديل بيانات المحفظة</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>اسم المحفظة *</Label>
+                <Input value={editName} onChange={e => setEditName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>الوصف</Label>
+                <Textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={2} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>هدف الإيراد</Label>
+                  <Input type="number" value={editTargetRevenue} onChange={e => setEditTargetRevenue(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label>هامش الربح المستهدف %</Label>
+                  <Input type="number" value={editTargetMargin} onChange={e => setEditTargetMargin(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>السنة المالية</Label>
+                <Input value={editFiscalYear} onChange={e => setEditFiscalYear(e.target.value)} placeholder="مثال: 2026" />
+              </div>
+              <Button onClick={handleSaveEdit} className="w-full">حفظ</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
