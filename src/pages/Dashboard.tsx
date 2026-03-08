@@ -12,8 +12,9 @@ import {
 import {
   Building2, FolderKanban, Briefcase, TrendingUp, Plus,
   ArrowLeft, DollarSign, Filter, Search, X, Archive, ArchiveRestore,
-  AlertTriangle, ShieldAlert,
+  AlertTriangle, ShieldAlert, Trash2,
 } from 'lucide-react';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
