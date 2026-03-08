@@ -49,7 +49,10 @@ export default function ProjectDetail() {
     loadAll, updateProject, deleteProject,
   } = useStore();
 
+  const { detailsLoaded, detailsLoading, loadProjectData } = useStore();
+
   useEffect(() => { loadAll(); }, []);
+  useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded]);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0 });
