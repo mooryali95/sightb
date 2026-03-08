@@ -20,7 +20,7 @@ import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { motion } from 'framer-motion';
 import {
   Building2, DollarSign, TrendingUp, AlertTriangle, Plus,
-  FolderKanban, ArrowLeft, Briefcase,
+  FolderKanban, ArrowLeft, Briefcase, FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
