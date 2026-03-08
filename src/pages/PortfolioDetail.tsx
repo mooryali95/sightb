@@ -47,12 +47,12 @@ export default function PortfolioDetail() {
   useEffect(() => { loadAll(); }, []);
   
   // Load project data for all portfolio projects
-  const portfolioProjects = useMemo(() => projects.filter(p => p.portfolioId === id), [projects, id]);
+  const earlyPortfolioProjects = useMemo(() => projects.filter(p => p.portfolioId === id), [projects, id]);
   useEffect(() => {
-    if (!detailsLoaded && portfolioProjects.length > 0) {
-      portfolioProjects.forEach(p => loadProjectData(p.id));
+    if (!detailsLoaded && earlyPortfolioProjects.length > 0) {
+      earlyPortfolioProjects.forEach(p => loadProjectData(p.id));
     }
-  }, [detailsLoaded, portfolioProjects.length]);
+  }, [detailsLoaded, earlyPortfolioProjects.length]);
 
   const portfolio = portfolios.find(p => p.id === id);
   const company = portfolio ? companies.find(c => c.id === portfolio.companyId) : null;
