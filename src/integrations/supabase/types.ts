@@ -89,29 +89,38 @@ export type Database = {
         Row: {
           baseline_id: string
           category: string
+          cost_type: string
           created_at: string
           description: string
+          end_month: number | null
           id: string
           month: number | null
           planned_amount: number
+          start_month: number | null
         }
         Insert: {
           baseline_id: string
           category: string
+          cost_type?: string
           created_at?: string
           description: string
+          end_month?: number | null
           id?: string
           month?: number | null
           planned_amount?: number
+          start_month?: number | null
         }
         Update: {
           baseline_id?: string
           category?: string
+          cost_type?: string
           created_at?: string
           description?: string
+          end_month?: number | null
           id?: string
           month?: number | null
           planned_amount?: number
+          start_month?: number | null
         }
         Relationships: [
           {

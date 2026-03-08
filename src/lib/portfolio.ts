@@ -55,6 +55,9 @@ export function getPortfolioSummary(
     weightedCompleteNum += project.percentComplete * w;
     totalWeight += w;
 
+    // Note: This is an approximation using totalPlanned instead of BAC (baseline).
+    // For accurate CPI, each project should have an active baseline.
+    // If no baseline exists, this ratio approximates spending efficiency.
     // Approximate CPI
     if (summary.totalActual > 0 && summary.totalPlanned > 0) {
       const approxCPI = (project.percentComplete / 100 * summary.totalPlanned) / summary.totalActual;
