@@ -194,7 +194,33 @@ export default function CompanyDetail() {
                     });
                     toast.success('تم تصدير تقرير الشركة');
                   }}>
-                    <FileSpreadsheet className="w-3.5 h-3.5" />تصدير
+                    <FileSpreadsheet className="w-3.5 h-3.5" />Excel
+                  </Button>
+                )}
+                {summary && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                    exportCompanyToPDF({
+                      companyName: company.name,
+                      summary,
+                      portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
+                        name: ps.portfolioName,
+                        projects: ps.projectCount,
+                        contractValue: ps.totalEffectiveValue,
+                        actual: ps.totalActual,
+                        profit: ps.aggregatePlannedProfit,
+                        completion: ps.weightedPercentComplete,
+                        health: HEALTH_STATUS_LABELS[ps.healthStatus],
+                      })),
+                      indirectCosts: compIndirectCosts.map(ic => ({
+                        category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
+                        description: ic.description,
+                        amount: ic.amount,
+                        month: ic.month,
+                      })),
+                    });
+                    toast.success('تم تصدير تقرير PDF');
+                  }}>
+                    <FileSpreadsheet className="w-3.5 h-3.5" />PDF
                   </Button>
                 )}
                 {isAdmin && (
