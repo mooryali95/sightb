@@ -1,8 +1,9 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { BarChart3, Shield, TrendingUp, FolderKanban, ArrowLeft, ExternalLink } from 'lucide-react';
 import basserhLogo from '@/assets/basserh-logo.jpg';
+import { useAuth } from '@/hooks/useAuth';
 
 const features = [
   {
