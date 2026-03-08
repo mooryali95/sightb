@@ -141,43 +141,106 @@ export const useStore = create<AppState>()((set, get) => ({
   companies: [], portfolios: [], projects: [], budgetItems: [], expenses: [],
   revenues: [], baselines: [], resources: [], custodies: [], milestones: [],
   changeOrders: [], risks: [], indirectCosts: [], snapshots: [],
-  auditLog: [], loading: true,
+  auditLog: [], loading: true, detailsLoading: false, detailsLoaded: false,
+  projectDataLoaded: new Set<string>(),
 
   // ---- Load slice ----
   loadAll: async () => {
+    // Phase 1: Load overview data (fast)
     set({ loading: true });
-    const [companies, portfolios, projects, budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts] = await Promise.all([
+    const [companies, portfolios, projects] = await Promise.all([
       supabase.from('companies').select('*').order('created_at', { ascending: false }),
       supabase.from('portfolios').select('*').order('created_at', { ascending: false }),
       supabase.from('projects').select('*').order('created_at', { ascending: false }),
-      supabase.from('budget_items').select('*').order('created_at', { ascending: false }),
-      supabase.from('expenses').select('*').order('created_at', { ascending: false }),
-      supabase.from('revenues').select('*').order('created_at', { ascending: false }),
-      supabase.from('resources').select('*').order('created_at', { ascending: false }),
-      supabase.from('custodies').select('*').order('created_at', { ascending: false }),
-      supabase.from('milestones').select('*').order('sort_order', { ascending: true }),
-      supabase.from('change_orders').select('*').order('created_at', { ascending: false }),
-      supabase.from('risks').select('*').order('created_at', { ascending: false }),
-      supabase.from('indirect_costs').select('*').order('created_at', { ascending: false }),
     ]);
 
-    const expenseList = (expenses.data || []).map(mapExpense);
-
+    const expenseList = get().expenses;
     set({
       companies: (companies.data || []).map(mapCompany),
       portfolios: (portfolios.data || []).map(mapPortfolio),
       projects: (projects.data || []).map(mapProject),
-      budgetItems: (budgetItems.data || []).map(mapBudgetItem),
-      expenses: expenseList,
-      revenues: (revenues.data || []).map(mapRevenue),
-      resources: (resources.data || []).map(mapResource),
-      custodies: (custodies.data || []).map((c) => mapCustody(c, expenseList)),
-      milestones: (milestones.data || []).map(mapMilestone),
-      changeOrders: (changeOrders.data || []).map(mapChangeOrder),
-      risks: (risks.data || []).map(mapRisk),
-      indirectCosts: (indirectCosts.data || []).map(mapIndirectCost),
       loading: false,
     });
+
+    // Phase 2: Load detail data in background (non-blocking)
+    if (!get().detailsLoaded) {
+      set({ detailsLoading: true });
+      const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts] = await Promise.all([
+        supabase.from('budget_items').select('*').order('created_at', { ascending: false }),
+        supabase.from('expenses').select('*').order('created_at', { ascending: false }),
+        supabase.from('revenues').select('*').order('created_at', { ascending: false }),
+        supabase.from('resources').select('*').order('created_at', { ascending: false }),
+        supabase.from('custodies').select('*').order('created_at', { ascending: false }),
+        supabase.from('milestones').select('*').order('sort_order', { ascending: true }),
+        supabase.from('change_orders').select('*').order('created_at', { ascending: false }),
+        supabase.from('risks').select('*').order('created_at', { ascending: false }),
+        supabase.from('indirect_costs').select('*').order('created_at', { ascending: false }),
+      ]);
+
+      const mappedExpenses = (expenses.data || []).map(mapExpense);
+
+      set({
+        budgetItems: (budgetItems.data || []).map(mapBudgetItem),
+        expenses: mappedExpenses,
+        revenues: (revenues.data || []).map(mapRevenue),
+        resources: (resources.data || []).map(mapResource),
+        custodies: (custodies.data || []).map((c) => mapCustody(c, mappedExpenses)),
+        milestones: (milestones.data || []).map(mapMilestone),
+        changeOrders: (changeOrders.data || []).map(mapChangeOrder),
+        risks: (risks.data || []).map(mapRisk),
+        indirectCosts: (indirectCosts.data || []).map(mapIndirectCost),
+        detailsLoading: false,
+        detailsLoaded: true,
+      });
+    }
+  },
+
+  // Load data for a specific project (targeted lazy load)
+  loadProjectData: async (projectId: string) => {
+    if (get().detailsLoaded || get().projectDataLoaded.has(projectId)) return;
+
+    const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks] = await Promise.all([
+      supabase.from('budget_items').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('expenses').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('revenues').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('resources').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('custodies').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('milestones').select('*').eq('project_id', projectId).order('sort_order', { ascending: true }),
+      supabase.from('change_orders').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      supabase.from('risks').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+    ]);
+
+    const mappedExpenses = (expenses.data || []).map(mapExpense);
+    const loaded = new Set(get().projectDataLoaded);
+    loaded.add(projectId);
+
+    set((s) => ({
+      budgetItems: [...s.budgetItems.filter(b => b.projectId !== projectId), ...(budgetItems.data || []).map(mapBudgetItem)],
+      expenses: [...s.expenses.filter(e => e.projectId !== projectId), ...mappedExpenses],
+      revenues: [...s.revenues.filter(r => r.projectId !== projectId), ...(revenues.data || []).map(mapRevenue)],
+      resources: [...s.resources.filter(r => r.projectId !== projectId), ...(resources.data || []).map(mapResource)],
+      custodies: [...s.custodies.filter(c => c.projectId !== projectId), ...(custodies.data || []).map(c => mapCustody(c, mappedExpenses))],
+      milestones: [...s.milestones.filter(m => m.projectId !== projectId), ...(milestones.data || []).map(mapMilestone)],
+      changeOrders: [...s.changeOrders.filter(co => co.projectId !== projectId), ...(changeOrders.data || []).map(mapChangeOrder)],
+      risks: [...s.risks.filter(r => r.projectId !== projectId), ...(risks.data || []).map(mapRisk)],
+      projectDataLoaded: loaded,
+    }));
+  },
+
+  // Load data for all projects in a company
+  loadCompanyData: async (companyId: string) => {
+    if (get().detailsLoaded) return;
+    const companyProjects = get().projects.filter(p => p.companyId === companyId);
+    const [indirectCosts] = await Promise.all([
+      supabase.from('indirect_costs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
+    ]);
+    set((s) => ({
+      indirectCosts: [...s.indirectCosts.filter(ic => ic.companyId !== companyId), ...(indirectCosts.data || []).map(mapIndirectCost)],
+    }));
+    // Load project data for all company projects
+    for (const p of companyProjects) {
+      await get().loadProjectData(p.id);
+    }
   },
 
   loadAuditLog: async (projectId: string) => {
