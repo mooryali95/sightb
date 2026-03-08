@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useRole } from '@/hooks/useRole';
+import { useRole, type AppRole } from '@/hooks/useRole';
 import { useStore } from '@/store/useStore';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
