@@ -37,7 +37,7 @@ const stagger = {
 };
 
 export default function Dashboard() {
-  const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, loading, loadAll, archiveCompany, unarchiveCompany } = useStore();
+  const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, loading, loadAll, archiveCompany, unarchiveCompany } = useStore();
   const navigate = useNavigate();
   const { isAdmin, canEdit } = useRole();
 
