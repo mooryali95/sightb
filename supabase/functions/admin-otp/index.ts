@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
             <p style="color: #aaa; font-size: 11px; text-align: center;">SightB - نظام إدارة المشاريع المالية</p>
           </div>
         `;
-        emailSent = await sendViaResend(profile.email, `رمز التحقق: ${otpCode} - SightB`, emailHtml);
+        emailSent = await sendViaResend(profile.email, 'رمز التحقق لتسجيل الدخول - SightB', emailHtml);
         console.log("[admin-otp] Email sent:", emailSent, "to:", profile.email);
       }
 

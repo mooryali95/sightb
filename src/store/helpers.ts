@@ -17,18 +17,10 @@ export async function getUserId(): Promise<string> {
   return user.id;
 }
 
-// ---- Audit log helper ----
-export async function logDeletion(tableName: string, recordId: string, recordData: unknown, projectId?: string) {
-  try {
-    const userId = await getUserId();
-    await supabase.from('audit_log').insert([{
-      user_id: userId, action: 'delete', table_name: tableName,
-      record_id: recordId, record_data: recordData as Json,
-      project_id: projectId || null,
-    }]);
-  } catch (e) {
-    console.warn('Audit log failed:', e);
-  }
+// ---- Audit log helper (DEPRECATED - server-side triggers handle audit logging) ----
+// logDeletion is kept as a no-op for backward compatibility with existing imports
+export async function logDeletion(_tableName: string, _recordId: string, _recordData: unknown, _projectId?: string) {
+  // No-op: audit logging is now handled exclusively by database triggers (audit_delete, audit_update)
 }
 
 // ---- Mappers ----
