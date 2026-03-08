@@ -168,12 +168,19 @@ export function MilestonesSection({ projectId, milestones, project }: Milestones
 
       {/* Overall progress */}
       {milestones.length > 0 && (
-        <div className="mb-4">
+        <div className="mb-4 space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
             <span>الإنجاز الكلي للمشروع</span>
             <span>{weightedComplete}%</span>
           </div>
           <Progress value={weightedComplete} className="h-3" />
+
+          {/* Weight warning */}
+          {totalWeight > 0 && (totalWeight < 0.99 || totalWeight > 1.01) && (
+            <div className="p-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-xs flex items-center gap-1.5">
+              ⚠️ مجموع الأوزان ({totalWeight.toFixed(2)}) {totalWeight < 0.99 ? 'أقل' : 'أكبر'} من 1 — يُفضل أن يكون المجموع = 1.00
+            </div>
+          )}
         </div>
       )}
 
