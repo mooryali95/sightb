@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
@@ -10,12 +10,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
-  Briefcase,
+  Briefcase, Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
@@ -47,7 +51,25 @@ export default function ProjectDetail() {
 
   useEffect(() => { loadAll(); }, []);
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0 });
+
   const project = projects.find((p) => p.id === id);
+
+  useEffect(() => {
+    if (project) {
+      setEditForm({
+        name: project.name,
+        contractValue: project.contractValue,
+        durationMonths: project.durationMonths,
+        description: project.description || '',
+        retentionPercent: project.retentionPercent || 0,
+        managementReserve: project.managementReserve || 0,
+        percentComplete: project.percentComplete || 0,
+      });
+    }
+  }, [project?.id]);
+
   if (!project) {
     return (
       <AppLayout>
@@ -95,6 +117,27 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleSaveEdit = async () => {
+    if (!editForm.name.trim()) { toast.error('اسم المشروع مطلوب'); return; }
+    if (editForm.contractValue < 0) { toast.error('قيمة العقد يجب أن تكون موجبة'); return; }
+    if (editForm.durationMonths < 1) { toast.error('المدة يجب أن تكون شهر واحد على الأقل'); return; }
+    try {
+      await updateProject(project.id, {
+        name: editForm.name.trim(),
+        contractValue: editForm.contractValue,
+        durationMonths: editForm.durationMonths,
+        description: editForm.description.trim() || undefined,
+        retentionPercent: editForm.retentionPercent,
+        managementReserve: editForm.managementReserve,
+        percentComplete: editForm.percentComplete,
+      });
+      setEditOpen(false);
+      toast.success('تم تحديث بيانات المشروع');
+    } catch (e: any) {
+      toast.error('فشل تحديث المشروع');
+    }
+  };
+
   const tabCount = isAdmin ? 11 : 10;
 
   return (
@@ -127,6 +170,53 @@ export default function ProjectDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md" dir="rtl">
+                    <DialogHeader>
+                      <DialogTitle>تعديل بيانات المشروع</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                      <div className="space-y-1.5">
+                        <Label>اسم المشروع</Label>
+                        <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} maxLength={200} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label>قيمة العقد</Label>
+                          <Input type="number" min={0} value={editForm.contractValue} onChange={e => setEditForm(f => ({ ...f, contractValue: Number(e.target.value) }))} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>المدة (أشهر)</Label>
+                          <Input type="number" min={1} max={120} value={editForm.durationMonths} onChange={e => setEditForm(f => ({ ...f, durationMonths: Number(e.target.value) }))} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label>نسبة الإنجاز %</Label>
+                          <Input type="number" min={0} max={100} value={editForm.percentComplete} onChange={e => setEditForm(f => ({ ...f, percentComplete: Number(e.target.value) }))} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>نسبة الحجز %</Label>
+                          <Input type="number" min={0} max={100} value={editForm.retentionPercent} onChange={e => setEditForm(f => ({ ...f, retentionPercent: Number(e.target.value) }))} />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>الاحتياطي الإداري</Label>
+                        <Input type="number" min={0} value={editForm.managementReserve} onChange={e => setEditForm(f => ({ ...f, managementReserve: Number(e.target.value) }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>الوصف</Label>
+                        <Textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} maxLength={500} rows={2} />
+                      </div>
+                      <Button onClick={handleSaveEdit} className="w-full">حفظ التعديلات</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <Select
                   value={project.status}
                   onValueChange={(val) => {
