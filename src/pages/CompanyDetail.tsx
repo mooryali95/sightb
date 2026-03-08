@@ -352,11 +352,13 @@ export default function CompanyDetail() {
                         <td className="font-medium">{ic.description}</td>
                         <td className="font-mono text-sm">{formatCurrency(ic.amount)}</td>
                         <td className="text-xs">شهر {ic.month}</td>
-                        <td>
-                          <ConfirmDeleteDialog onConfirm={async () => {
-                            try { await deleteIndirectCost(ic.id); toast.success('تم الحذف'); } catch { toast.error('فشل الحذف'); }
-                          }} title="حذف التكلفة" description={`هل أنت متأكد من حذف "${ic.description}"؟`} />
-                        </td>
+                        {(isAdmin || canEdit('company', id!)) && (
+                          <td>
+                            <ConfirmDeleteDialog onConfirm={async () => {
+                              try { await deleteIndirectCost(ic.id); toast.success('تم الحذف'); } catch { toast.error('فشل الحذف'); }
+                            }} title="حذف التكلفة" description={`هل أنت متأكد من حذف "${ic.description}"؟`} />
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
