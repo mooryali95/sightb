@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getBaselineMonthlyPV, getMonthlyBreakdown, calculateEVM, getCurrentMonth } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type CostBaseline, type Project } from '@/types/project';
+import { EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type CostType, type CostBaseline, type Project } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Target, TrendingUp, TrendingDown, DollarSign, BarChart3, CheckCircle2 } from 'lucide-react';
+import { Plus, Target, TrendingUp, TrendingDown, DollarSign, BarChart3, CheckCircle2, AlertTriangle, Shield } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -69,6 +69,19 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
     : null;
 
   const sCurveData = activeBaseline ? buildSCurveData(activeBaseline, expenses, durationMonths) : [];
+
+  // Management reserve tracking
+  const contingencySpent = expenses.filter(e => e.category === 'contingency').reduce((s, e) => s + e.amount, 0);
+  const managementReserveRemaining = (project.managementReserve || 0) - contingencySpent;
+
+  const getMonthDisplay = (item: any) => {
+    if (item.startMonth && item.endMonth && item.startMonth !== item.endMonth) {
+      return `شهر ${item.startMonth} → ${item.endMonth}`;
+    }
+    if (item.startMonth) return `شهر ${item.startMonth}`;
+    if (item.month) return `شهر ${item.month}`;
+    return 'موزع';
+  };
 
   if (loading) {
     return <div className="stat-card text-center py-8 text-sm text-muted-foreground">جاري التحميل...</div>;
@@ -140,6 +153,32 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
         )}
       </div>
 
+      {/* Management Reserve */}
+      {(project.managementReserve || 0) > 0 && (
+        <div className="stat-card">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold">الاحتياطي الإداري (Management Reserve)</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+              <p className="text-xs text-muted-foreground">الاحتياطي المخصص</p>
+              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(project.managementReserve)}</p>
+            </div>
+            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+              <p className="text-xs text-muted-foreground">المصروف (طوارئ)</p>
+              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contingencySpent)}</p>
+            </div>
+            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+              <p className="text-xs text-muted-foreground">المتبقي</p>
+              <p className={`text-sm font-mono font-bold mt-1 ${managementReserveRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                {formatCurrency(managementReserveRemaining)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {evm && activeBaseline && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -149,10 +188,39 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
             <StatCard title="مؤشر الأداء (CPI)" value={evm.cpi.toFixed(2)} icon={<BarChart3 className="w-4 h-4" />} trend={evm.cpi >= 1 ? 'up' : 'down'} subtitle={evm.cpi >= 1 ? 'ضمن الميزانية' : 'تجاوز الميزانية'} />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <StatCard title="الميزانية الكلية (BAC)" value={formatCurrency(evm.bac)} icon={<DollarSign className="w-4 h-4" />} />
-            <StatCard title="التقدير للإنجاز (EAC)" value={formatCurrency(evm.eac)} icon={<Target className="w-4 h-4" />} trend={evm.eac <= evm.bac ? 'up' : 'down'} />
+            <StatCard title="التقدير للإنجاز (EAC)" value={formatCurrency(evm.eac)} icon={<Target className="w-4 h-4" />} trend={evm.eac <= evm.bac ? 'up' : 'down'} subtitle="الأداء مستمر" />
             <StatCard title="الانحراف عند الإنجاز (VAC)" value={formatCurrency(evm.vac)} icon={evm.vac >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />} trend={evm.vac >= 0 ? 'up' : 'down'} />
+            <StatCard
+              title="TCPI (BAC)"
+              value={evm.tcpiBAC.toFixed(2)}
+              icon={<AlertTriangle className="w-4 h-4" />}
+              trend={evm.tcpiBAC <= 1.2 ? 'up' : 'down'}
+              subtitle={evm.tcpiBAC > 1.2 ? 'يتطلب أداء استثنائي — راجع التخطيط' : 'ضمن النطاق'}
+            />
+          </div>
+
+          {/* EAC Variants detail */}
+          <div className="stat-card">
+            <h3 className="text-sm font-semibold mb-3">تقديرات التكلفة عند الإنجاز (EAC Variants)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs text-muted-foreground mb-1">EAC — الأداء يستمر (Typical)</p>
+                <p className="text-sm font-mono font-bold">{formatCurrency(evm.eac)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">BAC / CPI</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs text-muted-foreground mb-1">EAC — الأداء يتحسن (Atypical)</p>
+                <p className="text-sm font-mono font-bold">{formatCurrency(evm.eacAtypical)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">AC + (BAC - EV)</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs text-muted-foreground mb-1">EAC — مرجّح (Combined)</p>
+                <p className="text-sm font-mono font-bold">{formatCurrency(evm.eacCombined)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">AC + (BAC - EV) / (CPI × SPI)</p>
+              </div>
+            </div>
           </div>
 
           {sCurveData.length > 0 && (
@@ -177,7 +245,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
             <div className="overflow-x-auto">
               <table className="data-table">
                 <thead>
-                  <tr><th>الفئة</th><th>الوصف</th><th>المخطط</th><th>الشهر</th></tr>
+                  <tr><th>الفئة</th><th>الوصف</th><th>المخطط</th><th>الفترة</th><th>النوع</th></tr>
                 </thead>
                 <tbody>
                   {activeBaseline.items.map((item) => (
@@ -185,7 +253,8 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
                       <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory] || item.category}</span></td>
                       <td>{item.description}</td>
                       <td className="font-mono text-sm">{formatCurrency(item.plannedAmount)}</td>
-                      <td>{item.month ? `شهر ${item.month}` : 'موزع'}</td>
+                      <td className="text-xs text-muted-foreground">{getMonthDisplay(item)}</td>
+                      <td className="text-xs text-muted-foreground">{COST_TYPE_LABELS[item.costType as CostType] || 'ثابت'}</td>
                     </tr>
                   ))}
                 </tbody>

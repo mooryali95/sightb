@@ -520,6 +520,9 @@ export const useStore = create<AppState>()((set, get) => ({
       baseline_id: bl.id, category: b.category,
       description: b.description, planned_amount: b.plannedAmount,
       month: b.month || null,
+      start_month: b.startMonth || null,
+      end_month: b.endMonth || null,
+      cost_type: b.costType || 'fixed',
     }));
 
     const { data: items, error: itemsErr } = await supabase
