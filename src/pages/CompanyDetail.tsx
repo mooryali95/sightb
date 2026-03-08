@@ -24,7 +24,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, DollarSign, TrendingUp, AlertTriangle, Plus,
   FolderKanban, ArrowLeft, Briefcase, FileSpreadsheet, Pencil, Trash2,
-  Archive,
+  Archive, ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -64,6 +64,12 @@ export default function CompanyDetail() {
   const [icAmount, setIcAmount] = useState('');
   const [icMonth, setIcMonth] = useState('1');
   const [icDate, setIcDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const [expandedPortfolios, setExpandedPortfolios] = useState<Record<string, boolean>>({});
+
+  const togglePortfolio = (portfolioId: string) => {
+    setExpandedPortfolios(prev => ({ ...prev, [portfolioId]: !prev[portfolioId] }));
+  };
 
   // Edit company form
   const [editOpen, setEditOpen] = useState(false);
@@ -250,12 +256,12 @@ export default function CompanyDetail() {
               return (
                 <div key={ps.portfolioId} className="rounded-xl border border-border bg-card overflow-hidden">
                   {/* Portfolio header */}
-                  <div
-                    className="p-4 cursor-pointer hover:bg-muted/30 transition-colors border-b border-border/50"
-                    onClick={() => navigate(`/portfolio/${ps.portfolioId}`)}
-                  >
+                  <div className="p-4 border-b border-border/50">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
+                      <div
+                        className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1"
+                        onClick={() => navigate(`/portfolio/${ps.portfolioId}`)}
+                      >
                         <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
                           <FolderKanban className="w-4 h-4 text-primary" />
                         </div>
@@ -268,7 +274,14 @@ export default function CompanyDetail() {
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${HEALTH_STATUS_COLORS[ps.healthStatus]}`}>
                           {HEALTH_STATUS_LABELS[ps.healthStatus]}
                         </span>
-                        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                        {portfolioProjects.length > 0 && (
+                          <button
+                            onClick={() => togglePortfolio(ps.portfolioId)}
+                            className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center transition-colors"
+                          >
+                            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${expandedPortfolios[ps.portfolioId] ? 'rotate-180' : ''}`} />
+                          </button>
+                        )}
                       </div>
                     </div>
                     <div className="grid grid-cols-4 gap-3">
@@ -292,14 +305,18 @@ export default function CompanyDetail() {
                       </div>
                     </div>
                   </div>
-                  {/* Nested projects */}
-                  {portfolioProjects.length > 0 && (
-                    <div className="divide-y divide-border/40">
+                  {/* Collapsible nested projects */}
+                  {portfolioProjects.length > 0 && expandedPortfolios[ps.portfolioId] && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="divide-y divide-border/40"
+                    >
                       {portfolioProjects.map(project => {
                         const projExpenses = expenses.filter(e => e.projectId === project.id);
-                        const projRevenues = revenues.filter(r => r.projectId === project.id);
                         const totalSpent = projExpenses.reduce((s, e) => s + e.amount, 0);
-                        const totalRevenue = projRevenues.reduce((s, r) => s + r.amount, 0);
                         const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
                         return (
                           <div
@@ -324,7 +341,6 @@ export default function CompanyDetail() {
                                 <span>·</span>
                                 <span>الإنجاز: {project.percentComplete}%</span>
                               </div>
-                              {/* Progress bar */}
                               <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
                                 <div
                                   className={`h-full rounded-full transition-all ${spentPercent > 90 ? 'bg-destructive' : spentPercent > 70 ? 'bg-amber-500' : 'bg-primary'}`}
@@ -336,7 +352,7 @@ export default function CompanyDetail() {
                           </div>
                         );
                       })}
-                    </div>
+                    </motion.div>
                   )}
                 </div>
               );
