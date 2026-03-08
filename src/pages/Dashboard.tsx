@@ -326,7 +326,150 @@ export default function Dashboard() {
               )}
             </motion.div>
 
-            {/* Per-Project Financial KPI Cards */}
+            {/* Portfolio Performance Section */}
+            {(() => {
+              const activePortfolios = portfolios.filter(p => {
+                const comp = companies.find(c => c.id === p.companyId);
+                return comp && comp.status !== 'archived';
+              });
+              if (activePortfolios.length === 0) return null;
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.32 }}
+                  className="mb-8"
+                >
+                  <h3 className="text-sm font-semibold mb-3">أداء المحافظ</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {activePortfolios.map(portfolio => {
+                      const ps = getPortfolioSummary(portfolio, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks);
+                      return (
+                        <div
+                          key={portfolio.id}
+                          className="stat-card cursor-pointer hover:border-primary/40 transition-colors"
+                          onClick={() => navigate(`/portfolio/${portfolio.id}`)}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <FolderKanban className="w-4 h-4 text-primary" />
+                              <span className="text-sm font-semibold">{portfolio.name}</span>
+                            </div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${HEALTH_STATUS_COLORS[ps.healthStatus]}`}>
+                              {HEALTH_STATUS_LABELS[ps.healthStatus]}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="p-1.5 rounded bg-muted/30">
+                              <p className="text-[10px] text-muted-foreground">المشاريع</p>
+                              <p className="text-sm font-bold">{ps.projectCount}</p>
+                            </div>
+                            <div className="p-1.5 rounded bg-muted/30">
+                              <p className="text-[10px] text-muted-foreground">العقود</p>
+                              <p className="text-[10px] font-mono font-bold">{formatCurrency(ps.totalEffectiveValue)}</p>
+                            </div>
+                            <div className="p-1.5 rounded bg-muted/30">
+                              <p className="text-[10px] text-muted-foreground">الإنجاز</p>
+                              <p className="text-sm font-bold">{ps.weightedPercentComplete.toFixed(0)}%</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              );
+            })()}
+
+            {/* Projects Needing Attention */}
+            {(() => {
+              const attentionProjects = filteredProjects.filter(p => {
+                const pExp = expenses.filter(e => e.projectId === p.id);
+                const pBud = budgetItems.filter(b => b.projectId === p.id);
+                const pRev = revenues.filter(r => r.projectId === p.id);
+                const pCO = changeOrders.filter(co => co.projectId === p.id);
+                const s = getProjectSummary(p, pBud, pExp, pRev, pCO);
+                return s.spendRate > 90 || p.status === 'on-hold' || p.status === 'cancelled';
+              });
+              if (attentionProjects.length === 0) return null;
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.33 }}
+                  className="stat-card mb-8 border-amber-300 dark:border-amber-700"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <h3 className="text-sm font-semibold">مشاريع تحتاج انتباه ({attentionProjects.length})</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {attentionProjects.slice(0, 5).map(p => {
+                      const s = getProjectSummary(p, budgetItems.filter(b => b.projectId === p.id), expenses.filter(e => e.projectId === p.id), revenues.filter(r => r.projectId === p.id), changeOrders.filter(co => co.projectId === p.id));
+                      return (
+                        <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/project/${p.id}`)}>
+                          <div>
+                            <span className="text-sm font-medium">{p.name}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full mr-2 ${PROJECT_STATUS_COLORS[p.status]}`}>{PROJECT_STATUS_LABELS[p.status]}</span>
+                          </div>
+                          <span className="text-xs font-mono text-destructive">{s.spendRate.toFixed(0)}% صرف</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              );
+            })()}
+
+            {/* Top Risks */}
+            {(() => {
+              const openRisks = risks.filter(r => r.status === 'open' || r.status === 'mitigating').sort((a, b) => b.financialImpact - a.financialImpact).slice(0, 5);
+              if (openRisks.length === 0) return null;
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.34 }}
+                  className="stat-card mb-8"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldAlert className="w-4 h-4 text-destructive" />
+                    <h3 className="text-sm font-semibold">أعلى المخاطر المفتوحة</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>العنوان</th>
+                          <th>المشروع</th>
+                          <th>الاحتمال</th>
+                          <th>الأثر المالي</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {openRisks.map(risk => {
+                          const project = risk.projectId ? projects.find(p => p.id === risk.projectId) : null;
+                          const portfolio = risk.portfolioId ? portfolios.find(p => p.id === risk.portfolioId) : null;
+                          return (
+                            <tr key={risk.id}>
+                              <td className="font-medium text-sm">{risk.title}</td>
+                              <td className="text-xs text-muted-foreground">{project?.name || portfolio?.name || '-'}</td>
+                              <td>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${RISK_PROBABILITY_COLORS[risk.probability]}`}>
+                                  {RISK_PROBABILITY_LABELS[risk.probability]}
+                                </span>
+                              </td>
+                              <td className="font-mono text-sm text-destructive">{formatCurrency(risk.financialImpact)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </motion.div>
+              );
+            })()}
+
             {filteredProjects.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
