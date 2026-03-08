@@ -113,9 +113,9 @@ export default function Dashboard() {
     setTimePeriod('all');
   };
 
-  // Stats based on filtered projects
+  // Stats based on filtered projects + time period
   const totalContractValue = filteredProjects.reduce((s, p) => s + p.contractValue, 0);
-  const filteredExpenses = expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId));
+  const filteredExpenses = expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId) && isInRange(e.date, currentRange));
   const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
   const filteredBudgetItems = budgetItems.filter((b) => filteredProjects.some((p) => p.id === b.projectId));
   const totalPlanned = filteredBudgetItems.reduce((s, b) => s + b.plannedAmount, 0);
@@ -125,8 +125,19 @@ export default function Dashboard() {
   const plannedProfit = effectiveTotalContract - totalPlanned;
   const plannedProfitMargin = effectiveTotalContract > 0 ? (plannedProfit / effectiveTotalContract) * 100 : 0;
 
-  const filteredRevenues = revenues.filter((r) => filteredProjects.some((p) => p.id === r.projectId));
+  const filteredRevenues = revenues.filter((r) => filteredProjects.some((p) => p.id === r.projectId) && isInRange(r.date, currentRange));
   const collectedRevenue = filteredRevenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
+
+  // Previous period comparison
+  const prevExpenses = previousRange
+    ? expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId) && isInRange(e.date, previousRange)).reduce((s, e) => s + e.amount, 0)
+    : 0;
+  const prevRevenue = previousRange
+    ? revenues.filter((r) => filteredProjects.some((p) => p.id === r.projectId) && r.status === 'collected' && isInRange(r.date, previousRange)).reduce((s, r) => s + r.amount, 0)
+    : 0;
+
+  const expenseChange = prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : null;
+  const revenueChange = prevRevenue > 0 ? ((collectedRevenue - prevRevenue) / prevRevenue) * 100 : null;
 
   const companyData = companies
     .map((c) => {
