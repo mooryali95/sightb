@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 
@@ -16,23 +16,48 @@ interface ResourcesSectionProps {
 }
 
 export function ResourcesSection({ projectId, resources }: ResourcesSectionProps) {
-  const { addResource, deleteResource, expenses } = useStore();
+  const { addResource, updateResource, deleteResource, expenses } = useStore();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [monthlyCost, setMonthlyCost] = useState('');
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setEditingId(null);
+    setName('');
+    setRole('');
+    setMonthlyCost('');
+  };
+
+  const openEdit = (r: Resource) => {
+    setEditingId(r.id);
+    setName(r.name);
+    setRole(r.role || '');
+    setMonthlyCost(String(r.monthlyCost));
+    setOpen(true);
+  };
+
+  const handleSubmit = async () => {
     if (!name.trim()) return;
-    await addResource({
-      projectId,
-      name: name.trim(),
-      role: role.trim() || undefined,
-      monthlyCost: parseFloat(monthlyCost) || 0,
-    });
-    setName(''); setRole(''); setMonthlyCost('');
+    if (editingId) {
+      await updateResource(editingId, {
+        name: name.trim(),
+        role: role.trim() || undefined,
+        monthlyCost: parseFloat(monthlyCost) || 0,
+      });
+      toast.success('تم تعديل المورد');
+    } else {
+      await addResource({
+        projectId,
+        name: name.trim(),
+        role: role.trim() || undefined,
+        monthlyCost: parseFloat(monthlyCost) || 0,
+      });
+      toast.success('تمت إضافة المورد');
+    }
+    resetForm();
     setOpen(false);
-    toast.success('تمت إضافة المورد');
   };
 
   const totalMonthlyCost = resources.reduce((s, r) => s + r.monthlyCost, 0);
@@ -45,12 +70,12 @@ export function ResourcesSection({ projectId, resources }: ResourcesSectionProps
           <h3 className="text-sm font-semibold">الموارد البشرية</h3>
           <p className="text-xs text-muted-foreground">{resources.length} مورد · التكلفة الشهرية: {formatCurrency(totalMonthlyCost)}</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مورد</Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>إضافة مورد جديد</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingId ? 'تعديل المورد' : 'إضافة مورد جديد'}</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label>الاسم</Label>
@@ -64,7 +89,7 @@ export function ResourcesSection({ projectId, resources }: ResourcesSectionProps
                 <Label>التكلفة الشهرية</Label>
                 <Input type="number" value={monthlyCost} onChange={(e) => setMonthlyCost(e.target.value)} placeholder="0" />
               </div>
-              <Button onClick={handleAdd} className="w-full">إضافة</Button>
+              <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -90,7 +115,14 @@ export function ResourcesSection({ projectId, resources }: ResourcesSectionProps
                     <td className="text-muted-foreground">{r.role || '—'}</td>
                     <td className="font-mono text-sm">{formatCurrency(r.monthlyCost)}</td>
                     <td className="font-mono text-sm">{formatCurrency(totalSpent)}</td>
-                    <td><ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} /></td>
+                    <td>
+                      <div className="flex items-center gap-0.5">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
+                        <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
