@@ -193,3 +193,135 @@ export function exportToPDF(data: ExportBudgetData) {
 
   doc.save(`${data.projectName}_Financial_Report.pdf`);
 }
+
+// ======== Portfolio Export ========
+interface PortfolioExportData {
+  portfolioName: string;
+  summary: {
+    totalContractValue: number;
+    totalEffectiveValue: number;
+    totalPlanned: number;
+    totalActual: number;
+    totalCollectedRevenue: number;
+    aggregatePlannedProfit: number;
+    aggregatePlannedMargin: number;
+    weightedPercentComplete: number;
+    averageCPI: number;
+    atRiskProjects: number;
+    openRisks: number;
+    totalFinancialExposure: number;
+    revenueAchievement: number;
+    healthStatus: string;
+    projectCount: number;
+  };
+  projectSummaries: { name: string; contractValue: number; planned: number; actual: number; plannedProfit: number; percentComplete: number; health: string }[];
+  risks: { title: string; project: string; probability: string; impact: string; financialImpact: number; status: string }[];
+}
+
+export function exportPortfolioToExcel(data: PortfolioExportData) {
+  const wb = XLSX.utils.book_new();
+
+  // Summary sheet
+  const summaryRows = [
+    { 'البند': 'اسم المحفظة', 'القيمة': data.portfolioName },
+    { 'البند': 'عدد المشاريع', 'القيمة': data.summary.projectCount },
+    { 'البند': 'إجمالي العقود', 'القيمة': data.summary.totalEffectiveValue },
+    { 'البند': 'إجمالي المخطط', 'القيمة': data.summary.totalPlanned },
+    { 'البند': 'إجمالي المصروفات', 'القيمة': data.summary.totalActual },
+    { 'البند': 'الربح المخطط', 'القيمة': data.summary.aggregatePlannedProfit },
+    { 'البند': 'هامش الربح %', 'القيمة': data.summary.aggregatePlannedMargin.toFixed(1) },
+    { 'البند': 'الإنجاز المرجّح %', 'القيمة': data.summary.weightedPercentComplete.toFixed(1) },
+    { 'البند': 'متوسط CPI', 'القيمة': data.summary.averageCPI.toFixed(2) },
+    { 'البند': 'مشاريع متعثرة', 'القيمة': data.summary.atRiskProjects },
+    { 'البند': 'مخاطر مفتوحة', 'القيمة': data.summary.openRisks },
+    { 'البند': 'التعرض المالي', 'القيمة': data.summary.totalFinancialExposure },
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'الملخص');
+
+  // Projects comparison
+  const projectRows = data.projectSummaries.map(p => ({
+    'المشروع': p.name,
+    'قيمة العقد': p.contractValue,
+    'المخطط': p.planned,
+    'المصروف': p.actual,
+    'الربح المخطط': p.plannedProfit,
+    'الإنجاز %': p.percentComplete,
+    'الصحة': p.health,
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(projectRows), 'مقارنة المشاريع');
+
+  // Risks
+  if (data.risks.length > 0) {
+    const riskRows = data.risks.map(r => ({
+      'العنوان': r.title,
+      'المشروع': r.project,
+      'الاحتمال': r.probability,
+      'الأثر': r.impact,
+      'الأثر المالي': r.financialImpact,
+      'الحالة': r.status,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(riskRows), 'المخاطر');
+  }
+
+  XLSX.writeFile(wb, `${data.portfolioName}_تقرير_محفظة.xlsx`);
+}
+
+// ======== Company Export ========
+interface CompanyExportData {
+  companyName: string;
+  summary: {
+    totalContractValue: number;
+    totalActual: number;
+    totalPlannedProfit: number;
+    totalIndirectCosts: number;
+    netProfitAfterIndirect: number;
+    netProfitMargin: number;
+    totalAtRiskProjects: number;
+  };
+  portfolioSummaries: { name: string; projects: number; contractValue: number; actual: number; profit: number; completion: number; health: string }[];
+  indirectCosts: { category: string; description: string; amount: number; month: number }[];
+}
+
+export function exportCompanyToExcel(data: CompanyExportData) {
+  const wb = XLSX.utils.book_new();
+
+  // Summary
+  const summaryRows = [
+    { 'البند': 'اسم الشركة', 'القيمة': data.companyName },
+    { 'البند': 'إجمالي العقود', 'القيمة': data.summary.totalContractValue },
+    { 'البند': 'إجمالي المصروفات', 'القيمة': data.summary.totalActual },
+    { 'البند': 'الربح المخطط', 'القيمة': data.summary.totalPlannedProfit },
+    { 'البند': 'تكاليف غير مباشرة', 'القيمة': data.summary.totalIndirectCosts },
+    { 'البند': 'صافي الربح', 'القيمة': data.summary.netProfitAfterIndirect },
+    { 'البند': 'هامش صافي الربح %', 'القيمة': data.summary.netProfitMargin.toFixed(1) },
+    { 'البند': 'مشاريع متعثرة', 'القيمة': data.summary.totalAtRiskProjects },
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'الملخص');
+
+  // Portfolios
+  if (data.portfolioSummaries.length > 0) {
+    const pRows = data.portfolioSummaries.map(p => ({
+      'المحفظة': p.name,
+      'المشاريع': p.projects,
+      'العقود': p.contractValue,
+      'المصروفات': p.actual,
+      'الربح': p.profit,
+      'الإنجاز %': p.completion,
+      'الصحة': p.health,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pRows), 'أداء المحافظ');
+  }
+
+  // Indirect costs
+  if (data.indirectCosts.length > 0) {
+    const icRows = data.indirectCosts.map(ic => ({
+      'الفئة': ic.category,
+      'الوصف': ic.description,
+      'المبلغ': ic.amount,
+      'الشهر': `شهر ${ic.month}`,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(icRows), 'تكاليف غير مباشرة');
+  }
+
+  XLSX.writeFile(wb, `${data.companyName}_تقرير_شركة.xlsx`);
+}
