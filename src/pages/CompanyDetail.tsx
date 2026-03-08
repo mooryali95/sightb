@@ -436,33 +436,56 @@ export default function CompanyDetail() {
 
         {/* Standalone projects */}
         {standaloneProjects.length > 0 && (
-          <div className="stat-card mb-6">
-            <h3 className="text-sm font-semibold mb-4">مشاريع مستقلة (بدون محفظة)</h3>
-            <div className="overflow-x-auto">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>المشروع</th>
-                    <th>قيمة العقد</th>
-                    <th>الحالة</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {standaloneProjects.map(project => (
-                    <tr key={project.id} className="cursor-pointer" onClick={() => navigate(`/project/${project.id}`)}>
-                      <td className="font-medium">{project.name}</td>
-                      <td className="font-mono text-sm">{formatCurrency(project.contractValue)}</td>
-                      <td>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
-                          {PROJECT_STATUS_LABELS[project.status]}
-                        </span>
-                      </td>
-                      <td><ArrowLeft className="w-4 h-4 text-muted-foreground" /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Briefcase className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold">مشاريع مستقلة ({standaloneProjects.length})</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {standaloneProjects.map(project => {
+                const projExpenses = expenses.filter(e => e.projectId === project.id);
+                const totalSpent = projExpenses.reduce((s, e) => s + e.amount, 0);
+                const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
+                return (
+                  <div
+                    key={project.id}
+                    className="rounded-xl border border-border bg-card p-4 cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all"
+                    onClick={() => navigate(`/project/${project.id}`)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <Briefcase className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <span className="text-sm font-semibold truncate">{project.name}</span>
+                      </div>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
+                        {PROJECT_STATUS_LABELS[project.status]}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-center mb-3">
+                      <div className="p-1.5 rounded bg-muted/40">
+                        <p className="text-[10px] text-muted-foreground">العقد</p>
+                        <p className="text-xs font-mono font-bold">{formatCurrency(project.contractValue)}</p>
+                      </div>
+                      <div className="p-1.5 rounded bg-muted/40">
+                        <p className="text-[10px] text-muted-foreground">المصروف</p>
+                        <p className="text-xs font-mono font-bold">{formatCurrency(totalSpent)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+                      <span>الإنجاز: {project.percentComplete}%</span>
+                      <span>الصرف: {spentPercent.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${spentPercent > 90 ? 'bg-destructive' : spentPercent > 70 ? 'bg-amber-500' : 'bg-primary'}`}
+                        style={{ width: `${spentPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
