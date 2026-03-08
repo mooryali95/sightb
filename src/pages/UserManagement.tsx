@@ -483,6 +483,8 @@ export default function UserManagement() {
               {filteredProfiles.map((profile) => {
                 const userRoles = allRoles.filter((r) => r.userId === profile.id);
                 const isSelf = profile.id === user?.id;
+                const targetIsOwner = userRoles.some(r => r.role === 'owner' && r.scopeType === 'system');
+                const canDeleteUser = !isSelf && (!targetIsOwner || isOwner);
                 return (
                   <div key={profile.id} className="p-4 rounded-lg border border-border/50 space-y-2">
                     <div className="flex items-center justify-between">
