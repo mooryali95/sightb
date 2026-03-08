@@ -288,10 +288,11 @@ export default function CompanyDetail() {
         <div className="stat-card mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold">التكاليف غير المباشرة</h3>
-            <Dialog open={icOpen} onOpenChange={setIcOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة</Button>
-              </DialogTrigger>
+            {(isAdmin || canEdit('company', id!)) && (
+              <Dialog open={icOpen} onOpenChange={setIcOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة</Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>إضافة تكلفة غير مباشرة</DialogTitle></DialogHeader>
                 <div className="space-y-3">
