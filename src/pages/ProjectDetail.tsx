@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown } from '@/lib/finance';
@@ -12,11 +13,12 @@ import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
-  FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle,
+  FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
 import { exportToExcel, exportToPDF } from '@/lib/export';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 
 // Sub-components
 import { ResourcesSection } from '@/components/project/ResourcesSection';
@@ -34,10 +36,11 @@ import { RisksSection } from '@/components/project/RisksSection';
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAdmin } = useRole();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks,
-    loadAll, updateProject,
+    loadAll, updateProject, deleteProject,
   } = useStore();
 
   useEffect(() => { loadAll(); }, []);
@@ -80,6 +83,18 @@ export default function ProjectDetail() {
 
   const totalAllRevenue = pRevenues.reduce((s, r) => s + r.amount, 0);
 
+  const handleDeleteProject = async () => {
+    try {
+      await deleteProject(project.id);
+      toast.success('تم حذف المشروع');
+      navigate('/');
+    } catch (e: any) {
+      toast.error('فشل حذف المشروع');
+    }
+  };
+
+  const tabCount = isAdmin ? 11 : 10;
+
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -97,22 +112,36 @@ export default function ProjectDetail() {
                 {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
               </p>
             </div>
-            <Select
-              value={project.status}
-              onValueChange={(val) => {
-                updateProject(project.id, { status: val as ProjectStatus });
-                toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
-              }}
-            >
-              <SelectTrigger className={`w-[140px] h-8 text-xs ${PROJECT_STATUS_COLORS[project.status]}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select
+                value={project.status}
+                onValueChange={(val) => {
+                  updateProject(project.id, { status: val as ProjectStatus });
+                  toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
+                }}
+              >
+                <SelectTrigger className={`w-[140px] h-8 text-xs ${PROJECT_STATUS_COLORS[project.status]}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isAdmin && (
+                <ConfirmDeleteDialog
+                  title="حذف المشروع"
+                  description={`هل أنت متأكد من حذف مشروع "${project.name}"؟ سيتم حذف جميع البيانات المرتبطة (الموازنة، المصروفات، الإيرادات).`}
+                  onConfirm={handleDeleteProject}
+                  trigger={
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  }
+                />
+              )}
+            </div>
           </div>
         </div>
 
@@ -170,7 +199,7 @@ export default function ProjectDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="milestones" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 sm:grid-cols-11 max-w-6xl">
+          <TabsList className={`grid w-full grid-cols-5 sm:grid-cols-${tabCount} max-w-6xl`}>
             <TabsTrigger value="milestones" className="gap-1 text-xs"><MilestoneIcon className="w-3.5 h-3.5" /><span className="hidden sm:inline">المراحل</span></TabsTrigger>
             <TabsTrigger value="resources" className="gap-1 text-xs"><Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموارد</span></TabsTrigger>
             <TabsTrigger value="budget" className="gap-1 text-xs"><PiggyBank className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموازنة</span></TabsTrigger>
@@ -181,7 +210,9 @@ export default function ProjectDetail() {
             <TabsTrigger value="changeorders" className="gap-1 text-xs"><FileEdit className="w-3.5 h-3.5" /><span className="hidden sm:inline">أوامر التغيير</span></TabsTrigger>
             <TabsTrigger value="risks" className="gap-1 text-xs"><AlertTriangle className="w-3.5 h-3.5" /><span className="hidden sm:inline">المخاطر</span></TabsTrigger>
             <TabsTrigger value="charts" className="gap-1 text-xs"><BarChart3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">التحليلات</span></TabsTrigger>
-            <TabsTrigger value="auditlog" className="gap-1 text-xs"><History className="w-3.5 h-3.5" /><span className="hidden sm:inline">السجل</span></TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="auditlog" className="gap-1 text-xs"><History className="w-3.5 h-3.5" /><span className="hidden sm:inline">السجل</span></TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} /></TabsContent>
@@ -194,7 +225,9 @@ export default function ProjectDetail() {
           <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} /></TabsContent>
           <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} /></TabsContent>
           <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} /></TabsContent>
-          <TabsContent value="auditlog"><AuditLogSection projectId={project.id} /></TabsContent>
+          {isAdmin && (
+            <TabsContent value="auditlog"><AuditLogSection projectId={project.id} /></TabsContent>
+          )}
         </Tabs>
       </motion.div>
     </AppLayout>

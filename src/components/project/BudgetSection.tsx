@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, BarChart3 } from 'lucide-react';
+import { Plus, BarChart3, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 
@@ -25,8 +25,9 @@ interface BudgetSectionProps {
 }
 
 export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency }: BudgetSectionProps) {
-  const { addBudgetItem, deleteBudgetItem } = useStore();
+  const { addBudgetItem, deleteBudgetItem, updateBudgetItem } = useStore();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
   const [description, setDescription] = useState('');
   const [plannedAmount, setPlannedAmount] = useState('');
@@ -35,25 +36,53 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
   const [costType, setCostType] = useState<CostType>('fixed');
   const [resourceId, setResourceId] = useState<string>('');
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setEditingId(null);
+    setCategory('salary');
+    setDescription('');
+    setPlannedAmount('');
+    setStartMonth('');
+    setEndMonth('');
+    setCostType('fixed');
+    setResourceId('');
+  };
+
+  const openEdit = (item: any) => {
+    setEditingId(item.id);
+    setCategory(item.category);
+    setDescription(item.description);
+    setPlannedAmount(String(item.plannedAmount));
+    setStartMonth(item.startMonth ? String(item.startMonth) : '');
+    setEndMonth(item.endMonth ? String(item.endMonth) : '');
+    setCostType(item.costType || 'fixed');
+    setResourceId(item.resourceId || '');
+    setOpen(true);
+  };
+
+  const handleSubmit = async () => {
     if (!description.trim() || !plannedAmount) return;
     const sm = startMonth && startMonth !== 'all' ? parseInt(startMonth) : undefined;
     const em = endMonth && endMonth !== 'all' ? parseInt(endMonth) : undefined;
-    await addBudgetItem({
-      projectId,
+    const data = {
       category,
       description: description.trim(),
       plannedAmount: parseFloat(plannedAmount),
       startMonth: sm,
       endMonth: em || sm,
-      month: sm, // legacy compat
+      month: sm,
       costType,
       costClass: 'direct' as CostClass,
       resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
-    });
-    setDescription(''); setPlannedAmount(''); setStartMonth(''); setEndMonth(''); setResourceId('');
+    };
+    if (editingId) {
+      await updateBudgetItem(editingId, data);
+      toast.success('تم تعديل بند الموازنة');
+    } else {
+      await addBudgetItem({ projectId, ...data });
+      toast.success('تمت إضافة بند الموازنة');
+    }
+    resetForm();
     setOpen(false);
-    toast.success('تمت إضافة بند الموازنة');
   };
 
   const totalPlanned = budgetItems.reduce((s: number, b: any) => s + b.plannedAmount, 0);
@@ -197,13 +226,13 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
               الإجمالي المخطط: {formatCurrency(totalPlanned)} · الفعلي: {formatCurrency(totalActual)} · المتبقي: {formatCurrency(totalPlanned - totalActual)}
             </p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />بند جديد</Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>إضافة بند موازنة</DialogTitle>
+                <DialogTitle>{editingId ? 'تعديل بند الموازنة' : 'إضافة بند موازنة'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
                 <div className="space-y-2">
@@ -277,7 +306,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                     </Select>
                   </div>
                 )}
-                <Button onClick={handleAdd} className="w-full">إضافة</Button>
+                <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -343,7 +372,12 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                         </div>
                       </td>
                       <td>
-                        <ConfirmDeleteDialog title="حذف بند الموازنة" description="هل أنت متأكد من حذف هذا البند؟" onConfirm={() => deleteBudgetItem(item.id)} />
+                        <div className="flex items-center gap-0.5">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
+                            <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                          </Button>
+                          <ConfirmDeleteDialog title="حذف بند الموازنة" description="هل أنت متأكد من حذف هذا البند؟" onConfirm={() => deleteBudgetItem(item.id)} />
+                        </div>
                       </td>
                     </tr>
                   );

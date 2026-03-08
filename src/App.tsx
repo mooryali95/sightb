@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import NewCompany from "./pages/NewCompany";
 import NewPortfolio from "./pages/NewPortfolio";
@@ -29,6 +30,7 @@ const App = () => (
         <BrowserRouter>
           <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
             <Routes>
+              <Route path="/welcome" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
