@@ -25,8 +25,8 @@ interface BudgetSectionProps {
   managementReserve?: number;
 }
 
-export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency }: BudgetSectionProps) {
-  const { addBudgetItem, deleteBudgetItem, updateBudgetItem } = useStore();
+export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency, managementReserve = 0 }: BudgetSectionProps) {
+  const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
