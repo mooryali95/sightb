@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
+import {
+  REVENUE_TYPE_LABELS, REVENUE_STATUS_LABELS, REVENUE_STATUS_COLORS,
+  type RevenueType, type RevenueStatus,
+} from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,9 +28,15 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
   const [amount, setAmount] = useState('');
   const [month, setMonth] = useState('1');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [revenueType, setRevenueType] = useState<RevenueType>('milestone');
+  const [status, setStatus] = useState<RevenueStatus>('collected');
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState('');
+  const [collectionDate, setCollectionDate] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMonth, setFilterMonth] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
 
   const resetForm = () => {
     setEditingId(null);
@@ -34,6 +44,11 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
     setAmount('');
     setMonth('1');
     setDate(new Date().toISOString().split('T')[0]);
+    setRevenueType('milestone');
+    setStatus('collected');
+    setInvoiceNumber('');
+    setInvoiceDate('');
+    setCollectionDate('');
   };
 
   const openEdit = (rev: any) => {
@@ -42,27 +57,32 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
     setAmount(String(rev.amount));
     setMonth(String(rev.month));
     setDate(rev.date);
+    setRevenueType(rev.revenueType || 'milestone');
+    setStatus(rev.status || 'collected');
+    setInvoiceNumber(rev.invoiceNumber || '');
+    setInvoiceDate(rev.invoiceDate || '');
+    setCollectionDate(rev.collectionDate || '');
     setOpen(true);
   };
 
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
+    const data = {
+      description: description.trim(),
+      amount: parseFloat(amount),
+      date,
+      month: parseInt(month),
+      revenueType,
+      status,
+      invoiceNumber: invoiceNumber || undefined,
+      invoiceDate: invoiceDate || undefined,
+      collectionDate: collectionDate || undefined,
+    };
     if (editingId) {
-      await updateRevenue(editingId, {
-        description: description.trim(),
-        amount: parseFloat(amount),
-        date,
-        month: parseInt(month),
-      });
+      await updateRevenue(editingId, data);
       toast.success('تم تعديل الإيراد');
     } else {
-      await addRevenue({
-        projectId,
-        description: description.trim(),
-        amount: parseFloat(amount),
-        date,
-        month: parseInt(month),
-      });
+      await addRevenue({ projectId, ...data });
       toast.success('تمت إضافة الإيراد');
     }
     resetForm();
@@ -72,10 +92,14 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
   const filteredRevenues = revenues.filter((rev: any) => {
     const matchesSearch = !searchQuery || rev.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesMonth = filterMonth === 'all' || String(rev.month) === filterMonth;
-    return matchesSearch && matchesMonth;
+    const matchesStatus = filterStatus === 'all' || rev.status === filterStatus;
+    return matchesSearch && matchesMonth && matchesStatus;
   });
 
   const total = revenues.reduce((s: number, r: any) => s + r.amount, 0);
+  const collectedTotal = revenues.filter((r: any) => r.status === 'collected').reduce((s: number, r: any) => s + r.amount, 0);
+  const invoicedTotal = revenues.filter((r: any) => r.status === 'invoiced').reduce((s: number, r: any) => s + r.amount, 0);
+  const plannedTotal = revenues.filter((r: any) => r.status === 'planned').reduce((s: number, r: any) => s + r.amount, 0);
 
   return (
     <div className="stat-card">
@@ -114,15 +138,79 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
                   </Select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>نوع الإيراد</Label>
+                  <Select value={revenueType} onValueChange={(v) => setRevenueType(v as RevenueType)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(REVENUE_TYPE_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>الحالة</Label>
+                  <Select value={status} onValueChange={(v) => setStatus(v as RevenueStatus)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(REVENUE_STATUS_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label>التاريخ</Label>
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </div>
+              {(status === 'invoiced' || status === 'collected') && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>رقم الفاتورة</Label>
+                    <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="INV-001" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>تاريخ الفاتورة</Label>
+                    <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                  </div>
+                </div>
+              )}
+              {status === 'collected' && (
+                <div className="space-y-2">
+                  <Label>تاريخ التحصيل</Label>
+                  <Input type="date" value={collectionDate} onChange={(e) => setCollectionDate(e.target.value)} />
+                </div>
+              )}
               <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Revenue summary */}
+      {revenues.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
+            <p className="text-[10px] text-muted-foreground">مخطط</p>
+            <p className="text-xs font-mono font-bold">{formatCurrency(plannedTotal)}</p>
+          </div>
+          <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
+            <p className="text-[10px] text-muted-foreground">مُفوتر</p>
+            <p className="text-xs font-mono font-bold">{formatCurrency(invoicedTotal)}</p>
+          </div>
+          <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
+            <p className="text-[10px] text-muted-foreground">محصّل</p>
+            <p className="text-xs font-mono font-bold">{formatCurrency(collectedTotal)}</p>
+          </div>
+          <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
+            <p className="text-[10px] text-muted-foreground">ذمم مدينة</p>
+            <p className="text-xs font-mono font-bold">{formatCurrency(invoicedTotal)}</p>
+          </div>
+        </div>
+      )}
 
       {revenues.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
@@ -136,7 +224,16 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
               ))}
             </SelectContent>
           </Select>
-          {(searchQuery || filterMonth !== 'all') && (
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue placeholder="كل الحالات" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الحالات</SelectItem>
+              {Object.entries(REVENUE_STATUS_LABELS).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(searchQuery || filterMonth !== 'all' || filterStatus !== 'all') && (
             <span className="text-xs text-muted-foreground self-center">({filteredRevenues.length} نتيجة)</span>
           )}
         </div>
@@ -152,7 +249,9 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
             <thead>
               <tr>
                 <th>الوصف</th>
+                <th>النوع</th>
                 <th>المبلغ</th>
+                <th>الحالة</th>
                 <th>الشهر</th>
                 <th>التاريخ</th>
                 <th></th>
@@ -162,7 +261,13 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
               {filteredRevenues.map((r) => (
                 <tr key={r.id}>
                   <td>{r.description}</td>
+                  <td className="text-xs">{REVENUE_TYPE_LABELS[r.revenueType as RevenueType] || r.revenueType}</td>
                   <td className="font-mono text-sm">{formatCurrency(r.amount)}</td>
+                  <td>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${REVENUE_STATUS_COLORS[r.status as RevenueStatus] || ''}`}>
+                      {REVENUE_STATUS_LABELS[r.status as RevenueStatus] || r.status}
+                    </span>
+                  </td>
                   <td>شهر {r.month}</td>
                   <td className="text-muted-foreground text-sm">{r.date}</td>
                   <td>

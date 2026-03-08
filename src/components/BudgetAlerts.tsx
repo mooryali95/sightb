@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, calculateEVM, getCurrentMonth } from '@/lib/finance';
+import type { BaselineItem, Expense } from '@/types/project';
 
 interface BudgetAlertsProps {
   totalPlanned: number;
@@ -9,6 +10,12 @@ interface BudgetAlertsProps {
   contractValue: number;
   budgetItems: { id: string; description: string; plannedAmount: number; category: string }[];
   expenses: { budgetItemId?: string; amount: number }[];
+  // Optional EVM props
+  baselineItems?: BaselineItem[];
+  allExpenses?: Expense[];
+  durationMonths?: number;
+  startDate?: string;
+  percentComplete?: number;
 }
 
 const THRESHOLDS = [
@@ -17,7 +24,7 @@ const THRESHOLDS = [
   { pct: 75, label: 'بلغ 75% من', variant: 'info' as const },
 ];
 
-export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetItems, expenses }: BudgetAlertsProps) {
+export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetItems, expenses, baselineItems, allExpenses, durationMonths, startDate, percentComplete }: BudgetAlertsProps) {
   const alerted = useRef(new Set<string>());
 
   useEffect(() => {
@@ -33,7 +40,7 @@ export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetI
           description: `${formatCurrency(totalActual)} من ${formatCurrency(totalPlanned)}`,
           duration: 8000,
         });
-        break; // show highest threshold only
+        break;
       }
     }
 
@@ -51,6 +58,20 @@ export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetI
       }
     }
 
+    // CPI alert (if EVM data available)
+    if (baselineItems && allExpenses && durationMonths && percentComplete !== undefined && percentComplete > 0) {
+      const cm = getCurrentMonth(startDate || '', durationMonths);
+      const evm = calculateEVM(baselineItems, allExpenses, durationMonths, cm, percentComplete);
+      const cpiKey = 'cpi-low';
+      if (evm.cpi > 0 && evm.cpi < 0.85 && !alerted.current.has(cpiKey)) {
+        alerted.current.add(cpiKey);
+        toast.warning(`📉 مؤشر أداء التكلفة (CPI = ${evm.cpi.toFixed(2)}) أقل من المستوى الصحي`, {
+          description: 'CPI < 0.85 يعني أن المشروع ينفق أكثر من القيمة المكتسبة',
+          duration: 10000,
+        });
+      }
+    }
+
     // Per-item alerts
     budgetItems.forEach(item => {
       const itemActual = expenses
@@ -62,7 +83,7 @@ export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetI
         const key = `item-${item.id}-${t.pct}`;
         if (itemPct >= t.pct && !alerted.current.has(key)) {
           alerted.current.add(key);
-          if (t.pct >= 90) { // only alert for 90%+ on individual items
+          if (t.pct >= 90) {
             toast.warning(`⚠️ بند "${item.description}" ${t.label} المخطط (${itemPct.toFixed(0)}%)`, {
               description: `${formatCurrency(itemActual)} من ${formatCurrency(item.plannedAmount)}`,
               duration: 6000,
@@ -72,9 +93,9 @@ export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetI
         }
       }
     });
-  }, [totalPlanned, totalActual, contractValue, budgetItems, expenses]);
+  }, [totalPlanned, totalActual, contractValue, budgetItems, expenses, baselineItems, allExpenses, durationMonths, startDate, percentComplete]);
 
-  // Render inline warnings for visibility
+  // Render inline warnings
   const overallPct = totalPlanned > 0 ? (totalActual / totalPlanned) * 100 : 0;
   const contractPct = contractValue > 0 ? (totalActual / contractValue) * 100 : 0;
 
@@ -85,7 +106,7 @@ export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetI
   if (warnings.length === 0) return null;
 
   return (
-    <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5 flex items-start gap-2">
+    <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5 flex items-start gap-2 mb-4">
       <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
       <div className="space-y-1">
         {warnings.map((w, i) => (

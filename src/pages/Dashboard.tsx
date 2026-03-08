@@ -31,7 +31,7 @@ const stagger = {
 };
 
 export default function Dashboard() {
-  const { companies, portfolios, projects, budgetItems, expenses, revenues, loading, loadAll, archiveCompany, unarchiveCompany } = useStore();
+  const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, loading, loadAll, archiveCompany, unarchiveCompany } = useStore();
   const navigate = useNavigate();
   const { isAdmin, canEdit } = useRole();
 
@@ -49,7 +49,6 @@ export default function Dashboard() {
   // Filtered projects
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
-      // Hide projects from archived companies unless filtering by that company
       if (filterCompany === 'all') {
         const comp = companies.find(c => c.id === p.companyId);
         if (comp?.status === 'archived') return false;
@@ -73,10 +72,16 @@ export default function Dashboard() {
   const totalContractValue = filteredProjects.reduce((s, p) => s + p.contractValue, 0);
   const filteredExpenses = expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId));
   const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
+  const filteredBudgetItems = budgetItems.filter((b) => filteredProjects.some((p) => p.id === b.projectId));
+  const totalPlanned = filteredBudgetItems.reduce((s, b) => s + b.plannedAmount, 0);
+  const filteredChangeOrders = changeOrders.filter((co) => filteredProjects.some((p) => p.id === co.projectId));
+  const approvedChangeImpact = filteredChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
+  const effectiveTotalContract = totalContractValue + approvedChangeImpact;
+  const plannedProfit = effectiveTotalContract - totalPlanned;
+  const plannedProfitMargin = effectiveTotalContract > 0 ? (plannedProfit / effectiveTotalContract) * 100 : 0;
+
   const filteredRevenues = revenues.filter((r) => filteredProjects.some((p) => p.id === r.projectId));
-  const totalRevenue = filteredRevenues.reduce((s, r) => s + r.amount, 0) || totalContractValue;
-  const totalProfit = totalRevenue - totalExpenses;
-  const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+  const collectedRevenue = filteredRevenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
 
   const companyData = companies
     .map((c) => {
@@ -123,7 +128,6 @@ export default function Dashboard() {
         </motion.div>
 
         {!hasData ? (
-          /* Empty State */
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -161,7 +165,6 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 w-full">
-                  {/* Search */}
                   <div className="relative flex-1 min-w-0">
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -172,7 +175,6 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  {/* Company Filter */}
                   <Select value={filterCompany} onValueChange={setFilterCompany}>
                     <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
                       <SelectValue placeholder="جميع الشركات" />
@@ -185,7 +187,6 @@ export default function Dashboard() {
                     </SelectContent>
                   </Select>
 
-                  {/* Status Filter */}
                   <Select value={filterStatus} onValueChange={setFilterStatus}>
                     <SelectTrigger className="w-full sm:w-[150px] h-9 text-sm">
                       <SelectValue placeholder="جميع الحالات" />
@@ -198,7 +199,6 @@ export default function Dashboard() {
                     </SelectContent>
                   </Select>
 
-                  {/* Clear Filters */}
                   <AnimatePresence>
                     {hasActiveFilters && (
                       <motion.div
@@ -237,8 +237,9 @@ export default function Dashboard() {
               <motion.div variants={stagger.item}>
                 <StatCard
                   title="إجمالي قيمة العقود"
-                  value={formatCurrency(totalContractValue)}
+                  value={formatCurrency(effectiveTotalContract)}
                   icon={<DollarSign className="w-4 h-4" />}
+                  subtitle={approvedChangeImpact !== 0 ? `الأصلية: ${formatCurrency(totalContractValue)}` : undefined}
                 />
               </motion.div>
               <motion.div variants={stagger.item}>
@@ -251,11 +252,11 @@ export default function Dashboard() {
               </motion.div>
               <motion.div variants={stagger.item}>
                 <StatCard
-                  title="صافي الربح"
-                  value={formatCurrency(totalProfit)}
+                  title="الربح المخطط"
+                  value={formatCurrency(plannedProfit)}
                   icon={<TrendingUp className="w-4 h-4" />}
-                  trend={totalProfit >= 0 ? 'up' : 'down'}
-                  subtitle={`هامش الربح: ${profitMargin.toFixed(1)}%`}
+                  trend={plannedProfit >= 0 ? 'up' : 'down'}
+                  subtitle={`هامش: ${plannedProfitMargin.toFixed(1)}%`}
                 />
               </motion.div>
               <motion.div variants={stagger.item}>
@@ -263,7 +264,7 @@ export default function Dashboard() {
                   title="المشاريع"
                   value={filteredProjects.length.toString()}
                   icon={<Briefcase className="w-4 h-4" />}
-                  subtitle={`${companies.length} شركة · ${portfolios.length} محفظة`}
+                  subtitle={collectedRevenue > 0 ? `محصّل: ${formatCurrency(collectedRevenue)}` : `${companies.length} شركة · ${portfolios.length} محفظة`}
                 />
               </motion.div>
             </motion.div>
@@ -331,10 +332,11 @@ export default function Dashboard() {
                   const pExpenses = expenses.filter((e) => e.projectId === project.id);
                   const pRevenues = revenues.filter((r) => r.projectId === project.id);
                   const pBudget = budgetItems.filter((b) => b.projectId === project.id);
-                  const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues);
+                  const pCO = changeOrders.filter((co) => co.projectId === project.id);
+                  const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues, pCO);
                   const company = companies.find((c) => c.id === project.companyId);
-                  const spendRate = project.contractValue > 0 ? (summary.totalActual / project.contractValue) * 100 : 0;
-                  const budgetUtilization = project.contractValue > 0 ? (summary.totalPlanned / project.contractValue) * 100 : 0;
+                  const spendRate = summary.contractSpendRate;
+                  const budgetUtilization = summary.effectiveContractValue > 0 ? (summary.totalPlanned / summary.effectiveContractValue) * 100 : 0;
 
                   return (
                     <div
@@ -355,20 +357,22 @@ export default function Dashboard() {
                       <div className="grid grid-cols-2 gap-2 mb-3">
                         <div className="text-center p-2 rounded-lg bg-muted/30">
                           <p className="text-[10px] text-muted-foreground">قيمة العقد</p>
-                          <p className="text-xs font-mono font-bold">{formatCurrency(project.contractValue)}</p>
+                          <p className="text-xs font-mono font-bold">{formatCurrency(summary.effectiveContractValue)}</p>
                         </div>
                         <div className="text-center p-2 rounded-lg bg-muted/30">
                           <p className="text-[10px] text-muted-foreground">المصروفات</p>
                           <p className="text-xs font-mono font-bold">{formatCurrency(summary.totalActual)}</p>
                         </div>
                         <div className="text-center p-2 rounded-lg bg-muted/30">
-                          <p className="text-[10px] text-muted-foreground">الإيرادات</p>
-                          <p className="text-xs font-mono font-bold">{formatCurrency(summary.totalRevenue)}</p>
+                          <p className="text-[10px] text-muted-foreground">الربح المخطط</p>
+                          <p className={`text-xs font-mono font-bold ${summary.plannedProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                            {formatCurrency(summary.plannedProfit)}
+                          </p>
                         </div>
                         <div className="text-center p-2 rounded-lg bg-muted/30">
-                          <p className="text-[10px] text-muted-foreground">صافي الربح</p>
-                          <p className={`text-xs font-mono font-bold ${summary.netProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                            {formatCurrency(summary.netProfit)}
+                          <p className="text-[10px] text-muted-foreground">متبقي الموازنة</p>
+                          <p className={`text-xs font-mono font-bold ${summary.budgetRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                            {formatCurrency(summary.budgetRemaining)}
                           </p>
                         </div>
                       </div>
@@ -428,7 +432,7 @@ export default function Dashboard() {
                       <th>قيمة العقد</th>
                       <th className="hidden md:table-cell">المصروفات</th>
                       <th className="hidden md:table-cell">نسبة الصرف</th>
-                      <th>الربح</th>
+                      <th>الربح المخطط</th>
                       <th className="hidden sm:table-cell">الحالة</th>
                       <th></th>
                     </tr>
@@ -439,9 +443,10 @@ export default function Dashboard() {
                         const pExpenses = expenses.filter((e) => e.projectId === project.id);
                         const pRevenues = revenues.filter((r) => r.projectId === project.id);
                         const pBudget = budgetItems.filter((b) => b.projectId === project.id);
-                        const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues);
+                        const pCO = changeOrders.filter((co) => co.projectId === project.id);
+                        const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues, pCO);
                         const company = companies.find((c) => c.id === project.companyId);
-                        const spendRate = project.contractValue > 0 ? (summary.totalActual / project.contractValue) * 100 : 0;
+                        const spendRate = summary.contractSpendRate;
 
                         return (
                           <motion.tr
@@ -455,7 +460,7 @@ export default function Dashboard() {
                           >
                             <td className="font-medium">{project.name}</td>
                             <td className="text-muted-foreground hidden sm:table-cell">{company?.name}</td>
-                            <td className="font-mono text-sm">{formatCurrency(project.contractValue)}</td>
+                            <td className="font-mono text-sm">{formatCurrency(summary.effectiveContractValue)}</td>
                             <td className="font-mono text-sm hidden md:table-cell">{formatCurrency(summary.totalActual)}</td>
                             <td className="hidden md:table-cell">
                               <div className="flex items-center gap-2">
@@ -472,8 +477,8 @@ export default function Dashboard() {
                               </div>
                             </td>
                             <td>
-                              <span className={summary.netProfit >= 0 ? 'badge-profit' : 'badge-loss'}>
-                                {formatCurrency(summary.netProfit)}
+                              <span className={summary.plannedProfit >= 0 ? 'badge-profit' : 'badge-loss'}>
+                                {formatCurrency(summary.plannedProfit)}
                               </span>
                             </td>
                             <td className="hidden sm:table-cell">

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency, getBaselineMonthlyPV, getMonthlyBreakdown, calculateEVM } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type CostBaseline } from '@/types/project';
+import { formatCurrency, getBaselineMonthlyPV, getMonthlyBreakdown, calculateEVM, getCurrentMonth } from '@/lib/finance';
+import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type CostBaseline, type Project } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,10 +17,7 @@ interface BaselineSectionProps {
   durationMonths: number;
   expenses: any[];
   budgetItems: any[];
-}
-
-function getCurrentMonth(durationMonths: number): number {
-  return Math.ceil(durationMonths / 2);
+  project: Project;
 }
 
 function buildSCurveData(baseline: CostBaseline, expenses: any[], durationMonths: number) {
@@ -35,7 +32,7 @@ function buildSCurveData(baseline: CostBaseline, expenses: any[], durationMonths
   });
 }
 
-export function BaselineSection({ projectId, durationMonths, expenses, budgetItems }: BaselineSectionProps) {
+export function BaselineSection({ projectId, durationMonths, expenses, budgetItems, project }: BaselineSectionProps) {
   const { baselines, createBaseline, deleteBaseline, setActiveBaseline, loadBaselines } = useStore();
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -65,8 +62,10 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
     }
   };
 
+  const currentMonth = getCurrentMonth(project.startDate, durationMonths);
+
   const evm = activeBaseline
-    ? calculateEVM(activeBaseline.items, expenses, durationMonths, Math.min(durationMonths, getCurrentMonth(durationMonths)))
+    ? calculateEVM(activeBaseline.items, expenses, durationMonths, Math.min(durationMonths, currentMonth), project.percentComplete)
     : null;
 
   const sCurveData = activeBaseline ? buildSCurveData(activeBaseline, expenses, durationMonths) : [];
@@ -81,7 +80,11 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-semibold">خطوط الأساس (Cost Baselines)</h3>
-            <p className="text-xs text-muted-foreground">أنشئ خط أساس من الموازنة الحالية لتتبع الأداء المالي</p>
+            <p className="text-xs text-muted-foreground">
+              أنشئ خط أساس من الموازنة الحالية لتتبع الأداء المالي
+              {project.percentComplete > 0 && ` · نسبة الإنجاز: ${project.percentComplete}%`}
+              {` · الشهر الحالي: ${currentMonth}`}
+            </p>
           </div>
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
             <DialogTrigger asChild>
@@ -140,7 +143,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
       {evm && activeBaseline && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatCard title="التكلفة المخططة (PV)" value={formatCurrency(evm.pv)} icon={<Target className="w-4 h-4" />} />
+            <StatCard title="القيمة المكتسبة (EV)" value={formatCurrency(evm.ev)} icon={<TrendingUp className="w-4 h-4" />} subtitle={`الإنجاز: ${project.percentComplete}%`} />
             <StatCard title="التكلفة الفعلية (AC)" value={formatCurrency(evm.ac)} icon={<TrendingDown className="w-4 h-4" />} />
             <StatCard title="انحراف التكلفة (CV)" value={formatCurrency(evm.cv)} icon={evm.cv >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />} trend={evm.cv >= 0 ? 'up' : 'down'} />
             <StatCard title="مؤشر الأداء (CPI)" value={evm.cpi.toFixed(2)} icon={<BarChart3 className="w-4 h-4" />} trend={evm.cpi >= 1 ? 'up' : 'down'} subtitle={evm.cpi >= 1 ? 'ضمن الميزانية' : 'تجاوز الميزانية'} />

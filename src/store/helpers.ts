@@ -1,7 +1,11 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
-import { Company, Portfolio, Project, BudgetItem, Expense, Revenue, CostBaseline, BaselineItem, Resource, Custody } from '@/types/project';
-import type { Tables } from '@/integrations/supabase/types';
+import {
+  Company, Portfolio, Project, BudgetItem, Expense, Revenue,
+  CostBaseline, BaselineItem, Resource, Custody, Milestone, ChangeOrder,
+  type ContractType, type CostType, type CostClass, type RevenueType, type RevenueStatus,
+  type MilestoneStatus, type ChangeOrderType, type ChangeOrderStatus,
+} from '@/types/project';
 
 // ---- getUserId ----
 export async function getUserId(): Promise<string> {
@@ -28,15 +32,15 @@ export async function logDeletion(tableName: string, recordId: string, recordDat
 }
 
 // ---- Mappers ----
-export function mapCompany(d: Tables<'companies'>): Company {
-  return { id: d.id, name: d.name, description: d.description || undefined, logo: d.logo || undefined, status: (d as any).status || 'active', createdAt: d.created_at };
+export function mapCompany(d: any): Company {
+  return { id: d.id, name: d.name, description: d.description || undefined, logo: d.logo || undefined, status: d.status || 'active', createdAt: d.created_at };
 }
 
-export function mapPortfolio(d: Tables<'portfolios'>): Portfolio {
+export function mapPortfolio(d: any): Portfolio {
   return { id: d.id, companyId: d.company_id, name: d.name, description: d.description || undefined, createdAt: d.created_at };
 }
 
-export function mapProject(d: Tables<'projects'>): Project {
+export function mapProject(d: any): Project {
   return {
     id: d.id, companyId: d.company_id, portfolioId: d.portfolio_id || undefined,
     name: d.name, description: d.description || undefined,
@@ -44,14 +48,27 @@ export function mapProject(d: Tables<'projects'>): Project {
     startDate: d.start_date || '', endDate: d.end_date || '',
     durationMonths: d.duration_months, resourceCount: d.resource_count,
     status: d.status as Project['status'], clientLogo: d.client_logo || undefined, createdAt: d.created_at,
+    percentComplete: d.percent_complete ?? 0,
+    contractType: (d.contract_type || 'lump_sum') as ContractType,
+    retentionPercent: Number(d.retention_percent ?? 0),
+    managementReserve: Number(d.management_reserve ?? 0),
   };
 }
 
-export function mapBudgetItem(d: Tables<'budget_items'>): BudgetItem {
-  return { id: d.id, projectId: d.project_id, category: d.category as BudgetItem['category'], description: d.description, plannedAmount: Number(d.planned_amount), month: d.month || undefined, resourceId: d.resource_id || undefined };
+export function mapBudgetItem(d: any): BudgetItem {
+  return {
+    id: d.id, projectId: d.project_id, category: d.category as BudgetItem['category'],
+    description: d.description, plannedAmount: Number(d.planned_amount),
+    month: d.month || undefined,
+    startMonth: d.start_month || undefined,
+    endMonth: d.end_month || undefined,
+    costType: (d.cost_type || 'fixed') as CostType,
+    costClass: (d.cost_class || 'direct') as CostClass,
+    resourceId: d.resource_id || undefined,
+  };
 }
 
-export function mapExpense(d: Tables<'expenses'>): Expense {
+export function mapExpense(d: any): Expense {
   return {
     id: d.id, projectId: d.project_id, budgetItemId: d.budget_item_id || undefined,
     category: d.category as Expense['category'], description: d.description, amount: Number(d.amount),
@@ -60,14 +77,14 @@ export function mapExpense(d: Tables<'expenses'>): Expense {
   };
 }
 
-export function mapResource(d: Tables<'resources'>): Resource {
+export function mapResource(d: any): Resource {
   return {
     id: d.id, projectId: d.project_id, name: d.name,
     role: d.role || undefined, monthlyCost: Number(d.monthly_cost), createdAt: d.created_at,
   };
 }
 
-export function mapCustody(d: Tables<'custodies'>, expenses: Expense[]): Custody {
+export function mapCustody(d: any, expenses: Expense[]): Custody {
   const spent = expenses.filter(e => e.custodyId === d.id).reduce((s, e) => s + e.amount, 0);
   return {
     id: d.id, projectId: d.project_id || undefined, companyId: d.company_id || undefined,
@@ -77,14 +94,53 @@ export function mapCustody(d: Tables<'custodies'>, expenses: Expense[]): Custody
   };
 }
 
-export function mapRevenue(d: Tables<'revenues'>): Revenue {
-  return { id: d.id, projectId: d.project_id, description: d.description, amount: Number(d.amount), date: d.date, month: d.month };
+export function mapRevenue(d: any): Revenue {
+  return {
+    id: d.id, projectId: d.project_id, description: d.description,
+    amount: Number(d.amount), date: d.date, month: d.month,
+    revenueType: (d.revenue_type || 'milestone') as RevenueType,
+    status: (d.status || 'collected') as RevenueStatus,
+    invoiceNumber: d.invoice_number || undefined,
+    invoiceDate: d.invoice_date || undefined,
+    collectionDate: d.collection_date || undefined,
+  };
 }
 
-export function mapBaselineItem(d: Tables<'baseline_items'>): BaselineItem {
+export function mapBaselineItem(d: any): BaselineItem {
   return {
     id: d.id, baselineId: d.baseline_id, category: d.category as BaselineItem['category'],
     description: d.description, plannedAmount: Number(d.planned_amount),
     month: d.month || undefined,
+  };
+}
+
+export function mapMilestone(d: any): Milestone {
+  return {
+    id: d.id, projectId: d.project_id, name: d.name,
+    description: d.description || undefined,
+    sortOrder: d.sort_order ?? 0,
+    plannedStart: d.planned_start || undefined,
+    plannedEnd: d.planned_end || undefined,
+    actualStart: d.actual_start || undefined,
+    actualEnd: d.actual_end || undefined,
+    percentComplete: d.percent_complete ?? 0,
+    weight: Number(d.weight ?? 0),
+    status: (d.status || 'planned') as MilestoneStatus,
+    linkedRevenueId: d.linked_revenue_id || undefined,
+    createdAt: d.created_at,
+  };
+}
+
+export function mapChangeOrder(d: any): ChangeOrder {
+  return {
+    id: d.id, projectId: d.project_id, description: d.description,
+    changeType: (d.change_type || 'scope_addition') as ChangeOrderType,
+    amountImpact: Number(d.amount_impact ?? 0),
+    durationImpact: d.duration_impact ?? 0,
+    status: (d.status || 'proposed') as ChangeOrderStatus,
+    requestedBy: d.requested_by || undefined,
+    approvedBy: d.approved_by || undefined,
+    approvedDate: d.approved_date || undefined,
+    createdAt: d.created_at,
   };
 }
