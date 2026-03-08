@@ -24,6 +24,8 @@ export default function NewPortfolio() {
 
   useEffect(() => { loadAll(); }, []);
 
+  const editableCompanies = useMemo(() => companies.filter(c => isAdmin || canEdit('company', c.id)), [companies, isAdmin, canEdit]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const result = portfolioSchema.safeParse({ name, companyId, description: description || undefined });
