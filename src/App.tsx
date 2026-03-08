@@ -17,6 +17,7 @@ import CompanyDetail from "./pages/CompanyDetail";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import UserManagement from "./pages/UserManagement";
+import SystemAuditLog from "./pages/SystemAuditLog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/project/new" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
               <Route path="/project/:id" element={<ProtectedRoute><ErrorBoundary><ProjectDetail /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+              <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>
