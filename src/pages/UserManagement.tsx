@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
@@ -10,10 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { UserPlus, Trash2, Users, Shield, Eye, Pencil, Mail, CheckCircle2, Clock, UserX } from 'lucide-react';
+import { UserPlus, Trash2, Users, Shield, Eye, Pencil, Mail, CheckCircle2, Clock, UserX, ChevronDown, ChevronUp, Filter, Search } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Profile {
   id: string;
@@ -66,6 +67,14 @@ export default function UserManagement() {
   const [invScopeType, setInvScopeType] = useState('system');
   const [invScopeId, setInvScopeId] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Invites log state
+  const [invitesOpen, setInvitesOpen] = useState(false);
+  const [inviteStatusFilter, setInviteStatusFilter] = useState<string>('all');
+  const [inviteSearchQuery, setInviteSearchQuery] = useState('');
+
+  // Users filter
+  const [userSearchQuery, setUserSearchQuery] = useState('');
 
   useEffect(() => {
     if (!isAdmin || roleLoading) return;
@@ -199,6 +208,35 @@ export default function UserManagement() {
     return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
+  // Group invites by email, deduplicated
+  const groupedInvites = useMemo(() => {
+    let filtered = invites;
+    if (inviteStatusFilter !== 'all') {
+      filtered = filtered.filter(i => i.status === inviteStatusFilter);
+    }
+    if (inviteSearchQuery.trim()) {
+      const q = inviteSearchQuery.toLowerCase();
+      filtered = filtered.filter(i => i.email.toLowerCase().includes(q));
+    }
+
+    const groups: Record<string, Invite[]> = {};
+    for (const inv of filtered) {
+      if (!groups[inv.email]) groups[inv.email] = [];
+      groups[inv.email].push(inv);
+    }
+    return groups;
+  }, [invites, inviteStatusFilter, inviteSearchQuery]);
+
+  const pendingInvitesCount = invites.filter(i => i.status === 'pending').length;
+  const acceptedInvitesCount = invites.filter(i => i.status === 'accepted').length;
+
+  // Filtered users
+  const filteredProfiles = useMemo(() => {
+    if (!userSearchQuery.trim()) return profiles;
+    const q = userSearchQuery.toLowerCase();
+    return profiles.filter(p => p.email.toLowerCase().includes(q) || (p.fullName && p.fullName.toLowerCase().includes(q)));
+  }, [profiles, userSearchQuery]);
+
   if (roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -299,7 +337,7 @@ export default function UserManagement() {
           </p>
         </motion.div>
 
-        {/* All Invites */}
+        {/* Invites Log - Collapsible */}
         {invites.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -307,41 +345,110 @@ export default function UserManagement() {
             transition={{ delay: 0.1 }}
             className="stat-card"
           >
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-primary" />
-              سجل الدعوات
-            </h2>
-            <div className="space-y-3">
-              {invites.map((invite) => {
-                const statusConf = inviteStatusConfig[invite.status] || inviteStatusConfig.pending;
-                const StatusIcon = statusConf.icon;
-                return (
-                  <div key={invite.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-sm font-medium" dir="ltr">{invite.email}</span>
-                      <Badge variant="outline">{roleLabels[invite.role]}</Badge>
-                      <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${statusConf.className}`}>
-                        <StatusIcon className="w-3 h-3" />
-                        {statusConf.label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {scopeLabels[invite.scopeType]}: {getScopeName(invite.scopeType, invite.scopeId)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {formatDate(invite.createdAt)}
-                      </span>
+            <Collapsible open={invitesOpen} onOpenChange={setInvitesOpen}>
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between text-right">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-primary" />
+                    <h2 className="text-lg font-semibold">سجل الدعوات</h2>
+                    <div className="flex items-center gap-1.5">
+                      {pendingInvitesCount > 0 && (
+                        <Badge variant="outline" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">
+                          {pendingInvitesCount} معلّقة
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-[10px]">
+                        {invites.length} إجمالي
+                      </Badge>
                     </div>
-                    {invite.status === 'pending' && (
-                      <ConfirmDeleteDialog
-                        title="حذف الدعوة"
-                        description={`هل تريد حذف الدعوة المرسلة إلى ${invite.email}؟`}
-                        onConfirm={() => deleteInvite(invite.id)}
-                      />
-                    )}
                   </div>
-                );
-              })}
-            </div>
+                  {invitesOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4 mb-3">
+                  <div className="relative flex-1 min-w-0">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="بحث بالإيميل..."
+                      value={inviteSearchQuery}
+                      onChange={(e) => setInviteSearchQuery(e.target.value)}
+                      className="pr-9 h-8 text-sm"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setInviteStatusFilter('all')}
+                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                    >
+                      الكل ({invites.length})
+                    </button>
+                    <button
+                      onClick={() => setInviteStatusFilter('pending')}
+                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'pending' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:opacity-80'}`}
+                    >
+                      معلّقة ({pendingInvitesCount})
+                    </button>
+                    <button
+                      onClick={() => setInviteStatusFilter('accepted')}
+                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'accepted' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:opacity-80'}`}
+                    >
+                      مقبولة ({acceptedInvitesCount})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grouped by email */}
+                <div className="space-y-3">
+                  {Object.entries(groupedInvites).map(([email, emailInvites]) => (
+                    <div key={email} className="rounded-lg border border-border/50 overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm font-medium" dir="ltr">{email}</span>
+                          <Badge variant="outline" className="text-[10px]">{emailInvites.length} دعوة</Badge>
+                        </div>
+                      </div>
+                      <div className="divide-y divide-border/30">
+                        {emailInvites.map((invite) => {
+                          const statusConf = inviteStatusConfig[invite.status] || inviteStatusConfig.pending;
+                          const StatusIcon = statusConf.icon;
+                          return (
+                            <div key={invite.id} className="flex items-center justify-between px-3 py-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className="text-[10px]">{roleLabels[invite.role]}</Badge>
+                                <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${statusConf.className}`}>
+                                  <StatusIcon className="w-3 h-3" />
+                                  {statusConf.label}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {scopeLabels[invite.scopeType]}: {getScopeName(invite.scopeType, invite.scopeId)}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {formatDate(invite.createdAt)}
+                                </span>
+                              </div>
+                              {invite.status === 'pending' && (
+                                <ConfirmDeleteDialog
+                                  title="حذف الدعوة"
+                                  description={`هل تريد حذف الدعوة المرسلة إلى ${invite.email}؟`}
+                                  onConfirm={() => deleteInvite(invite.id)}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {Object.keys(groupedInvites).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">لا توجد دعوات تطابق البحث</p>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </motion.div>
         )}
 
@@ -352,14 +459,28 @@ export default function UserManagement() {
           transition={{ delay: 0.2 }}
           className="stat-card"
         >
-          <h2 className="text-lg font-semibold mb-4">المستخدمون الحاليون</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">المستخدمون الحاليون ({profiles.length})</h2>
+          </div>
+
+          {/* User search */}
+          <div className="relative mb-4">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="بحث بالإيميل أو الاسم..."
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+              className="pr-9 h-9 text-sm"
+            />
+          </div>
+
           {loading ? (
             <div className="flex justify-center py-8">
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <div className="space-y-4">
-              {profiles.map((profile) => {
+              {filteredProfiles.map((profile) => {
                 const userRoles = allRoles.filter((r) => r.userId === profile.id);
                 const isSelf = profile.id === user?.id;
                 return (
@@ -423,6 +544,9 @@ export default function UserManagement() {
                   </div>
                 );
               })}
+              {filteredProfiles.length === 0 && userSearchQuery && (
+                <p className="text-sm text-muted-foreground text-center py-4">لا يوجد مستخدم يطابق البحث</p>
+              )}
             </div>
           )}
         </motion.div>
