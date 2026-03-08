@@ -104,12 +104,13 @@ export default function Dashboard() {
     });
   }, [projects, companies, filterCompany, filterStatus, searchQuery]);
 
-  const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '';
+  const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '' || timePeriod !== 'all';
 
   const clearFilters = () => {
     setFilterCompany('all');
     setFilterStatus('all');
     setSearchQuery('');
+    setTimePeriod('all');
   };
 
   // Stats based on filtered projects
