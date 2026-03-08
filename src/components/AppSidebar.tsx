@@ -2,7 +2,7 @@ import { useStore } from '@/store/useStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Building2, FolderKanban, LayoutDashboard, Plus, ChevronDown, ChevronLeft,
-  Briefcase, Menu, LogOut, Users,
+  Briefcase, Menu, LogOut, Users, ScrollText,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
