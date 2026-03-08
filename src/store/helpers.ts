@@ -3,8 +3,11 @@ import type { Json } from '@/integrations/supabase/types';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
   CostBaseline, BaselineItem, Resource, Custody, Milestone, ChangeOrder,
+  Risk, IndirectCost, PeriodicSnapshot,
   type ContractType, type CostType, type CostClass, type RevenueType, type RevenueStatus,
   type MilestoneStatus, type ChangeOrderType, type ChangeOrderStatus,
+  type RiskProbability, type RiskImpact, type RiskCategory, type RiskStatus,
+  type IndirectCostCategory,
 } from '@/types/project';
 
 // ---- getUserId ----
@@ -19,11 +22,8 @@ export async function logDeletion(tableName: string, recordId: string, recordDat
   try {
     const userId = await getUserId();
     await supabase.from('audit_log').insert([{
-      user_id: userId,
-      action: 'delete',
-      table_name: tableName,
-      record_id: recordId,
-      record_data: recordData as Json,
+      user_id: userId, action: 'delete', table_name: tableName,
+      record_id: recordId, record_data: recordData as Json,
       project_id: projectId || null,
     }]);
   } catch (e) {
@@ -37,7 +37,15 @@ export function mapCompany(d: any): Company {
 }
 
 export function mapPortfolio(d: any): Portfolio {
-  return { id: d.id, companyId: d.company_id, name: d.name, description: d.description || undefined, createdAt: d.created_at };
+  return {
+    id: d.id, companyId: d.company_id, name: d.name,
+    description: d.description || undefined,
+    targetRevenue: Number(d.target_revenue ?? 0),
+    targetMargin: Number(d.target_margin ?? 0),
+    fiscalYear: d.fiscal_year || undefined,
+    notes: d.notes || undefined,
+    createdAt: d.created_at,
+  };
 }
 
 export function mapProject(d: any): Project {
@@ -141,6 +149,52 @@ export function mapChangeOrder(d: any): ChangeOrder {
     requestedBy: d.requested_by || undefined,
     approvedBy: d.approved_by || undefined,
     approvedDate: d.approved_date || undefined,
+    createdAt: d.created_at,
+  };
+}
+
+export function mapRisk(d: any): Risk {
+  return {
+    id: d.id,
+    projectId: d.project_id || undefined,
+    portfolioId: d.portfolio_id || undefined,
+    title: d.title,
+    description: d.description || undefined,
+    probability: (d.probability || 'medium') as RiskProbability,
+    impact: (d.impact || 'medium') as RiskImpact,
+    financialImpact: Number(d.financial_impact ?? 0),
+    category: (d.category || 'financial') as RiskCategory,
+    status: (d.status || 'open') as RiskStatus,
+    mitigationPlan: d.mitigation_plan || undefined,
+    owner: d.owner || undefined,
+    identifiedDate: d.identified_date || undefined,
+    closedDate: d.closed_date || undefined,
+    createdAt: d.created_at,
+  };
+}
+
+export function mapIndirectCost(d: any): IndirectCost {
+  return {
+    id: d.id,
+    companyId: d.company_id,
+    category: (d.category || 'other') as IndirectCostCategory,
+    description: d.description,
+    amount: Number(d.amount ?? 0),
+    month: d.month,
+    date: d.date,
+    allocationMethod: d.allocation_method || 'equal',
+    createdAt: d.created_at,
+  };
+}
+
+export function mapSnapshot(d: any): PeriodicSnapshot {
+  return {
+    id: d.id,
+    entityType: d.entity_type,
+    entityId: d.entity_id,
+    period: d.period,
+    snapshotDate: d.snapshot_date,
+    metrics: d.metrics || {},
     createdAt: d.created_at,
   };
 }

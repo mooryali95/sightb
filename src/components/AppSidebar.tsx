@@ -56,9 +56,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           </div>
         )}
         <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
+          variant="ghost" size="icon" onClick={onToggle}
           className="text-sidebar-foreground hover:bg-sidebar-accent shrink-0"
         >
           {collapsed ? <Menu className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -72,9 +70,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           onClick={() => navigate('/')}
           className={cn(
             'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-            isActive('/')
-              ? 'bg-primary/20 text-primary font-semibold'
-              : 'text-sidebar-foreground hover:bg-sidebar-accent'
+            isActive('/') ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
           )}
         >
           <LayoutDashboard className="w-4 h-4 shrink-0" />
@@ -87,9 +83,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
             onClick={() => navigate('/users')}
             className={cn(
               'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-              isActive('/users')
-                ? 'bg-primary/20 text-primary font-semibold'
-                : 'text-sidebar-foreground hover:bg-sidebar-accent'
+              isActive('/users') ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
             )}
           >
             <Users className="w-4 h-4 shrink-0" />
@@ -101,14 +95,9 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
         {!collapsed && (
           <div className="pt-4">
             <div className="flex items-center justify-between px-3 mb-2">
-              <span className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider">
-                الشركات
-              </span>
+              <span className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider">الشركات</span>
               {isAdmin && (
-                <button
-                  onClick={() => navigate('/companies/new')}
-                  className="text-sidebar-foreground/40 hover:text-primary transition-colors"
-                >
+                <button onClick={() => navigate('/companies/new')} className="text-sidebar-foreground/40 hover:text-primary transition-colors">
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -116,112 +105,107 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
 
             {companies.filter(c => c.status !== 'archived').map((company) => (
               <div key={company.id}>
-                <button
-                  onClick={() => toggleCompany(company.id)}
-                  className={cn(
-                    'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                    'text-sidebar-foreground hover:bg-sidebar-accent'
-                  )}
-                >
+                <div className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                  'text-sidebar-foreground hover:bg-sidebar-accent'
+                )}>
                   <Building2 className="w-4 h-4 shrink-0 text-primary" />
-                  <span className="flex-1 text-right truncate">{company.name}</span>
-                  <ChevronDown
+                  <button
+                    onClick={() => navigate(`/company/${company.id}`)}
                     className={cn(
-                      'w-3.5 h-3.5 transition-transform',
-                      expandedCompanies.has(company.id) && 'rotate-180'
+                      'flex-1 text-right truncate hover:text-primary transition-colors',
+                      isActive(`/company/${company.id}`) && 'text-primary font-semibold'
                     )}
-                  />
-                </button>
+                  >
+                    {company.name}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleCompany(company.id); }}
+                    className="p-0.5 rounded hover:bg-sidebar-accent"
+                  >
+                    <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', expandedCompanies.has(company.id) && 'rotate-180')} />
+                  </button>
+                </div>
 
                 {expandedCompanies.has(company.id) && (
                   <div className="mr-4 border-r border-primary/20 pr-2 space-y-0.5">
                     {/* Direct projects under company (no portfolio) */}
-                    {projects
-                      .filter((p) => p.companyId === company.id && !p.portfolioId)
-                      .map((project) => (
-                        <button
-                          key={project.id}
-                          onClick={() => navigate(`/project/${project.id}`)}
-                          className={cn(
-                            'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors',
-                            isActive(`/project/${project.id}`)
-                              ? 'bg-primary/15 text-primary'
-                              : 'text-sidebar-foreground/60 hover:bg-sidebar-accent'
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              'w-1.5 h-1.5 rounded-full shrink-0',
-                              project.status === 'active' || project.status === 'approved' ? 'bg-success' : 
-                              project.status === 'completed' ? 'bg-primary' :
-                              project.status === 'archived' ? 'bg-muted-foreground' : 'bg-warning'
-                            )}
-                          />
-                          <span className="truncate">{project.name}</span>
-                        </button>
-                      ))}
+                    {projects.filter((p) => p.companyId === company.id && !p.portfolioId).map((project) => (
+                      <button
+                        key={project.id}
+                        onClick={() => navigate(`/project/${project.id}`)}
+                        className={cn(
+                          'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors',
+                          isActive(`/project/${project.id}`) ? 'bg-primary/15 text-primary' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent'
+                        )}
+                      >
+                        <div className={cn(
+                          'w-1.5 h-1.5 rounded-full shrink-0',
+                          project.status === 'active' || project.status === 'approved' ? 'bg-success' :
+                          project.status === 'completed' ? 'bg-primary' :
+                          project.status === 'archived' ? 'bg-muted-foreground' : 'bg-warning'
+                        )} />
+                        <span className="truncate">{project.name}</span>
+                      </button>
+                    ))}
 
                     {/* Portfolios */}
-                    {portfolios
-                      .filter((p) => p.companyId === company.id)
-                      .map((portfolio) => (
-                        <div key={portfolio.id}>
+                    {portfolios.filter((p) => p.companyId === company.id).map((portfolio) => (
+                      <div key={portfolio.id}>
+                        <div className={cn(
+                          'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors',
+                          'text-sidebar-foreground/80 hover:bg-sidebar-accent'
+                        )}>
+                          <FolderKanban className="w-3.5 h-3.5 shrink-0 text-primary/70" />
                           <button
-                            onClick={() => togglePortfolio(portfolio.id)}
+                            onClick={() => navigate(`/portfolio/${portfolio.id}`)}
                             className={cn(
-                              'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors',
-                              'text-sidebar-foreground/80 hover:bg-sidebar-accent'
+                              'flex-1 text-right truncate hover:text-primary transition-colors',
+                              isActive(`/portfolio/${portfolio.id}`) && 'text-primary font-semibold'
                             )}
                           >
-                            <FolderKanban className="w-3.5 h-3.5 shrink-0 text-primary/70" />
-                            <span className="flex-1 text-right truncate">{portfolio.name}</span>
-                            <ChevronDown
-                              className={cn(
-                                'w-3 h-3 transition-transform',
-                                expandedPortfolios.has(portfolio.id) && 'rotate-180'
-                              )}
-                            />
+                            {portfolio.name}
                           </button>
-
-                          {expandedPortfolios.has(portfolio.id) && (
-                            <div className="mr-3 space-y-0.5">
-                              {projects
-                                .filter((p) => p.portfolioId === portfolio.id)
-                                .map((project) => (
-                                  <button
-                                    key={project.id}
-                                    onClick={() => navigate(`/project/${project.id}`)}
-                                    className={cn(
-                                      'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors',
-                                      isActive(`/project/${project.id}`)
-                                        ? 'bg-primary/15 text-primary'
-                                        : 'text-sidebar-foreground/60 hover:bg-sidebar-accent'
-                                    )}
-                                  >
-                                    <div
-                                      className={cn(
-                                        'w-1.5 h-1.5 rounded-full shrink-0',
-                                        project.status === 'active' || project.status === 'approved' ? 'bg-success' : 
-                                        project.status === 'completed' ? 'bg-primary' :
-                                        project.status === 'archived' ? 'bg-muted-foreground' : 'bg-warning'
-                                      )}
-                                    />
-                                    <span className="truncate">{project.name}</span>
-                                  </button>
-                                ))}
-                              {canEdit('company', company.id) && (
-                                <button
-                                  onClick={() => navigate(`/project/new?portfolio=${portfolio.id}&company=${company.id}`)}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                  <span>مشروع جديد</span>
-                                </button>
-                              )}
-                            </div>
-                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); togglePortfolio(portfolio.id); }}
+                            className="p-0.5 rounded hover:bg-sidebar-accent"
+                          >
+                            <ChevronDown className={cn('w-3 h-3 transition-transform', expandedPortfolios.has(portfolio.id) && 'rotate-180')} />
+                          </button>
                         </div>
-                      ))}
+
+                        {expandedPortfolios.has(portfolio.id) && (
+                          <div className="mr-3 space-y-0.5">
+                            {projects.filter((p) => p.portfolioId === portfolio.id).map((project) => (
+                              <button
+                                key={project.id}
+                                onClick={() => navigate(`/project/${project.id}`)}
+                                className={cn(
+                                  'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors',
+                                  isActive(`/project/${project.id}`) ? 'bg-primary/15 text-primary' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent'
+                                )}
+                              >
+                                <div className={cn(
+                                  'w-1.5 h-1.5 rounded-full shrink-0',
+                                  project.status === 'active' || project.status === 'approved' ? 'bg-success' :
+                                  project.status === 'completed' ? 'bg-primary' :
+                                  project.status === 'archived' ? 'bg-muted-foreground' : 'bg-warning'
+                                )} />
+                                <span className="truncate">{project.name}</span>
+                              </button>
+                            ))}
+                            {canEdit('company', company.id) && (
+                              <button
+                                onClick={() => navigate(`/project/new?portfolio=${portfolio.id}&company=${company.id}`)}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
+                              >
+                                <Plus className="w-3 h-3" /><span>مشروع جديد</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
 
                     {/* Add project directly under company */}
                     {canEdit('company', company.id) && (
@@ -230,15 +214,13 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                           onClick={() => navigate(`/project/new?company=${company.id}`)}
                           className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
                         >
-                          <Plus className="w-3 h-3" />
-                          <span>مشروع مستقل</span>
+                          <Plus className="w-3 h-3" /><span>مشروع مستقل</span>
                         </button>
                         <button
                           onClick={() => navigate(`/portfolio/new?company=${company.id}`)}
                           className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
                         >
-                          <Plus className="w-3 h-3" />
-                          <span>محفظة جديدة</span>
+                          <Plus className="w-3 h-3" /><span>محفظة جديدة</span>
                         </button>
                       </>
                     )}

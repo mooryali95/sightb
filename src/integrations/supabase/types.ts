@@ -438,6 +438,53 @@ export type Database = {
           },
         ]
       }
+      indirect_costs: {
+        Row: {
+          allocation_method: string
+          amount: number
+          category: string
+          company_id: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          month: number
+          user_id: string
+        }
+        Insert: {
+          allocation_method?: string
+          amount?: number
+          category?: string
+          company_id: string
+          created_at?: string
+          date: string
+          description: string
+          id?: string
+          month: number
+          user_id: string
+        }
+        Update: {
+          allocation_method?: string
+          amount?: number
+          category?: string
+          company_id?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          month?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indirect_costs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milestones: {
         Row: {
           actual_end: string | null
@@ -507,29 +554,74 @@ export type Database = {
           },
         ]
       }
+      periodic_snapshots: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metrics: Json
+          period: string
+          snapshot_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          metrics?: Json
+          period: string
+          snapshot_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metrics?: Json
+          period?: string
+          snapshot_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       portfolios: {
         Row: {
           company_id: string
           created_at: string
           description: string | null
+          fiscal_year: string | null
           id: string
           name: string
+          notes: string | null
+          target_margin: number
+          target_revenue: number
           user_id: string
         }
         Insert: {
           company_id: string
           created_at?: string
           description?: string | null
+          fiscal_year?: string | null
           id?: string
           name: string
+          notes?: string | null
+          target_margin?: number
+          target_revenue?: number
           user_id: string
         }
         Update: {
           company_id?: string
           created_at?: string
           description?: string | null
+          fiscal_year?: string | null
           id?: string
           name?: string
+          notes?: string | null
+          target_margin?: number
+          target_revenue?: number
           user_id?: string
         }
         Relationships: [
@@ -734,6 +826,78 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "revenues_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risks: {
+        Row: {
+          category: string
+          closed_date: string | null
+          created_at: string
+          description: string | null
+          financial_impact: number
+          id: string
+          identified_date: string | null
+          impact: string
+          mitigation_plan: string | null
+          owner: string | null
+          portfolio_id: string | null
+          probability: string
+          project_id: string | null
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          closed_date?: string | null
+          created_at?: string
+          description?: string | null
+          financial_impact?: number
+          id?: string
+          identified_date?: string | null
+          impact?: string
+          mitigation_plan?: string | null
+          owner?: string | null
+          portfolio_id?: string | null
+          probability?: string
+          project_id?: string | null
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          closed_date?: string | null
+          created_at?: string
+          description?: string | null
+          financial_impact?: number
+          id?: string
+          identified_date?: string | null
+          impact?: string
+          mitigation_plan?: string | null
+          owner?: string | null
+          portfolio_id?: string | null
+          probability?: string
+          project_id?: string | null
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risks_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"

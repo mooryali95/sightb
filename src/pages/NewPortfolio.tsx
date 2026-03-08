@@ -31,7 +31,7 @@ export default function NewPortfolio() {
     }
     setLoading(true);
     try {
-      await addPortfolio({ name: result.data.name, companyId: result.data.companyId, description: result.data.description });
+      await addPortfolio({ name: result.data.name, companyId: result.data.companyId, description: result.data.description, targetRevenue: 0, targetMargin: 0 });
       navigate('/');
     } catch (error: any) {
       console.error('[add-portfolio]', error);
