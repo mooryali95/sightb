@@ -679,22 +679,36 @@ export default function Dashboard() {
                         <span className="text-sm font-medium">{company.name}</span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">نشطة</span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1 text-xs text-muted-foreground hover:text-destructive"
-                        onClick={async () => {
-                          try {
-                            await archiveCompany(company.id);
-                            toast.success(`تم أرشفة "${company.name}"`);
-                          } catch (e: any) {
-                            toast.error(`فشل أرشفة الشركة: ${e.message}`);
-                          }
-                        }}
-                      >
-                        <Archive className="w-3.5 h-3.5" />
-                        أرشفة
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-xs text-muted-foreground hover:text-destructive"
+                          onClick={async () => {
+                            try {
+                              await archiveCompany(company.id);
+                              toast.success(`تم أرشفة "${company.name}"`);
+                            } catch (e: any) {
+                              toast.error(`فشل أرشفة الشركة: ${e.message}`);
+                            }
+                          }}
+                        >
+                          <Archive className="w-3.5 h-3.5" />
+                          أرشفة
+                        </Button>
+                        <ConfirmDeleteDialog
+                          title="حذف الشركة"
+                          description={`هل أنت متأكد من حذف "${company.name}"؟ سيتم حذف جميع المحافظ والمشاريع المرتبطة بها نهائياً.`}
+                          onConfirm={async () => {
+                            try {
+                              await deleteCompany(company.id);
+                              toast.success(`تم حذف "${company.name}"`);
+                            } catch (e: any) {
+                              toast.error(`فشل حذف الشركة: ${e.message}`);
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   ))}
                   {archivedCompanies.length > 0 && (
