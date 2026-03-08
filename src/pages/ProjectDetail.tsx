@@ -117,6 +117,27 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleSaveEdit = async () => {
+    if (!editForm.name.trim()) { toast.error('اسم المشروع مطلوب'); return; }
+    if (editForm.contractValue < 0) { toast.error('قيمة العقد يجب أن تكون موجبة'); return; }
+    if (editForm.durationMonths < 1) { toast.error('المدة يجب أن تكون شهر واحد على الأقل'); return; }
+    try {
+      await updateProject(project.id, {
+        name: editForm.name.trim(),
+        contractValue: editForm.contractValue,
+        durationMonths: editForm.durationMonths,
+        description: editForm.description.trim() || undefined,
+        retentionPercent: editForm.retentionPercent,
+        managementReserve: editForm.managementReserve,
+        percentComplete: editForm.percentComplete,
+      });
+      setEditOpen(false);
+      toast.success('تم تحديث بيانات المشروع');
+    } catch (e: any) {
+      toast.error('فشل تحديث المشروع');
+    }
+  };
+
   const tabCount = isAdmin ? 11 : 10;
 
   return (
