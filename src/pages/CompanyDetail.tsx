@@ -145,9 +145,11 @@ export default function CompanyDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
-                  <Pencil className="w-3.5 h-3.5" />تعديل
-                </Button>
+                {(isAdmin || canEdit('company', id!)) && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
+                    <Pencil className="w-3.5 h-3.5" />تعديل
+                  </Button>
+                )}
                 {summary && (
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                     exportCompanyToExcel({
