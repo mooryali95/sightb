@@ -3,10 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ProjectStatus } from '@/types/project';
+import { getPortfolioSummary, getHealthScore } from '@/lib/portfolio';
+import {
+  PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ProjectStatus,
+  HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS,
+  RISK_PROBABILITY_LABELS, RISK_PROBABILITY_COLORS, type RiskProbability,
+} from '@/types/project';
 import {
   Building2, FolderKanban, Briefcase, TrendingUp, Plus,
   ArrowLeft, DollarSign, Filter, Search, X, Archive, ArchiveRestore,
+  AlertTriangle, ShieldAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
