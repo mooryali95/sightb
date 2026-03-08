@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
+import { exportCompanyToExcel } from '@/lib/export';
 import {
   HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS,
   INDIRECT_COST_CATEGORY_LABELS, type IndirectCostCategory,
@@ -19,7 +20,7 @@ import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { motion } from 'framer-motion';
 import {
   Building2, DollarSign, TrendingUp, AlertTriangle, Plus,
-  FolderKanban, ArrowLeft, Briefcase,
+  FolderKanban, ArrowLeft, Briefcase, FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -94,9 +95,37 @@ export default function CompanyDetail() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
           </div>
-          <div className="flex items-center gap-3">
-            <Building2 className="w-6 h-6 text-primary" />
-            <h1 className="page-title">{company.name}</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Building2 className="w-6 h-6 text-primary" />
+              <h1 className="page-title">{company.name}</h1>
+            </div>
+            {summary && (
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                exportCompanyToExcel({
+                  companyName: company.name,
+                  summary,
+                  portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
+                    name: ps.portfolioName,
+                    projects: ps.projectCount,
+                    contractValue: ps.totalEffectiveValue,
+                    actual: ps.totalActual,
+                    profit: ps.aggregatePlannedProfit,
+                    completion: ps.weightedPercentComplete,
+                    health: HEALTH_STATUS_LABELS[ps.healthStatus],
+                  })),
+                  indirectCosts: compIndirectCosts.map(ic => ({
+                    category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
+                    description: ic.description,
+                    amount: ic.amount,
+                    month: ic.month,
+                  })),
+                });
+                toast.success('تم تصدير تقرير الشركة');
+              }}>
+                <FileSpreadsheet className="w-3.5 h-3.5" />تصدير Excel
+              </Button>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {compPortfolios.length} محفظة · {companyProjects.length} مشروع
