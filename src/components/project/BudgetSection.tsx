@@ -372,7 +372,12 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                         </div>
                       </td>
                       <td>
-                        <ConfirmDeleteDialog title="حذف بند الموازنة" description="هل أنت متأكد من حذف هذا البند؟" onConfirm={() => deleteBudgetItem(item.id)} />
+                        <div className="flex items-center gap-0.5">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
+                            <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                          </Button>
+                          <ConfirmDeleteDialog title="حذف بند الموازنة" description="هل أنت متأكد من حذف هذا البند؟" onConfirm={() => deleteBudgetItem(item.id)} />
+                        </div>
                       </td>
                     </tr>
                   );
