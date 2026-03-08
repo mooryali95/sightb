@@ -44,7 +44,8 @@ export function useRole() {
     fetchRoles();
   }, [user]);
 
-  const isAdmin = roles.some((r) => r.role === 'admin' && r.scopeType === 'system');
+  const isOwner = roles.some((r) => r.role === 'owner' && r.scopeType === 'system');
+  const isAdmin = isOwner || roles.some((r) => r.role === 'admin' && r.scopeType === 'system');
 
   const canEdit = (scopeType: ScopeType, scopeId: string) => {
     if (isAdmin) return true;
