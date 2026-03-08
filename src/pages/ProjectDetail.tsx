@@ -170,6 +170,53 @@ export default function ProjectDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md" dir="rtl">
+                    <DialogHeader>
+                      <DialogTitle>تعديل بيانات المشروع</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                      <div className="space-y-1.5">
+                        <Label>اسم المشروع</Label>
+                        <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} maxLength={200} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label>قيمة العقد</Label>
+                          <Input type="number" min={0} value={editForm.contractValue} onChange={e => setEditForm(f => ({ ...f, contractValue: Number(e.target.value) }))} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>المدة (أشهر)</Label>
+                          <Input type="number" min={1} max={120} value={editForm.durationMonths} onChange={e => setEditForm(f => ({ ...f, durationMonths: Number(e.target.value) }))} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label>نسبة الإنجاز %</Label>
+                          <Input type="number" min={0} max={100} value={editForm.percentComplete} onChange={e => setEditForm(f => ({ ...f, percentComplete: Number(e.target.value) }))} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>نسبة الحجز %</Label>
+                          <Input type="number" min={0} max={100} value={editForm.retentionPercent} onChange={e => setEditForm(f => ({ ...f, retentionPercent: Number(e.target.value) }))} />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>الاحتياطي الإداري</Label>
+                        <Input type="number" min={0} value={editForm.managementReserve} onChange={e => setEditForm(f => ({ ...f, managementReserve: Number(e.target.value) }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>الوصف</Label>
+                        <Textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} maxLength={500} rows={2} />
+                      </div>
+                      <Button onClick={handleSaveEdit} className="w-full">حفظ التعديلات</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <Select
                   value={project.status}
                   onValueChange={(val) => {
