@@ -1,8 +1,9 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { BarChart3, Shield, TrendingUp, FolderKanban, ArrowLeft, ExternalLink } from 'lucide-react';
 import basserhLogo from '@/assets/basserh-logo.jpg';
+import { useAuth } from '@/hooks/useAuth';
 
 const features = [
   {
@@ -28,7 +29,11 @@ const features = [
 ];
 
 export default function Landing() {
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  if (loading) return null;
+  if (user) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
