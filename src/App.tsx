@@ -17,6 +17,7 @@ import CompanyDetail from "./pages/CompanyDetail";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import UserManagement from "./pages/UserManagement";
+import SystemAuditLog from "./pages/SystemAuditLog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
