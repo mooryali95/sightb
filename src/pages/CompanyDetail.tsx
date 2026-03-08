@@ -65,6 +65,12 @@ export default function CompanyDetail() {
   const [icMonth, setIcMonth] = useState('1');
   const [icDate, setIcDate] = useState(new Date().toISOString().split('T')[0]);
 
+  const [expandedPortfolios, setExpandedPortfolios] = useState<Record<string, boolean>>({});
+
+  const togglePortfolio = (portfolioId: string) => {
+    setExpandedPortfolios(prev => ({ ...prev, [portfolioId]: !prev[portfolioId] }));
+  };
+
   // Edit company form
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState('');
