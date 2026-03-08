@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-export type AppRole = 'admin' | 'editor' | 'viewer';
+export type AppRole = 'owner' | 'admin' | 'editor' | 'viewer';
 export type ScopeType = 'system' | 'company' | 'project';
 
 interface UserRole {
@@ -44,7 +44,8 @@ export function useRole() {
     fetchRoles();
   }, [user]);
 
-  const isAdmin = roles.some((r) => r.role === 'admin' && r.scopeType === 'system');
+  const isOwner = roles.some((r) => r.role === 'owner' && r.scopeType === 'system');
+  const isAdmin = isOwner || roles.some((r) => r.role === 'admin' && r.scopeType === 'system');
 
   const canEdit = (scopeType: ScopeType, scopeId: string) => {
     if (isAdmin) return true;
@@ -63,5 +64,5 @@ export function useRole() {
     );
   };
 
-  return { roles, isAdmin, canEdit, hasAccess, loading };
+  return { roles, isOwner, isAdmin, canEdit, hasAccess, loading };
 }

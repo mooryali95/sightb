@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useRole } from '@/hooks/useRole';
+import { useRole, type AppRole } from '@/hooks/useRole';
 import { useStore } from '@/store/useStore';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { UserPlus, Trash2, Users, Shield, Eye, Pencil, Mail, CheckCircle2, Clock, UserX, ChevronDown, ChevronUp, Filter, Search } from 'lucide-react';
+import { UserPlus, Trash2, Users, Shield, Eye, Pencil, Mail, CheckCircle2, Clock, UserX, ChevronDown, ChevronUp, Filter, Search, Crown } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -41,8 +41,8 @@ interface RoleEntry {
   scopeId: string | null;
 }
 
-const roleLabels: Record<string, string> = { admin: 'أدمن', editor: 'محرر', viewer: 'مشاهد' };
-const roleIcons: Record<string, any> = { admin: Shield, editor: Pencil, viewer: Eye };
+const roleLabels: Record<string, string> = { owner: 'مالك', admin: 'أدمن', editor: 'محرر', viewer: 'مشاهد' };
+const roleIcons: Record<string, any> = { owner: Crown, admin: Shield, editor: Pencil, viewer: Eye };
 const scopeLabels: Record<string, string> = { system: 'النظام', company: 'شركة', project: 'مشروع' };
 
 const inviteStatusConfig: Record<string, { label: string; icon: any; className: string }> = {
@@ -52,7 +52,7 @@ const inviteStatusConfig: Record<string, { label: string; icon: any; className: 
 
 export default function UserManagement() {
   const { user } = useAuth();
-  const { isAdmin, loading: roleLoading } = useRole();
+  const { isAdmin, isOwner, loading: roleLoading } = useRole();
   const { companies, projects } = useStore();
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -483,6 +483,8 @@ export default function UserManagement() {
               {filteredProfiles.map((profile) => {
                 const userRoles = allRoles.filter((r) => r.userId === profile.id);
                 const isSelf = profile.id === user?.id;
+                const targetIsOwner = userRoles.some(r => r.role === 'owner' && r.scopeType === 'system');
+                const canDeleteUser = !isSelf && (!targetIsOwner || isOwner);
                 return (
                   <div key={profile.id} className="p-4 rounded-lg border border-border/50 space-y-2">
                     <div className="flex items-center justify-between">
@@ -496,7 +498,7 @@ export default function UserManagement() {
                         <Badge variant={profile.status === 'active' ? 'default' : 'secondary'}>
                           {profile.status === 'active' ? 'نشط' : 'معلق'}
                         </Badge>
-                        {!isSelf && (
+                        {canDeleteUser && (
                           <ConfirmDeleteDialog
                             title="حذف الحساب نهائياً"
                             description={`هل تريد حذف حساب ${profile.email} بالكامل؟ سيتم إزالة جميع صلاحياته وبياناته. لا يمكن التراجع عن هذا الإجراء.`}
@@ -526,7 +528,7 @@ export default function UserManagement() {
                             <span className="text-xs text-muted-foreground">
                               — {getScopeName(role.scopeType, role.scopeId)}
                             </span>
-                            {!(role.role === 'admin' && role.userId === user?.id) && (
+                            {!(role.role === 'owner') && !(role.role === 'admin' && role.userId === user?.id) && (
                               <ConfirmDeleteDialog
                                 title="إزالة الصلاحية"
                                 description="هل تريد إزالة هذه الصلاحية من المستخدم؟"
