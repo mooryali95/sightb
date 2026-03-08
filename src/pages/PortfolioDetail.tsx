@@ -135,6 +135,32 @@ export default function PortfolioDetail() {
                 {HEALTH_STATUS_LABELS[summary.healthStatus]}
               </span>
             </div>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+              exportPortfolioToExcel({
+                portfolioName: portfolio.name,
+                summary: { ...summary },
+                projectSummaries: projectSummaries.map(ps => ({
+                  name: ps.project.name,
+                  contractValue: ps.summary.effectiveContractValue,
+                  planned: ps.summary.totalPlanned,
+                  actual: ps.summary.totalActual,
+                  plannedProfit: ps.summary.plannedProfit,
+                  percentComplete: ps.project.percentComplete,
+                  health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
+                })),
+                risks: portfolioRisks.map(r => ({
+                  title: r.title,
+                  project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
+                  probability: RISK_PROBABILITY_LABELS[r.probability],
+                  impact: r.impact,
+                  financialImpact: r.financialImpact,
+                  status: RISK_STATUS_LABELS[r.status],
+                })),
+              });
+              toast.success('تم تصدير تقرير المحفظة');
+            }}>
+              <FileSpreadsheet className="w-3.5 h-3.5" />تصدير Excel
+            </Button>
           </div>
           {portfolio.fiscalYear && <p className="text-xs text-muted-foreground mt-1">السنة المالية: {portfolio.fiscalYear}</p>}
         </div>
