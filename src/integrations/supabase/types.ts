@@ -19,6 +19,7 @@ export type Database = {
           code: string
           created_at: string
           expires_at: string
+          failed_attempts: number
           id: string
           used: boolean
           user_id: string
@@ -27,6 +28,7 @@ export type Database = {
           code: string
           created_at?: string
           expires_at: string
+          failed_attempts?: number
           id?: string
           used?: boolean
           user_id: string
@@ -35,6 +37,7 @@ export type Database = {
           code?: string
           created_at?: string
           expires_at?: string
+          failed_attempts?: number
           id?: string
           used?: boolean
           user_id?: string

@@ -192,28 +192,55 @@ Deno.serve(async (req) => {
         );
       }
 
-      const { data: otpRecord } = await supabase
+      // Find the latest unused, unexpired OTP for this user (regardless of code match)
+      const { data: latestOtp } = await supabase
         .from("admin_otp_codes")
         .select("*")
         .eq("user_id", user.id)
-        .eq("code", code)
         .eq("used", false)
         .gte("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (!otpRecord) {
+      if (!latestOtp) {
         return new Response(
           JSON.stringify({ verified: false, error: "الرمز غير صحيح أو منتهي الصلاحية" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
+      const MAX_FAILED_ATTEMPTS = 5;
+
+      // Check if too many failed attempts on this code
+      if (latestOtp.failed_attempts >= MAX_FAILED_ATTEMPTS) {
+        await supabase
+          .from("admin_otp_codes")
+          .update({ used: true })
+          .eq("id", latestOtp.id);
+        return new Response(
+          JSON.stringify({ verified: false, error: "تم تجاوز عدد المحاولات لهذا الرمز. اطلب رمزاً جديداً." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if code matches
+      if (latestOtp.code !== code) {
+        await supabase
+          .from("admin_otp_codes")
+          .update({ failed_attempts: (latestOtp.failed_attempts || 0) + 1 })
+          .eq("id", latestOtp.id);
+        return new Response(
+          JSON.stringify({ verified: false, error: "الرمز غير صحيح أو منتهي الصلاحية" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Code matches — mark as used
       await supabase
         .from("admin_otp_codes")
         .update({ used: true })
-        .eq("id", otpRecord.id);
+        .eq("id", latestOtp.id);
 
       if (fingerprint) {
         await supabase.from("trusted_devices").upsert(
