@@ -58,6 +58,20 @@ export default function CompanyDetail() {
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   const totalIndirect = compIndirectCosts.reduce((s, ic) => s + ic.amount, 0);
 
+  const CHART_COLORS = ['hsl(var(--primary))', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#6366f1'];
+
+  const expensesByPortfolio = useMemo(() => {
+    const data: { name: string; value: number }[] = [];
+    compPortfolios.forEach(p => {
+      const portfolioProjectIds = companyProjects.filter(pr => pr.portfolioId === p.id).map(pr => pr.id);
+      const total = expenses.filter(e => portfolioProjectIds.includes(e.projectId)).reduce((s, e) => s + e.amount, 0);
+      if (total > 0) data.push({ name: p.name, value: total });
+    });
+    const standaloneTotal = expenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
+    if (standaloneTotal > 0) data.push({ name: 'مشاريع مستقلة', value: standaloneTotal });
+    return data;
+  }, [compPortfolios, companyProjects, standaloneProjects, expenses]);
+
   // Add indirect cost form
   const [icOpen, setIcOpen] = useState(false);
   const [icCategory, setIcCategory] = useState<IndirectCostCategory>('other');
