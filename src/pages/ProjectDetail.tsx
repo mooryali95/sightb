@@ -19,7 +19,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
-  Briefcase,
+  Briefcase, Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
