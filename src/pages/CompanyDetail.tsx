@@ -40,7 +40,10 @@ export default function CompanyDetail() {
     updateCompany, deleteCompany, archiveCompany,
   } = useStore();
 
+  const { detailsLoaded, loadCompanyData } = useStore();
+
   useEffect(() => { loadAll(); }, []);
+  useEffect(() => { if (id && !detailsLoaded) loadCompanyData(id); }, [id, detailsLoaded]);
 
   const company = companies.find(c => c.id === id);
 

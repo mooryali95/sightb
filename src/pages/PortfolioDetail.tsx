@@ -42,7 +42,17 @@ export default function PortfolioDetail() {
     updatePortfolio, deletePortfolio,
   } = useStore();
 
+  const { detailsLoaded, detailsLoading, loadProjectData } = useStore();
+  
   useEffect(() => { loadAll(); }, []);
+  
+  // Load project data for all portfolio projects
+  const portfolioProjects = useMemo(() => projects.filter(p => p.portfolioId === id), [projects, id]);
+  useEffect(() => {
+    if (!detailsLoaded && portfolioProjects.length > 0) {
+      portfolioProjects.forEach(p => loadProjectData(p.id));
+    }
+  }, [detailsLoaded, portfolioProjects.length]);
 
   const portfolio = portfolios.find(p => p.id === id);
   const company = portfolio ? companies.find(c => c.id === portfolio.companyId) : null;
