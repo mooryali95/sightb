@@ -82,6 +82,7 @@ interface RevenueActions {
 
 interface ResourceActions {
   addResource: (r: Omit<Resource, 'id' | 'createdAt'>) => Promise<string>;
+  updateResource: (id: string, r: Partial<Resource>) => Promise<void>;
   deleteResource: (id: string) => Promise<void>;
 }
 
@@ -455,6 +456,16 @@ export const useStore = create<AppState>()((set, get) => ({
     const mapped = mapResource(data);
     set((s) => ({ resources: [mapped, ...s.resources] }));
     return mapped.id;
+  },
+
+  updateResource: async (id, r) => {
+    const updates: Record<string, unknown> = {};
+    if (r.name !== undefined) updates.name = r.name;
+    if (r.role !== undefined) updates.role = r.role;
+    if (r.monthlyCost !== undefined) updates.monthly_cost = r.monthlyCost;
+    const { error } = await supabase.from('resources').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ resources: s.resources.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
   },
 
   deleteResource: async (id) => {

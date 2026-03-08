@@ -129,18 +129,16 @@ export default function ProjectDetail() {
                   ))}
                 </SelectContent>
               </Select>
-              {isAdmin && (
-                <ConfirmDeleteDialog
-                  title="حذف المشروع"
-                  description={`هل أنت متأكد من حذف مشروع "${project.name}"؟ سيتم حذف جميع البيانات المرتبطة (الموازنة، المصروفات، الإيرادات).`}
-                  onConfirm={handleDeleteProject}
-                  trigger={
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  }
-                />
-              )}
+              <ConfirmDeleteDialog
+                title="حذف المشروع"
+                description={`هل أنت متأكد من حذف مشروع "${project.name}"؟ سيتم حذف جميع البيانات المرتبطة (الموازنة، المصروفات، الإيرادات).`}
+                onConfirm={handleDeleteProject}
+                trigger={
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                }
+              />
             </div>
           </div>
         </div>
