@@ -119,6 +119,9 @@ export function mapBaselineItem(d: any): BaselineItem {
     id: d.id, baselineId: d.baseline_id, category: d.category as BaselineItem['category'],
     description: d.description, plannedAmount: Number(d.planned_amount),
     month: d.month || undefined,
+    startMonth: d.start_month || undefined,
+    endMonth: d.end_month || undefined,
+    costType: (d.cost_type || 'fixed') as CostType,
   };
 }
 

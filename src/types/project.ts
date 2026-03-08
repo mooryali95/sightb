@@ -195,6 +195,7 @@ export interface CostBaseline {
 export interface BaselineItem {
   id: string; baselineId: string; category: ExpenseCategory;
   description: string; plannedAmount: number; month?: number;
+  startMonth?: number; endMonth?: number; costType: CostType;
 }
 
 // ======== Risk Types ========
@@ -297,6 +298,7 @@ export interface ProjectSummary {
   totalPlanned: number;
   totalActual: number;
   budgetRemaining: number;
+  /** Budget variance as percentage: ((totalPlanned - totalActual) / totalPlanned) * 100 */
   budgetVariance: number;
   plannedProfit: number;
   plannedProfitMargin: number;
@@ -310,6 +312,8 @@ export interface ProjectSummary {
   contractSpendRate: number;
   burnRate: number;
   percentComplete: number;
+  managementReserve: number;
+  bacWithoutReserve: number;
 }
 
 export type HealthStatus = 'healthy' | 'warning' | 'critical';
@@ -366,6 +370,10 @@ export interface EVMMetrics {
   pv: number; ev: number; ac: number; bac: number;
   cv: number; sv: number; cpi: number; spi: number;
   eac: number; etc: number; vac: number;
+  tcpiBAC: number;  // TCPI based on BAC
+  tcpiEAC: number;  // TCPI based on EAC
+  eacAtypical: number;  // EAC assuming atypical performance (will improve)
+  eacCombined: number;  // EAC weighted by CPI × SPI
 }
 
 export interface MonthlyCashFlow {

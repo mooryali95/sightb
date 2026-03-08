@@ -1,6 +1,6 @@
 import {
   BudgetItem, Expense, Revenue, ProjectSummary, Project,
-  BaselineItem, EVMMetrics, ChangeOrder, MonthlyCashFlow,
+  BaselineItem, EVMMetrics, ChangeOrder, MonthlyCashFlow, CostType,
 } from '@/types/project';
 
 export function formatCurrency(amount: number, currency = 'ر.س'): string {
@@ -50,7 +50,8 @@ export function getProjectSummary(
   const effectiveContractValue = getEffectiveContractValue(project.contractValue, changeOrders);
   const contractRemaining = effectiveContractValue - totalActual;
   const budgetRemaining = totalPlanned - totalActual;
-  const budgetVariance = totalPlanned - totalActual;
+  // budgetVariance as percentage
+  const budgetVariance = totalPlanned > 0 ? ((totalPlanned - totalActual) / totalPlanned) * 100 : 0;
 
   const plannedProfit = effectiveContractValue - totalPlanned;
   const plannedProfitMargin = effectiveContractValue > 0 ? (plannedProfit / effectiveContractValue) * 100 : 0;
@@ -68,6 +69,10 @@ export function getProjectSummary(
   // Burn rate = average monthly actual spend
   const currentMonth = getCurrentMonth(project.startDate, project.durationMonths);
   const burnRate = currentMonth > 0 ? totalActual / currentMonth : 0;
+
+  // Management reserve
+  const managementReserve = project.managementReserve || 0;
+  const bacWithoutReserve = totalPlanned - managementReserve;
 
   return {
     contractValue: project.contractValue,
@@ -89,6 +94,8 @@ export function getProjectSummary(
     contractSpendRate,
     burnRate,
     percentComplete: project.percentComplete,
+    managementReserve,
+    bacWithoutReserve,
   };
 }
 
@@ -111,27 +118,77 @@ export function getMonthlyBreakdown(expenses: Expense[], months: number) {
 }
 
 /**
+ * Distribute a single item across monthly buckets based on costType + start/end range.
+ * Shared by both getBaselineMonthlyPV and getPlannedMonthlyCashFlow.
+ */
+function distributeItem(
+  result: number[],
+  plannedAmount: number,
+  costType: CostType | undefined,
+  startMonth: number | undefined,
+  endMonth: number | undefined,
+  month: number | undefined,
+  totalMonths: number,
+) {
+  const hasRange = startMonth || endMonth;
+  const hasMonth = month;
+
+  if (!hasRange && !hasMonth) {
+    // No month info — distribute evenly
+    const perMonth = plannedAmount / totalMonths;
+    for (let m = 0; m < totalMonths; m++) {
+      result[m] += perMonth;
+    }
+    return;
+  }
+
+  // Use startMonth/endMonth if available, fallback to legacy month field
+  const s = Math.max(1, startMonth || month || 1);
+  const e = Math.min(totalMonths, endMonth || startMonth || month || totalMonths);
+
+  const type = costType || 'fixed';
+
+  switch (type) {
+    case 'one_time':
+      if (s >= 1 && s <= totalMonths) {
+        result[s - 1] += plannedAmount;
+      }
+      break;
+    case 'recurring':
+      for (let m = s; m <= e; m++) {
+        result[m - 1] += plannedAmount;
+      }
+      break;
+    case 'fixed':
+    default: {
+      const span = e - s + 1;
+      const perMonth = span > 0 ? plannedAmount / span : plannedAmount;
+      for (let m = s; m <= e; m++) {
+        result[m - 1] += perMonth;
+      }
+      break;
+    }
+  }
+}
+
+/**
  * Get monthly planned values from baseline items (time-phased budget)
- * Supports startMonth/endMonth + costType
+ * Supports startMonth/endMonth + costType with fallback for legacy data
  */
 export function getBaselineMonthlyPV(items: BaselineItem[], months: number): number[] {
   const result: number[] = Array(months).fill(0);
-  const itemsWithMonth = items.filter(i => i.month && i.month >= 1 && i.month <= months);
-  const itemsWithoutMonth = items.filter(i => !i.month);
 
-  // Items with assigned months
-  itemsWithMonth.forEach(i => {
-    result[i.month! - 1] += i.plannedAmount;
+  items.forEach(item => {
+    distributeItem(
+      result,
+      item.plannedAmount,
+      item.costType,
+      item.startMonth,
+      item.endMonth,
+      item.month,
+      months,
+    );
   });
-
-  // Items without month: distribute evenly across all months
-  const totalUnassigned = itemsWithoutMonth.reduce((s, i) => s + i.plannedAmount, 0);
-  if (totalUnassigned > 0 && months > 0) {
-    const perMonth = totalUnassigned / months;
-    for (let m = 0; m < months; m++) {
-      result[m] += perMonth;
-    }
-  }
 
   return result;
 }
@@ -143,44 +200,15 @@ export function getPlannedMonthlyCashFlow(budgetItems: BudgetItem[], durationMon
   const result: number[] = Array(durationMonths).fill(0);
 
   budgetItems.forEach(item => {
-    const start = item.startMonth;
-    const end = item.endMonth;
-
-    if (!start && !end) {
-      // No month specified — distribute evenly
-      const perMonth = item.plannedAmount / durationMonths;
-      for (let m = 0; m < durationMonths; m++) {
-        result[m] += perMonth;
-      }
-      return;
-    }
-
-    const s = Math.max(1, start || 1);
-    const e = Math.min(durationMonths, end || start || durationMonths);
-
-    switch (item.costType) {
-      case 'one_time':
-        // All amount in start month
-        if (s >= 1 && s <= durationMonths) {
-          result[s - 1] += item.plannedAmount;
-        }
-        break;
-      case 'recurring':
-        // Full amount each month from start to end
-        for (let m = s; m <= e; m++) {
-          result[m - 1] += item.plannedAmount;
-        }
-        break;
-      case 'fixed':
-      default:
-        // Distribute evenly from start to end
-        const span = e - s + 1;
-        const perMonth = span > 0 ? item.plannedAmount / span : item.plannedAmount;
-        for (let m = s; m <= e; m++) {
-          result[m - 1] += perMonth;
-        }
-        break;
-    }
+    distributeItem(
+      result,
+      item.plannedAmount,
+      item.costType,
+      item.startMonth,
+      item.endMonth,
+      item.month,
+      durationMonths,
+    );
   });
 
   return result;
@@ -203,7 +231,8 @@ export function getCashFlowForecast(
 
   revenues.forEach(r => {
     if (r.month >= 1 && r.month <= durationMonths) {
-      if (r.status === 'planned') {
+      if (r.status === 'planned' || r.status === 'invoiced') {
+        // Both planned and invoiced count as expected revenue in cash flow
         plannedRev[r.month - 1] += r.amount;
       } else if (r.status === 'collected') {
         actualRev[r.month - 1] += r.amount;
@@ -263,9 +292,19 @@ export function calculateEVM(
   const sv = ev - pv;
   const cpi = ac > 0 ? ev / ac : 0;
   const spi = pv > 0 ? ev / pv : 0;
-  const eac = cpi > 0 ? bac / cpi : bac;
+
+  // EAC variants
+  const eacTypical = cpi > 0 ? bac / cpi : bac;           // Current performance continues
+  const eacAtypical = ac + (bac - ev);                      // Performance will improve
+  const eacCombined = cpi > 0 && spi > 0 ? ac + ((bac - ev) / (cpi * spi)) : bac;  // Weighted
+
+  const eac = eacTypical;
   const etc = eac - ac;
   const vac = bac - eac;
 
-  return { pv, ev, ac, bac, cv, sv, cpi, spi, eac, etc, vac };
+  // TCPI
+  const tcpiBAC = (bac - ac) !== 0 ? (bac - ev) / (bac - ac) : 0;
+  const tcpiEAC = (eac - ac) !== 0 ? (bac - ev) / (eac - ac) : 0;
+
+  return { pv, ev, ac, bac, cv, sv, cpi, spi, eac, etc, vac, tcpiBAC, tcpiEAC, eacAtypical, eacCombined };
 }
