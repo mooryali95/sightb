@@ -498,7 +498,7 @@ export default function UserManagement() {
                         <Badge variant={profile.status === 'active' ? 'default' : 'secondary'}>
                           {profile.status === 'active' ? 'نشط' : 'معلق'}
                         </Badge>
-                        {!isSelf && (
+                        {canDeleteUser && (
                           <ConfirmDeleteDialog
                             title="حذف الحساب نهائياً"
                             description={`هل تريد حذف حساب ${profile.email} بالكامل؟ سيتم إزالة جميع صلاحياته وبياناته. لا يمكن التراجع عن هذا الإجراء.`}
