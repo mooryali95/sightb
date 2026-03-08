@@ -7,7 +7,7 @@ import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { getPortfolioSummary, getHealthScore } from '@/lib/portfolio';
 import { getProjectSummary, getCashFlowForecast } from '@/lib/finance';
-import { exportPortfolioToExcel } from '@/lib/export';
+import { exportPortfolioToExcel, exportPortfolioToPDF } from '@/lib/export';
 import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, RISK_PROBABILITY_LABELS, RISK_STATUS_LABELS, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -217,7 +217,33 @@ export default function PortfolioDetail() {
                   });
                   toast.success('تم تصدير تقرير المحفظة');
                 }}>
-                  <FileSpreadsheet className="w-3.5 h-3.5" />تصدير
+                  <FileSpreadsheet className="w-3.5 h-3.5" />Excel
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                  exportPortfolioToPDF({
+                    portfolioName: portfolio.name,
+                    summary: { ...summary },
+                    projectSummaries: projectSummaries.map(ps => ({
+                      name: ps.project.name,
+                      contractValue: ps.summary.effectiveContractValue,
+                      planned: ps.summary.totalPlanned,
+                      actual: ps.summary.totalActual,
+                      plannedProfit: ps.summary.plannedProfit,
+                      percentComplete: ps.project.percentComplete,
+                      health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
+                    })),
+                    risks: portfolioRisks.map(r => ({
+                      title: r.title,
+                      project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
+                      probability: RISK_PROBABILITY_LABELS[r.probability],
+                      impact: r.impact,
+                      financialImpact: r.financialImpact,
+                      status: RISK_STATUS_LABELS[r.status],
+                    })),
+                  });
+                  toast.success('تم تصدير تقرير PDF');
+                }}>
+                  <FileSpreadsheet className="w-3.5 h-3.5" />PDF
                 </Button>
                 {isAdmin && (
                   <ConfirmDeleteDialog
