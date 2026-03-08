@@ -82,6 +82,7 @@ interface RevenueActions {
 
 interface ResourceActions {
   addResource: (r: Omit<Resource, 'id' | 'createdAt'>) => Promise<string>;
+  updateResource: (id: string, r: Partial<Resource>) => Promise<void>;
   deleteResource: (id: string) => Promise<void>;
 }
 
