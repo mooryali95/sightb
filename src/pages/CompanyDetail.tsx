@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
@@ -27,6 +27,7 @@ import {
   Archive, ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -56,6 +57,20 @@ export default function CompanyDetail() {
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   const totalIndirect = compIndirectCosts.reduce((s, ic) => s + ic.amount, 0);
+
+  const CHART_COLORS = ['hsl(var(--primary))', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#6366f1'];
+
+  const expensesByPortfolio = useMemo(() => {
+    const data: { name: string; value: number }[] = [];
+    compPortfolios.forEach(p => {
+      const portfolioProjectIds = companyProjects.filter(pr => pr.portfolioId === p.id).map(pr => pr.id);
+      const total = expenses.filter(e => portfolioProjectIds.includes(e.projectId)).reduce((s, e) => s + e.amount, 0);
+      if (total > 0) data.push({ name: p.name, value: total });
+    });
+    const standaloneTotal = expenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
+    if (standaloneTotal > 0) data.push({ name: 'مشاريع مستقلة', value: standaloneTotal });
+    return data;
+  }, [compPortfolios, companyProjects, standaloneProjects, expenses]);
 
   // Add indirect cost form
   const [icOpen, setIcOpen] = useState(false);
@@ -244,7 +259,42 @@ export default function CompanyDetail() {
           </div>
         )}
 
-        {/* Portfolios with nested projects */}
+        {/* Expense Distribution Pie Chart */}
+        {expensesByPortfolio.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4 mb-6">
+            <h3 className="text-sm font-semibold mb-4">توزيع المصروفات حسب المحافظ</h3>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={expensesByPortfolio}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={3}
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    labelLine={{ strokeWidth: 1 }}
+                  >
+                    {expensesByPortfolio.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}
+                  />
+                  <Legend
+                    formatter={(value) => <span className="text-xs">{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
         {compPortfolios.length > 0 && (
           <div className="mb-6 space-y-4">
             <div className="flex items-center gap-2 mb-1">
