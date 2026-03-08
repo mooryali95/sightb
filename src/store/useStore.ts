@@ -458,6 +458,16 @@ export const useStore = create<AppState>()((set, get) => ({
     return mapped.id;
   },
 
+  updateResource: async (id, r) => {
+    const updates: Record<string, unknown> = {};
+    if (r.name !== undefined) updates.name = r.name;
+    if (r.role !== undefined) updates.role = r.role;
+    if (r.monthlyCost !== undefined) updates.monthly_cost = r.monthlyCost;
+    const { error } = await supabase.from('resources').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ resources: s.resources.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
+  },
+
   deleteResource: async (id) => {
     const { error } = await supabase.from('resources').delete().eq('id', id);
     if (error) throw error;
