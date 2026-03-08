@@ -25,8 +25,9 @@ interface BudgetSectionProps {
 }
 
 export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency }: BudgetSectionProps) {
-  const { addBudgetItem, deleteBudgetItem } = useStore();
+  const { addBudgetItem, deleteBudgetItem, updateBudgetItem } = useStore();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
   const [description, setDescription] = useState('');
   const [plannedAmount, setPlannedAmount] = useState('');
@@ -35,25 +36,53 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
   const [costType, setCostType] = useState<CostType>('fixed');
   const [resourceId, setResourceId] = useState<string>('');
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setEditingId(null);
+    setCategory('salary');
+    setDescription('');
+    setPlannedAmount('');
+    setStartMonth('');
+    setEndMonth('');
+    setCostType('fixed');
+    setResourceId('');
+  };
+
+  const openEdit = (item: any) => {
+    setEditingId(item.id);
+    setCategory(item.category);
+    setDescription(item.description);
+    setPlannedAmount(String(item.plannedAmount));
+    setStartMonth(item.startMonth ? String(item.startMonth) : '');
+    setEndMonth(item.endMonth ? String(item.endMonth) : '');
+    setCostType(item.costType || 'fixed');
+    setResourceId(item.resourceId || '');
+    setOpen(true);
+  };
+
+  const handleSubmit = async () => {
     if (!description.trim() || !plannedAmount) return;
     const sm = startMonth && startMonth !== 'all' ? parseInt(startMonth) : undefined;
     const em = endMonth && endMonth !== 'all' ? parseInt(endMonth) : undefined;
-    await addBudgetItem({
-      projectId,
+    const data = {
       category,
       description: description.trim(),
       plannedAmount: parseFloat(plannedAmount),
       startMonth: sm,
       endMonth: em || sm,
-      month: sm, // legacy compat
+      month: sm,
       costType,
       costClass: 'direct' as CostClass,
       resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
-    });
-    setDescription(''); setPlannedAmount(''); setStartMonth(''); setEndMonth(''); setResourceId('');
+    };
+    if (editingId) {
+      await updateBudgetItem(editingId, data);
+      toast.success('تم تعديل بند الموازنة');
+    } else {
+      await addBudgetItem({ projectId, ...data });
+      toast.success('تمت إضافة بند الموازنة');
+    }
+    resetForm();
     setOpen(false);
-    toast.success('تمت إضافة بند الموازنة');
   };
 
   const totalPlanned = budgetItems.reduce((s: number, b: any) => s + b.plannedAmount, 0);
