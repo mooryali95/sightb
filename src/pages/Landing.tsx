@@ -28,8 +28,11 @@ const features = [
   },
 ];
 
-export default function Landing() {
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  if (loading) return null;
+  if (user) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
