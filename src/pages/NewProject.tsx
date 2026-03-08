@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { PROJECT_STATUS_LABELS, CONTRACT_TYPE_LABELS, type ProjectStatus, type C
 export default function NewProject() {
   const [searchParams] = useSearchParams();
   const { companies, portfolios, addProject, loadAll } = useStore();
+  const { isAdmin, canEdit } = useRole();
   const navigate = useNavigate();
 
   useEffect(() => { loadAll(); }, []);
@@ -33,6 +35,7 @@ export default function NewProject() {
   const [retentionPercent, setRetentionPercent] = useState('0');
   const [loading, setLoading] = useState(false);
 
+  const editableCompanies = useMemo(() => companies.filter(c => isAdmin || canEdit('company', c.id)), [companies, isAdmin, canEdit]);
   const filteredPortfolios = portfolios.filter((p) => p.companyId === companyId);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,7 +102,7 @@ export default function NewProject() {
               <Select value={companyId} onValueChange={(v) => { setCompanyId(v); setPortfolioId(''); }}>
                 <SelectTrigger><SelectValue placeholder="اختر الشركة" /></SelectTrigger>
                 <SelectContent>
-                  {companies.map((c) => (
+                  {editableCompanies.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +19,12 @@ export default function NewPortfolio() {
   const [companyId, setCompanyId] = useState(searchParams.get('company') || '');
   const [loading, setLoading] = useState(false);
   const { companies, addPortfolio, loadAll } = useStore();
+  const { isAdmin, canEdit } = useRole();
   const navigate = useNavigate();
 
   useEffect(() => { loadAll(); }, []);
+
+  const editableCompanies = useMemo(() => companies.filter(c => isAdmin || canEdit('company', c.id)), [companies, isAdmin, canEdit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +63,7 @@ export default function NewPortfolio() {
             <Select value={companyId} onValueChange={setCompanyId}>
               <SelectTrigger><SelectValue placeholder="اختر الشركة" /></SelectTrigger>
               <SelectContent>
-                {companies.map((c) => (
+                {editableCompanies.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>

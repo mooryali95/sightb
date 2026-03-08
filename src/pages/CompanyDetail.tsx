@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useRole();
+  const { isAdmin, canEdit } = useRole();
   const {
     companies, portfolios, projects, budgetItems, expenses, revenues,
     changeOrders, milestones, risks, indirectCosts,
@@ -145,9 +145,11 @@ export default function CompanyDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
-                  <Pencil className="w-3.5 h-3.5" />تعديل
-                </Button>
+                {(isAdmin || canEdit('company', id!)) && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
+                    <Pencil className="w-3.5 h-3.5" />تعديل
+                  </Button>
+                )}
                 {summary && (
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                     exportCompanyToExcel({
@@ -286,10 +288,11 @@ export default function CompanyDetail() {
         <div className="stat-card mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold">التكاليف غير المباشرة</h3>
-            <Dialog open={icOpen} onOpenChange={setIcOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة</Button>
-              </DialogTrigger>
+            {(isAdmin || canEdit('company', id!)) && (
+              <Dialog open={icOpen} onOpenChange={setIcOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة</Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>إضافة تكلفة غير مباشرة</DialogTitle></DialogHeader>
                 <div className="space-y-3">
@@ -325,7 +328,8 @@ export default function CompanyDetail() {
                   <Button onClick={handleAddIndirectCost} className="w-full">إضافة</Button>
                 </div>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            )}
           </div>
 
           {compIndirectCosts.length > 0 ? (
@@ -348,11 +352,13 @@ export default function CompanyDetail() {
                         <td className="font-medium">{ic.description}</td>
                         <td className="font-mono text-sm">{formatCurrency(ic.amount)}</td>
                         <td className="text-xs">شهر {ic.month}</td>
-                        <td>
-                          <ConfirmDeleteDialog onConfirm={async () => {
-                            try { await deleteIndirectCost(ic.id); toast.success('تم الحذف'); } catch { toast.error('فشل الحذف'); }
-                          }} title="حذف التكلفة" description={`هل أنت متأكد من حذف "${ic.description}"؟`} />
-                        </td>
+                        {(isAdmin || canEdit('company', id!)) && (
+                          <td>
+                            <ConfirmDeleteDialog onConfirm={async () => {
+                              try { await deleteIndirectCost(ic.id); toast.success('تم الحذف'); } catch { toast.error('فشل الحذف'); }
+                            }} title="حذف التكلفة" description={`هل أنت متأكد من حذف "${ic.description}"؟`} />
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

@@ -35,7 +35,7 @@ const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 
 export default function PortfolioDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useRole();
+  const { isAdmin, canEdit } = useRole();
   const {
     portfolios, companies, projects, budgetItems, expenses, revenues,
     changeOrders, milestones, risks, loading, loadAll,
@@ -188,9 +188,11 @@ export default function PortfolioDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
-                  <Pencil className="w-3.5 h-3.5" />تعديل
-                </Button>
+                {(isAdmin || canEdit('company', portfolio.companyId)) && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
+                    <Pencil className="w-3.5 h-3.5" />تعديل
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                   exportPortfolioToExcel({
                     portfolioName: portfolio.name,
