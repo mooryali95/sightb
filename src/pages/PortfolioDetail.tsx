@@ -7,7 +7,7 @@ import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { getPortfolioSummary, getHealthScore } from '@/lib/portfolio';
 import { getProjectSummary, getCashFlowForecast } from '@/lib/finance';
-import { exportPortfolioToExcel } from '@/lib/export';
+import { exportPortfolioToExcel, exportPortfolioToPDF } from '@/lib/export';
 import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, RISK_PROBABILITY_LABELS, RISK_STATUS_LABELS, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
