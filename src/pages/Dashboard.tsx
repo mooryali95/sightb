@@ -270,7 +270,7 @@ export default function Dashboard() {
                   title="المشاريع"
                   value={filteredProjects.length.toString()}
                   icon={<Briefcase className="w-4 h-4" />}
-                  subtitle={collectedRevenue > 0 ? `محصّل: ${formatCurrency(collectedRevenue)}` : `${companies.length} شركة · ${portfolios.length} محفظة`}
+                  subtitle={collectedRevenue > 0 ? `محصّل: ${formatCurrency(collectedRevenue)}` : `${activeCompanies.length} نشطة${archivedCompanies.length > 0 ? ` · ${archivedCompanies.length} مؤرشفة` : ''} · ${portfolios.length} محفظة`}
                 />
               </motion.div>
             </motion.div>
