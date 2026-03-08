@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { UserPlus, Trash2, Users, Shield, Eye, Pencil } from 'lucide-react';
+import { UserPlus, Trash2, Users, Shield, Eye, Pencil, Mail, CheckCircle2, Clock, UserX } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -44,6 +44,11 @@ const roleLabels: Record<string, string> = { admin: 'أدمن', editor: 'محر�
 const roleIcons: Record<string, any> = { admin: Shield, editor: Pencil, viewer: Eye };
 const scopeLabels: Record<string, string> = { system: 'النظام', company: 'شركة', project: 'مشروع' };
 
+const inviteStatusConfig: Record<string, { label: string; icon: any; className: string }> = {
+  pending: { label: 'في الانتظار', icon: Clock, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  accepted: { label: 'مقبولة', icon: CheckCircle2, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+};
+
 export default function UserManagement() {
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useRole();
@@ -53,6 +58,7 @@ export default function UserManagement() {
   const [allRoles, setAllRoles] = useState<RoleEntry[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
 
   // Invite form
   const [invEmail, setInvEmail] = useState('');
@@ -159,12 +165,38 @@ export default function UserManagement() {
     else loadData();
   };
 
+  const deleteUser = async (targetUserId: string) => {
+    setDeletingUser(targetUserId);
+    try {
+      const res = await supabase.functions.invoke('delete-user', {
+        body: { targetUserId },
+      });
+      if (res.error) throw res.error;
+      if (res.data?.error) {
+        toast.error(res.data.error);
+        return;
+      }
+      toast.success('تم حذف الحساب بنجاح');
+      loadData();
+    } catch (err: any) {
+      console.error('[delete-user]', err);
+      toast.error('حدث خطأ في حذف الحساب');
+    } finally {
+      setDeletingUser(null);
+    }
+  };
+
   const getScopeName = (scopeType: string, scopeId: string | null) => {
     if (scopeType === 'system' || !scopeId) return 'النظام بالكامل';
     if (scopeType === 'company') {
       return companies.find((c) => c.id === scopeId)?.name || scopeId;
     }
     return projects.find((p) => p.id === scopeId)?.name || scopeId;
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   if (roleLoading) {
@@ -267,34 +299,48 @@ export default function UserManagement() {
           </p>
         </motion.div>
 
-        {/* Pending Invites */}
-        {invites.filter((i) => i.status === 'pending').length > 0 && (
+        {/* All Invites */}
+        {invites.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="stat-card"
           >
-            <h2 className="text-lg font-semibold mb-4">الدعوات المعلقة</h2>
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Mail className="w-5 h-5 text-primary" />
+              سجل الدعوات
+            </h2>
             <div className="space-y-3">
-              {invites
-                .filter((i) => i.status === 'pending')
-                .map((invite) => (
+              {invites.map((invite) => {
+                const statusConf = inviteStatusConfig[invite.status] || inviteStatusConfig.pending;
+                const StatusIcon = statusConf.icon;
+                return (
                   <div key={invite.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-sm font-medium" dir="ltr">{invite.email}</span>
                       <Badge variant="outline">{roleLabels[invite.role]}</Badge>
+                      <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${statusConf.className}`}>
+                        <StatusIcon className="w-3 h-3" />
+                        {statusConf.label}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         {scopeLabels[invite.scopeType]}: {getScopeName(invite.scopeType, invite.scopeId)}
                       </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatDate(invite.createdAt)}
+                      </span>
                     </div>
-                    <ConfirmDeleteDialog
-                      title="حذف الدعوة"
-                      description={`هل تريد حذف الدعوة المرسلة إلى ${invite.email}؟`}
-                      onConfirm={() => deleteInvite(invite.id)}
-                    />
+                    {invite.status === 'pending' && (
+                      <ConfirmDeleteDialog
+                        title="حذف الدعوة"
+                        description={`هل تريد حذف الدعوة المرسلة إلى ${invite.email}؟`}
+                        onConfirm={() => deleteInvite(invite.id)}
+                      />
+                    )}
                   </div>
-                ))}
+                );
+              })}
             </div>
           </motion.div>
         )}
@@ -315,6 +361,7 @@ export default function UserManagement() {
             <div className="space-y-4">
               {profiles.map((profile) => {
                 const userRoles = allRoles.filter((r) => r.userId === profile.id);
+                const isSelf = profile.id === user?.id;
                 return (
                   <div key={profile.id} className="p-4 rounded-lg border border-border/50 space-y-2">
                     <div className="flex items-center justify-between">
@@ -324,9 +371,29 @@ export default function UserManagement() {
                           <span className="text-xs text-muted-foreground mr-2">({profile.fullName})</span>
                         )}
                       </div>
-                      <Badge variant={profile.status === 'active' ? 'default' : 'secondary'}>
-                        {profile.status === 'active' ? 'نشط' : 'معلق'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={profile.status === 'active' ? 'default' : 'secondary'}>
+                          {profile.status === 'active' ? 'نشط' : 'معلق'}
+                        </Badge>
+                        {!isSelf && (
+                          <ConfirmDeleteDialog
+                            title="حذف الحساب نهائياً"
+                            description={`هل تريد حذف حساب ${profile.email} بالكامل؟ سيتم إزالة جميع صلاحياته وبياناته. لا يمكن التراجع عن هذا الإجراء.`}
+                            onConfirm={() => deleteUser(profile.id)}
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={deletingUser === profile.id}
+                              >
+                                <UserX className="w-3.5 h-3.5" />
+                                {deletingUser === profile.id ? 'جاري الحذف...' : 'حذف الحساب'}
+                              </Button>
+                            }
+                          />
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {userRoles.map((role) => {
