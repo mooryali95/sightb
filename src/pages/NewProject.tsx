@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { PROJECT_STATUS_LABELS, CONTRACT_TYPE_LABELS, type ProjectStatus, type C
 export default function NewProject() {
   const [searchParams] = useSearchParams();
   const { companies, portfolios, addProject, loadAll } = useStore();
+  const { isAdmin, canEdit } = useRole();
   const navigate = useNavigate();
 
   useEffect(() => { loadAll(); }, []);
