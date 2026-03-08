@@ -91,6 +91,20 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           </button>
         )}
 
+        {/* System Audit Log - Owner only */}
+        {isOwner && (
+          <button
+            onClick={() => navigate('/audit')}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+              isActive('/audit') ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
+            )}
+          >
+            <ScrollText className="w-4 h-4 shrink-0" />
+            {!collapsed && <span>السجل الرئيسي</span>}
+          </button>
+        )}
+
         {/* Companies Section */}
         {!collapsed && (
           <div className="pt-4">
