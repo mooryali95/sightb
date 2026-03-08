@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
-import { getPortfolioSummary, getHealthScore } from '@/lib/portfolio';
+import { getPortfolioSummary, getCompanySummary, getHealthScore } from '@/lib/portfolio';
 import {
   PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ProjectStatus,
   HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS,
@@ -12,7 +12,7 @@ import {
 import {
   Building2, FolderKanban, Briefcase, TrendingUp, Plus,
   ArrowLeft, DollarSign, Filter, Search, X, Archive, ArchiveRestore,
-  AlertTriangle, ShieldAlert, Trash2,
+  AlertTriangle, ShieldAlert, Trash2, Camera, GitCompare,
 } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis,
 } from 'recharts';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect } from 'react';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 import { useRole } from '@/hooks/useRole';
+import { supabase } from '@/integrations/supabase/client';
 
 const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)'];
 
