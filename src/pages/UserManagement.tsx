@@ -41,8 +41,8 @@ interface RoleEntry {
   scopeId: string | null;
 }
 
-const roleLabels: Record<string, string> = { admin: 'أدمن', editor: 'محرر', viewer: 'مشاهد' };
-const roleIcons: Record<string, any> = { admin: Shield, editor: Pencil, viewer: Eye };
+const roleLabels: Record<string, string> = { owner: 'مالك', admin: 'أدمن', editor: 'محرر', viewer: 'مشاهد' };
+const roleIcons: Record<string, any> = { owner: Crown, admin: Shield, editor: Pencil, viewer: Eye };
 const scopeLabels: Record<string, string> = { system: 'النظام', company: 'شركة', project: 'مشروع' };
 
 const inviteStatusConfig: Record<string, { label: string; icon: any; className: string }> = {
