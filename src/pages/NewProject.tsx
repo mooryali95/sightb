@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 import { Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectSchema } from '@/lib/validations';
-import { PROJECT_STATUS_LABELS, type ProjectStatus } from '@/types/project';
+import { PROJECT_STATUS_LABELS, CONTRACT_TYPE_LABELS, type ProjectStatus, type ContractType } from '@/types/project';
 
 export default function NewProject() {
   const [searchParams] = useSearchParams();
@@ -29,6 +29,8 @@ export default function NewProject() {
   const [durationMonths, setDurationMonths] = useState('4');
   const [resourceCount, setResourceCount] = useState('1');
   const [currency] = useState('ر.س');
+  const [contractType, setContractType] = useState<ContractType>('lump_sum');
+  const [retentionPercent, setRetentionPercent] = useState('0');
   const [loading, setLoading] = useState(false);
 
   const filteredPortfolios = portfolios.filter((p) => p.companyId === companyId);
@@ -64,6 +66,10 @@ export default function NewProject() {
         durationMonths: result.data.durationMonths,
         resourceCount: result.data.resourceCount,
         status: 'planning',
+        percentComplete: 0,
+        contractType,
+        retentionPercent: parseFloat(retentionPercent) || 0,
+        managementReserve: 0,
       });
       navigate('/');
     } catch (error: any) {
@@ -127,6 +133,24 @@ export default function NewProject() {
               <Label>قيمة العقد ({currency})</Label>
               <Input type="number" value={contractValue} onChange={(e) => setContractValue(e.target.value)} placeholder="230,000" required />
             </div>
+            <div className="space-y-2">
+              <Label>نوع العقد</Label>
+              <Select value={contractType} onValueChange={(v) => setContractType(v as ContractType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CONTRACT_TYPE_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>نسبة المحتجزات %</Label>
+              <Input type="number" value={retentionPercent} onChange={(e) => setRetentionPercent(e.target.value)} min="0" max="100" step="0.1" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>مدة المشروع (أشهر)</Label>
               <Input type="number" value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} min="1" />

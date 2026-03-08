@@ -2,12 +2,13 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
-  CostBaseline, Resource, Custody,
+  CostBaseline, Resource, Custody, Milestone, ChangeOrder,
 } from '@/types/project';
 import {
   getUserId, logDeletion,
   mapCompany, mapPortfolio, mapProject, mapBudgetItem,
   mapExpense, mapResource, mapCustody, mapRevenue, mapBaselineItem,
+  mapMilestone, mapChangeOrder,
 } from './helpers';
 
 export interface AuditLogEntry {
@@ -32,6 +33,8 @@ interface DataState {
   baselines: CostBaseline[];
   resources: Resource[];
   custodies: Custody[];
+  milestones: Milestone[];
+  changeOrders: ChangeOrder[];
   auditLog: AuditLogEntry[];
   loading: boolean;
 }
@@ -96,8 +99,21 @@ interface BaselineActions {
   loadBaselines: (projectId: string) => Promise<CostBaseline[]>;
 }
 
+interface MilestoneActions {
+  addMilestone: (m: Omit<Milestone, 'id' | 'createdAt'>) => Promise<string>;
+  updateMilestone: (id: string, m: Partial<Milestone>) => Promise<void>;
+  deleteMilestone: (id: string) => Promise<void>;
+}
+
+interface ChangeOrderActions {
+  addChangeOrder: (co: Omit<ChangeOrder, 'id' | 'createdAt'>) => Promise<string>;
+  updateChangeOrder: (id: string, co: Partial<ChangeOrder>) => Promise<void>;
+  deleteChangeOrder: (id: string) => Promise<void>;
+}
+
 type AppState = DataState & LoadActions & CompanyActions & PortfolioActions & ProjectActions &
-  BudgetActions & ExpenseActions & RevenueActions & ResourceActions & CustodyActions & BaselineActions;
+  BudgetActions & ExpenseActions & RevenueActions & ResourceActions & CustodyActions & BaselineActions &
+  MilestoneActions & ChangeOrderActions;
 
 export const useStore = create<AppState>()((set, get) => ({
   // ---- Initial state ----
@@ -110,13 +126,15 @@ export const useStore = create<AppState>()((set, get) => ({
   baselines: [],
   resources: [],
   custodies: [],
+  milestones: [],
+  changeOrders: [],
   auditLog: [],
   loading: true,
 
   // ---- Load slice ----
   loadAll: async () => {
     set({ loading: true });
-    const [companies, portfolios, projects, budgetItems, expenses, revenues, resources, custodies] = await Promise.all([
+    const [companies, portfolios, projects, budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders] = await Promise.all([
       supabase.from('companies').select('*').order('created_at', { ascending: false }),
       supabase.from('portfolios').select('*').order('created_at', { ascending: false }),
       supabase.from('projects').select('*').order('created_at', { ascending: false }),
@@ -125,6 +143,8 @@ export const useStore = create<AppState>()((set, get) => ({
       supabase.from('revenues').select('*').order('created_at', { ascending: false }),
       supabase.from('resources').select('*').order('created_at', { ascending: false }),
       supabase.from('custodies').select('*').order('created_at', { ascending: false }),
+      supabase.from('milestones').select('*').order('sort_order', { ascending: true }),
+      supabase.from('change_orders').select('*').order('created_at', { ascending: false }),
     ]);
 
     const expenseList = (expenses.data || []).map(mapExpense);
@@ -138,6 +158,8 @@ export const useStore = create<AppState>()((set, get) => ({
       revenues: (revenues.data || []).map(mapRevenue),
       resources: (resources.data || []).map(mapResource),
       custodies: (custodies.data || []).map((c) => mapCustody(c, expenseList)),
+      milestones: (milestones.data || []).map(mapMilestone),
+      changeOrders: (changeOrders.data || []).map(mapChangeOrder),
       loading: false,
     });
   },
@@ -245,7 +267,10 @@ export const useStore = create<AppState>()((set, get) => ({
       start_date: p.startDate || null, end_date: p.endDate || null,
       duration_months: p.durationMonths, resource_count: p.resourceCount,
       status: p.status, client_logo: p.clientLogo || null,
-    }).select().single();
+      contract_type: p.contractType || 'lump_sum',
+      retention_percent: p.retentionPercent || 0,
+      management_reserve: p.managementReserve || 0,
+    } as any).select().single();
     if (error) throw error;
     const mapped = mapProject(data);
     set((s) => ({ projects: [mapped, ...s.projects] }));
@@ -265,7 +290,11 @@ export const useStore = create<AppState>()((set, get) => ({
     if (p.durationMonths !== undefined) updates.duration_months = p.durationMonths;
     if (p.resourceCount !== undefined) updates.resource_count = p.resourceCount;
     if (p.status !== undefined) updates.status = p.status;
-    const { error } = await supabase.from('projects').update(updates).eq('id', id);
+    if (p.percentComplete !== undefined) updates.percent_complete = p.percentComplete;
+    if (p.contractType !== undefined) updates.contract_type = p.contractType;
+    if (p.retentionPercent !== undefined) updates.retention_percent = p.retentionPercent;
+    if (p.managementReserve !== undefined) updates.management_reserve = p.managementReserve;
+    const { error } = await (supabase as any).from('projects').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
   },
@@ -284,10 +313,12 @@ export const useStore = create<AppState>()((set, get) => ({
   // ---- Budget slice ----
   addBudgetItem: async (b) => {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('budget_items').insert({
+    const { data, error } = await (supabase as any).from('budget_items').insert({
       user_id: userId, project_id: b.projectId, category: b.category,
       description: b.description, planned_amount: b.plannedAmount,
       month: b.month || null, resource_id: b.resourceId || null,
+      start_month: b.startMonth || null, end_month: b.endMonth || null,
+      cost_type: b.costType || 'fixed', cost_class: b.costClass || 'direct',
     }).select().single();
     if (error) throw error;
     const mapped = mapBudgetItem(data);
@@ -301,8 +332,12 @@ export const useStore = create<AppState>()((set, get) => ({
     if (b.description !== undefined) updates.description = b.description;
     if (b.plannedAmount !== undefined) updates.planned_amount = b.plannedAmount;
     if (b.month !== undefined) updates.month = b.month;
+    if (b.startMonth !== undefined) updates.start_month = b.startMonth;
+    if (b.endMonth !== undefined) updates.end_month = b.endMonth;
+    if (b.costType !== undefined) updates.cost_type = b.costType;
+    if (b.costClass !== undefined) updates.cost_class = b.costClass;
     if (b.resourceId !== undefined) updates.resource_id = b.resourceId;
-    const { error } = await supabase.from('budget_items').update(updates).eq('id', id);
+    const { error } = await (supabase as any).from('budget_items').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ budgetItems: s.budgetItems.map((x) => (x.id === id ? { ...x, ...b } : x)) }));
   },
@@ -353,9 +388,14 @@ export const useStore = create<AppState>()((set, get) => ({
   // ---- Revenue slice ----
   addRevenue: async (r) => {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('revenues').insert({
+    const { data, error } = await (supabase as any).from('revenues').insert({
       user_id: userId, project_id: r.projectId,
       description: r.description, amount: r.amount, date: r.date, month: r.month,
+      revenue_type: r.revenueType || 'milestone',
+      status: r.status || 'collected',
+      invoice_number: r.invoiceNumber || null,
+      invoice_date: r.invoiceDate || null,
+      collection_date: r.collectionDate || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapRevenue(data);
@@ -369,7 +409,12 @@ export const useStore = create<AppState>()((set, get) => ({
     if (r.amount !== undefined) updates.amount = r.amount;
     if (r.date !== undefined) updates.date = r.date;
     if (r.month !== undefined) updates.month = r.month;
-    const { error } = await supabase.from('revenues').update(updates).eq('id', id);
+    if (r.revenueType !== undefined) updates.revenue_type = r.revenueType;
+    if (r.status !== undefined) updates.status = r.status;
+    if (r.invoiceNumber !== undefined) updates.invoice_number = r.invoiceNumber;
+    if (r.invoiceDate !== undefined) updates.invoice_date = r.invoiceDate;
+    if (r.collectionDate !== undefined) updates.collection_date = r.collectionDate;
+    const { error } = await (supabase as any).from('revenues').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ revenues: s.revenues.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
   },
@@ -520,5 +565,89 @@ export const useStore = create<AppState>()((set, get) => ({
       ],
     }));
     return baselines;
+  },
+
+  // ---- Milestone slice ----
+  addMilestone: async (m) => {
+    const userId = await getUserId();
+    const { data, error } = await (supabase as any).from('milestones').insert({
+      project_id: m.projectId, user_id: userId, name: m.name,
+      description: m.description || null, sort_order: m.sortOrder || 0,
+      planned_start: m.plannedStart || null, planned_end: m.plannedEnd || null,
+      actual_start: m.actualStart || null, actual_end: m.actualEnd || null,
+      percent_complete: m.percentComplete || 0, weight: m.weight || 0,
+      status: m.status || 'planned',
+      linked_revenue_id: m.linkedRevenueId || null,
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapMilestone(data);
+    set((s) => ({ milestones: [...s.milestones, mapped].sort((a, b) => a.sortOrder - b.sortOrder) }));
+    return mapped.id;
+  },
+
+  updateMilestone: async (id, m) => {
+    const updates: Record<string, unknown> = {};
+    if (m.name !== undefined) updates.name = m.name;
+    if (m.description !== undefined) updates.description = m.description;
+    if (m.sortOrder !== undefined) updates.sort_order = m.sortOrder;
+    if (m.plannedStart !== undefined) updates.planned_start = m.plannedStart;
+    if (m.plannedEnd !== undefined) updates.planned_end = m.plannedEnd;
+    if (m.actualStart !== undefined) updates.actual_start = m.actualStart;
+    if (m.actualEnd !== undefined) updates.actual_end = m.actualEnd;
+    if (m.percentComplete !== undefined) updates.percent_complete = m.percentComplete;
+    if (m.weight !== undefined) updates.weight = m.weight;
+    if (m.status !== undefined) updates.status = m.status;
+    if (m.linkedRevenueId !== undefined) updates.linked_revenue_id = m.linkedRevenueId;
+    const { error } = await (supabase as any).from('milestones').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ milestones: s.milestones.map((x) => (x.id === id ? { ...x, ...m } : x)) }));
+  },
+
+  deleteMilestone: async (id) => {
+    const ms = get().milestones.find(m => m.id === id);
+    if (ms) await logDeletion('milestones', id, ms, ms.projectId);
+    const { error } = await (supabase as any).from('milestones').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ milestones: s.milestones.filter((x) => x.id !== id) }));
+  },
+
+  // ---- ChangeOrder slice ----
+  addChangeOrder: async (co) => {
+    const userId = await getUserId();
+    const { data, error } = await (supabase as any).from('change_orders').insert({
+      project_id: co.projectId, user_id: userId, description: co.description,
+      change_type: co.changeType || 'scope_addition',
+      amount_impact: co.amountImpact || 0, duration_impact: co.durationImpact || 0,
+      status: co.status || 'proposed',
+      requested_by: co.requestedBy || null, approved_by: co.approvedBy || null,
+      approved_date: co.approvedDate || null,
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapChangeOrder(data);
+    set((s) => ({ changeOrders: [mapped, ...s.changeOrders] }));
+    return mapped.id;
+  },
+
+  updateChangeOrder: async (id, co) => {
+    const updates: Record<string, unknown> = {};
+    if (co.description !== undefined) updates.description = co.description;
+    if (co.changeType !== undefined) updates.change_type = co.changeType;
+    if (co.amountImpact !== undefined) updates.amount_impact = co.amountImpact;
+    if (co.durationImpact !== undefined) updates.duration_impact = co.durationImpact;
+    if (co.status !== undefined) updates.status = co.status;
+    if (co.requestedBy !== undefined) updates.requested_by = co.requestedBy;
+    if (co.approvedBy !== undefined) updates.approved_by = co.approvedBy;
+    if (co.approvedDate !== undefined) updates.approved_date = co.approvedDate;
+    const { error } = await (supabase as any).from('change_orders').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ changeOrders: s.changeOrders.map((x) => (x.id === id ? { ...x, ...co } : x)) }));
+  },
+
+  deleteChangeOrder: async (id) => {
+    const co = get().changeOrders.find(c => c.id === id);
+    if (co) await logDeletion('change_orders', id, co, co.projectId);
+    const { error } = await (supabase as any).from('change_orders').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ changeOrders: s.changeOrders.filter((x) => x.id !== id) }));
   },
 }));

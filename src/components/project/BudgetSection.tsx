@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type Resource } from '@/types/project';
+import {
+  EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type Resource,
+  type CostType, type CostClass,
+} from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,20 +30,28 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
   const [category, setCategory] = useState<ExpenseCategory>('salary');
   const [description, setDescription] = useState('');
   const [plannedAmount, setPlannedAmount] = useState('');
-  const [month, setMonth] = useState<string>('');
+  const [startMonth, setStartMonth] = useState<string>('');
+  const [endMonth, setEndMonth] = useState<string>('');
+  const [costType, setCostType] = useState<CostType>('fixed');
   const [resourceId, setResourceId] = useState<string>('');
 
   const handleAdd = async () => {
     if (!description.trim() || !plannedAmount) return;
+    const sm = startMonth && startMonth !== 'all' ? parseInt(startMonth) : undefined;
+    const em = endMonth && endMonth !== 'all' ? parseInt(endMonth) : undefined;
     await addBudgetItem({
       projectId,
       category,
       description: description.trim(),
       plannedAmount: parseFloat(plannedAmount),
-      month: month && month !== 'all' ? parseInt(month) : undefined,
+      startMonth: sm,
+      endMonth: em || sm,
+      month: sm, // legacy compat
+      costType,
+      costClass: 'direct' as CostClass,
       resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
     });
-    setDescription(''); setPlannedAmount(''); setMonth(''); setResourceId('');
+    setDescription(''); setPlannedAmount(''); setStartMonth(''); setEndMonth(''); setResourceId('');
     setOpen(false);
     toast.success('تمت إضافة بند الموازنة');
   };
@@ -49,7 +60,6 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
   const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
   const unallocated = contractValue - totalPlanned;
   const plannedProfit = contractValue - totalPlanned;
-  const actualProfit = contractValue - totalActual;
   const plannedProfitMargin = contractValue > 0 ? (plannedProfit / contractValue) * 100 : 0;
 
   const categoryMap = new Map<string, { planned: number; actual: number }>();
@@ -76,6 +86,15 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
 
   const budgetUtilization = contractValue > 0 ? (totalPlanned / contractValue) * 100 : 0;
   const spendRate = totalPlanned > 0 ? (totalActual / totalPlanned) * 100 : 0;
+
+  const getMonthDisplay = (item: any) => {
+    if (item.startMonth && item.endMonth && item.startMonth !== item.endMonth) {
+      return `شهر ${item.startMonth} → ${item.endMonth}`;
+    }
+    if (item.startMonth) return `شهر ${item.startMonth}`;
+    if (item.month) return `شهر ${item.month}`;
+    return 'موزع';
+  };
 
   return (
     <div className="space-y-4">
@@ -208,11 +227,35 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                     <Input type="number" value={plannedAmount} onChange={(e) => setPlannedAmount(e.target.value)} placeholder="0" />
                   </div>
                   <div className="space-y-2">
-                    <Label>الشهر <span className="text-muted-foreground text-xs">(اختياري)</span></Label>
-                    <Select value={month} onValueChange={setMonth}>
+                    <Label>نوع التكلفة</Label>
+                    <Select value={costType} onValueChange={(v) => setCostType(v as CostType)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(COST_TYPE_LABELS).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>من شهر <span className="text-muted-foreground text-xs">(اختياري)</span></Label>
+                    <Select value={startMonth} onValueChange={setStartMonth}>
                       <SelectTrigger><SelectValue placeholder="موزع على الكل" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">موزع على كل الأشهر</SelectItem>
+                        {Array.from({ length: durationMonths }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>إلى شهر</Label>
+                    <Select value={endMonth} onValueChange={setEndMonth} disabled={!startMonth || startMonth === 'all'}>
+                      <SelectTrigger><SelectValue placeholder="نفس الشهر" /></SelectTrigger>
+                      <SelectContent>
                         {Array.from({ length: durationMonths }, (_, i) => (
                           <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
                         ))}
@@ -264,7 +307,8 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                   <th>الفئة</th>
                   <th>الوصف</th>
                   <th>المورد</th>
-                  <th>الشهر</th>
+                  <th>الفترة</th>
+                  <th>النوع</th>
                   <th>المخطط</th>
                   <th>الفعلي (مربوط)</th>
                   <th className="hidden sm:table-cell">المتبقي</th>
@@ -283,7 +327,8 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                       <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory]}</span></td>
                       <td>{item.description}</td>
                       <td className="text-xs">{resource?.name || '—'}</td>
-                      <td className="text-xs text-muted-foreground">{item.month ? `شهر ${item.month}` : 'موزع'}</td>
+                      <td className="text-xs text-muted-foreground">{getMonthDisplay(item)}</td>
+                      <td className="text-xs text-muted-foreground">{COST_TYPE_LABELS[item.costType as CostType] || 'ثابت'}</td>
                       <td className="font-mono text-sm">{formatCurrency(item.plannedAmount)}</td>
                       <td className="font-mono text-sm">{formatCurrency(actual)}</td>
                       <td className="hidden sm:table-cell">

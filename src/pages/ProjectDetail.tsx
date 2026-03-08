@@ -12,7 +12,7 @@ import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
-  FileSpreadsheet, FileText,
+  FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
@@ -27,12 +27,15 @@ import { CustodySection } from '@/components/project/CustodySection';
 import { RevenueSection } from '@/components/project/RevenueSection';
 import { ChartsSection } from '@/components/project/ChartsSection';
 import { AuditLogSection } from '@/components/project/AuditLogSection';
+import { MilestonesSection } from '@/components/project/MilestonesSection';
+import { ChangeOrdersSection } from '@/components/project/ChangeOrdersSection';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
+    milestones, changeOrders,
     loadAll, updateProject,
   } = useStore();
 
@@ -57,7 +60,10 @@ export default function ProjectDetail() {
   const pRevenues = revenues.filter((r) => r.projectId === project.id);
   const pResources = resources.filter((r) => r.projectId === project.id);
   const pCustodies = custodies.filter((c) => c.projectId === project.id);
-  const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues);
+  const pMilestones = milestones.filter((m) => m.projectId === project.id);
+  const pChangeOrders = changeOrders.filter((co) => co.projectId === project.id);
+
+  const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues, pChangeOrders);
   const categoryBreakdown = getExpensesByCategory(pExpenses);
   const monthlyData = getMonthlyBreakdown(pExpenses, project.durationMonths);
 
@@ -74,6 +80,8 @@ export default function ProjectDetail() {
   const getActualForItem = (item: any) =>
     pExpenses.filter((e) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
 
+  const totalAllRevenue = pRevenues.reduce((s, r) => s + r.amount, 0);
+
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -88,6 +96,7 @@ export default function ProjectDetail() {
               <h1 className="page-title">{project.name}</h1>
               <p className="page-subtitle">
                 {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
+                {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
               </p>
             </div>
             <Select
@@ -111,22 +120,48 @@ export default function ProjectDetail() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard title="قيمة العقد" value={formatCurrency(project.contractValue)} icon={<DollarSign className="w-4 h-4" />} />
+          <StatCard
+            title={summary.effectiveContractValue !== summary.contractValue ? 'القيمة المعدّلة للعقد' : 'قيمة العقد'}
+            value={formatCurrency(summary.effectiveContractValue)}
+            icon={<DollarSign className="w-4 h-4" />}
+            subtitle={summary.effectiveContractValue !== summary.contractValue ? `الأصلية: ${formatCurrency(summary.contractValue)}` : undefined}
+          />
           <StatCard title="المصروفات الفعلية" value={formatCurrency(summary.totalActual)} icon={<TrendingDown className="w-4 h-4" />} trend="down" subtitle={`المخطط: ${formatCurrency(summary.totalPlanned)}`} />
-          <StatCard title="صافي الربح" value={formatCurrency(summary.netProfit)} icon={<TrendingUp className="w-4 h-4" />} trend={summary.netProfit >= 0 ? 'up' : 'down'} subtitle={`هامش الربح: ${summary.profitMargin.toFixed(1)}%`} />
-          <StatCard title="المتبقي من الميزانية" value={formatCurrency(summary.remaining)} icon={<Target className="w-4 h-4" />} trend={summary.remaining >= 0 ? 'up' : 'down'} />
+          <StatCard
+            title="الربح المخطط"
+            value={formatCurrency(summary.plannedProfit)}
+            icon={<TrendingUp className="w-4 h-4" />}
+            trend={summary.plannedProfit >= 0 ? 'up' : 'down'}
+            subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`}
+          />
+          <StatCard
+            title="المتبقي من الموازنة"
+            value={formatCurrency(summary.budgetRemaining)}
+            icon={<Target className="w-4 h-4" />}
+            trend={summary.budgetRemaining >= 0 ? 'up' : 'down'}
+          />
         </div>
 
-        <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={project.contractValue} budgetItems={pBudget} expenses={pExpenses} />
+        {summary.collectedRevenue > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <StatCard title="محصّل" value={formatCurrency(summary.collectedRevenue)} icon={<DollarSign className="w-4 h-4" />} />
+            <StatCard title="ذمم مدينة" value={formatCurrency(summary.accountsReceivable)} icon={<Receipt className="w-4 h-4" />} />
+            <StatCard title="الربح المحقق" value={formatCurrency(summary.realizedProfit)} icon={<TrendingUp className="w-4 h-4" />} trend={summary.realizedProfit >= 0 ? 'up' : 'down'} />
+          </div>
+        )}
+
+        <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} />
 
         {/* Export Buttons */}
         <div className="flex gap-2 mb-4">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
             exportToExcel({
-              projectName: project.name, contractValue: project.contractValue,
+              projectName: project.name, contractValue: summary.effectiveContractValue,
               budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-              expenses: pExpenses, revenues: pRevenues,
-              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual, totalRevenue: summary.totalRevenue,
+              expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+              totalRevenue: totalAllRevenue,
+              durationMonths: project.durationMonths,
             });
             toast.success('تم تصدير التقرير إلى Excel');
           }}>
@@ -134,10 +169,13 @@ export default function ProjectDetail() {
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
             exportToPDF({
-              projectName: project.name, contractValue: project.contractValue,
+              projectName: project.name, contractValue: summary.effectiveContractValue,
               budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-              expenses: pExpenses, revenues: pRevenues,
-              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual, totalRevenue: summary.totalRevenue,
+              expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+              totalRevenue: totalAllRevenue,
+              durationMonths: project.durationMonths,
+              plannedProfit: summary.plannedProfit,
             });
             toast.success('تم تصدير التقرير إلى PDF');
           }}>
@@ -146,24 +184,28 @@ export default function ProjectDetail() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="resources" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 max-w-5xl">
+        <Tabs defaultValue="milestones" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 sm:grid-cols-10 max-w-6xl">
+            <TabsTrigger value="milestones" className="gap-1 text-xs"><MilestoneIcon className="w-3.5 h-3.5" /><span className="hidden sm:inline">المراحل</span></TabsTrigger>
             <TabsTrigger value="resources" className="gap-1 text-xs"><Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموارد</span></TabsTrigger>
             <TabsTrigger value="budget" className="gap-1 text-xs"><PiggyBank className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموازنة</span></TabsTrigger>
             <TabsTrigger value="baseline" className="gap-1 text-xs"><Baseline className="w-3.5 h-3.5" /><span className="hidden sm:inline">خط الأساس</span></TabsTrigger>
             <TabsTrigger value="expenses" className="gap-1 text-xs"><Receipt className="w-3.5 h-3.5" /><span className="hidden sm:inline">المصروفات</span></TabsTrigger>
             <TabsTrigger value="custody" className="gap-1 text-xs"><Wallet className="w-3.5 h-3.5" /><span className="hidden sm:inline">العهد</span></TabsTrigger>
             <TabsTrigger value="revenue" className="gap-1 text-xs"><DollarSign className="w-3.5 h-3.5" /><span className="hidden sm:inline">الإيرادات</span></TabsTrigger>
+            <TabsTrigger value="changeorders" className="gap-1 text-xs"><FileEdit className="w-3.5 h-3.5" /><span className="hidden sm:inline">أوامر التغيير</span></TabsTrigger>
             <TabsTrigger value="charts" className="gap-1 text-xs"><BarChart3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">التحليلات</span></TabsTrigger>
             <TabsTrigger value="auditlog" className="gap-1 text-xs"><History className="w-3.5 h-3.5" /><span className="hidden sm:inline">السجل</span></TabsTrigger>
           </TabsList>
 
+          <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} /></TabsContent>
           <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} /></TabsContent>
-          <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={project.contractValue} currency={project.currency} /></TabsContent>
-          <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} /></TabsContent>
-          <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={project.contractValue} /></TabsContent>
+          <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} /></TabsContent>
+          <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} /></TabsContent>
+          <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} /></TabsContent>
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} /></TabsContent>
           <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} /></TabsContent>
+          <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} /></TabsContent>
           <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} /></TabsContent>
           <TabsContent value="auditlog"><AuditLogSection projectId={project.id} /></TabsContent>
         </Tabs>
