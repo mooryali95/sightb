@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useRole();
+  const { isAdmin, canEdit } = useRole();
   const {
     companies, portfolios, projects, budgetItems, expenses, revenues,
     changeOrders, milestones, risks, indirectCosts,
