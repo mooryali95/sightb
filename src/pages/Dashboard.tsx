@@ -54,6 +54,41 @@ export default function Dashboard() {
   const [filterCompany, setFilterCompany] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [timePeriod, setTimePeriod] = useState<string>('all');
+
+  // Time period date ranges
+  const { currentRange, previousRange } = useMemo(() => {
+    const now = new Date();
+    let currentStart: Date, currentEnd: Date, prevStart: Date, prevEnd: Date;
+    switch (timePeriod) {
+      case 'month':
+        currentStart = startOfMonth(now); currentEnd = endOfMonth(now);
+        prevStart = startOfMonth(subMonths(now, 1)); prevEnd = endOfMonth(subMonths(now, 1));
+        break;
+      case 'quarter':
+        currentStart = startOfQuarter(now); currentEnd = endOfQuarter(now);
+        prevStart = startOfQuarter(subQuarters(now, 1)); prevEnd = endOfQuarter(subQuarters(now, 1));
+        break;
+      case 'year':
+        currentStart = startOfYear(now); currentEnd = endOfYear(now);
+        prevStart = startOfYear(subYears(now, 1)); prevEnd = endOfYear(subYears(now, 1));
+        break;
+      default:
+        return { currentRange: null, previousRange: null };
+    }
+    return {
+      currentRange: { start: currentStart, end: currentEnd },
+      previousRange: { start: prevStart, end: prevEnd },
+    };
+  }, [timePeriod]);
+
+  const isInRange = useCallback((dateStr: string, range: { start: Date; end: Date } | null) => {
+    if (!range) return true;
+    try {
+      const d = parseISO(dateStr);
+      return isWithinInterval(d, range);
+    } catch { return true; }
+  }, []);
 
   // Filtered projects
   const filteredProjects = useMemo(() => {
