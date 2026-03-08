@@ -35,10 +35,15 @@ interface DataState {
   snapshots: PeriodicSnapshot[];
   auditLog: AuditLogEntry[];
   loading: boolean;
+  detailsLoading: boolean;
+  detailsLoaded: boolean;
+  projectDataLoaded: Set<string>;
 }
 
 interface LoadActions {
   loadAll: () => Promise<void>;
+  loadProjectData: (projectId: string) => Promise<void>;
+  loadCompanyData: (companyId: string) => Promise<void>;
   loadAuditLog: (projectId: string) => Promise<void>;
 }
 
