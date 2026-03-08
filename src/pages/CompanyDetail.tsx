@@ -27,6 +27,7 @@ import {
   Archive, ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
