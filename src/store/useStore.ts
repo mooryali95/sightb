@@ -3,23 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
   CostBaseline, Resource, Custody, Milestone, ChangeOrder,
+  Risk, IndirectCost, PeriodicSnapshot,
 } from '@/types/project';
 import {
   getUserId, logDeletion,
   mapCompany, mapPortfolio, mapProject, mapBudgetItem,
   mapExpense, mapResource, mapCustody, mapRevenue, mapBaselineItem,
-  mapMilestone, mapChangeOrder,
+  mapMilestone, mapChangeOrder, mapRisk, mapIndirectCost, mapSnapshot,
 } from './helpers';
 
 export interface AuditLogEntry {
-  id: string;
-  userId: string;
-  action: string;
-  tableName: string;
-  recordId: string;
-  recordData: any;
-  projectId?: string;
-  createdAt: string;
+  id: string; userId: string; action: string; tableName: string;
+  recordId: string; recordData: any; projectId?: string; createdAt: string;
 }
 
 // ---- Slice types ----
@@ -35,6 +30,9 @@ interface DataState {
   custodies: Custody[];
   milestones: Milestone[];
   changeOrders: ChangeOrder[];
+  risks: Risk[];
+  indirectCosts: IndirectCost[];
+  snapshots: PeriodicSnapshot[];
   auditLog: AuditLogEntry[];
   loading: boolean;
 }
@@ -111,30 +109,38 @@ interface ChangeOrderActions {
   deleteChangeOrder: (id: string) => Promise<void>;
 }
 
+interface RiskActions {
+  addRisk: (r: Omit<Risk, 'id' | 'createdAt'>) => Promise<string>;
+  updateRisk: (id: string, r: Partial<Risk>) => Promise<void>;
+  deleteRisk: (id: string) => Promise<void>;
+}
+
+interface IndirectCostActions {
+  addIndirectCost: (ic: Omit<IndirectCost, 'id' | 'createdAt'>) => Promise<string>;
+  updateIndirectCost: (id: string, ic: Partial<IndirectCost>) => Promise<void>;
+  deleteIndirectCost: (id: string) => Promise<void>;
+}
+
+interface SnapshotActions {
+  saveSnapshot: (s: Omit<PeriodicSnapshot, 'id' | 'createdAt'>) => Promise<string>;
+  loadSnapshots: (entityType: string, entityId: string) => Promise<PeriodicSnapshot[]>;
+}
+
 type AppState = DataState & LoadActions & CompanyActions & PortfolioActions & ProjectActions &
   BudgetActions & ExpenseActions & RevenueActions & ResourceActions & CustodyActions & BaselineActions &
-  MilestoneActions & ChangeOrderActions;
+  MilestoneActions & ChangeOrderActions & RiskActions & IndirectCostActions & SnapshotActions;
 
 export const useStore = create<AppState>()((set, get) => ({
   // ---- Initial state ----
-  companies: [],
-  portfolios: [],
-  projects: [],
-  budgetItems: [],
-  expenses: [],
-  revenues: [],
-  baselines: [],
-  resources: [],
-  custodies: [],
-  milestones: [],
-  changeOrders: [],
-  auditLog: [],
-  loading: true,
+  companies: [], portfolios: [], projects: [], budgetItems: [], expenses: [],
+  revenues: [], baselines: [], resources: [], custodies: [], milestones: [],
+  changeOrders: [], risks: [], indirectCosts: [], snapshots: [],
+  auditLog: [], loading: true,
 
   // ---- Load slice ----
   loadAll: async () => {
     set({ loading: true });
-    const [companies, portfolios, projects, budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders] = await Promise.all([
+    const [companies, portfolios, projects, budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts] = await Promise.all([
       supabase.from('companies').select('*').order('created_at', { ascending: false }),
       supabase.from('portfolios').select('*').order('created_at', { ascending: false }),
       supabase.from('projects').select('*').order('created_at', { ascending: false }),
@@ -145,6 +151,8 @@ export const useStore = create<AppState>()((set, get) => ({
       supabase.from('custodies').select('*').order('created_at', { ascending: false }),
       supabase.from('milestones').select('*').order('sort_order', { ascending: true }),
       supabase.from('change_orders').select('*').order('created_at', { ascending: false }),
+      supabase.from('risks').select('*').order('created_at', { ascending: false }),
+      supabase.from('indirect_costs').select('*').order('created_at', { ascending: false }),
     ]);
 
     const expenseList = (expenses.data || []).map(mapExpense);
@@ -160,6 +168,8 @@ export const useStore = create<AppState>()((set, get) => ({
       custodies: (custodies.data || []).map((c) => mapCustody(c, expenseList)),
       milestones: (milestones.data || []).map(mapMilestone),
       changeOrders: (changeOrders.data || []).map(mapChangeOrder),
+      risks: (risks.data || []).map(mapRisk),
+      indirectCosts: (indirectCosts.data || []).map(mapIndirectCost),
       loading: false,
     });
   },
@@ -228,8 +238,13 @@ export const useStore = create<AppState>()((set, get) => ({
   // ---- Portfolio slice ----
   addPortfolio: async (p) => {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('portfolios').insert({
-      user_id: userId, company_id: p.companyId, name: p.name, description: p.description || null,
+    const { data, error } = await (supabase as any).from('portfolios').insert({
+      user_id: userId, company_id: p.companyId, name: p.name,
+      description: p.description || null,
+      target_revenue: p.targetRevenue || 0,
+      target_margin: p.targetMargin || 0,
+      fiscal_year: p.fiscalYear || null,
+      notes: p.notes || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapPortfolio(data);
@@ -242,7 +257,11 @@ export const useStore = create<AppState>()((set, get) => ({
     if (p.name !== undefined) updates.name = p.name;
     if (p.description !== undefined) updates.description = p.description;
     if (p.companyId !== undefined) updates.company_id = p.companyId;
-    const { error } = await supabase.from('portfolios').update(updates).eq('id', id);
+    if (p.targetRevenue !== undefined) updates.target_revenue = p.targetRevenue;
+    if (p.targetMargin !== undefined) updates.target_margin = p.targetMargin;
+    if (p.fiscalYear !== undefined) updates.fiscal_year = p.fiscalYear;
+    if (p.notes !== undefined) updates.notes = p.notes;
+    const { error } = await (supabase as any).from('portfolios').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ portfolios: s.portfolios.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
   },
@@ -472,15 +491,12 @@ export const useStore = create<AppState>()((set, get) => ({
 
     const existingBaselines = get().baselines.filter(b => b.projectId === projectId);
     const nextVersion = existingBaselines.length > 0
-      ? Math.max(...existingBaselines.map(b => b.version)) + 1
-      : 1;
+      ? Math.max(...existingBaselines.map(b => b.version)) + 1 : 1;
 
     const totalPlanned = currentBudget.reduce((s, b) => s + b.plannedAmount, 0);
 
     if (existingBaselines.length > 0) {
-      await supabase.from('cost_baselines')
-        .update({ is_active: false })
-        .eq('project_id', projectId);
+      await supabase.from('cost_baselines').update({ is_active: false }).eq('project_id', projectId);
     }
 
     const { data: bl, error: blErr } = await supabase.from('cost_baselines').insert({
@@ -507,10 +523,7 @@ export const useStore = create<AppState>()((set, get) => ({
     };
 
     set((s) => ({
-      baselines: [
-        mapped,
-        ...s.baselines.map(b => b.projectId === projectId ? { ...b, isActive: false } : b),
-      ],
+      baselines: [mapped, ...s.baselines.map(b => b.projectId === projectId ? { ...b, isActive: false } : b)],
     }));
     return mapped.id;
   },
@@ -524,32 +537,20 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   setActiveBaseline: async (id, projectId) => {
-    await supabase.from('cost_baselines')
-      .update({ is_active: false })
-      .eq('project_id', projectId);
-    const { error } = await supabase.from('cost_baselines')
-      .update({ is_active: true })
-      .eq('id', id);
+    await supabase.from('cost_baselines').update({ is_active: false }).eq('project_id', projectId);
+    const { error } = await supabase.from('cost_baselines').update({ is_active: true }).eq('id', id);
     if (error) throw error;
-    set((s) => ({
-      baselines: s.baselines.map(b =>
-        b.projectId === projectId ? { ...b, isActive: b.id === id } : b
-      ),
-    }));
+    set((s) => ({ baselines: s.baselines.map(b => b.projectId === projectId ? { ...b, isActive: b.id === id } : b) }));
   },
 
   loadBaselines: async (projectId) => {
     const { data: bls, error } = await supabase
-      .from('cost_baselines').select('*')
-      .eq('project_id', projectId)
-      .order('version', { ascending: false });
+      .from('cost_baselines').select('*').eq('project_id', projectId).order('version', { ascending: false });
     if (error) throw error;
 
     const baselines: CostBaseline[] = [];
     for (const bl of (bls || [])) {
-      const { data: items } = await supabase
-        .from('baseline_items').select('*')
-        .eq('baseline_id', bl.id);
+      const { data: items } = await supabase.from('baseline_items').select('*').eq('baseline_id', bl.id);
       baselines.push({
         id: bl.id, projectId: bl.project_id, name: bl.name,
         version: bl.version, isActive: bl.is_active,
@@ -558,12 +559,7 @@ export const useStore = create<AppState>()((set, get) => ({
       });
     }
 
-    set((s) => ({
-      baselines: [
-        ...s.baselines.filter(b => b.projectId !== projectId),
-        ...baselines,
-      ],
-    }));
+    set((s) => ({ baselines: [...s.baselines.filter(b => b.projectId !== projectId), ...baselines] }));
     return baselines;
   },
 
@@ -576,8 +572,7 @@ export const useStore = create<AppState>()((set, get) => ({
       planned_start: m.plannedStart || null, planned_end: m.plannedEnd || null,
       actual_start: m.actualStart || null, actual_end: m.actualEnd || null,
       percent_complete: m.percentComplete || 0, weight: m.weight || 0,
-      status: m.status || 'planned',
-      linked_revenue_id: m.linkedRevenueId || null,
+      status: m.status || 'planned', linked_revenue_id: m.linkedRevenueId || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapMilestone(data);
@@ -649,5 +644,125 @@ export const useStore = create<AppState>()((set, get) => ({
     const { error } = await (supabase as any).from('change_orders').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ changeOrders: s.changeOrders.filter((x) => x.id !== id) }));
+  },
+
+  // ---- Risk slice ----
+  addRisk: async (r) => {
+    const userId = await getUserId();
+    const { data, error } = await (supabase as any).from('risks').insert({
+      user_id: userId,
+      project_id: r.projectId || null,
+      portfolio_id: r.portfolioId || null,
+      title: r.title,
+      description: r.description || null,
+      probability: r.probability || 'medium',
+      impact: r.impact || 'medium',
+      financial_impact: r.financialImpact || 0,
+      category: r.category || 'financial',
+      status: r.status || 'open',
+      mitigation_plan: r.mitigationPlan || null,
+      owner: r.owner || null,
+      identified_date: r.identifiedDate || null,
+      closed_date: r.closedDate || null,
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapRisk(data);
+    set((s) => ({ risks: [mapped, ...s.risks] }));
+    return mapped.id;
+  },
+
+  updateRisk: async (id, r) => {
+    const updates: Record<string, unknown> = {};
+    if (r.title !== undefined) updates.title = r.title;
+    if (r.description !== undefined) updates.description = r.description;
+    if (r.probability !== undefined) updates.probability = r.probability;
+    if (r.impact !== undefined) updates.impact = r.impact;
+    if (r.financialImpact !== undefined) updates.financial_impact = r.financialImpact;
+    if (r.category !== undefined) updates.category = r.category;
+    if (r.status !== undefined) updates.status = r.status;
+    if (r.mitigationPlan !== undefined) updates.mitigation_plan = r.mitigationPlan;
+    if (r.owner !== undefined) updates.owner = r.owner;
+    if (r.identifiedDate !== undefined) updates.identified_date = r.identifiedDate;
+    if (r.closedDate !== undefined) updates.closed_date = r.closedDate;
+    const { error } = await (supabase as any).from('risks').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ risks: s.risks.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
+  },
+
+  deleteRisk: async (id) => {
+    const risk = get().risks.find(r => r.id === id);
+    if (risk) await logDeletion('risks', id, risk, risk.projectId);
+    const { error } = await (supabase as any).from('risks').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ risks: s.risks.filter((x) => x.id !== id) }));
+  },
+
+  // ---- IndirectCost slice ----
+  addIndirectCost: async (ic) => {
+    const userId = await getUserId();
+    const { data, error } = await (supabase as any).from('indirect_costs').insert({
+      user_id: userId,
+      company_id: ic.companyId,
+      category: ic.category || 'other',
+      description: ic.description,
+      amount: ic.amount || 0,
+      month: ic.month,
+      date: ic.date,
+      allocation_method: ic.allocationMethod || 'equal',
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapIndirectCost(data);
+    set((s) => ({ indirectCosts: [mapped, ...s.indirectCosts] }));
+    return mapped.id;
+  },
+
+  updateIndirectCost: async (id, ic) => {
+    const updates: Record<string, unknown> = {};
+    if (ic.category !== undefined) updates.category = ic.category;
+    if (ic.description !== undefined) updates.description = ic.description;
+    if (ic.amount !== undefined) updates.amount = ic.amount;
+    if (ic.month !== undefined) updates.month = ic.month;
+    if (ic.date !== undefined) updates.date = ic.date;
+    if (ic.allocationMethod !== undefined) updates.allocation_method = ic.allocationMethod;
+    const { error } = await (supabase as any).from('indirect_costs').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ indirectCosts: s.indirectCosts.map((x) => (x.id === id ? { ...x, ...ic } : x)) }));
+  },
+
+  deleteIndirectCost: async (id) => {
+    const { error } = await (supabase as any).from('indirect_costs').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ indirectCosts: s.indirectCosts.filter((x) => x.id !== id) }));
+  },
+
+  // ---- Snapshot slice ----
+  saveSnapshot: async (s) => {
+    const userId = await getUserId();
+    const { data, error } = await (supabase as any).from('periodic_snapshots').upsert({
+      user_id: userId,
+      entity_type: s.entityType,
+      entity_id: s.entityId,
+      period: s.period,
+      snapshot_date: s.snapshotDate,
+      metrics: s.metrics,
+    }, { onConflict: 'entity_type,entity_id,period' }).select().single();
+    if (error) throw error;
+    const mapped = mapSnapshot(data);
+    set((st) => ({
+      snapshots: [mapped, ...st.snapshots.filter(x => !(x.entityType === mapped.entityType && x.entityId === mapped.entityId && x.period === mapped.period))],
+    }));
+    return mapped.id;
+  },
+
+  loadSnapshots: async (entityType, entityId) => {
+    const { data, error } = await (supabase as any).from('periodic_snapshots').select('*')
+      .eq('entity_type', entityType).eq('entity_id', entityId)
+      .order('snapshot_date', { ascending: false });
+    if (error) throw error;
+    const mapped = (data || []).map(mapSnapshot);
+    set((s) => ({
+      snapshots: [...s.snapshots.filter(x => !(x.entityType === entityType && x.entityId === entityId)), ...mapped],
+    }));
+    return mapped;
   },
 }));
