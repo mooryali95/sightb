@@ -259,7 +259,42 @@ export default function CompanyDetail() {
           </div>
         )}
 
-        {/* Portfolios with nested projects */}
+        {/* Expense Distribution Pie Chart */}
+        {expensesByPortfolio.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4 mb-6">
+            <h3 className="text-sm font-semibold mb-4">توزيع المصروفات حسب المحافظ</h3>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={expensesByPortfolio}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={3}
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    labelLine={{ strokeWidth: 1 }}
+                  >
+                    {expensesByPortfolio.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}
+                  />
+                  <Legend
+                    formatter={(value) => <span className="text-xs">{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
         {compPortfolios.length > 0 && (
           <div className="mb-6 space-y-4">
             <div className="flex items-center gap-2 mb-1">
