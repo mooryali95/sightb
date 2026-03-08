@@ -39,7 +39,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
             {this.props.fallbackMessage || 'حدث خطأ أثناء عرض هذا الجزء. يرجى المحاولة مرة أخرى.'}
           </p>
-          {this.state.error && (
+          {import.meta.env.DEV && this.state.error && (
             <pre className="text-xs text-destructive/70 bg-destructive/5 p-3 rounded-lg mb-4 max-w-lg overflow-auto">
               {this.state.error.message}
             </pre>
