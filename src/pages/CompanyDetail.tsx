@@ -238,49 +238,109 @@ export default function CompanyDetail() {
           </div>
         )}
 
-        {/* Portfolios */}
+        {/* Portfolios with nested projects */}
         {compPortfolios.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold mb-3">المحافظ</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {summary?.portfolioSummaries.map(ps => (
-                <div
-                  key={ps.portfolioId}
-                  className="stat-card cursor-pointer hover:border-primary/40 transition-colors"
-                  onClick={() => navigate(`/portfolio/${ps.portfolioId}`)}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <FolderKanban className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-semibold">{ps.portfolioName}</span>
-                    </div>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${HEALTH_STATUS_COLORS[ps.healthStatus]}`}>
-                      {HEALTH_STATUS_LABELS[ps.healthStatus]}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-center">
-                    <div className="p-2 rounded bg-muted/30">
-                      <p className="text-[10px] text-muted-foreground">المشاريع</p>
-                      <p className="text-sm font-bold">{ps.projectCount}</p>
-                    </div>
-                    <div className="p-2 rounded bg-muted/30">
-                      <p className="text-[10px] text-muted-foreground">العقود</p>
-                      <p className="text-xs font-mono font-bold">{formatCurrency(ps.totalEffectiveValue)}</p>
-                    </div>
-                    <div className="p-2 rounded bg-muted/30">
-                      <p className="text-[10px] text-muted-foreground">الإنجاز</p>
-                      <p className="text-sm font-bold">{ps.weightedPercentComplete.toFixed(0)}%</p>
-                    </div>
-                    <div className="p-2 rounded bg-muted/30">
-                      <p className="text-[10px] text-muted-foreground">الربح</p>
-                      <p className={`text-xs font-mono font-bold ${ps.aggregatePlannedProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                        {formatCurrency(ps.aggregatePlannedProfit)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+          <div className="mb-6 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <FolderKanban className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold">المحافظ ({compPortfolios.length})</h3>
             </div>
+            {summary?.portfolioSummaries.map(ps => {
+              const portfolioProjects = companyProjects.filter(p => p.portfolioId === ps.portfolioId);
+              return (
+                <div key={ps.portfolioId} className="rounded-xl border border-border bg-card overflow-hidden">
+                  {/* Portfolio header */}
+                  <div
+                    className="p-4 cursor-pointer hover:bg-muted/30 transition-colors border-b border-border/50"
+                    onClick={() => navigate(`/portfolio/${ps.portfolioId}`)}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <FolderKanban className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold">{ps.portfolioName}</h4>
+                          <p className="text-[11px] text-muted-foreground">{ps.projectCount} مشروع</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${HEALTH_STATUS_COLORS[ps.healthStatus]}`}>
+                          {HEALTH_STATUS_LABELS[ps.healthStatus]}
+                        </span>
+                        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      <div className="text-center p-2 rounded-lg bg-muted/40">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">العقود</p>
+                        <p className="text-xs font-mono font-bold">{formatCurrency(ps.totalEffectiveValue)}</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-muted/40">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">المصروفات</p>
+                        <p className="text-xs font-mono font-bold">{formatCurrency(ps.totalActual)}</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-muted/40">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">الإنجاز</p>
+                        <p className="text-sm font-bold">{ps.weightedPercentComplete.toFixed(0)}%</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-muted/40">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">الربح</p>
+                        <p className={`text-xs font-mono font-bold ${ps.aggregatePlannedProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
+                          {formatCurrency(ps.aggregatePlannedProfit)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Nested projects */}
+                  {portfolioProjects.length > 0 && (
+                    <div className="divide-y divide-border/40">
+                      {portfolioProjects.map(project => {
+                        const projExpenses = expenses.filter(e => e.projectId === project.id);
+                        const projRevenues = revenues.filter(r => r.projectId === project.id);
+                        const totalSpent = projExpenses.reduce((s, e) => s + e.amount, 0);
+                        const totalRevenue = projRevenues.reduce((s, r) => s + r.amount, 0);
+                        const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
+                        return (
+                          <div
+                            key={project.id}
+                            className="px-4 py-3 hover:bg-muted/20 cursor-pointer transition-colors flex items-center gap-4"
+                            onClick={() => navigate(`/project/${project.id}`)}
+                          >
+                            <div className="w-7 h-7 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
+                              <Briefcase className="w-3.5 h-3.5 text-blue-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium truncate">{project.name}</span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ${PROJECT_STATUS_COLORS[project.status]}`}>
+                                  {PROJECT_STATUS_LABELS[project.status]}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                                <span>العقد: {formatCurrency(project.contractValue)}</span>
+                                <span>·</span>
+                                <span>المصروف: {formatCurrency(totalSpent)}</span>
+                                <span>·</span>
+                                <span>الإنجاز: {project.percentComplete}%</span>
+                              </div>
+                              {/* Progress bar */}
+                              <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${spentPercent > 90 ? 'bg-destructive' : spentPercent > 70 ? 'bg-amber-500' : 'bg-primary'}`}
+                                  style={{ width: `${spentPercent}%` }}
+                                />
+                              </div>
+                            </div>
+                            <ArrowLeft className="w-4 h-4 text-muted-foreground shrink-0" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
