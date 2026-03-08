@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
-import { type Resource } from '@/types/project';
+import { type Resource, type BudgetItem, type Expense } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,15 +13,19 @@ import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 interface ResourcesSectionProps {
   projectId: string;
   resources: Resource[];
+  budgetItems?: BudgetItem[];
+  expenses?: Expense[];
 }
 
-export function ResourcesSection({ projectId, resources }: ResourcesSectionProps) {
-  const { addResource, updateResource, deleteResource, expenses } = useStore();
+export function ResourcesSection({ projectId, resources, budgetItems = [], expenses: propExpenses }: ResourcesSectionProps) {
+  const { addResource, updateResource, deleteResource, expenses: storeExpenses } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [monthlyCost, setMonthlyCost] = useState('');
+
+  const pExpenses = propExpenses || storeExpenses.filter(e => e.projectId === projectId);
 
   const resetForm = () => {
     setEditingId(null);
@@ -61,7 +65,7 @@ export function ResourcesSection({ projectId, resources }: ResourcesSectionProps
   };
 
   const totalMonthlyCost = resources.reduce((s, r) => s + r.monthlyCost, 0);
-  const pExpenses = expenses.filter(e => e.projectId === projectId);
+  const hasBudgetData = budgetItems.length > 0;
 
   return (
     <div className="stat-card">
@@ -104,17 +108,45 @@ export function ResourcesSection({ projectId, resources }: ResourcesSectionProps
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
-              <tr><th>الاسم</th><th>الدور</th><th>التكلفة الشهرية</th><th>إجمالي الصرف</th><th></th></tr>
+              <tr>
+                <th>الاسم</th>
+                <th>الدور</th>
+                <th>التكلفة الشهرية</th>
+                {hasBudgetData && <th>المخطط</th>}
+                <th>إجمالي الصرف</th>
+                {hasBudgetData && <th>الانحراف</th>}
+                {hasBudgetData && <th>نسبة الانحراف</th>}
+                <th></th>
+              </tr>
             </thead>
             <tbody>
               {resources.map((r) => {
                 const totalSpent = pExpenses.filter(e => e.resourceId === r.id).reduce((s, e) => s + e.amount, 0);
+                const plannedForResource = budgetItems.filter(b => b.resourceId === r.id).reduce((s, b) => s + b.plannedAmount, 0);
+                const variance = plannedForResource - totalSpent;
+                const variancePct = plannedForResource > 0 ? (variance / plannedForResource) * 100 : 0;
+
                 return (
                   <tr key={r.id}>
                     <td className="font-medium">{r.name}</td>
                     <td className="text-muted-foreground">{r.role || '—'}</td>
                     <td className="font-mono text-sm">{formatCurrency(r.monthlyCost)}</td>
+                    {hasBudgetData && (
+                      <td className="font-mono text-sm">{plannedForResource > 0 ? formatCurrency(plannedForResource) : '—'}</td>
+                    )}
                     <td className="font-mono text-sm">{formatCurrency(totalSpent)}</td>
+                    {hasBudgetData && (
+                      <td>
+                        {plannedForResource > 0 ? (
+                          <span className={variance >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(variance)}</span>
+                        ) : '—'}
+                      </td>
+                    )}
+                    {hasBudgetData && (
+                      <td className="text-xs text-muted-foreground">
+                        {plannedForResource > 0 ? `${variancePct.toFixed(1)}%` : '—'}
+                      </td>
+                    )}
                     <td>
                       <div className="flex items-center gap-0.5">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>

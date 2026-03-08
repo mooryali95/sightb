@@ -407,6 +407,46 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           </div>
         )}
       </div>
+
+      {/* Reserves Analysis */}
+      {budgetItems.length > 0 && (
+        <div className="stat-card">
+          <h3 className="text-sm font-semibold mb-4">تحليل الاحتياطيات</h3>
+          {(() => {
+            const contingencyPlanned = budgetItems.filter((b: any) => b.category === 'contingency').reduce((s: number, b: any) => s + b.plannedAmount, 0);
+            const contingencyActual = expenses.filter((e: any) => e.category === 'contingency').reduce((s: number, e: any) => s + e.amount, 0);
+            const contingencyRemaining = contingencyPlanned - contingencyActual;
+            const budgetWithoutReserve = totalPlanned - contingencyPlanned;
+
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">الموازنة بدون احتياطي</p>
+                  <p className="text-sm font-mono font-bold mt-1">{formatCurrency(budgetWithoutReserve)}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">احتياطي الطوارئ (مخطط)</p>
+                  <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contingencyPlanned)}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">احتياطي الطوارئ (مصروف)</p>
+                  <p className="text-sm font-mono font-bold mt-1 text-destructive">{formatCurrency(contingencyActual)}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">المتبقي من الاحتياطي</p>
+                  <p className={`text-sm font-mono font-bold mt-1 ${contingencyRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                    {formatCurrency(contingencyRemaining)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">الاحتياطي الإداري</p>
+                  <p className="text-sm font-mono font-bold mt-1">{formatCurrency(managementReserve)}</p>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }
