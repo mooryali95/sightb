@@ -52,7 +52,7 @@ const inviteStatusConfig: Record<string, { label: string; icon: any; className: 
 
 export default function UserManagement() {
   const { user } = useAuth();
-  const { isAdmin, loading: roleLoading } = useRole();
+  const { isAdmin, isOwner, loading: roleLoading } = useRole();
   const { companies, projects } = useStore();
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
