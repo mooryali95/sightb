@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
@@ -14,23 +15,28 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import {
   Building2, DollarSign, TrendingUp, AlertTriangle, Plus,
-  FolderKanban, ArrowLeft, Briefcase, FileSpreadsheet,
+  FolderKanban, ArrowLeft, Briefcase, FileSpreadsheet, Pencil, Trash2,
+  Archive,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAdmin } = useRole();
   const {
     companies, portfolios, projects, budgetItems, expenses, revenues,
     changeOrders, milestones, risks, indirectCosts,
     loading, loadAll, addIndirectCost, deleteIndirectCost,
+    updateCompany, deleteCompany, archiveCompany,
   } = useStore();
 
   useEffect(() => { loadAll(); }, []);
@@ -58,6 +64,28 @@ export default function CompanyDetail() {
   const [icAmount, setIcAmount] = useState('');
   const [icMonth, setIcMonth] = useState('1');
   const [icDate, setIcDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Edit company form
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+
+  const openEdit = () => {
+    if (company) {
+      setEditName(company.name);
+      setEditDescription(company.description || '');
+      setEditOpen(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editName.trim()) { toast.error('اسم الشركة مطلوب'); return; }
+    try {
+      await updateCompany(id!, { name: editName, description: editDescription || undefined });
+      toast.success('تم تحديث بيانات الشركة');
+      setEditOpen(false);
+    } catch { toast.error('فشل التحديث'); }
+  };
 
   const handleAddIndirectCost = async () => {
     if (!icDescription.trim()) { toast.error('الوصف مطلوب'); return; }
@@ -90,47 +118,107 @@ export default function CompanyDetail() {
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header */}
-        <div className="page-header">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Building2 className="w-6 h-6 text-primary" />
-              <h1 className="page-title">{company.name}</h1>
+        {/* Header with Blue Theme */}
+        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-to-l from-blue-500/10 via-primary/5 to-transparent">
+          <div className="p-6">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+              <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
             </div>
-            {summary && (
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                exportCompanyToExcel({
-                  companyName: company.name,
-                  summary,
-                  portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
-                    name: ps.portfolioName,
-                    projects: ps.projectCount,
-                    contractValue: ps.totalEffectiveValue,
-                    actual: ps.totalActual,
-                    profit: ps.aggregatePlannedProfit,
-                    completion: ps.weightedPercentComplete,
-                    health: HEALTH_STATUS_LABELS[ps.healthStatus],
-                  })),
-                  indirectCosts: compIndirectCosts.map(ic => ({
-                    category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
-                    description: ic.description,
-                    amount: ic.amount,
-                    month: ic.month,
-                  })),
-                });
-                toast.success('تم تصدير تقرير الشركة');
-              }}>
-                <FileSpreadsheet className="w-3.5 h-3.5" />تصدير Excel
-              </Button>
-            )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-bold">{company.name}</h1>
+                    <Badge variant={company.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
+                      {company.status === 'active' ? 'نشطة' : 'مؤرشفة'}
+                    </Badge>
+                  </div>
+                  {company.description && (
+                    <p className="text-sm text-muted-foreground mt-0.5">{company.description}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {compPortfolios.length} محفظة · {companyProjects.length} مشروع
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
+                  <Pencil className="w-3.5 h-3.5" />تعديل
+                </Button>
+                {summary && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                    exportCompanyToExcel({
+                      companyName: company.name,
+                      summary,
+                      portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
+                        name: ps.portfolioName,
+                        projects: ps.projectCount,
+                        contractValue: ps.totalEffectiveValue,
+                        actual: ps.totalActual,
+                        profit: ps.aggregatePlannedProfit,
+                        completion: ps.weightedPercentComplete,
+                        health: HEALTH_STATUS_LABELS[ps.healthStatus],
+                      })),
+                      indirectCosts: compIndirectCosts.map(ic => ({
+                        category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
+                        description: ic.description,
+                        amount: ic.amount,
+                        month: ic.month,
+                      })),
+                    });
+                    toast.success('تم تصدير تقرير الشركة');
+                  }}>
+                    <FileSpreadsheet className="w-3.5 h-3.5" />تصدير
+                  </Button>
+                )}
+                {isAdmin && (
+                  <>
+                    {company.status === 'active' && (
+                      <Button variant="outline" size="sm" className="gap-1.5 text-muted-foreground" onClick={async () => {
+                        try { await archiveCompany(id!); toast.success('تم الأرشفة'); } catch { toast.error('فشل'); }
+                      }}>
+                        <Archive className="w-3.5 h-3.5" />أرشفة
+                      </Button>
+                    )}
+                    <ConfirmDeleteDialog
+                      title="حذف الشركة"
+                      description={`هل أنت متأكد من حذف "${company.name}"؟ سيتم حذف جميع البيانات المرتبطة.`}
+                      onConfirm={async () => {
+                        try { await deleteCompany(id!); toast.success('تم الحذف'); navigate('/'); } catch { toast.error('فشل الحذف'); }
+                      }}
+                      trigger={
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      }
+                    />
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {compPortfolios.length} محفظة · {companyProjects.length} مشروع
-          </p>
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>تعديل بيانات الشركة</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>اسم الشركة *</Label>
+                <Input value={editName} onChange={e => setEditName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>الوصف</Label>
+                <Textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} />
+              </div>
+              <Button onClick={handleSaveEdit} className="w-full">حفظ</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Stats */}
         {summary && (

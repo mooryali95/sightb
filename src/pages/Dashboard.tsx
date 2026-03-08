@@ -662,23 +662,23 @@ export default function Dashboard() {
               </div>
             </motion.div>
 
-            {/* Company Management */}
-            {(
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="stat-card mt-6"
-              >
-                <h3 className="text-sm font-semibold mb-4">إدارة الشركات</h3>
-                <div className="space-y-2">
-                  {activeCompanies.map((company) => (
-                    <div key={company.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-medium">{company.name}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">نشطة</span>
-                      </div>
+            {/* Company Management - Admin Only for delete/archive */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="stat-card mt-6"
+            >
+              <h3 className="text-sm font-semibold mb-4">إدارة الشركات</h3>
+              <div className="space-y-2">
+                {activeCompanies.map((company) => (
+                  <div key={company.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
+                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(`/company/${company.id}`)}>
+                      <Building2 className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">{company.name}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">نشطة</span>
+                    </div>
+                    {isAdmin && (
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
@@ -709,18 +709,20 @@ export default function Dashboard() {
                           }}
                         />
                       </div>
-                    </div>
-                  ))}
-                  {archivedCompanies.length > 0 && (
-                    <>
-                      <div className="text-xs text-muted-foreground pt-3 pb-1 font-semibold">الشركات المؤرشفة</div>
-                      {archivedCompanies.map((company) => (
-                        <div key={company.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/40 opacity-70">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm">{company.name}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">مؤرشفة</span>
-                          </div>
+                    )}
+                  </div>
+                ))}
+                {archivedCompanies.length > 0 && (
+                  <>
+                    <div className="text-xs text-muted-foreground pt-3 pb-1 font-semibold">الشركات المؤرشفة</div>
+                    {archivedCompanies.map((company) => (
+                      <div key={company.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/40 opacity-70">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{company.name}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">مؤرشفة</span>
+                        </div>
+                        {isAdmin && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -737,13 +739,13 @@ export default function Dashboard() {
                             <ArchiveRestore className="w-3.5 h-3.5" />
                             إعادة تفعيل
                           </Button>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            )}
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            </motion.div>
           </>
         )}
       </motion.div>

@@ -7,6 +7,7 @@ import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown } from '@/lib/finance';
 import { EXPENSE_CATEGORY_LABELS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ExpenseCategory, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
@@ -14,6 +15,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
+  Briefcase,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
@@ -98,47 +100,62 @@ export default function ProjectDetail() {
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header */}
-        <div className="page-header">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <span>{company?.name}</span>
-            {portfolio && (<><span>←</span><span>{portfolio.name}</span></>)}
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="page-title">{project.name}</h1>
-              <p className="page-subtitle">
-                {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
-                {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
-              </p>
+        {/* Header with Green Theme */}
+        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-to-l from-emerald-500/10 via-green-500/5 to-transparent">
+          <div className="p-6">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+              <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
+              {company && (<><span>←</span><button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-primary transition-colors">{company.name}</button></>)}
+              {portfolio && (<><span>←</span><button onClick={() => navigate(`/portfolio/${portfolio.id}`)} className="hover:text-primary transition-colors">{portfolio.name}</button></>)}
             </div>
-            <div className="flex items-center gap-2">
-              <Select
-                value={project.status}
-                onValueChange={(val) => {
-                  updateProject(project.id, { status: val as ProjectStatus });
-                  toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
-                }}
-              >
-                <SelectTrigger className={`w-[140px] h-8 text-xs ${PROJECT_STATUS_COLORS[project.status]}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <ConfirmDeleteDialog
-                title="حذف المشروع"
-                description={`هل أنت متأكد من حذف مشروع "${project.name}"؟ سيتم حذف جميع البيانات المرتبطة (الموازنة، المصروفات، الإيرادات).`}
-                onConfirm={handleDeleteProject}
-                trigger={
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                }
-              />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center">
+                  <Briefcase className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-bold">{project.name}</h1>
+                    <Badge className={`text-[10px] ${PROJECT_STATUS_COLORS[project.status]}`}>
+                      {PROJECT_STATUS_LABELS[project.status]}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
+                    {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={project.status}
+                  onValueChange={(val) => {
+                    updateProject(project.id, { status: val as ProjectStatus });
+                    toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
+                  }}
+                >
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isAdmin && (
+                  <ConfirmDeleteDialog
+                    title="حذف المشروع"
+                    description={`هل أنت متأكد من حذف مشروع "${project.name}"؟ سيتم حذف جميع البيانات المرتبطة.`}
+                    onConfirm={handleDeleteProject}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
