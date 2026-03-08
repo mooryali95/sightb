@@ -64,5 +64,5 @@ export function useRole() {
     );
   };
 
-  return { roles, isAdmin, canEdit, hasAccess, loading };
+  return { roles, isOwner, isAdmin, canEdit, hasAccess, loading };
 }

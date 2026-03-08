@@ -76,6 +76,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Prevent deleting owners (only another owner can delete an owner)
+    const { data: targetIsOwner } = await supabase
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", targetUserId)
+      .eq("role", "owner")
+      .eq("scope_type", "system")
+      .limit(1);
+
+    if (targetIsOwner && targetIsOwner.length > 0) {
+      // Check if caller is also an owner
+      const { data: callerIsOwner } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("role", "owner")
+        .eq("scope_type", "system")
+        .limit(1);
+
+      if (!callerIsOwner || callerIsOwner.length === 0) {
+        return new Response(JSON.stringify({ error: "لا يمكن حذف حساب المالك" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Delete roles, invites, profile, then auth user
     await supabase.from("user_roles").delete().eq("user_id", targetUserId);
     await supabase.from("trusted_devices").delete().eq("user_id", targetUserId);
