@@ -306,7 +306,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                     </Select>
                   </div>
                 )}
-                <Button onClick={handleAdd} className="w-full">إضافة</Button>
+                <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
               </div>
             </DialogContent>
           </Dialog>
