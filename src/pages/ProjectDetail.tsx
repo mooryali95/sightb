@@ -51,7 +51,25 @@ export default function ProjectDetail() {
 
   useEffect(() => { loadAll(); }, []);
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0 });
+
   const project = projects.find((p) => p.id === id);
+
+  useEffect(() => {
+    if (project) {
+      setEditForm({
+        name: project.name,
+        contractValue: project.contractValue,
+        durationMonths: project.durationMonths,
+        description: project.description || '',
+        retentionPercent: project.retentionPercent || 0,
+        managementReserve: project.managementReserve || 0,
+        percentComplete: project.percentComplete || 0,
+      });
+    }
+  }, [project?.id]);
+
   if (!project) {
     return (
       <AppLayout>
