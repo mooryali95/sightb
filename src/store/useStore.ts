@@ -394,6 +394,7 @@ export const useStore = create<AppState>()((set, get) => ({
     if (e.month !== undefined) updates.month = e.month;
     if (e.responsible !== undefined) updates.responsible = e.responsible;
     if (e.notes !== undefined) updates.notes = e.notes;
+    if (e.budgetItemId !== undefined) updates.budget_item_id = e.budgetItemId;
     const { error } = await supabase.from('expenses').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...e } : x)) }));

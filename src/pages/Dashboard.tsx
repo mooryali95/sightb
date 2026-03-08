@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
-import { getPortfolioSummary, getHealthScore } from '@/lib/portfolio';
+import { getPortfolioSummary, getCompanySummary, getHealthScore } from '@/lib/portfolio';
 import {
   PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ProjectStatus,
   HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS,
@@ -12,7 +12,7 @@ import {
 import {
   Building2, FolderKanban, Briefcase, TrendingUp, Plus,
   ArrowLeft, DollarSign, Filter, Search, X, Archive, ArchiveRestore,
-  AlertTriangle, ShieldAlert, Trash2,
+  AlertTriangle, ShieldAlert, Trash2, Camera, GitCompare,
 } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis,
 } from 'recharts';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect } from 'react';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 import { useRole } from '@/hooks/useRole';
+import { supabase } from '@/integrations/supabase/client';
 
 const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)'];
 
@@ -38,7 +39,7 @@ const stagger = {
 };
 
 export default function Dashboard() {
-  const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, loading, loadAll, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
+  const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, loadSnapshots, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
   const navigate = useNavigate();
   const { isAdmin, canEdit } = useRole();
 
@@ -381,6 +382,105 @@ export default function Dashboard() {
                 </motion.div>
               );
             })()}
+
+            {/* Health Matrix */}
+            {(() => {
+              const healthData = filteredProjects.map(p => {
+                const pExp = expenses.filter(e => e.projectId === p.id);
+                const pBud = budgetItems.filter(b => b.projectId === p.id);
+                const pRev = revenues.filter(r => r.projectId === p.id);
+                const pCO = changeOrders.filter(co => co.projectId === p.id);
+                const s = getProjectSummary(p, pBud, pExp, pRev, pCO);
+                return {
+                  name: p.name,
+                  x: Math.round(s.spendRate),
+                  y: p.percentComplete,
+                  z: s.effectiveContractValue,
+                  fill: p.percentComplete >= s.spendRate ? 'hsl(160, 60%, 42%)' :
+                        p.percentComplete >= s.spendRate * 0.7 ? 'hsl(38, 92%, 50%)' : 'hsl(0, 72%, 51%)',
+                };
+              }).filter(d => d.x > 0 || d.y > 0);
+              if (healthData.length < 2) return null;
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.33 }}
+                  className="stat-card mb-8"
+                >
+                  <h3 className="text-sm font-semibold mb-1">مصفوفة صحة المشاريع</h3>
+                  <p className="text-xs text-muted-foreground mb-4">المحور الأفقي: نسبة الصرف — المحور الرأسي: نسبة الإنجاز</p>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis type="number" dataKey="x" name="نسبة الصرف" unit="%" domain={[0, 'auto']} />
+                      <YAxis type="number" dataKey="y" name="نسبة الإنجاز" unit="%" domain={[0, 100]} />
+                      <ZAxis type="number" dataKey="z" range={[60, 400]} />
+                      <Tooltip
+                        cursor={{ strokeDasharray: '3 3' }}
+                        content={({ payload }) => {
+                          if (!payload?.length) return null;
+                          const d = payload[0].payload;
+                          return (
+                            <div className="p-2 rounded-lg border border-border bg-card text-xs shadow-lg">
+                              <p className="font-semibold">{d.name}</p>
+                              <p>الصرف: {d.x}% · الإنجاز: {d.y}%</p>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Scatter data={healthData}>
+                        {healthData.map((entry, i) => (
+                          <Cell key={i} fill={entry.fill} />
+                        ))}
+                      </Scatter>
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </motion.div>
+              );
+            })()}
+
+            {/* Snapshot & Comparison Controls */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.335 }}
+              className="flex gap-2 mb-8"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={async () => {
+                  const now = new Date();
+                  const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                  let count = 0;
+                  for (const p of projects) {
+                    const pBud = budgetItems.filter(b => b.projectId === p.id);
+                    const pExp = expenses.filter(e => e.projectId === p.id);
+                    const pRev = revenues.filter(r => r.projectId === p.id);
+                    const pCO = changeOrders.filter(co => co.projectId === p.id);
+                    const s = getProjectSummary(p, pBud, pExp, pRev, pCO);
+                    await saveSnapshot({ entityType: 'project', entityId: p.id, period, snapshotDate: now.toISOString(), metrics: s as any });
+                    count++;
+                  }
+                  for (const port of portfolios) {
+                    const ps = getPortfolioSummary(port, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks);
+                    await saveSnapshot({ entityType: 'portfolio', entityId: port.id, period, snapshotDate: now.toISOString(), metrics: ps as any });
+                    count++;
+                  }
+                  for (const comp of companies) {
+                    const cs = getCompanySummary(comp, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts);
+                    await saveSnapshot({ entityType: 'company', entityId: comp.id, period, snapshotDate: now.toISOString(), metrics: cs as any });
+                    count++;
+                  }
+                  toast.success(`تم حفظ ${count} لقطة للفترة ${period}`);
+                }}
+              >
+                <Camera className="w-3.5 h-3.5" />
+                حفظ لقطة الشهر الحالي
+              </Button>
+            </motion.div>
 
             {/* Projects Needing Attention */}
             {(() => {

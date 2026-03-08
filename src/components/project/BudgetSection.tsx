@@ -22,10 +22,11 @@ interface BudgetSectionProps {
   resources: Resource[];
   contractValue: number;
   currency: string;
+  managementReserve?: number;
 }
 
-export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency }: BudgetSectionProps) {
-  const { addBudgetItem, deleteBudgetItem, updateBudgetItem } = useStore();
+export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency, managementReserve = 0 }: BudgetSectionProps) {
+  const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
@@ -312,7 +313,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           </Dialog>
         </div>
 
-        {unlinkedByCategory.size > 0 && (
+      {unlinkedByCategory.size > 0 && (
           <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5">
             <p className="text-sm font-medium text-destructive flex items-center gap-2">⚠️ مصروفات غير مربوطة ببنود الموازنة</p>
             <ul className="mt-1 text-xs text-destructive/80 space-y-0.5">
@@ -320,6 +321,25 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                 <li key={cat}>{EXPENSE_CATEGORY_LABELS[cat as ExpenseCategory]}: {formatCurrency(total)}</li>
               ))}
             </ul>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 gap-1.5 text-xs"
+              onClick={async () => {
+                let linked = 0;
+                for (const exp of unlinkedExpenses) {
+                  const match = budgetItems.find((b: any) => b.category === exp.category && b.projectId === exp.projectId);
+                  if (match) {
+                    await updateExpense(exp.id, { budgetItemId: match.id });
+                    linked++;
+                  }
+                }
+                if (linked > 0) toast.success(`تم ربط ${linked} مصروف تلقائياً`);
+                else toast.info('لم يتم العثور على بنود مطابقة');
+              }}
+            >
+              ربط تلقائي حسب الفئة
+            </Button>
           </div>
         )}
 
@@ -387,6 +407,46 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           </div>
         )}
       </div>
+
+      {/* Reserves Analysis */}
+      {budgetItems.length > 0 && (
+        <div className="stat-card">
+          <h3 className="text-sm font-semibold mb-4">تحليل الاحتياطيات</h3>
+          {(() => {
+            const contingencyPlanned = budgetItems.filter((b: any) => b.category === 'contingency').reduce((s: number, b: any) => s + b.plannedAmount, 0);
+            const contingencyActual = expenses.filter((e: any) => e.category === 'contingency').reduce((s: number, e: any) => s + e.amount, 0);
+            const contingencyRemaining = contingencyPlanned - contingencyActual;
+            const budgetWithoutReserve = totalPlanned - contingencyPlanned;
+
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">الموازنة بدون احتياطي</p>
+                  <p className="text-sm font-mono font-bold mt-1">{formatCurrency(budgetWithoutReserve)}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">احتياطي الطوارئ (مخطط)</p>
+                  <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contingencyPlanned)}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">احتياطي الطوارئ (مصروف)</p>
+                  <p className="text-sm font-mono font-bold mt-1 text-destructive">{formatCurrency(contingencyActual)}</p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">المتبقي من الاحتياطي</p>
+                  <p className={`text-sm font-mono font-bold mt-1 ${contingencyRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                    {formatCurrency(contingencyRemaining)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                  <p className="text-xs text-muted-foreground">الاحتياطي الإداري</p>
+                  <p className="text-sm font-mono font-bold mt-1">{formatCurrency(managementReserve)}</p>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }

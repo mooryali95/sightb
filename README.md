@@ -1,73 +1,72 @@
-# Welcome to your Lovable project
+# رؤية — SightB
 
-## Project info
+نظام إدارة محافظ ومشاريع مالية متكامل، مصمم لتتبع الميزانيات والمصروفات والإيرادات وتحليل الأداء المالي وفق معايير PMI.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## التقنيات المستخدمة
 
-## How can I edit this code?
+- **React 18** + **TypeScript** + **Vite** — واجهة أمامية سريعة
+- **Tailwind CSS** + **shadcn/ui** — تصميم متجاوب وعصري
+- **Supabase** (Lovable Cloud) — قاعدة بيانات، مصادقة، تخزين ملفات
+- **Zustand** — إدارة الحالة
+- **Recharts** — رسوم بيانية تفاعلية
+- **Framer Motion** — حركات انتقالية
+- **jsPDF + xlsx** — تصدير التقارير
 
-There are several ways of editing your application.
+## التشغيل المحلي
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+```bash
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## هيكل الملفات
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+src/
+├── components/         # مكونات الواجهة
+│   ├── project/        # مكونات صفحة المشروع
+│   └── ui/             # مكونات shadcn/ui
+├── hooks/              # React hooks مخصصة
+├── lib/                # منطق الأعمال والحسابات المالية
+│   ├── finance.ts      # EVM, Cash Flow, Project Summary
+│   ├── portfolio.ts    # تلخيص المحافظ والشركات
+│   └── export.ts       # تصدير Excel و PDF
+├── pages/              # صفحات التطبيق
+├── store/              # إدارة الحالة (Zustand)
+├── types/              # أنواع TypeScript
+└── integrations/       # تكامل مع الخدمات الخارجية
+```
 
-**Use GitHub Codespaces**
+## كيفية إضافة مشروع
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. **إنشاء شركة** — من لوحة التحكم (يتطلب صلاحية Admin)
+2. **إنشاء محفظة** — داخل صفحة الشركة (اختياري)
+3. **إنشاء مشروع** — من صفحة الشركة أو المحفظة
+4. **إضافة الموارد البشرية** — من تبويب "الموارد" في صفحة المشروع
+5. **إضافة بنود الموازنة** — من تبويب "الموازنة"
+6. **إنشاء خط أساس** — من تبويب "خط الأساس" (Baseline)
+7. **تسجيل المصروفات** — من تبويب "المصروفات"
+8. **تسجيل الإيرادات** — من تبويب "الإيرادات"
 
-## What technologies are used for this project?
+## الصلاحيات
 
-This project is built with:
+| الدور | الوصف |
+|-------|-------|
+| **Admin** | إدارة كاملة: إنشاء/حذف الشركات، إدارة المستخدمين، جميع العمليات |
+| **Editor** | تعديل البيانات ضمن النطاق المحدد (شركة أو مشروع) |
+| **Viewer** | عرض البيانات فقط ضمن النطاق المحدد |
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- الصلاحيات مقيدة بالنطاق: المحرر على شركة "أ" لا يستطيع تعديل شركة "ب"
+- الحذف (شركات/مشاريع/محافظ) متاح للأدمن فقط
+- كل صلاحية محمية على مستوى قاعدة البيانات (RLS) والواجهة معاً
 
-## How can I deploy this project?
+## المقاييس المالية (PMI EVM)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- **PV** (القيمة المخططة) — من خط الأساس
+- **EV** (القيمة المكتسبة) — نسبة الإنجاز × BAC
+- **AC** (التكلفة الفعلية) — إجمالي المصروفات
+- **CPI/SPI** — مؤشرات أداء التكلفة والجدول
+- **EAC** (التقدير عند الإنجاز) — ثلاثة سيناريوهات: نموذجي، استثنائي، مرجّح
+- **TCPI** — مؤشر الأداء المطلوب للإنجاز
