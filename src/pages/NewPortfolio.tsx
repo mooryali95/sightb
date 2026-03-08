@@ -63,7 +63,7 @@ export default function NewPortfolio() {
             <Select value={companyId} onValueChange={setCompanyId}>
               <SelectTrigger><SelectValue placeholder="اختر الشركة" /></SelectTrigger>
               <SelectContent>
-                {companies.map((c) => (
+                {editableCompanies.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
