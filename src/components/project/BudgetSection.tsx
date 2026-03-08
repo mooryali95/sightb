@@ -22,6 +22,7 @@ interface BudgetSectionProps {
   resources: Resource[];
   contractValue: number;
   currency: string;
+  managementReserve?: number;
 }
 
 export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency }: BudgetSectionProps) {
