@@ -328,7 +328,8 @@ export default function CompanyDetail() {
                   <Button onClick={handleAddIndirectCost} className="w-full">إضافة</Button>
                 </div>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            )}
           </div>
 
           {compIndirectCosts.length > 0 ? (
