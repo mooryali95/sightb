@@ -24,7 +24,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, DollarSign, TrendingUp, AlertTriangle, Plus,
   FolderKanban, ArrowLeft, Briefcase, FileSpreadsheet, Pencil, Trash2,
-  Archive,
+  Archive, ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
