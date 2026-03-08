@@ -1,0 +1,4 @@
+ALTER TABLE public.baseline_items
+  ADD COLUMN IF NOT EXISTS start_month INTEGER,
+  ADD COLUMN IF NOT EXISTS end_month INTEGER,
+  ADD COLUMN IF NOT EXISTS cost_type TEXT NOT NULL DEFAULT 'fixed';
