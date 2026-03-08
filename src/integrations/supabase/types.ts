@@ -123,35 +123,47 @@ export type Database = {
       budget_items: {
         Row: {
           category: string
+          cost_class: string
+          cost_type: string
           created_at: string
           description: string
+          end_month: number | null
           id: string
           month: number | null
           planned_amount: number
           project_id: string
           resource_id: string | null
+          start_month: number | null
           user_id: string
         }
         Insert: {
           category: string
+          cost_class?: string
+          cost_type?: string
           created_at?: string
           description: string
+          end_month?: number | null
           id?: string
           month?: number | null
           planned_amount?: number
           project_id: string
           resource_id?: string | null
+          start_month?: number | null
           user_id: string
         }
         Update: {
           category?: string
+          cost_class?: string
+          cost_type?: string
           created_at?: string
           description?: string
+          end_month?: number | null
           id?: string
           month?: number | null
           planned_amount?: number
           project_id?: string
           resource_id?: string | null
+          start_month?: number | null
           user_id?: string
         }
         Relationships: [
@@ -167,6 +179,59 @@ export type Database = {
             columns: ["resource_id"]
             isOneToOne: false
             referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      change_orders: {
+        Row: {
+          amount_impact: number
+          approved_by: string | null
+          approved_date: string | null
+          change_type: string
+          created_at: string
+          description: string
+          duration_impact: number
+          id: string
+          project_id: string
+          requested_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_impact?: number
+          approved_by?: string | null
+          approved_date?: string | null
+          change_type?: string
+          created_at?: string
+          description: string
+          duration_impact?: number
+          id?: string
+          project_id: string
+          requested_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_impact?: number
+          approved_by?: string | null
+          approved_date?: string | null
+          change_type?: string
+          created_at?: string
+          description?: string
+          duration_impact?: number
+          id?: string
+          project_id?: string
+          requested_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -370,6 +435,75 @@ export type Database = {
           },
         ]
       }
+      milestones: {
+        Row: {
+          actual_end: string | null
+          actual_start: string | null
+          created_at: string
+          description: string | null
+          id: string
+          linked_revenue_id: string | null
+          name: string
+          percent_complete: number
+          planned_end: string | null
+          planned_start: string | null
+          project_id: string
+          sort_order: number
+          status: string
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_start?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          linked_revenue_id?: string | null
+          name: string
+          percent_complete?: number
+          planned_end?: string | null
+          planned_start?: string | null
+          project_id: string
+          sort_order?: number
+          status?: string
+          user_id: string
+          weight?: number
+        }
+        Update: {
+          actual_end?: string | null
+          actual_start?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          linked_revenue_id?: string | null
+          name?: string
+          percent_complete?: number
+          planned_end?: string | null
+          planned_start?: string | null
+          project_id?: string
+          sort_order?: number
+          status?: string
+          user_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_linked_revenue_id_fkey"
+            columns: ["linked_revenue_id"]
+            isOneToOne: false
+            referencedRelation: "revenues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portfolios: {
         Row: {
           company_id: string
@@ -433,6 +567,7 @@ export type Database = {
         Row: {
           client_logo: string | null
           company_id: string
+          contract_type: string
           contract_value: number
           created_at: string
           currency: string
@@ -440,9 +575,12 @@ export type Database = {
           duration_months: number
           end_date: string | null
           id: string
+          management_reserve: number
           name: string
+          percent_complete: number
           portfolio_id: string | null
           resource_count: number
+          retention_percent: number
           start_date: string | null
           status: string
           user_id: string
@@ -450,6 +588,7 @@ export type Database = {
         Insert: {
           client_logo?: string | null
           company_id: string
+          contract_type?: string
           contract_value?: number
           created_at?: string
           currency?: string
@@ -457,9 +596,12 @@ export type Database = {
           duration_months?: number
           end_date?: string | null
           id?: string
+          management_reserve?: number
           name: string
+          percent_complete?: number
           portfolio_id?: string | null
           resource_count?: number
+          retention_percent?: number
           start_date?: string | null
           status?: string
           user_id: string
@@ -467,6 +609,7 @@ export type Database = {
         Update: {
           client_logo?: string | null
           company_id?: string
+          contract_type?: string
           contract_value?: number
           created_at?: string
           currency?: string
@@ -474,9 +617,12 @@ export type Database = {
           duration_months?: number
           end_date?: string | null
           id?: string
+          management_reserve?: number
           name?: string
+          percent_complete?: number
           portfolio_id?: string | null
           resource_count?: number
+          retention_percent?: number
           start_date?: string | null
           status?: string
           user_id?: string
@@ -539,32 +685,47 @@ export type Database = {
       revenues: {
         Row: {
           amount: number
+          collection_date: string | null
           created_at: string
           date: string
           description: string
           id: string
+          invoice_date: string | null
+          invoice_number: string | null
           month: number
           project_id: string
+          revenue_type: string
+          status: string
           user_id: string
         }
         Insert: {
           amount?: number
+          collection_date?: string | null
           created_at?: string
           date: string
           description: string
           id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
           month?: number
           project_id: string
+          revenue_type?: string
+          status?: string
           user_id: string
         }
         Update: {
           amount?: number
+          collection_date?: string | null
           created_at?: string
           date?: string
           description?: string
           id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
           month?: number
           project_id?: string
+          revenue_type?: string
+          status?: string
           user_id?: string
         }
         Relationships: [
