@@ -313,7 +313,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           </Dialog>
         </div>
 
-        {unlinkedByCategory.size > 0 && (
+      {unlinkedByCategory.size > 0 && (
           <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5">
             <p className="text-sm font-medium text-destructive flex items-center gap-2">⚠️ مصروفات غير مربوطة ببنود الموازنة</p>
             <ul className="mt-1 text-xs text-destructive/80 space-y-0.5">
@@ -321,6 +321,25 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                 <li key={cat}>{EXPENSE_CATEGORY_LABELS[cat as ExpenseCategory]}: {formatCurrency(total)}</li>
               ))}
             </ul>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 gap-1.5 text-xs"
+              onClick={async () => {
+                let linked = 0;
+                for (const exp of unlinkedExpenses) {
+                  const match = budgetItems.find((b: any) => b.category === exp.category && b.projectId === exp.projectId);
+                  if (match) {
+                    await updateExpense(exp.id, { budgetItemId: match.id });
+                    linked++;
+                  }
+                }
+                if (linked > 0) toast.success(`تم ربط ${linked} مصروف تلقائياً`);
+                else toast.info('لم يتم العثور على بنود مطابقة');
+              }}
+            >
+              ربط تلقائي حسب الفئة
+            </Button>
           </div>
         )}
 
