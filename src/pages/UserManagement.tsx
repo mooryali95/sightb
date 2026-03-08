@@ -528,7 +528,7 @@ export default function UserManagement() {
                             <span className="text-xs text-muted-foreground">
                               — {getScopeName(role.scopeType, role.scopeId)}
                             </span>
-                            {!(role.role === 'admin' && role.userId === user?.id) && (
+                            {!(role.role === 'owner') && !(role.role === 'admin' && role.userId === user?.id) && (
                               <ConfirmDeleteDialog
                                 title="إزالة الصلاحية"
                                 description="هل تريد إزالة هذه الصلاحية من المستخدم؟"
