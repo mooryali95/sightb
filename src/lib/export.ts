@@ -135,63 +135,338 @@ export function exportToExcel(data: ExportBudgetData) {
   XLSX.writeFile(wb, `${data.projectName}_تقرير_مالي.xlsx`);
 }
 
+// ======== PDF Helpers ========
+const PDF_COLORS = {
+  primary: [45, 80, 120] as [number, number, number],
+  accent: [180, 150, 80] as [number, number, number],
+  light: [245, 245, 245] as [number, number, number],
+  dark: [40, 40, 40] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  success: [46, 125, 50] as [number, number, number],
+  danger: [198, 40, 40] as [number, number, number],
+};
+
+function addPdfFooter(doc: jsPDF) {
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(...PDF_COLORS.dark);
+    doc.text(`${i} / ${pageCount}`, pageW / 2, pageH - 6, { align: 'center' });
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, pageH - 6);
+    doc.text('Powered by BASSERH', pageW - 14, pageH - 6, { align: 'right' });
+  }
+}
+
+function addCoverPage(doc: jsPDF, title: string, subtitle?: string) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  // Background accent bar
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(0, 0, pageW, 80, 'F');
+
+  // Title
+  doc.setTextColor(...PDF_COLORS.white);
+  doc.setFontSize(28);
+  doc.text(title, pageW / 2, 40, { align: 'center' });
+
+  if (subtitle) {
+    doc.setFontSize(14);
+    doc.text(subtitle, pageW / 2, 55, { align: 'center' });
+  }
+
+  // Date
+  doc.setFontSize(11);
+  doc.setTextColor(...PDF_COLORS.dark);
+  doc.text(`Report Date: ${new Date().toLocaleDateString('en-GB')}`, pageW / 2, 100, { align: 'center' });
+
+  // Decorative line
+  doc.setDrawColor(...PDF_COLORS.accent);
+  doc.setLineWidth(1.5);
+  doc.line(pageW * 0.3, 110, pageW * 0.7, 110);
+}
+
+function addSectionTitle(doc: jsPDF, title: string, y: number): number {
+  const pageW = doc.internal.pageSize.getWidth();
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(14, y - 5, pageW - 28, 9, 'F');
+  doc.setFontSize(11);
+  doc.setTextColor(...PDF_COLORS.white);
+  doc.text(title, pageW / 2, y + 1, { align: 'center' });
+  return y + 12;
+}
+
 export function exportToPDF(data: ExportBudgetData) {
   const doc = new jsPDF({ orientation: 'landscape', putOnlyUsedFonts: true });
-
-  doc.setFontSize(16);
-  doc.text(data.projectName, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
 
   const approvedCOImpact = (data.changeOrders || []).filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
   const effectiveContract = data.contractValue + approvedCOImpact;
   const plannedProfit = data.plannedProfit !== undefined ? data.plannedProfit : effectiveContract - data.totalPlanned;
+  const collectedRevenue = data.revenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
 
-  doc.setFontSize(10);
-  doc.text(
-    `Contract: ${formatCurrency(effectiveContract)}  |  Planned: ${formatCurrency(data.totalPlanned)}  |  Actual: ${formatCurrency(data.totalActual)}  |  Planned Profit: ${formatCurrency(plannedProfit)}`,
-    doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' }
-  );
+  // Cover page
+  addCoverPage(doc, data.projectName, 'Financial Report');
+
+  // Executive Summary page
+  doc.addPage();
+  let y = addSectionTitle(doc, 'Executive Summary', 20);
+
+  doc.autoTable({
+    startY: y,
+    head: [['Metric', 'Value']],
+    body: [
+      ['Original Contract Value', formatCurrency(data.contractValue, data.currency)],
+      ['Approved Change Orders', formatCurrency(approvedCOImpact, data.currency)],
+      ['Effective Contract Value', formatCurrency(effectiveContract, data.currency)],
+      ['Total Budget (Planned)', formatCurrency(data.totalPlanned, data.currency)],
+      ['Total Expenses (Actual)', formatCurrency(data.totalActual, data.currency)],
+      ['Budget Remaining', formatCurrency(data.totalPlanned - data.totalActual, data.currency)],
+      ['Planned Profit', formatCurrency(plannedProfit, data.currency)],
+      ['Planned Profit Margin', data.totalPlanned > 0 ? `${((plannedProfit / effectiveContract) * 100).toFixed(1)}%` : 'N/A'],
+      ['Collected Revenue', formatCurrency(collectedRevenue, data.currency)],
+      ['Budget Utilization', data.totalPlanned > 0 ? `${((data.totalActual / data.totalPlanned) * 100).toFixed(1)}%` : '0%'],
+    ],
+    theme: 'striped',
+    headStyles: { fillColor: PDF_COLORS.primary, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    alternateRowStyles: { fillColor: PDF_COLORS.light },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+  });
 
   // Budget table
+  doc.addPage();
+  y = addSectionTitle(doc, 'Budget Breakdown', 20);
+
   doc.autoTable({
-    startY: 30,
+    startY: y,
     head: [['Category', 'Description', 'Planned', 'Actual', 'Remaining', 'Spend %']],
     body: data.budgetItems.map(b => [
       EXPENSE_CATEGORY_LABELS[b.category as ExpenseCategory] || b.category,
       b.description,
-      formatCurrency(b.plannedAmount),
-      formatCurrency(b.actual),
-      formatCurrency(b.plannedAmount - b.actual),
+      formatCurrency(b.plannedAmount, data.currency),
+      formatCurrency(b.actual, data.currency),
+      formatCurrency(b.plannedAmount - b.actual, data.currency),
       b.plannedAmount > 0 ? `${((b.actual / b.plannedAmount) * 100).toFixed(1)}%` : '0%',
     ]),
-    foot: [['Total', '', formatCurrency(data.totalPlanned), formatCurrency(data.totalActual), formatCurrency(data.totalPlanned - data.totalActual), data.totalPlanned > 0 ? `${((data.totalActual / data.totalPlanned) * 100).toFixed(1)}%` : '0%']],
+    foot: [['TOTAL', '', formatCurrency(data.totalPlanned, data.currency), formatCurrency(data.totalActual, data.currency), formatCurrency(data.totalPlanned - data.totalActual, data.currency), data.totalPlanned > 0 ? `${((data.totalActual / data.totalPlanned) * 100).toFixed(1)}%` : '0%']],
     theme: 'grid',
-    headStyles: { fillColor: [180, 150, 80] },
-    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-    styles: { fontSize: 8 },
+    headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
+    footStyles: { fillColor: PDF_COLORS.light, textColor: PDF_COLORS.dark, fontStyle: 'bold', fontSize: 8 },
+    styles: { fontSize: 7.5 },
   });
 
-  // Expenses table on new page
+  // Expenses table
   doc.addPage();
-  doc.setFontSize(12);
-  doc.text('Expenses', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+  y = addSectionTitle(doc, 'Expenses Detail', 20);
 
   doc.autoTable({
-    startY: 22,
+    startY: y,
     head: [['Category', 'Description', 'Amount', 'Month', 'Date', 'Responsible']],
     body: data.expenses.map(e => [
       EXPENSE_CATEGORY_LABELS[e.category as ExpenseCategory] || e.category,
       e.description,
-      formatCurrency(e.amount),
+      formatCurrency(e.amount, data.currency),
       `Month ${e.month}`,
       e.date,
       e.responsible || '-',
     ]),
     theme: 'grid',
-    headStyles: { fillColor: [180, 150, 80] },
-    styles: { fontSize: 8 },
+    headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
+    styles: { fontSize: 7.5 },
   });
 
+  // Revenue table
+  if (data.revenues.length > 0) {
+    doc.addPage();
+    y = addSectionTitle(doc, 'Revenue', 20);
+
+    doc.autoTable({
+      startY: y,
+      head: [['Description', 'Amount', 'Type', 'Status', 'Invoice #', 'Date']],
+      body: data.revenues.map(r => [
+        r.description,
+        formatCurrency(r.amount, data.currency),
+        r.revenueType || 'milestone',
+        r.status || 'collected',
+        r.invoiceNumber || '-',
+        r.date,
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
+      styles: { fontSize: 7.5 },
+    });
+  }
+
+  // Change Orders table
+  if (data.changeOrders && data.changeOrders.length > 0) {
+    doc.addPage();
+    y = addSectionTitle(doc, 'Change Orders', 20);
+
+    doc.autoTable({
+      startY: y,
+      head: [['Description', 'Type', 'Amount Impact', 'Duration Impact', 'Status', 'Requested By']],
+      body: data.changeOrders.map(co => [
+        co.description,
+        CHANGE_ORDER_TYPE_LABELS[co.changeType] || co.changeType,
+        formatCurrency(co.amountImpact, data.currency),
+        `${co.durationImpact} months`,
+        CHANGE_ORDER_STATUS_LABELS[co.status] || co.status,
+        co.requestedBy || '-',
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
+      styles: { fontSize: 7.5 },
+    });
+  }
+
+  addPdfFooter(doc);
   doc.save(`${data.projectName}_Financial_Report.pdf`);
+}
+
+// ======== Portfolio PDF Export ========
+export function exportPortfolioToPDF(data: PortfolioExportData) {
+  const doc = new jsPDF({ orientation: 'landscape', putOnlyUsedFonts: true });
+
+  addCoverPage(doc, data.portfolioName, 'Portfolio Report');
+
+  // Executive Summary
+  doc.addPage();
+  let y = addSectionTitle(doc, 'Portfolio Summary', 20);
+
+  doc.autoTable({
+    startY: y,
+    head: [['Metric', 'Value']],
+    body: [
+      ['Total Projects', String(data.summary.projectCount)],
+      ['Total Contract Value', formatCurrency(data.summary.totalEffectiveValue)],
+      ['Total Planned', formatCurrency(data.summary.totalPlanned)],
+      ['Total Expenses', formatCurrency(data.summary.totalActual)],
+      ['Planned Profit', formatCurrency(data.summary.aggregatePlannedProfit)],
+      ['Planned Margin', `${data.summary.aggregatePlannedMargin.toFixed(1)}%`],
+      ['Weighted Completion', `${data.summary.weightedPercentComplete.toFixed(1)}%`],
+      ['Average CPI', data.summary.averageCPI.toFixed(2)],
+      ['At-Risk Projects', String(data.summary.atRiskProjects)],
+      ['Open Risks', String(data.summary.openRisks)],
+      ['Financial Exposure', formatCurrency(data.summary.totalFinancialExposure)],
+      ['Revenue Achievement', `${data.summary.revenueAchievement.toFixed(1)}%`],
+      ['Health Status', data.summary.healthStatus],
+    ],
+    theme: 'striped',
+    headStyles: { fillColor: PDF_COLORS.primary, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    alternateRowStyles: { fillColor: PDF_COLORS.light },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+  });
+
+  // Projects comparison
+  doc.addPage();
+  y = addSectionTitle(doc, 'Projects Comparison', 20);
+
+  doc.autoTable({
+    startY: y,
+    head: [['Project', 'Contract Value', 'Planned', 'Actual', 'Planned Profit', 'Completion %', 'Health']],
+    body: data.projectSummaries.map(p => [
+      p.name, formatCurrency(p.contractValue), formatCurrency(p.planned),
+      formatCurrency(p.actual), formatCurrency(p.plannedProfit),
+      `${p.percentComplete}%`, p.health,
+    ]),
+    theme: 'grid',
+    headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
+    styles: { fontSize: 7.5 },
+  });
+
+  // Risks
+  if (data.risks.length > 0) {
+    doc.addPage();
+    y = addSectionTitle(doc, 'Risks', 20);
+
+    doc.autoTable({
+      startY: y,
+      head: [['Title', 'Project', 'Probability', 'Impact', 'Financial Impact', 'Status']],
+      body: data.risks.map(r => [
+        r.title, r.project, r.probability, r.impact,
+        formatCurrency(r.financialImpact), r.status,
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
+      styles: { fontSize: 7.5 },
+    });
+  }
+
+  addPdfFooter(doc);
+  doc.save(`${data.portfolioName}_Portfolio_Report.pdf`);
+}
+
+// ======== Company PDF Export ========
+export function exportCompanyToPDF(data: CompanyExportData) {
+  const doc = new jsPDF({ orientation: 'landscape', putOnlyUsedFonts: true });
+
+  addCoverPage(doc, data.companyName, 'Company Report');
+
+  // Executive Summary
+  doc.addPage();
+  let y = addSectionTitle(doc, 'Company Summary', 20);
+
+  doc.autoTable({
+    startY: y,
+    head: [['Metric', 'Value']],
+    body: [
+      ['Total Contract Value', formatCurrency(data.summary.totalContractValue)],
+      ['Total Expenses', formatCurrency(data.summary.totalActual)],
+      ['Planned Profit', formatCurrency(data.summary.totalPlannedProfit)],
+      ['Indirect Costs', formatCurrency(data.summary.totalIndirectCosts)],
+      ['Net Profit (After Indirect)', formatCurrency(data.summary.netProfitAfterIndirect)],
+      ['Net Profit Margin', `${data.summary.netProfitMargin.toFixed(1)}%`],
+      ['At-Risk Projects', String(data.summary.totalAtRiskProjects)],
+    ],
+    theme: 'striped',
+    headStyles: { fillColor: PDF_COLORS.primary, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    alternateRowStyles: { fillColor: PDF_COLORS.light },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+  });
+
+  // Portfolio performance
+  if (data.portfolioSummaries.length > 0) {
+    doc.addPage();
+    y = addSectionTitle(doc, 'Portfolio Performance', 20);
+
+    doc.autoTable({
+      startY: y,
+      head: [['Portfolio', 'Projects', 'Contracts', 'Expenses', 'Profit', 'Completion %', 'Health']],
+      body: data.portfolioSummaries.map(p => [
+        p.name, String(p.projects), formatCurrency(p.contractValue),
+        formatCurrency(p.actual), formatCurrency(p.profit),
+        `${p.completion.toFixed(1)}%`, p.health,
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
+      styles: { fontSize: 7.5 },
+    });
+  }
+
+  // Indirect costs
+  if (data.indirectCosts.length > 0) {
+    doc.addPage();
+    y = addSectionTitle(doc, 'Indirect Costs', 20);
+
+    doc.autoTable({
+      startY: y,
+      head: [['Category', 'Description', 'Amount', 'Month']],
+      body: data.indirectCosts.map(ic => [
+        ic.category, ic.description, formatCurrency(ic.amount), `Month ${ic.month}`,
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
+      styles: { fontSize: 7.5 },
+    });
+  }
+
+  addPdfFooter(doc);
+  doc.save(`${data.companyName}_Company_Report.pdf`);
 }
 
 // ======== Portfolio Export ========
