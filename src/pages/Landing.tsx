@@ -28,6 +28,7 @@ const features = [
   },
 ];
 
+export default function Landing() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
