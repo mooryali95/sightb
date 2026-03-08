@@ -255,6 +255,18 @@ export default function Dashboard() {
                     </SelectContent>
                   </Select>
 
+                  <Select value={timePeriod} onValueChange={setTimePeriod}>
+                    <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+                      <SelectValue placeholder="كل الفترات" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل الفترات</SelectItem>
+                      <SelectItem value="month">هذا الشهر</SelectItem>
+                      <SelectItem value="quarter">هذا الربع</SelectItem>
+                      <SelectItem value="year">هذه السنة</SelectItem>
+                    </SelectContent>
+                  </Select>
+
                   <AnimatePresence>
                     {hasActiveFilters && (
                       <motion.div
