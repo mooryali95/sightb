@@ -120,7 +120,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const array = new Uint32Array(1);
+      crypto.getRandomValues(array);
+      const otpCode = String(100000 + (array[0] % 900000));
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       await supabase
