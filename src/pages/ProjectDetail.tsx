@@ -154,28 +154,31 @@ export default function ProjectDetail() {
               {company && (<><span>←</span><button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-primary transition-colors">{company.name}</button></>)}
               {portfolio && (<><span>←</span><button onClick={() => navigate(`/portfolio/${portfolio.id}`)} className="hover:text-primary transition-colors">{portfolio.name}</button></>)}
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center">
-                  <Briefcase className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-xl font-bold">{project.name}</h1>
-                    <Badge className={`text-[10px] ${PROJECT_STATUS_COLORS[project.status]}`}>
-                      {PROJECT_STATUS_LABELS[project.status]}
-                    </Badge>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <Briefcase className="w-5 h-5 md:w-6 md:h-6 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
-                    {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
-                  </p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-base md:text-xl font-bold truncate">{project.name}</h1>
+                      <Badge className={`text-[10px] shrink-0 ${PROJECT_STATUS_COLORS[project.status]}`}>
+                        {PROJECT_STATUS_LABELS[project.status]}
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">
+                      {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
+                      {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              {/* Action buttons - separate row on mobile */}
+              <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <Dialog open={editOpen} onOpenChange={setEditOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8">
                       <Pencil className="w-4 h-4" />
                     </Button>
                   </DialogTrigger>
@@ -227,7 +230,7 @@ export default function ProjectDetail() {
                     toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
                   }}
                 >
-                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                  <SelectTrigger className="w-[120px] md:w-[140px] h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -242,7 +245,7 @@ export default function ProjectDetail() {
                     description={`هل أنت متأكد من حذف مشروع "${project.name}"؟ سيتم حذف جميع البيانات المرتبطة.`}
                     onConfirm={handleDeleteProject}
                     trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     }
