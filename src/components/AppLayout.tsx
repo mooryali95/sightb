@@ -22,7 +22,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Sidebar - hidden on mobile unless open */}
       <div className={cn(
-        'fixed md:relative z-30 md:z-auto transition-transform duration-300',
+        'fixed right-0 top-0 bottom-0 md:relative z-30 md:z-auto transition-transform duration-300 ease-out',
         mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
       )}>
         <AppSidebar
