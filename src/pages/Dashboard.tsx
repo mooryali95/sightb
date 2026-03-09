@@ -27,6 +27,9 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears, isWithinInterval, parseISO } from 'date-fns';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 import { useRole } from '@/hooks/useRole';

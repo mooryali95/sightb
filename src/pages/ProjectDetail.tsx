@@ -310,19 +310,19 @@ export default function ProjectDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="milestones" className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-5 sm:grid-cols-${tabCount} max-w-6xl`}>
-            <TabsTrigger value="milestones" className="gap-1 text-xs"><MilestoneIcon className="w-3.5 h-3.5" /><span className="hidden sm:inline">المراحل</span></TabsTrigger>
-            <TabsTrigger value="resources" className="gap-1 text-xs"><Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموارد</span></TabsTrigger>
-            <TabsTrigger value="budget" className="gap-1 text-xs"><PiggyBank className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموازنة</span></TabsTrigger>
-            <TabsTrigger value="baseline" className="gap-1 text-xs"><Baseline className="w-3.5 h-3.5" /><span className="hidden sm:inline">خط الأساس</span></TabsTrigger>
-            <TabsTrigger value="expenses" className="gap-1 text-xs"><Receipt className="w-3.5 h-3.5" /><span className="hidden sm:inline">المصروفات</span></TabsTrigger>
-            <TabsTrigger value="custody" className="gap-1 text-xs"><Wallet className="w-3.5 h-3.5" /><span className="hidden sm:inline">العهد</span></TabsTrigger>
-            <TabsTrigger value="revenue" className="gap-1 text-xs"><DollarSign className="w-3.5 h-3.5" /><span className="hidden sm:inline">الإيرادات</span></TabsTrigger>
-            <TabsTrigger value="changeorders" className="gap-1 text-xs"><FileEdit className="w-3.5 h-3.5" /><span className="hidden sm:inline">أوامر التغيير</span></TabsTrigger>
-            <TabsTrigger value="risks" className="gap-1 text-xs"><AlertTriangle className="w-3.5 h-3.5" /><span className="hidden sm:inline">المخاطر</span></TabsTrigger>
-            <TabsTrigger value="charts" className="gap-1 text-xs"><BarChart3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">التحليلات</span></TabsTrigger>
+          <TabsList className="flex w-full max-w-6xl overflow-x-auto scrollbar-hide h-auto p-1">
+            <TabsTrigger value="milestones" className="gap-1 text-xs shrink-0"><MilestoneIcon className="w-3.5 h-3.5" /><span className="hidden sm:inline">المراحل</span></TabsTrigger>
+            <TabsTrigger value="resources" className="gap-1 text-xs shrink-0"><Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموارد</span></TabsTrigger>
+            <TabsTrigger value="budget" className="gap-1 text-xs shrink-0"><PiggyBank className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموازنة</span></TabsTrigger>
+            <TabsTrigger value="baseline" className="gap-1 text-xs shrink-0"><Baseline className="w-3.5 h-3.5" /><span className="hidden sm:inline">خط الأساس</span></TabsTrigger>
+            <TabsTrigger value="expenses" className="gap-1 text-xs shrink-0"><Receipt className="w-3.5 h-3.5" /><span className="hidden sm:inline">المصروفات</span></TabsTrigger>
+            <TabsTrigger value="custody" className="gap-1 text-xs shrink-0"><Wallet className="w-3.5 h-3.5" /><span className="hidden sm:inline">العهد</span></TabsTrigger>
+            <TabsTrigger value="revenue" className="gap-1 text-xs shrink-0"><DollarSign className="w-3.5 h-3.5" /><span className="hidden sm:inline">الإيرادات</span></TabsTrigger>
+            <TabsTrigger value="changeorders" className="gap-1 text-xs shrink-0"><FileEdit className="w-3.5 h-3.5" /><span className="hidden sm:inline">أوامر التغيير</span></TabsTrigger>
+            <TabsTrigger value="risks" className="gap-1 text-xs shrink-0"><AlertTriangle className="w-3.5 h-3.5" /><span className="hidden sm:inline">المخاطر</span></TabsTrigger>
+            <TabsTrigger value="charts" className="gap-1 text-xs shrink-0"><BarChart3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">التحليلات</span></TabsTrigger>
             {isAdmin && (
-              <TabsTrigger value="auditlog" className="gap-1 text-xs"><History className="w-3.5 h-3.5" /><span className="hidden sm:inline">السجل</span></TabsTrigger>
+              <TabsTrigger value="auditlog" className="gap-1 text-xs shrink-0"><History className="w-3.5 h-3.5" /><span className="hidden sm:inline">السجل</span></TabsTrigger>
             )}
           </TabsList>
 

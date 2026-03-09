@@ -118,7 +118,7 @@
 
 @layer components {
   .stat-card {
-    @apply bg-card rounded-xl p-5 border border-border;
+    @apply bg-card rounded-xl p-3 md:p-5 border border-border;
     box-shadow: var(--shadow-card);
     transition: all 0.2s ease;
   }
@@ -129,7 +129,34 @@
 
   .stat-value {
     font-family: var(--font-mono);
-    @apply text-2xl font-medium tracking-tight;
+    @apply text-lg md:text-2xl font-medium tracking-tight;
+  }
+
+  /* Scrollbar hide utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile table improvements */
+  .data-table-wrapper {
+    @apply relative overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .data-table-wrapper::after {
+    content: '';
+    @apply absolute top-0 left-0 bottom-0 w-6 pointer-events-none;
+    background: linear-gradient(to left, hsl(var(--background) / 0.8), transparent);
+  }
+
+  @media (max-width: 767px) {
+    .data-table td,
+    .data-table th {
+      @apply px-2 py-2 text-xs;
+    }
   }
 
   .profit-text {
