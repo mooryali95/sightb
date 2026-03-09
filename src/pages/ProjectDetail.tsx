@@ -280,34 +280,36 @@ export default function ProjectDetail() {
 
         <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} />
 
-        {/* Export Buttons */}
-        <div className="flex gap-2 mb-4">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-            exportToExcel({
-              projectName: project.name, contractValue: summary.effectiveContractValue,
-              budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-              expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-              totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-            });
-            toast.success('تم تصدير التقرير إلى Excel');
-          }}>
-            <FileSpreadsheet className="w-3.5 h-3.5" />تصدير Excel
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-            exportToPDF({
-              projectName: project.name, contractValue: summary.effectiveContractValue,
-              budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-              expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-              totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-              plannedProfit: summary.plannedProfit,
-            });
-            toast.success('تم تصدير التقرير إلى PDF');
-          }}>
-            <FileText className="w-3.5 h-3.5" />تصدير PDF
-          </Button>
-        </div>
+        {/* Export Buttons - only for admin/editor */}
+        {(isAdmin || canEdit('project', project.id)) && (
+          <div className="flex gap-2 mb-4">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+              exportToExcel({
+                projectName: project.name, contractValue: summary.effectiveContractValue,
+                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+              });
+              toast.success('تم تصدير التقرير إلى Excel');
+            }}>
+              <FileSpreadsheet className="w-3.5 h-3.5" />تصدير Excel
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+              exportToPDF({
+                projectName: project.name, contractValue: summary.effectiveContractValue,
+                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                plannedProfit: summary.plannedProfit,
+              });
+              toast.success('تم تصدير التقرير إلى PDF');
+            }}>
+              <FileText className="w-3.5 h-3.5" />تصدير PDF
+            </Button>
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs defaultValue="milestones" className="space-y-6">
