@@ -219,75 +219,89 @@ export default function Dashboard() {
               transition={{ duration: 0.4, delay: 0.1 }}
               className="stat-card mb-6"
             >
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="flex items-center gap-2 text-muted-foreground shrink-0">
-                  <Filter className="w-4 h-4" />
-                  <span className="text-xs font-semibold">تصفية</span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 w-full">
-                  <div className="relative flex-1 min-w-0">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="بحث بالاسم..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pr-9 h-9 text-sm"
-                    />
-                  </div>
-
-                  <Select value={filterCompany} onValueChange={setFilterCompany}>
-                    <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
-                      <SelectValue placeholder="جميع الشركات" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">جميع الشركات</SelectItem>
-                      {companies.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-full sm:w-[150px] h-9 text-sm">
-                      <SelectValue placeholder="جميع الحالات" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">جميع الحالات</SelectItem>
-                      {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={timePeriod} onValueChange={setTimePeriod}>
-                    <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
-                      <SelectValue placeholder="كل الفترات" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">كل الفترات</SelectItem>
-                      <SelectItem value="month">هذا الشهر</SelectItem>
-                      <SelectItem value="quarter">هذا الربع</SelectItem>
-                      <SelectItem value="year">هذه السنة</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <AnimatePresence>
+              <Collapsible open={!isMobile || filtersOpen} onOpenChange={setFiltersOpen}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-muted-foreground shrink-0">
+                    <Filter className="w-4 h-4" />
+                    <span className="text-xs font-semibold">تصفية</span>
                     {hasActiveFilters && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                      >
-                        <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-xs shrink-0">
-                          <X className="w-3.5 h-3.5" />
-                          مسح
-                        </Button>
-                      </motion.div>
+                      <span className="text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">
+                        {[filterCompany !== 'all', filterStatus !== 'all', searchQuery !== '', timePeriod !== 'all'].filter(Boolean).length}
+                      </span>
                     )}
-                  </AnimatePresence>
+                  </div>
+                  <CollapsibleTrigger asChild className="md:hidden">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                      <ChevronDown className={cn("w-4 h-4 transition-transform", filtersOpen && "rotate-180")} />
+                    </Button>
+                  </CollapsibleTrigger>
                 </div>
-              </div>
+
+                <CollapsibleContent className="mt-3 md:!block">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
+                    <div className="relative flex-1 min-w-0">
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="بحث بالاسم..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pr-9 h-9 text-sm"
+                      />
+                    </div>
+
+                    <Select value={filterCompany} onValueChange={setFilterCompany}>
+                      <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
+                        <SelectValue placeholder="جميع الشركات" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">جميع الشركات</SelectItem>
+                        {companies.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-full sm:w-[150px] h-9 text-sm">
+                        <SelectValue placeholder="جميع الحالات" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">جميع الحالات</SelectItem>
+                        {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+                          <SelectItem key={key} value={key}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={timePeriod} onValueChange={setTimePeriod}>
+                      <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+                        <SelectValue placeholder="كل الفترات" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">كل الفترات</SelectItem>
+                        <SelectItem value="month">هذا الشهر</SelectItem>
+                        <SelectItem value="quarter">هذا الربع</SelectItem>
+                        <SelectItem value="year">هذه السنة</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <AnimatePresence>
+                      {hasActiveFilters && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                        >
+                          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-xs shrink-0">
+                            <X className="w-3.5 h-3.5" />
+                            مسح
+                          </Button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
 
               {hasActiveFilters && (
                 <motion.p
