@@ -47,8 +47,10 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isAdmin, canEdit } = useRole();
 
+  const isMobile = useIsMobile();
   const activeCompanies = useMemo(() => companies.filter(c => c.status !== 'archived'), [companies]);
   const archivedCompanies = useMemo(() => companies.filter(c => c.status === 'archived'), [companies]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     loadAll();
