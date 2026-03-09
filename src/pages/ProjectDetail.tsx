@@ -38,6 +38,7 @@ import { AuditLogSection } from '@/components/project/AuditLogSection';
 import { MilestonesSection } from '@/components/project/MilestonesSection';
 import { ChangeOrdersSection } from '@/components/project/ChangeOrdersSection';
 import { RisksSection } from '@/components/project/RisksSection';
+import { WhatIfSection } from '@/components/project/WhatIfSection';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
