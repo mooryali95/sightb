@@ -324,6 +324,7 @@ export default function ProjectDetail() {
             <TabsTrigger value="changeorders" className="gap-1 text-xs shrink-0"><FileEdit className="w-3.5 h-3.5" /><span className="hidden sm:inline">أوامر التغيير</span></TabsTrigger>
             <TabsTrigger value="risks" className="gap-1 text-xs shrink-0"><AlertTriangle className="w-3.5 h-3.5" /><span className="hidden sm:inline">المخاطر</span></TabsTrigger>
             <TabsTrigger value="charts" className="gap-1 text-xs shrink-0"><BarChart3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">التحليلات</span></TabsTrigger>
+            <TabsTrigger value="whatif" className="gap-1 text-xs shrink-0"><FlaskConical className="w-3.5 h-3.5" /><span className="hidden sm:inline">ما-إذا</span></TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="auditlog" className="gap-1 text-xs shrink-0"><History className="w-3.5 h-3.5" /><span className="hidden sm:inline">السجل</span></TabsTrigger>
             )}
