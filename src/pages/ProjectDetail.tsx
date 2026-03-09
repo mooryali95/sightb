@@ -19,7 +19,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
-  Briefcase, Pencil,
+  Briefcase, Pencil, FlaskConical,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
@@ -38,11 +38,12 @@ import { AuditLogSection } from '@/components/project/AuditLogSection';
 import { MilestonesSection } from '@/components/project/MilestonesSection';
 import { ChangeOrdersSection } from '@/components/project/ChangeOrdersSection';
 import { RisksSection } from '@/components/project/RisksSection';
+import { WhatIfSection } from '@/components/project/WhatIfSection';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useRole();
+  const { isAdmin, canEdit } = useRole();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks,
@@ -279,34 +280,36 @@ export default function ProjectDetail() {
 
         <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} />
 
-        {/* Export Buttons */}
-        <div className="flex gap-2 mb-4">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-            exportToExcel({
-              projectName: project.name, contractValue: summary.effectiveContractValue,
-              budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-              expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-              totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-            });
-            toast.success('تم تصدير التقرير إلى Excel');
-          }}>
-            <FileSpreadsheet className="w-3.5 h-3.5" />تصدير Excel
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-            exportToPDF({
-              projectName: project.name, contractValue: summary.effectiveContractValue,
-              budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-              expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-              totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-              plannedProfit: summary.plannedProfit,
-            });
-            toast.success('تم تصدير التقرير إلى PDF');
-          }}>
-            <FileText className="w-3.5 h-3.5" />تصدير PDF
-          </Button>
-        </div>
+        {/* Export Buttons - only for admin/editor */}
+        {(isAdmin || canEdit('project', project.id)) && (
+          <div className="flex gap-2 mb-4">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+              exportToExcel({
+                projectName: project.name, contractValue: summary.effectiveContractValue,
+                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+              });
+              toast.success('تم تصدير التقرير إلى Excel');
+            }}>
+              <FileSpreadsheet className="w-3.5 h-3.5" />تصدير Excel
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+              exportToPDF({
+                projectName: project.name, contractValue: summary.effectiveContractValue,
+                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                plannedProfit: summary.plannedProfit,
+              });
+              toast.success('تم تصدير التقرير إلى PDF');
+            }}>
+              <FileText className="w-3.5 h-3.5" />تصدير PDF
+            </Button>
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs defaultValue="milestones" className="space-y-6">
@@ -321,6 +324,7 @@ export default function ProjectDetail() {
             <TabsTrigger value="changeorders" className="gap-1 text-xs shrink-0"><FileEdit className="w-3.5 h-3.5" /><span className="hidden sm:inline">أوامر التغيير</span></TabsTrigger>
             <TabsTrigger value="risks" className="gap-1 text-xs shrink-0"><AlertTriangle className="w-3.5 h-3.5" /><span className="hidden sm:inline">المخاطر</span></TabsTrigger>
             <TabsTrigger value="charts" className="gap-1 text-xs shrink-0"><BarChart3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">التحليلات</span></TabsTrigger>
+            <TabsTrigger value="whatif" className="gap-1 text-xs shrink-0"><FlaskConical className="w-3.5 h-3.5" /><span className="hidden sm:inline">ما-إذا</span></TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="auditlog" className="gap-1 text-xs shrink-0"><History className="w-3.5 h-3.5" /><span className="hidden sm:inline">السجل</span></TabsTrigger>
             )}
@@ -336,6 +340,17 @@ export default function ProjectDetail() {
           <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} /></TabsContent>
           <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} /></TabsContent>
           <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} /></TabsContent>
+          <TabsContent value="whatif">
+            <WhatIfSection
+              contractValue={summary.effectiveContractValue}
+              totalPlanned={summary.totalPlanned}
+              totalActual={summary.totalActual}
+              totalRevenue={totalAllRevenue}
+              durationMonths={project.durationMonths}
+              percentComplete={project.percentComplete}
+              currency={project.currency}
+            />
+          </TabsContent>
           {isAdmin && (
             <TabsContent value="auditlog"><AuditLogSection projectId={project.id} /></TabsContent>
           )}
