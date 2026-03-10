@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { GlobalSearch } from '@/components/GlobalSearch';
 import { SmartNotifications } from '@/components/SmartNotifications';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
