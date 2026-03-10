@@ -48,6 +48,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             <GlobalSearch />
             <SmartNotifications />
+            <ThemeToggle />
           </div>
         </div>
 
