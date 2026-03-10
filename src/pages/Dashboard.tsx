@@ -54,7 +54,9 @@ export default function Dashboard() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
-    loadAll();
+    loadAll().catch(() => {
+      toast.error('حدث خطأ أثناء تحميل البيانات. يرجى إعادة تحميل الصفحة.');
+    });
   }, []);
 
   const [filterCompany, setFilterCompany] = useState<string>('all');
