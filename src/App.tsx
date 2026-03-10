@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ThemeProvider } from "next-themes";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import NewCompany from "./pages/NewCompany";
@@ -25,29 +26,31 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
-            <Routes>
-              <Route path="/welcome" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
-              <Route path="/companies/new" element={<ProtectedRoute><NewCompany /></ProtectedRoute>} />
-              <Route path="/company/:id" element={<ProtectedRoute><ErrorBoundary><CompanyDetail /></ErrorBoundary></ProtectedRoute>} />
-              <Route path="/portfolio/new" element={<ProtectedRoute><NewPortfolio /></ProtectedRoute>} />
-              <Route path="/portfolio/:id" element={<ProtectedRoute><ErrorBoundary><PortfolioDetail /></ErrorBoundary></ProtectedRoute>} />
-              <Route path="/project/new" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
-              <Route path="/project/:id" element={<ProtectedRoute><ErrorBoundary><ProjectDetail /></ErrorBoundary></ProtectedRoute>} />
-              <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-              <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </ErrorBoundary>
-        </BrowserRouter>
-      </TooltipProvider>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
+              <Routes>
+                <Route path="/welcome" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
+                <Route path="/companies/new" element={<ProtectedRoute><NewCompany /></ProtectedRoute>} />
+                <Route path="/company/:id" element={<ProtectedRoute><ErrorBoundary><CompanyDetail /></ErrorBoundary></ProtectedRoute>} />
+                <Route path="/portfolio/new" element={<ProtectedRoute><NewPortfolio /></ProtectedRoute>} />
+                <Route path="/portfolio/:id" element={<ProtectedRoute><ErrorBoundary><PortfolioDetail /></ErrorBoundary></ProtectedRoute>} />
+                <Route path="/project/new" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
+                <Route path="/project/:id" element={<ProtectedRoute><ErrorBoundary><ProjectDetail /></ErrorBoundary></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ErrorBoundary>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
