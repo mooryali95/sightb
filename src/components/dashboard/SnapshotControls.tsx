@@ -16,7 +16,7 @@ interface SnapshotControlsProps {
   milestones: any[];
   risks: any[];
   indirectCosts: any[];
-  saveSnapshot: (data: any) => Promise<void>;
+  saveSnapshot: (data: any) => Promise<any>;
 }
 
 export function SnapshotControls({
