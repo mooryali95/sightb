@@ -146,9 +146,6 @@ export default function ProjectDetail() {
     }
   };
 
-  // ---- Grouped Tabs ----
-  type TabGroup = 'planning' | 'finance' | 'tracking' | 'management';
-
 
 
   const pendingChangeOrders = pChangeOrders.filter(co => co.status === 'proposed').length;
