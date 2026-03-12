@@ -5,6 +5,7 @@ import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown } from '@/lib/finance';
+import { cn } from '@/lib/utils';
 import { EXPENSE_CATEGORY_LABELS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ExpenseCategory, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +58,9 @@ export default function ProjectDetail() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0 });
+  type TabGroup = 'planning' | 'finance' | 'tracking' | 'management';
+  const [activeGroup, setActiveGroup] = useState<TabGroup>('planning');
+  const [activeTab, setActiveTab] = useState('milestones');
 
   const project = projects.find((p) => p.id === id);
 
@@ -142,7 +146,47 @@ export default function ProjectDetail() {
     }
   };
 
-  const tabCount = isAdmin ? 11 : 10;
+
+
+  const pendingChangeOrders = pChangeOrders.filter(co => co.status === 'proposed').length;
+  const openHighRisks = pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.probability === 'high')).length;
+  const managementBadge = pendingChangeOrders + openHighRisks;
+
+  const tabGroups: { key: TabGroup; label: string; icon: typeof MilestoneIcon; defaultTab: string; badge: number }[] = [
+    { key: 'planning', label: 'التخطيط', icon: MilestoneIcon, defaultTab: 'milestones', badge: 0 },
+    { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'budget', badge: 0 },
+    { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: 0 },
+    { key: 'management', label: 'الإدارة', icon: FileEdit, defaultTab: 'changeorders', badge: managementBadge },
+  ];
+
+  const subTabs: Record<TabGroup, { value: string; label: string; icon: typeof MilestoneIcon }[]> = {
+    planning: [
+      { value: 'milestones', label: 'المراحل', icon: MilestoneIcon },
+      { value: 'resources', label: 'الموارد', icon: Users },
+    ],
+    finance: [
+      { value: 'budget', label: 'الموازنة', icon: PiggyBank },
+      { value: 'baseline', label: 'خط الأساس', icon: Baseline },
+      { value: 'expenses', label: 'المصروفات', icon: Receipt },
+      { value: 'custody', label: 'العهد', icon: Wallet },
+      { value: 'revenue', label: 'الإيرادات', icon: DollarSign },
+    ],
+    tracking: [
+      { value: 'charts', label: 'التحليلات', icon: BarChart3 },
+      { value: 'whatif', label: 'ما-إذا', icon: FlaskConical },
+    ],
+    management: [
+      { value: 'changeorders', label: 'أوامر التغيير', icon: FileEdit },
+      { value: 'risks', label: 'المخاطر', icon: AlertTriangle },
+      ...(isAdmin ? [{ value: 'auditlog', label: 'السجل', icon: History }] : []),
+    ],
+  };
+
+  const handleGroupChange = (group: TabGroup) => {
+    setActiveGroup(group);
+    const firstTab = subTabs[group][0]?.value;
+    if (firstTab) setActiveTab(firstTab);
+  };
 
   return (
     <AppLayout>
@@ -312,22 +356,46 @@ export default function ProjectDetail() {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="milestones" className="space-y-6">
-          <TabsList className="flex w-full max-w-6xl overflow-x-auto scrollbar-hide h-auto p-1">
-            <TabsTrigger value="milestones" className="gap-1 text-xs shrink-0"><MilestoneIcon className="w-3.5 h-3.5" /><span className="hidden sm:inline">المراحل</span></TabsTrigger>
-            <TabsTrigger value="resources" className="gap-1 text-xs shrink-0"><Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموارد</span></TabsTrigger>
-            <TabsTrigger value="budget" className="gap-1 text-xs shrink-0"><PiggyBank className="w-3.5 h-3.5" /><span className="hidden sm:inline">الموازنة</span></TabsTrigger>
-            <TabsTrigger value="baseline" className="gap-1 text-xs shrink-0"><Baseline className="w-3.5 h-3.5" /><span className="hidden sm:inline">خط الأساس</span></TabsTrigger>
-            <TabsTrigger value="expenses" className="gap-1 text-xs shrink-0"><Receipt className="w-3.5 h-3.5" /><span className="hidden sm:inline">المصروفات</span></TabsTrigger>
-            <TabsTrigger value="custody" className="gap-1 text-xs shrink-0"><Wallet className="w-3.5 h-3.5" /><span className="hidden sm:inline">العهد</span></TabsTrigger>
-            <TabsTrigger value="revenue" className="gap-1 text-xs shrink-0"><DollarSign className="w-3.5 h-3.5" /><span className="hidden sm:inline">الإيرادات</span></TabsTrigger>
-            <TabsTrigger value="changeorders" className="gap-1 text-xs shrink-0"><FileEdit className="w-3.5 h-3.5" /><span className="hidden sm:inline">أوامر التغيير</span></TabsTrigger>
-            <TabsTrigger value="risks" className="gap-1 text-xs shrink-0"><AlertTriangle className="w-3.5 h-3.5" /><span className="hidden sm:inline">المخاطر</span></TabsTrigger>
-            <TabsTrigger value="charts" className="gap-1 text-xs shrink-0"><BarChart3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">التحليلات</span></TabsTrigger>
-            <TabsTrigger value="whatif" className="gap-1 text-xs shrink-0"><FlaskConical className="w-3.5 h-3.5" /><span className="hidden sm:inline">ما-إذا</span></TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="auditlog" className="gap-1 text-xs shrink-0"><History className="w-3.5 h-3.5" /><span className="hidden sm:inline">السجل</span></TabsTrigger>
-            )}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          {/* Group Selector */}
+          <div className="flex gap-1.5 p-1 bg-muted/50 rounded-lg mb-1 overflow-x-auto scrollbar-hide">
+            {tabGroups.map((group) => {
+              const Icon = group.icon;
+              const isActive = activeGroup === group.key;
+              return (
+                <button
+                  key={group.key}
+                  type="button"
+                  onClick={() => handleGroupChange(group.key)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all shrink-0 relative',
+                    isActive
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{group.label}</span>
+                  {group.badge > 0 && (
+                    <span className="absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                      {group.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {/* Sub-tabs */}
+          <TabsList className="flex w-full overflow-x-auto scrollbar-hide h-auto p-1">
+            {subTabs[activeGroup].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger key={tab.value} value={tab.value} className="gap-1 text-xs shrink-0">
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
           <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} /></TabsContent>
