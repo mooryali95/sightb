@@ -58,6 +58,9 @@ export default function ProjectDetail() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0 });
+  type TabGroup = 'planning' | 'finance' | 'tracking' | 'management';
+  const [activeGroup, setActiveGroup] = useState<TabGroup>('planning');
+  const [activeTab, setActiveTab] = useState('milestones');
 
   const project = projects.find((p) => p.id === id);
 
