@@ -143,7 +143,50 @@ export default function ProjectDetail() {
     }
   };
 
-  const tabCount = isAdmin ? 11 : 10;
+  // ---- Grouped Tabs ----
+  type TabGroup = 'planning' | 'finance' | 'tracking' | 'management';
+  const [activeGroup, setActiveGroup] = useState<TabGroup>('planning');
+  const [activeTab, setActiveTab] = useState('milestones');
+
+  const pendingChangeOrders = pChangeOrders.filter(co => co.status === 'proposed').length;
+  const openHighRisks = pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.probability === 'high')).length;
+  const managementBadge = pendingChangeOrders + openHighRisks;
+
+  const tabGroups: { key: TabGroup; label: string; icon: typeof MilestoneIcon; defaultTab: string; badge: number }[] = [
+    { key: 'planning', label: 'التخطيط', icon: MilestoneIcon, defaultTab: 'milestones', badge: 0 },
+    { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'budget', badge: 0 },
+    { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: 0 },
+    { key: 'management', label: 'الإدارة', icon: FileEdit, defaultTab: 'changeorders', badge: managementBadge },
+  ];
+
+  const subTabs: Record<TabGroup, { value: string; label: string; icon: typeof MilestoneIcon }[]> = {
+    planning: [
+      { value: 'milestones', label: 'المراحل', icon: MilestoneIcon },
+      { value: 'resources', label: 'الموارد', icon: Users },
+    ],
+    finance: [
+      { value: 'budget', label: 'الموازنة', icon: PiggyBank },
+      { value: 'baseline', label: 'خط الأساس', icon: Baseline },
+      { value: 'expenses', label: 'المصروفات', icon: Receipt },
+      { value: 'custody', label: 'العهد', icon: Wallet },
+      { value: 'revenue', label: 'الإيرادات', icon: DollarSign },
+    ],
+    tracking: [
+      { value: 'charts', label: 'التحليلات', icon: BarChart3 },
+      { value: 'whatif', label: 'ما-إذا', icon: FlaskConical },
+    ],
+    management: [
+      { value: 'changeorders', label: 'أوامر التغيير', icon: FileEdit },
+      { value: 'risks', label: 'المخاطر', icon: AlertTriangle },
+      ...(isAdmin ? [{ value: 'auditlog', label: 'السجل', icon: History }] : []),
+    ],
+  };
+
+  const handleGroupChange = (group: TabGroup) => {
+    setActiveGroup(group);
+    const firstTab = subTabs[group][0]?.value;
+    if (firstTab) setActiveTab(firstTab);
+  };
 
   return (
     <AppLayout>
