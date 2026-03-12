@@ -148,8 +148,8 @@ export default function ProjectDetail() {
 
   // ---- Grouped Tabs ----
   type TabGroup = 'planning' | 'finance' | 'tracking' | 'management';
-  const [activeGroup, setActiveGroup] = useState<TabGroup>('planning');
-  const [activeTab, setActiveTab] = useState('milestones');
+
+
 
   const pendingChangeOrders = pChangeOrders.filter(co => co.status === 'proposed').length;
   const openHighRisks = pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.probability === 'high')).length;
