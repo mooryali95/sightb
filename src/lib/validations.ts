@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import { normalizeDigits } from './utils';
+
+/** Zod transform: normalizes Eastern-Arabic digits in string fields */
+const normalizedString = (schema: z.ZodString) =>
+  schema.transform((val) => normalizeDigits(val));
 
 // Company form
 export const companySchema = z.object({

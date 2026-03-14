@@ -137,6 +137,6 @@ function UpdateDiff({ oldData, newData }: { oldData: any; newData: any }) {
 
 function formatValue(val: any): string {
   if (val === null || val === undefined) return '—';
-  if (typeof val === 'number') return val.toLocaleString('ar-SA');
+  if (typeof val === 'number') return val.toLocaleString('en-US');
   return String(val);
 }
