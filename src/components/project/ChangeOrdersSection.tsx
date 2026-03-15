@@ -162,7 +162,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
                 <th>الأثر المالي</th>
                 <th>أثر المدة</th>
                 <th>الحالة</th>
-                <th></th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
