@@ -354,6 +354,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                       <td className="hidden md:table-cell text-xs">{resource?.name || '—'}</td>
                       <td className="text-muted-foreground hidden lg:table-cell">{exp.responsible || '—'}</td>
                       <td className="hidden lg:table-cell text-xs">{custody?.resourceName || '—'}</td>
+                      {!readOnly && (
                       <td>
                         <div className="flex items-center gap-0.5">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(exp)}>
