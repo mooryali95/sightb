@@ -109,6 +109,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
           <h3 className="text-sm font-semibold">الإيرادات</h3>
           <p className="text-xs text-muted-foreground">الإجمالي: {formatCurrency(total)}</p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة إيراد</Button>
@@ -189,6 +190,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Revenue summary */}
