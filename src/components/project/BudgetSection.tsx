@@ -365,7 +365,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                   <th>الفعلي (مربوط)</th>
                   <th className="hidden sm:table-cell">المتبقي</th>
                   <th className="hidden md:table-cell">نسبة الصرف</th>
-                  <th></th>
+                  {!readOnly && <th></th>}
                 </tr>
               </thead>
               <tbody>
