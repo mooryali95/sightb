@@ -75,6 +75,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
           <h3 className="text-sm font-semibold">الموارد البشرية</h3>
           <p className="text-xs text-muted-foreground">{resources.length} مورد · التكلفة الشهرية: {formatCurrency(totalMonthlyCost)}</p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مورد</Button>
@@ -98,6 +99,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {resources.length === 0 ? (
