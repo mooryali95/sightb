@@ -195,6 +195,7 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Table */}
       {risks.length > 0 && (
