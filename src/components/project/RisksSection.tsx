@@ -113,6 +113,7 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
       </div>
 
       {/* Add button */}
+      {!readOnly && (
       <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
         <DialogTrigger asChild>
           <Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة خطر</Button>
