@@ -19,9 +19,10 @@ interface RisksSectionProps {
   projectId?: string;
   portfolioId?: string;
   risks: Risk[];
+  readOnly?: boolean;
 }
 
-export function RisksSection({ projectId, portfolioId, risks }: RisksSectionProps) {
+export function RisksSection({ projectId, portfolioId, risks, readOnly = false }: RisksSectionProps) {
   const { addRisk, updateRisk, deleteRisk } = useStore();
   const [open, setOpen] = useState(false);
   const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
