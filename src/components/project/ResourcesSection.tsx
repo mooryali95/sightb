@@ -15,9 +15,10 @@ interface ResourcesSectionProps {
   resources: Resource[];
   budgetItems?: BudgetItem[];
   expenses?: Expense[];
+  readOnly?: boolean;
 }
 
-export function ResourcesSection({ projectId, resources, budgetItems = [], expenses: propExpenses }: ResourcesSectionProps) {
+export function ResourcesSection({ projectId, resources, budgetItems = [], expenses: propExpenses, readOnly = false }: ResourcesSectionProps) {
   const { addResource, updateResource, deleteResource, expenses: storeExpenses } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
