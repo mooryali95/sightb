@@ -225,6 +225,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
                     onChange={(e) => handlePercentChange(m, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
                     className="w-16 h-7 text-xs text-center"
                     min="0" max="100"
+                    disabled={readOnly}
                   />
                   <span className="text-xs text-muted-foreground">%</span>
                 </div>

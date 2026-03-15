@@ -150,6 +150,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                         {plannedForResource > 0 ? `${variancePct.toFixed(1)}%` : '—'}
                       </td>
                     )}
+                    {!readOnly && (
                     <td>
                       <div className="flex items-center gap-0.5">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
@@ -158,6 +159,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                         <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />
                       </div>
                     </td>
+                    )}
                   </tr>
                 );
               })}

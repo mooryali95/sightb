@@ -223,12 +223,14 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
                   <td className="text-xs text-muted-foreground">{RISK_CATEGORY_LABELS[risk.category]}</td>
                   <td><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${RISK_STATUS_COLORS[risk.status]}`}>{RISK_STATUS_LABELS[risk.status]}</span></td>
                   <td className="hidden sm:table-cell text-xs text-muted-foreground">{risk.owner || '-'}</td>
+                  {!readOnly && (
                   <td>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => openEdit(risk)}>تعديل</Button>
                       <ConfirmDeleteDialog onConfirm={() => handleDelete(risk.id)} title="حذف الخطر" description={`هل أنت متأكد من حذف "${risk.title}"؟`} />
                     </div>
                   </td>
+                  )}
                 </tr>
               ))}
             </tbody>

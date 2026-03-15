@@ -273,6 +273,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   </td>
                   <td>شهر {r.month}</td>
                   <td className="text-muted-foreground text-sm">{r.date}</td>
+                  {!readOnly && (
                   <td>
                     <div className="flex items-center gap-0.5">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
@@ -281,6 +282,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                       <ConfirmDeleteDialog title="حذف الإيراد" description="هل أنت متأكد من حذف هذا الإيراد؟" onConfirm={() => deleteRevenue(r.id)} />
                     </div>
                   </td>
+                  )}
                 </tr>
               ))}
             </tbody>

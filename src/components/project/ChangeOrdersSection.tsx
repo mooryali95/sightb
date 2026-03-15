@@ -179,6 +179,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
                       {CHANGE_ORDER_STATUS_LABELS[co.status]}
                     </span>
                   </td>
+                  {!readOnly && (
                   <td>
                     <div className="flex items-center gap-0.5">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(co)}>
@@ -187,6 +188,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
                       <ConfirmDeleteDialog title="حذف أمر التغيير" description="هل أنت متأكد من حذف أمر التغيير هذا؟" onConfirm={() => deleteChangeOrder(co.id)} />
                     </div>
                   </td>
+                  )}
                 </tr>
               ))}
             </tbody>
