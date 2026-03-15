@@ -63,6 +63,9 @@ export function SnapshotControls({
         <Camera className="w-3.5 h-3.5" />
         حفظ لقطة الشهر الحالي
       </Button>
+      <p className="text-[10px] text-muted-foreground max-w-xs self-center">
+        يحفظ نسخة من جميع المؤشرات المالية الحالية لمقارنتها لاحقاً مع الأشهر القادمة
+      </p>
     </motion.div>
   );
 }

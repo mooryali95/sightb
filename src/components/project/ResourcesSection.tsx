@@ -15,9 +15,10 @@ interface ResourcesSectionProps {
   resources: Resource[];
   budgetItems?: BudgetItem[];
   expenses?: Expense[];
+  readOnly?: boolean;
 }
 
-export function ResourcesSection({ projectId, resources, budgetItems = [], expenses: propExpenses }: ResourcesSectionProps) {
+export function ResourcesSection({ projectId, resources, budgetItems = [], expenses: propExpenses, readOnly = false }: ResourcesSectionProps) {
   const { addResource, updateResource, deleteResource, expenses: storeExpenses } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -74,6 +75,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
           <h3 className="text-sm font-semibold">الموارد البشرية</h3>
           <p className="text-xs text-muted-foreground">{resources.length} مورد · التكلفة الشهرية: {formatCurrency(totalMonthlyCost)}</p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مورد</Button>
@@ -97,6 +99,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {resources.length === 0 ? (
@@ -116,7 +119,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                 <th>إجمالي الصرف</th>
                 {hasBudgetData && <th>الانحراف</th>}
                 {hasBudgetData && <th>نسبة الانحراف</th>}
-                <th></th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -147,6 +150,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                         {plannedForResource > 0 ? `${variancePct.toFixed(1)}%` : '—'}
                       </td>
                     )}
+                    {!readOnly && (
                     <td>
                       <div className="flex items-center gap-0.5">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
@@ -155,6 +159,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                         <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />
                       </div>
                     </td>
+                    )}
                   </tr>
                 );
               })}

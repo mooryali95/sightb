@@ -18,9 +18,10 @@ interface RevenueSectionProps {
   projectId: string;
   revenues: any[];
   durationMonths: number;
+  readOnly?: boolean;
 }
 
-export function RevenueSection({ projectId, revenues, durationMonths }: RevenueSectionProps) {
+export function RevenueSection({ projectId, revenues, durationMonths, readOnly = false }: RevenueSectionProps) {
   const { addRevenue, deleteRevenue, updateRevenue } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -108,6 +109,7 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
           <h3 className="text-sm font-semibold">الإيرادات</h3>
           <p className="text-xs text-muted-foreground">الإجمالي: {formatCurrency(total)}</p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة إيراد</Button>
@@ -188,6 +190,7 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Revenue summary */}
@@ -254,7 +257,7 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
                 <th>الحالة</th>
                 <th>الشهر</th>
                 <th>التاريخ</th>
-                <th></th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -270,6 +273,7 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
                   </td>
                   <td>شهر {r.month}</td>
                   <td className="text-muted-foreground text-sm">{r.date}</td>
+                  {!readOnly && (
                   <td>
                     <div className="flex items-center gap-0.5">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
@@ -278,6 +282,7 @@ export function RevenueSection({ projectId, revenues, durationMonths }: RevenueS
                       <ConfirmDeleteDialog title="حذف الإيراد" description="هل أنت متأكد من حذف هذا الإيراد؟" onConfirm={() => deleteRevenue(r.id)} />
                     </div>
                   </td>
+                  )}
                 </tr>
               ))}
             </tbody>

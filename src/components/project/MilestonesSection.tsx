@@ -19,9 +19,10 @@ interface MilestonesSectionProps {
   projectId: string;
   milestones: Milestone[];
   project: Project;
+  readOnly?: boolean;
 }
 
-export function MilestonesSection({ projectId, milestones, project }: MilestonesSectionProps) {
+export function MilestonesSection({ projectId, milestones, project, readOnly = false }: MilestonesSectionProps) {
   const { addMilestone, updateMilestone, deleteMilestone, updateProject } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -112,6 +113,7 @@ export function MilestonesSection({ projectId, milestones, project }: Milestones
             {totalWeight > 0 && totalWeight !== 1 && ` · إجمالي الأوزان: ${totalWeight.toFixed(2)}`}
           </p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />مرحلة جديدة</Button>
@@ -164,6 +166,7 @@ export function MilestonesSection({ projectId, milestones, project }: Milestones
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Overall progress */}
@@ -201,12 +204,14 @@ export function MilestonesSection({ projectId, milestones, project }: Milestones
                   </span>
                   {m.weight > 0 && <span className="text-[10px] text-muted-foreground">وزن: {m.weight}</span>}
                 </div>
+                {!readOnly && (
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </Button>
                   <ConfirmDeleteDialog title="حذف المرحلة" description="هل أنت متأكد من حذف هذه المرحلة؟" onConfirm={() => deleteMilestone(m.id)} />
                 </div>
+                )}
               </div>
               {m.description && <p className="text-xs text-muted-foreground mb-2">{m.description}</p>}
               <div className="flex items-center gap-3">
@@ -220,6 +225,7 @@ export function MilestonesSection({ projectId, milestones, project }: Milestones
                     onChange={(e) => handlePercentChange(m, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
                     className="w-16 h-7 text-xs text-center"
                     min="0" max="100"
+                    disabled={readOnly}
                   />
                   <span className="text-xs text-muted-foreground">%</span>
                 </div>

@@ -20,9 +20,10 @@ interface ExpensesSectionProps {
   budgetItems: BudgetItem[];
   revenues: any[];
   contractValue: number;
+  readOnly?: boolean;
 }
 
-export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue }: ExpensesSectionProps) {
+export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false }: ExpensesSectionProps) {
   const { addExpense, deleteExpense, updateExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -186,6 +187,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       <div className="stat-card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold">سجل المصروفات</h3>
+          {!readOnly && (
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مصروف</Button>
@@ -286,6 +288,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         {/* Search & Filter Bar */}
@@ -333,7 +336,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                   <th className="hidden md:table-cell">المورد</th>
                   <th className="hidden lg:table-cell">المسؤول</th>
                   <th className="hidden lg:table-cell">العهدة</th>
-                  <th></th>
+                  {!readOnly && <th></th>}
                 </tr>
               </thead>
               <tbody>
@@ -351,6 +354,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                       <td className="hidden md:table-cell text-xs">{resource?.name || '—'}</td>
                       <td className="text-muted-foreground hidden lg:table-cell">{exp.responsible || '—'}</td>
                       <td className="hidden lg:table-cell text-xs">{custody?.resourceName || '—'}</td>
+                      {!readOnly && (
                       <td>
                         <div className="flex items-center gap-0.5">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(exp)}>
@@ -359,6 +363,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                           <ConfirmDeleteDialog title="حذف المصروف" description="هل أنت متأكد من حذف هذا المصروف؟" onConfirm={() => deleteExpense(exp.id)} />
                         </div>
                       </td>
+                      )}
                     </tr>
                   );
                 })}

@@ -23,9 +23,10 @@ interface BudgetSectionProps {
   contractValue: number;
   currency: string;
   managementReserve?: number;
+  readOnly?: boolean;
 }
 
-export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency, managementReserve = 0 }: BudgetSectionProps) {
+export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false }: BudgetSectionProps) {
   const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -227,6 +228,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
               الإجمالي المخطط: {formatCurrency(totalPlanned)} · الفعلي: {formatCurrency(totalActual)} · المتبقي: {formatCurrency(totalPlanned - totalActual)}
             </p>
           </div>
+          {!readOnly && (
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />بند جديد</Button>
@@ -311,9 +313,10 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
-      {unlinkedByCategory.size > 0 && (
+      {!readOnly && unlinkedByCategory.size > 0 && (
           <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5">
             <p className="text-sm font-medium text-destructive flex items-center gap-2">⚠️ مصروفات غير مربوطة ببنود الموازنة</p>
             <ul className="mt-1 text-xs text-destructive/80 space-y-0.5">
@@ -362,7 +365,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                   <th>الفعلي (مربوط)</th>
                   <th className="hidden sm:table-cell">المتبقي</th>
                   <th className="hidden md:table-cell">نسبة الصرف</th>
-                  <th></th>
+                  {!readOnly && <th></th>}
                 </tr>
               </thead>
               <tbody>
@@ -391,6 +394,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                           <span className="text-xs text-muted-foreground">{spentPct.toFixed(0)}%</span>
                         </div>
                       </td>
+                      {!readOnly && (
                       <td>
                         <div className="flex items-center gap-0.5">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
@@ -399,6 +403,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                           <ConfirmDeleteDialog title="حذف بند الموازنة" description="هل أنت متأكد من حذف هذا البند؟" onConfirm={() => deleteBudgetItem(item.id)} />
                         </div>
                       </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -441,6 +446,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                 <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
                   <p className="text-xs text-muted-foreground">الاحتياطي الإداري</p>
                   <p className="text-sm font-mono font-bold mt-1">{formatCurrency(managementReserve)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">محجوز لا يُصرف إلا بموافقة خاصة</p>
                 </div>
               </div>
             );

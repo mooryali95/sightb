@@ -17,9 +17,10 @@ interface ChartsSectionProps {
   expenses?: Expense[];
   totalPlanned?: number;
   durationMonths?: number;
+  budgetItems?: any[];
 }
 
-export function ChartsSection({ pieData, barData, expenses = [], totalPlanned = 0, durationMonths = 0 }: ChartsSectionProps) {
+export function ChartsSection({ pieData, barData, expenses = [], totalPlanned = 0, durationMonths = 0, budgetItems = [] }: ChartsSectionProps) {
   // Cost Trend data
   const hasTrendData = expenses.length > 0 && durationMonths > 0;
   const trendData = hasTrendData ? (() => {

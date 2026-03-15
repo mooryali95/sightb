@@ -46,8 +46,9 @@ const roleIcons: Record<string, any> = { owner: Crown, admin: Shield, editor: Pe
 const scopeLabels: Record<string, string> = { system: 'النظام', company: 'شركة', project: 'مشروع' };
 
 const inviteStatusConfig: Record<string, { label: string; icon: any; className: string }> = {
-  pending: { label: 'في الانتظار', icon: Clock, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  accepted: { label: 'مقبولة', icon: CheckCircle2, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  pending: { label: 'في الانتظار', icon: Clock, className: 'bg-muted text-muted-foreground' },
+  sent: { label: 'تم الإرسال', icon: Mail, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  accepted: { label: 'مقبولة ومسجّل', icon: CheckCircle2, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
 };
 
 export default function UserManagement() {
@@ -205,7 +206,7 @@ export default function UserManagement() {
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('ar-SA', { calendar: 'gregory', year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   // Group invites by email, deduplicated
@@ -287,6 +288,13 @@ export default function UserManagement() {
                   <SelectItem value="admin">أدمن</SelectItem>
                 </SelectContent>
               </Select>
+              {invRole && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {invRole === 'admin' && 'تحكم كامل: إنشاء/تعديل/حذف كل شيء + إدارة المستخدمين + التقارير'}
+                  {invRole === 'editor' && 'تعديل: إضافة/تعديل/حذف البيانات ضمن النطاق المحدد (بدون إدارة المستخدمين)'}
+                  {invRole === 'viewer' && 'مشاهدة فقط: عرض البيانات والتقارير بدون أي تعديل'}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>نطاق الصلاحية</Label>

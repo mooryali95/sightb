@@ -19,9 +19,10 @@ interface RisksSectionProps {
   projectId?: string;
   portfolioId?: string;
   risks: Risk[];
+  readOnly?: boolean;
 }
 
-export function RisksSection({ projectId, portfolioId, risks }: RisksSectionProps) {
+export function RisksSection({ projectId, portfolioId, risks, readOnly = false }: RisksSectionProps) {
   const { addRisk, updateRisk, deleteRisk } = useStore();
   const [open, setOpen] = useState(false);
   const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
@@ -112,6 +113,7 @@ export function RisksSection({ projectId, portfolioId, risks }: RisksSectionProp
       </div>
 
       {/* Add button */}
+      {!readOnly && (
       <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
         <DialogTrigger asChild>
           <Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة خطر</Button>
@@ -193,6 +195,7 @@ export function RisksSection({ projectId, portfolioId, risks }: RisksSectionProp
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Table */}
       {risks.length > 0 && (
@@ -207,7 +210,7 @@ export function RisksSection({ projectId, portfolioId, risks }: RisksSectionProp
                 <th>الفئة</th>
                 <th>الحالة</th>
                 <th className="hidden sm:table-cell">المسؤول</th>
-                <th></th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -220,12 +223,14 @@ export function RisksSection({ projectId, portfolioId, risks }: RisksSectionProp
                   <td className="text-xs text-muted-foreground">{RISK_CATEGORY_LABELS[risk.category]}</td>
                   <td><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${RISK_STATUS_COLORS[risk.status]}`}>{RISK_STATUS_LABELS[risk.status]}</span></td>
                   <td className="hidden sm:table-cell text-xs text-muted-foreground">{risk.owner || '-'}</td>
+                  {!readOnly && (
                   <td>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => openEdit(risk)}>تعديل</Button>
                       <ConfirmDeleteDialog onConfirm={() => handleDelete(risk.id)} title="حذف الخطر" description={`هل أنت متأكد من حذف "${risk.title}"؟`} />
                     </div>
                   </td>
+                  )}
                 </tr>
               ))}
             </tbody>

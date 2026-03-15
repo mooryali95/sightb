@@ -18,9 +18,10 @@ interface ChangeOrdersSectionProps {
   projectId: string;
   changeOrders: ChangeOrder[];
   contractValue: number;
+  readOnly?: boolean;
 }
 
-export function ChangeOrdersSection({ projectId, changeOrders, contractValue }: ChangeOrdersSectionProps) {
+export function ChangeOrdersSection({ projectId, changeOrders, contractValue, readOnly = false }: ChangeOrdersSectionProps) {
   const { addChangeOrder, updateChangeOrder, deleteChangeOrder } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -90,6 +91,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue }: 
             {approvedImpact !== 0 && ` · الأثر: ${approvedImpact > 0 ? '+' : ''}${formatCurrency(approvedImpact)}`}
           </p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />أمر تغيير جديد</Button>
@@ -145,6 +147,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue }: 
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {changeOrders.length === 0 ? (
@@ -159,7 +162,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue }: 
                 <th>الأثر المالي</th>
                 <th>أثر المدة</th>
                 <th>الحالة</th>
-                <th></th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -176,6 +179,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue }: 
                       {CHANGE_ORDER_STATUS_LABELS[co.status]}
                     </span>
                   </td>
+                  {!readOnly && (
                   <td>
                     <div className="flex items-center gap-0.5">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(co)}>
@@ -184,6 +188,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue }: 
                       <ConfirmDeleteDialog title="حذف أمر التغيير" description="هل أنت متأكد من حذف أمر التغيير هذا؟" onConfirm={() => deleteChangeOrder(co.id)} />
                     </div>
                   </td>
+                  )}
                 </tr>
               ))}
             </tbody>

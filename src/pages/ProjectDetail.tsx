@@ -44,7 +44,7 @@ import { WhatIfSection } from '@/components/project/WhatIfSection';
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin, canEdit } = useRole();
+  const { isAdmin, canEdit: canEditRole } = useRole();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks,
@@ -63,6 +63,7 @@ export default function ProjectDetail() {
   const [activeTab, setActiveTab] = useState('milestones');
 
   const project = projects.find((p) => p.id === id);
+  const isReadOnly = project ? !canEditRole('project', project.id) : true;
 
   useEffect(() => {
     if (project) {
@@ -220,6 +221,7 @@ export default function ProjectDetail() {
                 </div>
               </div>
               {/* Action buttons - separate row on mobile */}
+              {!isReadOnly && (
               <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <Dialog open={editOpen} onOpenChange={setEditOpen}>
                   <DialogTrigger asChild>
@@ -297,6 +299,7 @@ export default function ProjectDetail() {
                   />
                 )}
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -325,9 +328,9 @@ export default function ProjectDetail() {
         <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} />
 
         {/* Export Buttons - only for admin/editor */}
-        {(isAdmin || canEdit('project', project.id)) && (
-          <div className="flex gap-2 mb-4">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+        {(isAdmin || canEditRole('project', project.id)) && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1 sm:flex-none min-w-0" onClick={() => {
               exportToExcel({
                 projectName: project.name, contractValue: summary.effectiveContractValue,
                 budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
@@ -337,9 +340,9 @@ export default function ProjectDetail() {
               });
               toast.success('تم تصدير التقرير إلى Excel');
             }}>
-              <FileSpreadsheet className="w-3.5 h-3.5" />تصدير Excel
+              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" /><span className="truncate">Excel</span>
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1 sm:flex-none min-w-0" onClick={() => {
               exportToPDF({
                 projectName: project.name, contractValue: summary.effectiveContractValue,
                 budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
@@ -350,7 +353,7 @@ export default function ProjectDetail() {
               });
               toast.success('تم تصدير التقرير إلى PDF');
             }}>
-              <FileText className="w-3.5 h-3.5" />تصدير PDF
+              <FileText className="w-3.5 h-3.5 shrink-0" /><span className="truncate">PDF</span>
             </Button>
           </div>
         )}
@@ -398,16 +401,16 @@ export default function ProjectDetail() {
             })}
           </TabsList>
 
-          <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} /></TabsContent>
-          <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} /></TabsContent>
-          <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} /></TabsContent>
+          <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} /></TabsContent>
-          <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} /></TabsContent>
-          <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} /></TabsContent>
-          <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} /></TabsContent>
-          <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} /></TabsContent>
-          <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} /></TabsContent>
-          <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} /></TabsContent>
+          <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} budgetItems={pBudget} /></TabsContent>
           <TabsContent value="whatif">
             <WhatIfSection
               contractValue={summary.effectiveContractValue}

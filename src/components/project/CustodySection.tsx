@@ -15,9 +15,10 @@ interface CustodySectionProps {
   companyId: string;
   custodies: Custody[];
   expenses: any[];
+  readOnly?: boolean;
 }
 
-export function CustodySection({ projectId, companyId, custodies, expenses }: CustodySectionProps) {
+export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
   const { addCustody, deleteCustody } = useStore();
   const [open, setOpen] = useState(false);
   const [resourceName, setResourceName] = useState('');
@@ -54,6 +55,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses }: Cu
             إجمالي العهد: {formatCurrency(totalAmount)} · المصروف: {formatCurrency(totalSpent)} · المتبقي: {formatCurrency(totalAmount - totalSpent)}
           </p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />عهدة جديدة</Button>
@@ -77,6 +79,8 @@ export function CustodySection({ projectId, companyId, custodies, expenses }: Cu
             </div>
           </DialogContent>
         </Dialog>
+        )}
+        <p className="text-[10px] text-muted-foreground mt-2">العهدة مرتبطة بالمصروفات — عند إضافة مصروف يمكن ربطه بعهدة ليُخصم منها تلقائياً</p>
       </div>
 
       {enrichedCustodies.length === 0 ? (
@@ -92,7 +96,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses }: Cu
                 <th>المتبقي</th>
                 <th className="hidden sm:table-cell">نسبة الصرف</th>
                 <th className="hidden md:table-cell">ملاحظات</th>
-                <th></th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -113,7 +117,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses }: Cu
                       </div>
                     </td>
                     <td className="text-muted-foreground text-xs hidden md:table-cell">{c.notes || '—'}</td>
-                    <td><ConfirmDeleteDialog title="حذف العهدة" description="هل أنت متأكد من حذف هذه العهدة؟" onConfirm={() => deleteCustody(c.id)} /></td>
+                    {!readOnly && <td><ConfirmDeleteDialog title="حذف العهدة" description="هل أنت متأكد من حذف هذه العهدة؟" onConfirm={() => deleteCustody(c.id)} /></td>}
                   </tr>
                 );
               })}
