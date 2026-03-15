@@ -210,7 +210,7 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
                 <th>الفئة</th>
                 <th>الحالة</th>
                 <th className="hidden sm:table-cell">المسؤول</th>
-                <th></th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
