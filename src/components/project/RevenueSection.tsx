@@ -257,7 +257,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                 <th>الحالة</th>
                 <th>الشهر</th>
                 <th>التاريخ</th>
-                <th></th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
