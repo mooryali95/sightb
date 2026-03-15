@@ -187,6 +187,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       <div className="stat-card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold">سجل المصروفات</h3>
+          {!readOnly && (
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مصروف</Button>
@@ -287,6 +288,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         {/* Search & Filter Bar */}
