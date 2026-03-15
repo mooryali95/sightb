@@ -91,6 +91,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
             {approvedImpact !== 0 && ` · الأثر: ${approvedImpact > 0 ? '+' : ''}${formatCurrency(approvedImpact)}`}
           </p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />أمر تغيير جديد</Button>
@@ -146,6 +147,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {changeOrders.length === 0 ? (
