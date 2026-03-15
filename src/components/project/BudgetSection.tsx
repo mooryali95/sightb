@@ -446,6 +446,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                 <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
                   <p className="text-xs text-muted-foreground">الاحتياطي الإداري</p>
                   <p className="text-sm font-mono font-bold mt-1">{formatCurrency(managementReserve)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">محجوز لا يُصرف إلا بموافقة خاصة</p>
                 </div>
               </div>
             );
