@@ -63,6 +63,7 @@ export default function ProjectDetail() {
   const [activeTab, setActiveTab] = useState('milestones');
 
   const project = projects.find((p) => p.id === id);
+  const isReadOnly = project ? !canEditRole('project', project.id) : true;
 
   useEffect(() => {
     if (project) {
