@@ -55,6 +55,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             إجمالي العهد: {formatCurrency(totalAmount)} · المصروف: {formatCurrency(totalSpent)} · المتبقي: {formatCurrency(totalAmount - totalSpent)}
           </p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />عهدة جديدة</Button>
@@ -78,6 +79,8 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             </div>
           </DialogContent>
         </Dialog>
+        )}
+        <p className="text-[10px] text-muted-foreground mt-2">العهدة مرتبطة بالمصروفات — عند إضافة مصروف يمكن ربطه بعهدة ليُخصم منها تلقائياً</p>
       </div>
 
       {enrichedCustodies.length === 0 ? (
