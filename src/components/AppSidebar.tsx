@@ -266,6 +266,19 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
   );
 }
 
+function UserInfo() {
+  const { user } = useAuth();
+  const { isAdmin } = useRole();
+  return (
+    <div className="px-3 py-1.5">
+      <p className="text-xs font-medium text-sidebar-foreground truncate" dir="ltr">{user?.email}</p>
+      <p className="text-[10px] text-sidebar-foreground/40">
+        {isAdmin ? 'مدير النظام' : 'مستخدم'}
+      </p>
+    </div>
+  );
+}
+
 function SignOutButton({ collapsed }: { collapsed?: boolean }) {
   const { signOut } = useAuth();
   const navigate = useNavigate();

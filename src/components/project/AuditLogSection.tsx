@@ -62,7 +62,7 @@ export function AuditLogSection({ projectId }: AuditLogSectionProps) {
                     {ACTION_LABELS[entry.action] || entry.action} {TABLE_NAME_LABELS[entry.tableName] || entry.tableName}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {new Date(entry.createdAt).toLocaleDateString('ar-SA')} — {new Date(entry.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(entry.createdAt).toLocaleDateString('ar-SA', { calendar: 'gregory', year: 'numeric', month: '2-digit', day: '2-digit' })} — {new Date(entry.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <div className="text-xs space-y-1">

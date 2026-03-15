@@ -46,8 +46,9 @@ const roleIcons: Record<string, any> = { owner: Crown, admin: Shield, editor: Pe
 const scopeLabels: Record<string, string> = { system: 'النظام', company: 'شركة', project: 'مشروع' };
 
 const inviteStatusConfig: Record<string, { label: string; icon: any; className: string }> = {
-  pending: { label: 'في الانتظار', icon: Clock, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  accepted: { label: 'مقبولة', icon: CheckCircle2, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  pending: { label: 'في الانتظار', icon: Clock, className: 'bg-muted text-muted-foreground' },
+  sent: { label: 'تم الإرسال', icon: Mail, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  accepted: { label: 'مقبولة ومسجّل', icon: CheckCircle2, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
 };
 
 export default function UserManagement() {

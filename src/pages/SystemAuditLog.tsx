@@ -102,7 +102,7 @@ export default function SystemAuditLog() {
     const groups: Record<string, AuditEntry[]> = {};
     for (const entry of filtered) {
       const date = new Date(entry.createdAt).toLocaleDateString('ar-SA', {
-        year: 'numeric', month: 'long', day: 'numeric',
+        calendar: 'gregory', year: 'numeric', month: 'long', day: 'numeric',
       });
       if (!groups[date]) groups[date] = [];
       groups[date].push(entry);

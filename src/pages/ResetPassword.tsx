@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -13,20 +13,41 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const readyRef = useRef(false);
 
   useEffect(() => {
-    // Check for recovery token in URL hash
     const hash = window.location.hash;
-    if (hash.includes('type=recovery')) {
+
+    // Check for error in URL hash (e.g. expired OTP)
+    if (hash.includes('error=')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const errorDesc = params.get('error_description') || 'الرابط غير صالح';
+      console.warn('[reset-password] URL error:', errorDesc);
+      toast.error('الرابط منتهي الصلاحية أو غير صالح. يرجى طلب رابط جديد.');
+      setTimeout(() => navigate('/login'), 3000);
+      return;
+    }
+
+    if (hash.includes('type=recovery') || hash.includes('access_token')) {
       setReady(true);
+      readyRef.current = true;
     } else {
-      // Listen for PASSWORD_RECOVERY event
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
         if (event === 'PASSWORD_RECOVERY') {
           setReady(true);
+          readyRef.current = true;
         }
       });
-      return () => subscription.unsubscribe();
+
+      // Timeout — if no event fires in 5 seconds
+      const timeout = setTimeout(() => {
+        if (!readyRef.current) {
+          toast.error('لم يتم التعرف على الرابط. يرجى طلب رابط جديد.');
+          navigate('/login');
+        }
+      }, 5000);
+
+      return () => { subscription.unsubscribe(); clearTimeout(timeout); };
     }
   }, []);
 
