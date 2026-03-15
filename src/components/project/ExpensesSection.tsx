@@ -363,7 +363,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                           <ConfirmDeleteDialog title="حذف المصروف" description="هل أنت متأكد من حذف هذا المصروف؟" onConfirm={() => deleteExpense(exp.id)} />
                         </div>
                       </td>
-                    </tr>
+                      )}
                   );
                 })}
               </tbody>
