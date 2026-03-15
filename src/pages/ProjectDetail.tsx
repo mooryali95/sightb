@@ -44,7 +44,7 @@ import { WhatIfSection } from '@/components/project/WhatIfSection';
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin, canEdit } = useRole();
+  const { isAdmin, canEdit: canEditRole } = useRole();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks,
