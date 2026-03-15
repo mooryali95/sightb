@@ -394,6 +394,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                           <span className="text-xs text-muted-foreground">{spentPct.toFixed(0)}%</span>
                         </div>
                       </td>
+                      {!readOnly && (
                       <td>
                         <div className="flex items-center gap-0.5">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
@@ -402,6 +403,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                           <ConfirmDeleteDialog title="حذف بند الموازنة" description="هل أنت متأكد من حذف هذا البند؟" onConfirm={() => deleteBudgetItem(item.id)} />
                         </div>
                       </td>
+                      )}
                     </tr>
                   );
                 })}
