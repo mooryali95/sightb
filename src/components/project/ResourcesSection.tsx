@@ -119,7 +119,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                 <th>إجمالي الصرف</th>
                 {hasBudgetData && <th>الانحراف</th>}
                 {hasBudgetData && <th>نسبة الانحراف</th>}
-                <th></th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
