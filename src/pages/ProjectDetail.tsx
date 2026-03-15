@@ -221,6 +221,7 @@ export default function ProjectDetail() {
                 </div>
               </div>
               {/* Action buttons - separate row on mobile */}
+              {!isReadOnly && (
               <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <Dialog open={editOpen} onOpenChange={setEditOpen}>
                   <DialogTrigger asChild>
@@ -298,6 +299,7 @@ export default function ProjectDetail() {
                   />
                 )}
               </div>
+              )}
             </div>
           </div>
         </div>
