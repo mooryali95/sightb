@@ -113,6 +113,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
             {totalWeight > 0 && totalWeight !== 1 && ` · إجمالي الأوزان: ${totalWeight.toFixed(2)}`}
           </p>
         </div>
+        {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />مرحلة جديدة</Button>
@@ -165,6 +166,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Overall progress */}
