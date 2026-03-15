@@ -249,6 +249,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
       {/* Footer */}
       {!collapsed && (
         <div className="p-3 border-t border-sidebar-border space-y-2">
+          <UserInfo />
           <SignOutButton />
           <div className="flex items-center justify-center gap-1.5 py-1">
             <span className="text-[10px] text-sidebar-foreground/30">Powered by</span>
