@@ -18,9 +18,10 @@ interface ChangeOrdersSectionProps {
   projectId: string;
   changeOrders: ChangeOrder[];
   contractValue: number;
+  readOnly?: boolean;
 }
 
-export function ChangeOrdersSection({ projectId, changeOrders, contractValue }: ChangeOrdersSectionProps) {
+export function ChangeOrdersSection({ projectId, changeOrders, contractValue, readOnly = false }: ChangeOrdersSectionProps) {
   const { addChangeOrder, updateChangeOrder, deleteChangeOrder } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
