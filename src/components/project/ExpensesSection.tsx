@@ -20,9 +20,10 @@ interface ExpensesSectionProps {
   budgetItems: BudgetItem[];
   revenues: any[];
   contractValue: number;
+  readOnly?: boolean;
 }
 
-export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue }: ExpensesSectionProps) {
+export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false }: ExpensesSectionProps) {
   const { addExpense, deleteExpense, updateExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
