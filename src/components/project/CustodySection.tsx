@@ -15,9 +15,10 @@ interface CustodySectionProps {
   companyId: string;
   custodies: Custody[];
   expenses: any[];
+  readOnly?: boolean;
 }
 
-export function CustodySection({ projectId, companyId, custodies, expenses }: CustodySectionProps) {
+export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
   const { addCustody, deleteCustody } = useStore();
   const [open, setOpen] = useState(false);
   const [resourceName, setResourceName] = useState('');
