@@ -410,7 +410,7 @@ export default function ProjectDetail() {
           <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} /></TabsContent>
+          <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} budgetItems={pBudget} /></TabsContent>
           <TabsContent value="whatif">
             <WhatIfSection
               contractValue={summary.effectiveContractValue}
