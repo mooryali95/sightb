@@ -19,9 +19,10 @@ interface MilestonesSectionProps {
   projectId: string;
   milestones: Milestone[];
   project: Project;
+  readOnly?: boolean;
 }
 
-export function MilestonesSection({ projectId, milestones, project }: MilestonesSectionProps) {
+export function MilestonesSection({ projectId, milestones, project, readOnly = false }: MilestonesSectionProps) {
   const { addMilestone, updateMilestone, deleteMilestone, updateProject } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
