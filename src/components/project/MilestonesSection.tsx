@@ -204,12 +204,14 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
                   </span>
                   {m.weight > 0 && <span className="text-[10px] text-muted-foreground">وزن: {m.weight}</span>}
                 </div>
+                {!readOnly && (
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </Button>
                   <ConfirmDeleteDialog title="حذف المرحلة" description="هل أنت متأكد من حذف هذه المرحلة؟" onConfirm={() => deleteMilestone(m.id)} />
                 </div>
+                )}
               </div>
               {m.description && <p className="text-xs text-muted-foreground mb-2">{m.description}</p>}
               <div className="flex items-center gap-3">
