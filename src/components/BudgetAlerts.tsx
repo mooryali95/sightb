@@ -25,7 +25,7 @@ const THRESHOLDS = [
   { pct: 75, label: 'بلغ 75% من', variant: 'info' as const },
 ];
 
-export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetItems, expenses, baselineItems, allExpenses, durationMonths, startDate, percentComplete }: BudgetAlertsProps) {
+export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetItems, expenses, baselineItems, allExpenses, durationMonths, startDate, percentComplete, managementReserve }: BudgetAlertsProps) {
   const alerted = useRef(new Set<string>());
 
   useEffect(() => {
