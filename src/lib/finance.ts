@@ -37,6 +37,25 @@ export function getCurrentMonth(startDate: string, durationMonths: number): numb
   return Math.max(1, Math.min(diff, durationMonths));
 }
 
+/**
+ * Calculate the TRUE total planned value for budget items,
+ * accounting for recurring items that repeat monthly.
+ * - fixed: plannedAmount is the total (distributed evenly over months)
+ * - one_time: plannedAmount is the total (all in one month)
+ * - recurring: plannedAmount is the MONTHLY amount (multiply by number of months)
+ */
+export function getTotalPlanned(budgetItems: { plannedAmount: number; costType?: string; startMonth?: number | null; endMonth?: number | null }[]): number {
+  return budgetItems.reduce((sum, b) => {
+    if (b.costType === 'recurring') {
+      const start = b.startMonth || 1;
+      const end = b.endMonth || b.startMonth || 1;
+      const months = Math.max(1, end - start + 1);
+      return sum + (b.plannedAmount * months);
+    }
+    return sum + b.plannedAmount;
+  }, 0);
+}
+
 export function getProjectSummary(
   project: Project,
   budgetItems: BudgetItem[],
@@ -44,7 +63,7 @@ export function getProjectSummary(
   revenues: Revenue[],
   changeOrders: ChangeOrder[] = []
 ): ProjectSummary {
-  const totalPlanned = budgetItems.reduce((sum, b) => sum + b.plannedAmount, 0);
+  const totalPlanned = getTotalPlanned(budgetItems);
   const totalActual = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   const effectiveContractValue = getEffectiveContractValue(project.contractValue, changeOrders);
@@ -68,7 +87,8 @@ export function getProjectSummary(
 
   // Burn rate = average monthly actual spend
   const currentMonth = getCurrentMonth(project.startDate, project.durationMonths);
-  const burnRate = currentMonth > 0 ? totalActual / currentMonth : 0;
+  const projectStarted = project.startDate ? new Date(project.startDate) <= new Date() : true;
+  const burnRate = projectStarted && currentMonth > 0 ? totalActual / currentMonth : 0;
 
   // Management reserve
   const managementReserve = project.managementReserve || 0;
@@ -231,10 +251,10 @@ export function getCashFlowForecast(
 
   revenues.forEach(r => {
     if (r.month >= 1 && r.month <= durationMonths) {
-      if (r.status === 'planned' || r.status === 'invoiced') {
-        // Both planned and invoiced count as expected revenue in cash flow
-        plannedRev[r.month - 1] += r.amount;
-      } else if (r.status === 'collected') {
+      // All revenues (planned, invoiced, collected) count as expected revenue
+      plannedRev[r.month - 1] += r.amount;
+      // Only collected counts as actual
+      if (r.status === 'collected') {
         actualRev[r.month - 1] += r.amount;
       }
     }
@@ -272,12 +292,15 @@ export function calculateEVM(
   expenses: Expense[],
   durationMonths: number,
   currentMonth: number,
-  percentComplete: number = 0
+  percentComplete: number = 0,
+  managementReserve: number = 0
 ): EVMMetrics {
   const monthlyPV = getBaselineMonthlyPV(baselineItems, durationMonths);
   const monthlyAC = getMonthlyBreakdown(expenses, durationMonths);
 
-  const bac = monthlyPV.reduce((s, v) => s + v, 0);
+  // BAC = baseline total MINUS management reserve (per PMI standard)
+  const rawBac = monthlyPV.reduce((s, v) => s + v, 0);
+  const bac = Math.max(0, rawBac - managementReserve);
 
   // PV = cumulative planned value up to current month
   const pv = monthlyPV.slice(0, currentMonth).reduce((s, v) => s + v, 0);
@@ -290,8 +313,9 @@ export function calculateEVM(
 
   const cv = ev - ac;
   const sv = ev - pv;
-  const cpi = ac > 0 ? ev / ac : 0;
-  const spi = pv > 0 ? ev / pv : 0;
+  // When AC=0 and EV=0: no deviation → CPI=1; otherwise compute normally
+  const cpi = ac > 0 ? ev / ac : (ev === 0 ? 1 : 0);
+  const spi = pv > 0 ? ev / pv : (ev === 0 ? 1 : 0);
 
   // EAC variants
   const eacTypical = cpi > 0 ? bac / cpi : bac;           // Current performance continues

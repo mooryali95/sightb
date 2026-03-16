@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, getTotalPlanned } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type Resource,
   type CostType, type CostClass,
@@ -87,7 +87,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
     setOpen(false);
   };
 
-  const totalPlanned = budgetItems.reduce((s: number, b: any) => s + b.plannedAmount, 0);
+  const totalPlanned = getTotalPlanned(budgetItems);
   const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
   const unallocated = contractValue - totalPlanned;
   const plannedProfit = contractValue - totalPlanned;
@@ -96,7 +96,15 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
   const categoryMap = new Map<string, { planned: number; actual: number }>();
   budgetItems.forEach((b: any) => {
     const entry = categoryMap.get(b.category) || { planned: 0, actual: 0 };
-    entry.planned += b.plannedAmount;
+    // Account for recurring items
+    if (b.costType === 'recurring') {
+      const start = b.startMonth || 1;
+      const end = b.endMonth || b.startMonth || 1;
+      const months = Math.max(1, end - start + 1);
+      entry.planned += b.plannedAmount * months;
+    } else {
+      entry.planned += b.plannedAmount;
+    }
     categoryMap.set(b.category, entry);
   });
   expenses.forEach((e: any) => {
@@ -270,6 +278,16 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                     </Select>
                   </div>
                 </div>
+                {costType === 'recurring' && (
+                  <p className="text-xs text-muted-foreground">
+                    هذا المبلغ سيتكرر كل شهر — الإجمالي: {formatCurrency(
+                      (parseFloat(plannedAmount) || 0) * Math.max(1, ((parseInt(endMonth) || parseInt(startMonth) || 1) - (parseInt(startMonth) || 1) + 1))
+                    )}
+                  </p>
+                )}
+                {costType === 'fixed' && startMonth && endMonth && startMonth !== endMonth && startMonth !== 'all' && (
+                  <p className="text-xs text-muted-foreground">سيُوزّع بالتساوي على الأشهر المحددة</p>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>من شهر <span className="text-muted-foreground text-xs">(اختياري)</span></Label>
@@ -370,9 +388,12 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
               </thead>
               <tbody>
                 {budgetItems.map((item) => {
+                  const itemTotalPlanned = item.costType === 'recurring' && item.startMonth && item.endMonth && item.endMonth > item.startMonth
+                    ? item.plannedAmount * (item.endMonth - item.startMonth + 1)
+                    : item.plannedAmount;
                   const actual = getActualForItem(item);
-                  const remaining = item.plannedAmount - actual;
-                  const spentPct = item.plannedAmount > 0 ? (actual / item.plannedAmount) * 100 : 0;
+                  const remaining = itemTotalPlanned - actual;
+                  const spentPct = itemTotalPlanned > 0 ? (actual / itemTotalPlanned) * 100 : 0;
                   const resource = resources.find(r => r.id === item.resourceId);
                   return (
                     <tr key={item.id} className={spentPct > 100 ? 'bg-destructive/5' : ''}>
@@ -381,7 +402,12 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                       <td className="text-xs">{resource?.name || '—'}</td>
                       <td className="text-xs text-muted-foreground">{getMonthDisplay(item)}</td>
                       <td className="text-xs text-muted-foreground">{COST_TYPE_LABELS[item.costType as CostType] || 'ثابت'}</td>
-                      <td className="font-mono text-sm">{formatCurrency(item.plannedAmount)}</td>
+                      <td className="font-mono text-sm">
+                        {formatCurrency(item.plannedAmount)}
+                        {item.costType === 'recurring' && item.startMonth && item.endMonth && item.endMonth > item.startMonth && (
+                          <span className="block text-[10px] text-muted-foreground">إجمالي: {formatCurrency(itemTotalPlanned)}</span>
+                        )}
+                      </td>
                       <td className="font-mono text-sm">{formatCurrency(actual)}</td>
                       <td className="hidden sm:table-cell">
                         <span className={remaining >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(remaining)}</span>
@@ -418,7 +444,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
         <div className="stat-card">
           <h3 className="text-sm font-semibold mb-4">تحليل الاحتياطيات</h3>
           {(() => {
-            const contingencyPlanned = budgetItems.filter((b: any) => b.category === 'contingency').reduce((s: number, b: any) => s + b.plannedAmount, 0);
+            const contingencyPlanned = getTotalPlanned(budgetItems.filter((b: any) => b.category === 'contingency'));
             const contingencyActual = expenses.filter((e: any) => e.category === 'contingency').reduce((s: number, e: any) => s + e.amount, 0);
             const contingencyRemaining = contingencyPlanned - contingencyActual;
             const budgetWithoutReserve = totalPlanned - contingencyPlanned;

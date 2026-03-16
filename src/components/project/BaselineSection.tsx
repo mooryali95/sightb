@@ -65,7 +65,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
   const currentMonth = getCurrentMonth(project.startDate, durationMonths);
 
   const evm = activeBaseline
-    ? calculateEVM(activeBaseline.items, expenses, durationMonths, Math.min(durationMonths, currentMonth), project.percentComplete)
+    ? calculateEVM(activeBaseline.items, expenses, durationMonths, Math.min(durationMonths, currentMonth), project.percentComplete, project.managementReserve || 0)
     : null;
 
   const sCurveData = activeBaseline ? buildSCurveData(activeBaseline, expenses, durationMonths) : [];

@@ -16,6 +16,7 @@ interface BudgetAlertsProps {
   durationMonths?: number;
   startDate?: string;
   percentComplete?: number;
+  managementReserve?: number;
 }
 
 const THRESHOLDS = [
@@ -24,7 +25,7 @@ const THRESHOLDS = [
   { pct: 75, label: 'بلغ 75% من', variant: 'info' as const },
 ];
 
-export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetItems, expenses, baselineItems, allExpenses, durationMonths, startDate, percentComplete }: BudgetAlertsProps) {
+export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetItems, expenses, baselineItems, allExpenses, durationMonths, startDate, percentComplete, managementReserve }: BudgetAlertsProps) {
   const alerted = useRef(new Set<string>());
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetI
     // CPI alert (if EVM data available)
     if (baselineItems && allExpenses && durationMonths && percentComplete !== undefined && percentComplete > 0) {
       const cm = getCurrentMonth(startDate || '', durationMonths);
-      const evm = calculateEVM(baselineItems, allExpenses, durationMonths, cm, percentComplete);
+      const evm = calculateEVM(baselineItems, allExpenses, durationMonths, cm, percentComplete, managementReserve || 0);
       const cpiKey = 'cpi-low';
       if (evm.cpi > 0 && evm.cpi < 0.85 && !alerted.current.has(cpiKey)) {
         alerted.current.add(cpiKey);

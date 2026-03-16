@@ -1,7 +1,7 @@
 import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
-import { formatCurrency, getProjectSummary } from '@/lib/finance';
+import { formatCurrency, getProjectSummary, getTotalPlanned } from '@/lib/finance';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -100,7 +100,7 @@ export default function Dashboard() {
   const filteredExpenses = expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId) && isInRange(e.date, currentRange));
   const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
   const filteredBudgetItems = budgetItems.filter((b) => filteredProjects.some((p) => p.id === b.projectId));
-  const totalPlanned = filteredBudgetItems.reduce((s, b) => s + b.plannedAmount, 0);
+  const totalPlanned = getTotalPlanned(filteredBudgetItems);
   const filteredChangeOrders = changeOrders.filter((co) => filteredProjects.some((p) => p.id === co.projectId));
   const approvedChangeImpact = filteredChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
   const effectiveTotalContract = totalContractValue + approvedChangeImpact;
