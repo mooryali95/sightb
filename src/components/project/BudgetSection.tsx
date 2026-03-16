@@ -96,7 +96,15 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
   const categoryMap = new Map<string, { planned: number; actual: number }>();
   budgetItems.forEach((b: any) => {
     const entry = categoryMap.get(b.category) || { planned: 0, actual: 0 };
-    entry.planned += b.plannedAmount;
+    // Account for recurring items
+    if (b.costType === 'recurring') {
+      const start = b.startMonth || 1;
+      const end = b.endMonth || b.startMonth || 1;
+      const months = Math.max(1, end - start + 1);
+      entry.planned += b.plannedAmount * months;
+    } else {
+      entry.planned += b.plannedAmount;
+    }
     categoryMap.set(b.category, entry);
   });
   expenses.forEach((e: any) => {
