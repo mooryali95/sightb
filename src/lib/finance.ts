@@ -87,7 +87,8 @@ export function getProjectSummary(
 
   // Burn rate = average monthly actual spend
   const currentMonth = getCurrentMonth(project.startDate, project.durationMonths);
-  const burnRate = currentMonth > 0 ? totalActual / currentMonth : 0;
+  const projectStarted = project.startDate ? new Date(project.startDate) <= new Date() : true;
+  const burnRate = projectStarted && currentMonth > 0 ? totalActual / currentMonth : 0;
 
   // Management reserve
   const managementReserve = project.managementReserve || 0;
