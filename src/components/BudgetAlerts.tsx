@@ -16,6 +16,7 @@ interface BudgetAlertsProps {
   durationMonths?: number;
   startDate?: string;
   percentComplete?: number;
+  managementReserve?: number;
 }
 
 const THRESHOLDS = [
