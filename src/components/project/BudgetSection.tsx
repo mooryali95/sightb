@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, getTotalPlanned } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type Resource,
   type CostType, type CostClass,
