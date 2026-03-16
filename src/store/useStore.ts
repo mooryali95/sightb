@@ -5,6 +5,7 @@ import {
   CostBaseline, Resource, Custody, Milestone, ChangeOrder,
   Risk, IndirectCost, PeriodicSnapshot,
 } from '@/types/project';
+import { getTotalPlanned } from '@/lib/finance';
 import {
   getUserId, logDeletion,
   mapCompany, mapPortfolio, mapProject, mapBudgetItem,
