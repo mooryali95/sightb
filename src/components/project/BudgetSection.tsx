@@ -87,7 +87,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
     setOpen(false);
   };
 
-  const totalPlanned = budgetItems.reduce((s: number, b: any) => s + b.plannedAmount, 0);
+  const totalPlanned = getTotalPlanned(budgetItems);
   const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
   const unallocated = contractValue - totalPlanned;
   const plannedProfit = contractValue - totalPlanned;

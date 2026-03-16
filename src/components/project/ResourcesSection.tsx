@@ -125,7 +125,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
             <tbody>
               {resources.map((r) => {
                 const totalSpent = pExpenses.filter(e => e.resourceId === r.id).reduce((s, e) => s + e.amount, 0);
-                const plannedForResource = budgetItems.filter(b => b.resourceId === r.id).reduce((s, b) => s + b.plannedAmount, 0);
+                const plannedForResource = getTotalPlanned(budgetItems.filter(b => b.resourceId === r.id));
                 const variance = plannedForResource - totalSpent;
                 const variancePct = plannedForResource > 0 ? (variance / plannedForResource) * 100 : 0;
 

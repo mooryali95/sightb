@@ -81,7 +81,7 @@ export function getPortfolioSummary(
   const aggregatePlannedMargin = totalEffectiveValue > 0 ? (aggregatePlannedProfit / totalEffectiveValue) * 100 : 0;
   const aggregateRealizedMargin = totalCollectedRevenue > 0 ? (aggregateRealizedProfit / totalCollectedRevenue) * 100 : 0;
   const weightedPercentComplete = totalWeight > 0 ? weightedCompleteNum / totalWeight : 0;
-  const averageCPI = totalWeight > 0 ? weightedCPINum / totalWeight : 0;
+  const averageCPI = cpiWeight > 0 ? weightedCPINum / cpiWeight : 0;
   const revenueAchievement = portfolio.targetRevenue > 0 ? (totalCollectedRevenue / portfolio.targetRevenue) * 100 : 0;
 
   const healthStatus = getHealthScore({

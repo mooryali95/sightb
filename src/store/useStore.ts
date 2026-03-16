@@ -612,7 +612,7 @@ export const useStore = create<AppState>()((set, get) => ({
     const nextVersion = existingBaselines.length > 0
       ? Math.max(...existingBaselines.map(b => b.version)) + 1 : 1;
 
-    const totalPlanned = currentBudget.reduce((s, b) => s + b.plannedAmount, 0);
+    const totalPlanned = getTotalPlanned(currentBudget);
 
     if (existingBaselines.length > 0) {
       await supabase.from('cost_baselines').update({ is_active: false }).eq('project_id', projectId);

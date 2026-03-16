@@ -325,7 +325,7 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} />
+        <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} managementReserve={project.managementReserve} />
 
         {/* Export Buttons - only for admin/editor */}
         {(isAdmin || canEditRole('project', project.id)) && (

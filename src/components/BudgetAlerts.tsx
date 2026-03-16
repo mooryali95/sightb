@@ -62,7 +62,7 @@ export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetI
     // CPI alert (if EVM data available)
     if (baselineItems && allExpenses && durationMonths && percentComplete !== undefined && percentComplete > 0) {
       const cm = getCurrentMonth(startDate || '', durationMonths);
-      const evm = calculateEVM(baselineItems, allExpenses, durationMonths, cm, percentComplete);
+      const evm = calculateEVM(baselineItems, allExpenses, durationMonths, cm, percentComplete, managementReserve || 0);
       const cpiKey = 'cpi-low';
       if (evm.cpi > 0 && evm.cpi < 0.85 && !alerted.current.has(cpiKey)) {
         alerted.current.add(cpiKey);

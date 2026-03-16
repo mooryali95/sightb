@@ -292,12 +292,15 @@ export function calculateEVM(
   expenses: Expense[],
   durationMonths: number,
   currentMonth: number,
-  percentComplete: number = 0
+  percentComplete: number = 0,
+  managementReserve: number = 0
 ): EVMMetrics {
   const monthlyPV = getBaselineMonthlyPV(baselineItems, durationMonths);
   const monthlyAC = getMonthlyBreakdown(expenses, durationMonths);
 
-  const bac = monthlyPV.reduce((s, v) => s + v, 0);
+  // BAC = baseline total MINUS management reserve (per PMI standard)
+  const rawBac = monthlyPV.reduce((s, v) => s + v, 0);
+  const bac = Math.max(0, rawBac - managementReserve);
 
   // PV = cumulative planned value up to current month
   const pv = monthlyPV.slice(0, currentMonth).reduce((s, v) => s + v, 0);
@@ -310,8 +313,9 @@ export function calculateEVM(
 
   const cv = ev - ac;
   const sv = ev - pv;
-  const cpi = ac > 0 ? ev / ac : 0;
-  const spi = pv > 0 ? ev / pv : 0;
+  // When AC=0 and EV=0: no deviation → CPI=1; otherwise compute normally
+  const cpi = ac > 0 ? ev / ac : (ev === 0 ? 1 : 0);
+  const spi = pv > 0 ? ev / pv : (ev === 0 ? 1 : 0);
 
   // EAC variants
   const eacTypical = cpi > 0 ? bac / cpi : bac;           // Current performance continues
