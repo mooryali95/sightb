@@ -270,6 +270,16 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                     </Select>
                   </div>
                 </div>
+                {costType === 'recurring' && (
+                  <p className="text-xs text-muted-foreground">
+                    هذا المبلغ سيتكرر كل شهر — الإجمالي: {formatCurrency(
+                      (parseFloat(plannedAmount) || 0) * Math.max(1, ((parseInt(endMonth) || parseInt(startMonth) || 1) - (parseInt(startMonth) || 1) + 1))
+                    )}
+                  </p>
+                )}
+                {costType === 'fixed' && startMonth && endMonth && startMonth !== endMonth && startMonth !== 'all' && (
+                  <p className="text-xs text-muted-foreground">سيُوزّع بالتساوي على الأشهر المحددة</p>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>من شهر <span className="text-muted-foreground text-xs">(اختياري)</span></Label>
