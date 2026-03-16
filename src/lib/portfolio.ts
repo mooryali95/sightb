@@ -32,6 +32,7 @@ export function getPortfolioSummary(
   let weightedCompleteNum = 0;
   let weightedCPINum = 0;
   let totalWeight = 0;
+  let cpiWeight = 0;
   let atRiskProjects = 0;
 
   projects.forEach(project => {
@@ -55,16 +56,13 @@ export function getPortfolioSummary(
     weightedCompleteNum += project.percentComplete * w;
     totalWeight += w;
 
-    // Note: This is an approximation using totalPlanned instead of BAC (baseline).
-    // For accurate CPI, each project should have an active baseline.
-    // If no baseline exists, this ratio approximates spending efficiency.
-    // Approximate CPI
+    // Only projects with actual spending contribute to CPI average
     if (summary.totalActual > 0 && summary.totalPlanned > 0) {
       const approxCPI = (project.percentComplete / 100 * summary.totalPlanned) / summary.totalActual;
       weightedCPINum += approxCPI * w;
-    } else {
-      weightedCPINum += 1 * w;
+      cpiWeight += w;
     }
+    // Projects without expenses are excluded from CPI calculation
 
     // At risk: on-hold, cancelled, or spendRate > 100%
     if (project.status === 'on-hold' || project.status === 'cancelled' || summary.spendRate > 100) {
