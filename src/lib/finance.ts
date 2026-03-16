@@ -37,6 +37,25 @@ export function getCurrentMonth(startDate: string, durationMonths: number): numb
   return Math.max(1, Math.min(diff, durationMonths));
 }
 
+/**
+ * Calculate the TRUE total planned value for budget items,
+ * accounting for recurring items that repeat monthly.
+ * - fixed: plannedAmount is the total (distributed evenly over months)
+ * - one_time: plannedAmount is the total (all in one month)
+ * - recurring: plannedAmount is the MONTHLY amount (multiply by number of months)
+ */
+export function getTotalPlanned(budgetItems: { plannedAmount: number; costType?: string; startMonth?: number | null; endMonth?: number | null }[]): number {
+  return budgetItems.reduce((sum, b) => {
+    if (b.costType === 'recurring') {
+      const start = b.startMonth || 1;
+      const end = b.endMonth || b.startMonth || 1;
+      const months = Math.max(1, end - start + 1);
+      return sum + (b.plannedAmount * months);
+    }
+    return sum + b.plannedAmount;
+  }, 0);
+}
+
 export function getProjectSummary(
   project: Project,
   budgetItems: BudgetItem[],
@@ -44,7 +63,7 @@ export function getProjectSummary(
   revenues: Revenue[],
   changeOrders: ChangeOrder[] = []
 ): ProjectSummary {
-  const totalPlanned = budgetItems.reduce((sum, b) => sum + b.plannedAmount, 0);
+  const totalPlanned = getTotalPlanned(budgetItems);
   const totalActual = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   const effectiveContractValue = getEffectiveContractValue(project.contractValue, changeOrders);
