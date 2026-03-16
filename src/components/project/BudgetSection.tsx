@@ -380,9 +380,12 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
               </thead>
               <tbody>
                 {budgetItems.map((item) => {
+                  const itemTotalPlanned = item.costType === 'recurring' && item.startMonth && item.endMonth && item.endMonth > item.startMonth
+                    ? item.plannedAmount * (item.endMonth - item.startMonth + 1)
+                    : item.plannedAmount;
                   const actual = getActualForItem(item);
-                  const remaining = item.plannedAmount - actual;
-                  const spentPct = item.plannedAmount > 0 ? (actual / item.plannedAmount) * 100 : 0;
+                  const remaining = itemTotalPlanned - actual;
+                  const spentPct = itemTotalPlanned > 0 ? (actual / itemTotalPlanned) * 100 : 0;
                   const resource = resources.find(r => r.id === item.resourceId);
                   return (
                     <tr key={item.id} className={spentPct > 100 ? 'bg-destructive/5' : ''}>
@@ -391,7 +394,12 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                       <td className="text-xs">{resource?.name || '—'}</td>
                       <td className="text-xs text-muted-foreground">{getMonthDisplay(item)}</td>
                       <td className="text-xs text-muted-foreground">{COST_TYPE_LABELS[item.costType as CostType] || 'ثابت'}</td>
-                      <td className="font-mono text-sm">{formatCurrency(item.plannedAmount)}</td>
+                      <td className="font-mono text-sm">
+                        {formatCurrency(item.plannedAmount)}
+                        {item.costType === 'recurring' && item.startMonth && item.endMonth && item.endMonth > item.startMonth && (
+                          <span className="block text-[10px] text-muted-foreground">إجمالي: {formatCurrency(itemTotalPlanned)}</span>
+                        )}
+                      </td>
                       <td className="font-mono text-sm">{formatCurrency(actual)}</td>
                       <td className="hidden sm:table-cell">
                         <span className={remaining >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(remaining)}</span>
