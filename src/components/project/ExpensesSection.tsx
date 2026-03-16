@@ -282,6 +282,24 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         ))}
                       </SelectContent>
                     </Select>
+                    {custodyId && custodyId !== 'none' && (() => {
+                      const selectedCustody = custodies.find(c => c.id === custodyId);
+                      if (!selectedCustody) return null;
+                      const parsedAmount = parseFloat(amount) || 0;
+                      return (
+                        <div className="space-y-1">
+                          <p className={`text-xs ${selectedCustody.remaining > 0 ? 'text-muted-foreground' : 'text-destructive'}`}>
+                            المتبقي من العهدة: {formatCurrency(selectedCustody.remaining)}
+                            {selectedCustody.remaining <= 0 && ' ⚠️ العهدة مستنفدة'}
+                          </p>
+                          {parsedAmount > 0 && parsedAmount > selectedCustody.remaining && (
+                            <p className="text-xs text-destructive">
+                              ⚠️ المبلغ ({formatCurrency(parsedAmount)}) يتجاوز المتبقي ({formatCurrency(selectedCustody.remaining)})
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
                 <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>

@@ -418,7 +418,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
         <div className="stat-card">
           <h3 className="text-sm font-semibold mb-4">تحليل الاحتياطيات</h3>
           {(() => {
-            const contingencyPlanned = budgetItems.filter((b: any) => b.category === 'contingency').reduce((s: number, b: any) => s + b.plannedAmount, 0);
+            const contingencyPlanned = getTotalPlanned(budgetItems.filter((b: any) => b.category === 'contingency'));
             const contingencyActual = expenses.filter((e: any) => e.category === 'contingency').reduce((s: number, e: any) => s + e.amount, 0);
             const contingencyRemaining = contingencyPlanned - contingencyActual;
             const budgetWithoutReserve = totalPlanned - contingencyPlanned;
