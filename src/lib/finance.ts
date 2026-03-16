@@ -251,10 +251,10 @@ export function getCashFlowForecast(
 
   revenues.forEach(r => {
     if (r.month >= 1 && r.month <= durationMonths) {
-      if (r.status === 'planned' || r.status === 'invoiced') {
-        // Both planned and invoiced count as expected revenue in cash flow
-        plannedRev[r.month - 1] += r.amount;
-      } else if (r.status === 'collected') {
+      // All revenues (planned, invoiced, collected) count as expected revenue
+      plannedRev[r.month - 1] += r.amount;
+      // Only collected counts as actual
+      if (r.status === 'collected') {
         actualRev[r.month - 1] += r.amount;
       }
     }
