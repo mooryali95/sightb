@@ -1,7 +1,7 @@
 import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
-import { formatCurrency, getProjectSummary } from '@/lib/finance';
+import { formatCurrency, getProjectSummary, getTotalPlanned } from '@/lib/finance';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
