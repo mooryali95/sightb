@@ -457,6 +457,8 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          approval_status: string
+          approved_by: string | null
           budget_item_id: string | null
           category: string
           created_at: string
@@ -464,15 +466,19 @@ export type Database = {
           date: string
           description: string
           id: string
+          invoice_ref: string | null
           month: number
           notes: string | null
           project_id: string
           resource_id: string | null
           responsible: string | null
           user_id: string
+          vendor: string | null
         }
         Insert: {
           amount?: number
+          approval_status?: string
+          approved_by?: string | null
           budget_item_id?: string | null
           category: string
           created_at?: string
@@ -480,15 +486,19 @@ export type Database = {
           date: string
           description: string
           id?: string
+          invoice_ref?: string | null
           month?: number
           notes?: string | null
           project_id: string
           resource_id?: string | null
           responsible?: string | null
           user_id: string
+          vendor?: string | null
         }
         Update: {
           amount?: number
+          approval_status?: string
+          approved_by?: string | null
           budget_item_id?: string | null
           category?: string
           created_at?: string
@@ -496,12 +506,14 @@ export type Database = {
           date?: string
           description?: string
           id?: string
+          invoice_ref?: string | null
           month?: number
           notes?: string | null
           project_id?: string
           resource_id?: string | null
           responsible?: string | null
           user_id?: string
+          vendor?: string | null
         }
         Relationships: [
           {

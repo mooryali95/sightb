@@ -322,12 +322,22 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteCompany: async (id) => {
+    // Delete projects first (which cascades their children)
+    const compProjects = get().projects.filter(p => p.companyId === id);
+    for (const project of compProjects) {
+      await get().deleteProject(project.id);
+    }
+    // Delete portfolios, indirect costs, custodies tied to company
+    await supabase.from('portfolios').delete().eq('company_id', id);
+    await (supabase as any).from('indirect_costs').delete().eq('company_id', id);
+    await supabase.from('custodies').delete().eq('company_id', id);
     const { error } = await supabase.from('companies').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
       companies: s.companies.filter((x) => x.id !== id),
       portfolios: s.portfolios.filter((x) => x.companyId !== id),
       projects: s.projects.filter((x) => x.companyId !== id),
+      indirectCosts: s.indirectCosts.filter((x) => x.companyId !== id),
     }));
   },
 
@@ -427,6 +437,14 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteProject: async (id) => {
+    // Sequential delete to avoid FK constraint failures
+    const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies'] as const;
+    for (const table of tables) {
+      await (supabase as any).from(table).delete().eq('project_id', id);
+    }
+    // baseline_items cascade with cost_baselines
+    await supabase.from('cost_baselines').delete().eq('project_id', id);
+    // audit_log has ON DELETE SET NULL, safe to proceed
     const { error } = await supabase.from('projects').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
@@ -434,6 +452,11 @@ export const useStore = create<AppState>()((set, get) => ({
       budgetItems: s.budgetItems.filter((x) => x.projectId !== id),
       expenses: s.expenses.filter((x) => x.projectId !== id),
       revenues: s.revenues.filter((x) => x.projectId !== id),
+      milestones: s.milestones.filter((x) => x.projectId !== id),
+      changeOrders: s.changeOrders.filter((x) => x.projectId !== id),
+      risks: s.risks.filter((x) => x.projectId !== id),
+      resources: s.resources.filter((x) => x.projectId !== id),
+      custodies: s.custodies.filter((x) => x.projectId !== id),
     }));
   },
 
@@ -478,13 +501,17 @@ export const useStore = create<AppState>()((set, get) => ({
   // ---- Expense slice ----
   addExpense: async (e) => {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('expenses').insert({
+    const { data, error } = await (supabase as any).from('expenses').insert({
       user_id: userId, project_id: e.projectId,
       budget_item_id: e.budgetItemId || null,
       category: e.category, description: e.description,
       amount: e.amount, date: e.date, month: e.month,
       responsible: e.responsible || null, notes: e.notes || null,
       resource_id: e.resourceId || null, custody_id: e.custodyId || null,
+      approval_status: e.approvalStatus || 'approved',
+      approved_by: e.approvedBy || null,
+      vendor: e.vendor || null,
+      invoice_ref: e.invoiceRef || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapExpense(data);
@@ -502,7 +529,11 @@ export const useStore = create<AppState>()((set, get) => ({
     if (e.responsible !== undefined) updates.responsible = e.responsible;
     if (e.notes !== undefined) updates.notes = e.notes;
     if (e.budgetItemId !== undefined) updates.budget_item_id = e.budgetItemId;
-    const { error } = await supabase.from('expenses').update(updates).eq('id', id);
+    if (e.approvalStatus !== undefined) updates.approval_status = e.approvalStatus;
+    if (e.approvedBy !== undefined) updates.approved_by = e.approvedBy;
+    if (e.vendor !== undefined) updates.vendor = e.vendor;
+    if (e.invoiceRef !== undefined) updates.invoice_ref = e.invoiceRef;
+    const { error } = await (supabase as any).from('expenses').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...e } : x)) }));
   },

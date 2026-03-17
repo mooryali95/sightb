@@ -74,6 +74,10 @@ export function mapExpense(d: any): Expense {
     category: d.category as Expense['category'], description: d.description, amount: Number(d.amount),
     date: d.date, month: d.month, responsible: d.responsible || undefined, notes: d.notes || undefined,
     resourceId: d.resource_id || undefined, custodyId: d.custody_id || undefined,
+    approvalStatus: (d.approval_status || 'approved') as Expense['approvalStatus'],
+    approvedBy: d.approved_by || undefined,
+    vendor: d.vendor || undefined,
+    invoiceRef: d.invoice_ref || undefined,
   };
 }
 

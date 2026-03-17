@@ -24,10 +24,12 @@ interface BudgetSectionProps {
   currency: string;
   managementReserve?: number;
   readOnly?: boolean;
+  baselineLocked?: boolean;
 }
 
-export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false }: BudgetSectionProps) {
+export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false }: BudgetSectionProps) {
   const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense } = useStore();
+  const isLocked = readOnly || baselineLocked;
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
@@ -232,11 +234,16 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-semibold">بنود الموازنة</h3>
+            {baselineLocked && !readOnly && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                🔒 الموازنة مقفلة — خط الأساس مثبّت. لتعديل الموازنة، استخدم أوامر التغيير.
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               الإجمالي المخطط: {formatCurrency(totalPlanned)} · الفعلي: {formatCurrency(totalActual)} · المتبقي: {formatCurrency(totalPlanned - totalActual)}
             </p>
           </div>
-          {!readOnly && (
+          {!isLocked && (
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />بند جديد</Button>
@@ -334,7 +341,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           )}
         </div>
 
-      {!readOnly && unlinkedByCategory.size > 0 && (
+      {!isLocked && unlinkedByCategory.size > 0 && (
           <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5">
             <p className="text-sm font-medium text-destructive flex items-center gap-2">⚠️ مصروفات غير مربوطة ببنود الموازنة</p>
             <ul className="mt-1 text-xs text-destructive/80 space-y-0.5">
@@ -383,7 +390,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                   <th>الفعلي (مربوط)</th>
                   <th className="hidden sm:table-cell">المتبقي</th>
                   <th className="hidden md:table-cell">نسبة الصرف</th>
-                  {!readOnly && <th></th>}
+                  {!isLocked && <th></th>}
                 </tr>
               </thead>
               <tbody>
@@ -420,7 +427,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                           <span className="text-xs text-muted-foreground">{spentPct.toFixed(0)}%</span>
                         </div>
                       </td>
-                      {!readOnly && (
+                      {!isLocked && (
                       <td>
                         <div className="flex items-center gap-0.5">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>

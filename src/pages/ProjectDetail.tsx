@@ -47,7 +47,7 @@ export default function ProjectDetail() {
   const { isAdmin, canEdit: canEditRole } = useRole();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
-    milestones, changeOrders, risks,
+    milestones, changeOrders, risks, baselines,
     loadAll, updateProject, deleteProject,
   } = useStore();
 
@@ -403,7 +403,7 @@ export default function ProjectDetail() {
 
           <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} /></TabsContent>
           <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} /></TabsContent>
           <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>

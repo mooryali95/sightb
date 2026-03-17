@@ -114,10 +114,23 @@ export interface BudgetItem {
   costType: CostType; costClass: CostClass; resourceId?: string;
 }
 
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export const APPROVAL_STATUS_LABELS: Record<ApprovalStatus, string> = {
+  pending: 'بانتظار الاعتماد', approved: 'معتمد', rejected: 'مرفوض',
+};
+
+export const APPROVAL_STATUS_COLORS: Record<ApprovalStatus, string> = {
+  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
+
 export interface Expense {
   id: string; projectId: string; budgetItemId?: string; category: ExpenseCategory;
   description: string; amount: number; date: string; month: number;
   responsible?: string; notes?: string; resourceId?: string; custodyId?: string;
+  approvalStatus: ApprovalStatus; approvedBy?: string; vendor?: string; invoiceRef?: string;
 }
 
 export type RevenueType = 'advance' | 'milestone' | 'final' | 'retention' | 'variation' | 'deduction';

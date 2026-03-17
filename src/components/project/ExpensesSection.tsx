@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type Resource, type Custody, type BudgetItem } from '@/types/project';
+import {
+  EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS,
+  type ExpenseCategory, type ApprovalStatus, type Resource, type Custody, type BudgetItem,
+} from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, Check, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 
@@ -36,19 +40,26 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const [resourceId, setResourceId] = useState<string>('');
   const [custodyId, setCustodyId] = useState<string>('');
   const [budgetItemId, setBudgetItemId] = useState<string>('');
+  const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>('approved');
+  const [vendor, setVendor] = useState('');
+  const [invoiceRef, setInvoiceRef] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
+  const [filterApproval, setFilterApproval] = useState<string>('all');
 
   const filteredExpenses = expenses.filter((exp) => {
     const matchesSearch = !searchQuery || exp.description?.toLowerCase().includes(searchQuery.toLowerCase()) || exp.responsible?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = filterCategory === 'all' || exp.category === filterCategory;
     const matchesMonth = filterMonth === 'all' || String(exp.month) === filterMonth;
-    return matchesSearch && matchesCategory && matchesMonth;
+    const matchesApproval = filterApproval === 'all' || exp.approvalStatus === filterApproval;
+    return matchesSearch && matchesCategory && matchesMonth && matchesApproval;
   });
 
   const matchingBudgetItems = budgetItems.filter(b => b.category === category);
+
+  const pendingCount = expenses.filter(e => e.approvalStatus === 'pending').length;
 
   const resetForm = () => {
     setEditingId(null);
@@ -61,6 +72,9 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setResourceId('');
     setCustodyId('');
     setBudgetItemId('');
+    setApprovalStatus('approved');
+    setVendor('');
+    setInvoiceRef('');
   };
 
   const openEdit = (exp: any) => {
@@ -74,6 +88,9 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setResourceId(exp.resourceId || '');
     setCustodyId(exp.custodyId || '');
     setBudgetItemId(exp.budgetItemId || '');
+    setApprovalStatus(exp.approvalStatus || 'approved');
+    setVendor(exp.vendor || '');
+    setInvoiceRef(exp.invoiceRef || '');
     setOpen(true);
   };
 
@@ -87,6 +104,9 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         date,
         month: parseInt(month),
         responsible: responsible.trim() || undefined,
+        approvalStatus,
+        vendor: vendor.trim() || undefined,
+        invoiceRef: invoiceRef.trim() || undefined,
       });
       toast.success('تم تعديل المصروف');
     } else {
@@ -101,11 +121,24 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
         custodyId: custodyId && custodyId !== 'none' ? custodyId : undefined,
         budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : undefined,
+        approvalStatus,
+        vendor: vendor.trim() || undefined,
+        invoiceRef: invoiceRef.trim() || undefined,
       });
       toast.success('تمت إضافة المصروف');
     }
     resetForm();
     setOpen(false);
+  };
+
+  const handleApprove = async (expId: string) => {
+    await updateExpense(expId, { approvalStatus: 'approved' });
+    toast.success('تم اعتماد المصروف');
+  };
+
+  const handleReject = async (expId: string) => {
+    await updateExpense(expId, { approvalStatus: 'rejected' });
+    toast.success('تم رفض المصروف');
   };
 
   const responsibleMap = new Map<string, number>();
@@ -123,13 +156,23 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     }
   });
 
-  const totalExpenses = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+  const totalExpenses = expenses.filter(e => e.approvalStatus !== 'rejected').reduce((s: number, e: any) => s + e.amount, 0);
   const totalRevenue = revenues.reduce((s: number, r: any) => s + r.amount, 0);
   const spendFromRevenue = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0;
   const spendFromContract = contractValue > 0 ? (totalExpenses / contractValue) * 100 : 0;
 
   return (
     <div className="space-y-4">
+      {/* Pending approval alert */}
+      {pendingCount > 0 && !readOnly && (
+        <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/30">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            {pendingCount} مصروف بانتظار الاعتماد
+          </p>
+        </div>
+      )}
+
       {/* Spend ratios */}
       <div className="stat-card space-y-3">
         <div>
@@ -256,6 +299,27 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} placeholder="اختياري" />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>المورّد</Label>
+                    <Input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="اختياري" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>مرجع الفاتورة</Label>
+                    <Input value={invoiceRef} onChange={(e) => setInvoiceRef(e.target.value)} placeholder="اختياري" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>حالة الاعتماد</Label>
+                  <Select value={approvalStatus} onValueChange={(v) => setApprovalStatus(v as ApprovalStatus)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(APPROVAL_STATUS_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 {!editingId && resources.length > 0 && (
                   <div className="space-y-2">
                     <Label>المورد (اختياري)</Label>
@@ -331,7 +395,16 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                 ))}
               </SelectContent>
             </Select>
-            {(searchQuery || filterCategory !== 'all' || filterMonth !== 'all') && (
+            <Select value={filterApproval} onValueChange={setFilterApproval}>
+              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="كل الحالات" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل الحالات</SelectItem>
+                {Object.entries(APPROVAL_STATUS_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(searchQuery || filterCategory !== 'all' || filterMonth !== 'all' || filterApproval !== 'all') && (
               <span className="text-xs text-muted-foreground self-center">({filteredExpenses.length} نتيجة)</span>
             )}
           </div>
@@ -349,6 +422,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                   <th>الفئة</th>
                   <th>الوصف</th>
                   <th>المبلغ</th>
+                  <th>الحالة</th>
                   <th className="hidden sm:table-cell">الشهر</th>
                   <th className="hidden md:table-cell">بند الموازنة</th>
                   <th className="hidden md:table-cell">المورد</th>
@@ -362,11 +436,22 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                   const resource = resources.find(r => r.id === exp.resourceId);
                   const custody = custodies.find(c => c.id === exp.custodyId);
                   const budgetItem = budgetItems.find(b => b.id === exp.budgetItemId);
+                  const status = exp.approvalStatus || 'approved';
                   return (
-                    <tr key={exp.id}>
+                    <tr key={exp.id} className={status === 'rejected' ? 'opacity-50' : ''}>
                       <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[exp.category as ExpenseCategory]}</span></td>
-                      <td>{exp.description}</td>
+                      <td>
+                        <div>
+                          {exp.description}
+                          {exp.vendor && <span className="block text-[10px] text-muted-foreground">{exp.vendor}</span>}
+                        </div>
+                      </td>
                       <td className="font-mono text-sm">{formatCurrency(exp.amount)}</td>
+                      <td>
+                        <Badge className={`text-[10px] ${APPROVAL_STATUS_COLORS[status as ApprovalStatus] || ''}`}>
+                          {APPROVAL_STATUS_LABELS[status as ApprovalStatus] || status}
+                        </Badge>
+                      </td>
                       <td className="hidden sm:table-cell">شهر {exp.month}</td>
                       <td className="hidden md:table-cell text-xs">{budgetItem?.description || '—'}</td>
                       <td className="hidden md:table-cell text-xs">{resource?.name || '—'}</td>
@@ -375,6 +460,16 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                       {!readOnly && (
                       <td>
                         <div className="flex items-center gap-0.5">
+                          {status === 'pending' && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleApprove(exp.id)} title="اعتماد">
+                                <Check className="w-3.5 h-3.5 text-green-600" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReject(exp.id)} title="رفض">
+                                <X className="w-3.5 h-3.5 text-destructive" />
+                              </Button>
+                            </>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => openEdit(exp)}>
                             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                           </Button>

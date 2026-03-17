@@ -1,0 +1,5 @@
+ALTER TABLE public.expenses
+  ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'approved',
+  ADD COLUMN IF NOT EXISTS approved_by TEXT,
+  ADD COLUMN IF NOT EXISTS vendor TEXT,
+  ADD COLUMN IF NOT EXISTS invoice_ref TEXT;
