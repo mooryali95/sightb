@@ -234,6 +234,11 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-semibold">بنود الموازنة</h3>
+            {baselineLocked && !readOnly && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                🔒 الموازنة مقفلة — خط الأساس مثبّت. لتعديل الموازنة، استخدم أوامر التغيير.
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               الإجمالي المخطط: {formatCurrency(totalPlanned)} · الفعلي: {formatCurrency(totalActual)} · المتبقي: {formatCurrency(totalPlanned - totalActual)}
             </p>
