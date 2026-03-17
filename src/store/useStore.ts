@@ -506,7 +506,11 @@ export const useStore = create<AppState>()((set, get) => ({
     if (e.responsible !== undefined) updates.responsible = e.responsible;
     if (e.notes !== undefined) updates.notes = e.notes;
     if (e.budgetItemId !== undefined) updates.budget_item_id = e.budgetItemId;
-    const { error } = await supabase.from('expenses').update(updates).eq('id', id);
+    if (e.approvalStatus !== undefined) updates.approval_status = e.approvalStatus;
+    if (e.approvedBy !== undefined) updates.approved_by = e.approvedBy;
+    if (e.vendor !== undefined) updates.vendor = e.vendor;
+    if (e.invoiceRef !== undefined) updates.invoice_ref = e.invoiceRef;
+    const { error } = await (supabase as any).from('expenses').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...e } : x)) }));
   },
