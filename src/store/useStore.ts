@@ -427,6 +427,14 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteProject: async (id) => {
+    // Sequential delete to avoid FK constraint failures
+    const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies'] as const;
+    for (const table of tables) {
+      await (supabase as any).from(table).delete().eq('project_id', id);
+    }
+    // baseline_items cascade with cost_baselines
+    await supabase.from('cost_baselines').delete().eq('project_id', id);
+    // audit_log has ON DELETE SET NULL, safe to proceed
     const { error } = await supabase.from('projects').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
@@ -434,6 +442,11 @@ export const useStore = create<AppState>()((set, get) => ({
       budgetItems: s.budgetItems.filter((x) => x.projectId !== id),
       expenses: s.expenses.filter((x) => x.projectId !== id),
       revenues: s.revenues.filter((x) => x.projectId !== id),
+      milestones: s.milestones.filter((x) => x.projectId !== id),
+      changeOrders: s.changeOrders.filter((x) => x.projectId !== id),
+      risks: s.risks.filter((x) => x.projectId !== id),
+      resources: s.resources.filter((x) => x.projectId !== id),
+      custodies: s.custodies.filter((x) => x.projectId !== id),
     }));
   },
 
