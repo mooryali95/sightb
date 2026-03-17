@@ -341,7 +341,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           )}
         </div>
 
-      {!readOnly && unlinkedByCategory.size > 0 && (
+      {!isLocked && unlinkedByCategory.size > 0 && (
           <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5">
             <p className="text-sm font-medium text-destructive flex items-center gap-2">⚠️ مصروفات غير مربوطة ببنود الموازنة</p>
             <ul className="mt-1 text-xs text-destructive/80 space-y-0.5">
