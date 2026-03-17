@@ -322,12 +322,22 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   deleteCompany: async (id) => {
+    // Delete projects first (which cascades their children)
+    const compProjects = get().projects.filter(p => p.companyId === id);
+    for (const project of compProjects) {
+      await get().deleteProject(project.id);
+    }
+    // Delete portfolios, indirect costs, custodies tied to company
+    await supabase.from('portfolios').delete().eq('company_id', id);
+    await (supabase as any).from('indirect_costs').delete().eq('company_id', id);
+    await supabase.from('custodies').delete().eq('company_id', id);
     const { error } = await supabase.from('companies').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
       companies: s.companies.filter((x) => x.id !== id),
       portfolios: s.portfolios.filter((x) => x.companyId !== id),
       projects: s.projects.filter((x) => x.companyId !== id),
+      indirectCosts: s.indirectCosts.filter((x) => x.companyId !== id),
     }));
   },
 

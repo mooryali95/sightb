@@ -64,7 +64,7 @@ export function getProjectSummary(
   changeOrders: ChangeOrder[] = []
 ): ProjectSummary {
   const totalPlanned = getTotalPlanned(budgetItems);
-  const totalActual = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalActual = expenses.filter(e => (e as any).approvalStatus !== 'rejected').reduce((sum, e) => sum + e.amount, 0);
 
   const effectiveContractValue = getEffectiveContractValue(project.contractValue, changeOrders);
   const contractRemaining = effectiveContractValue - totalActual;
