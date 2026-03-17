@@ -29,6 +29,7 @@ interface BudgetSectionProps {
 
 export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false }: BudgetSectionProps) {
   const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense } = useStore();
+  const isLocked = readOnly || baselineLocked;
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
