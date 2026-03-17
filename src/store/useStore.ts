@@ -478,13 +478,17 @@ export const useStore = create<AppState>()((set, get) => ({
   // ---- Expense slice ----
   addExpense: async (e) => {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('expenses').insert({
+    const { data, error } = await (supabase as any).from('expenses').insert({
       user_id: userId, project_id: e.projectId,
       budget_item_id: e.budgetItemId || null,
       category: e.category, description: e.description,
       amount: e.amount, date: e.date, month: e.month,
       responsible: e.responsible || null, notes: e.notes || null,
       resource_id: e.resourceId || null, custody_id: e.custodyId || null,
+      approval_status: e.approvalStatus || 'approved',
+      approved_by: e.approvedBy || null,
+      vendor: e.vendor || null,
+      invoice_ref: e.invoiceRef || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapExpense(data);
