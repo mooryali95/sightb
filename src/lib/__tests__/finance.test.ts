@@ -57,8 +57,9 @@ describe('calculateEVM', () => {
 
   it('should return CPI=1 when AC=0 and EV=0', () => {
     const result = calculateEVM(baselineItems as any, [] as any, 4, 1, 0, 0);
-    expect(result.cpi).toBe(1);
-    expect(result.spi).toBe(1);
+    expect(result.cpi).toBe(1); // no spend, no work → no deviation
+    // SPI: EV=0, PV>0 → SPI=0 (behind schedule)
+    expect(result.spi).toBe(0);
   });
 });
 
