@@ -136,9 +136,15 @@ interface SnapshotActions {
   loadSnapshots: (entityType: string, entityId: string) => Promise<PeriodicSnapshot[]>;
 }
 
+interface CommitmentActions {
+  addCommitment: (c: Omit<Commitment, 'id' | 'createdAt'>) => Promise<string>;
+  updateCommitment: (id: string, c: Partial<Commitment>) => Promise<void>;
+  deleteCommitment: (id: string) => Promise<void>;
+}
+
 type AppState = DataState & LoadActions & CompanyActions & PortfolioActions & ProjectActions &
   BudgetActions & ExpenseActions & RevenueActions & ResourceActions & CustodyActions & BaselineActions &
-  MilestoneActions & ChangeOrderActions & RiskActions & IndirectCostActions & SnapshotActions;
+  MilestoneActions & ChangeOrderActions & RiskActions & IndirectCostActions & SnapshotActions & CommitmentActions;
 
 export const useStore = create<AppState>()((set, get) => ({
   // ---- Initial state ----
