@@ -185,7 +185,7 @@ export const useStore = create<AppState>()((set, get) => ({
       // Phase 2: Load detail data in background (non-blocking)
       if (!get().detailsLoaded) {
         set({ detailsLoading: true });
-        const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts] = await Promise.all([
+        const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts, commitments] = await Promise.all([
           supabase.from('budget_items').select('*').order('created_at', { ascending: false }),
           supabase.from('expenses').select('*').order('created_at', { ascending: false }),
           supabase.from('revenues').select('*').order('created_at', { ascending: false }),
@@ -195,6 +195,7 @@ export const useStore = create<AppState>()((set, get) => ({
           supabase.from('change_orders').select('*').order('created_at', { ascending: false }),
           supabase.from('risks').select('*').order('created_at', { ascending: false }),
           supabase.from('indirect_costs').select('*').order('created_at', { ascending: false }),
+          (supabase as any).from('commitments').select('*').order('created_at', { ascending: false }),
         ]);
 
         // Warn if any table hits the 1000 row limit
