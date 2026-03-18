@@ -137,7 +137,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
                   <div>
                     <p className="text-sm font-medium">{bl.name} <span className="text-muted-foreground">v{bl.version}</span></p>
                     <p className="text-xs text-muted-foreground">
-                      {bl.items.length} بند · {formatCurrency(bl.totalPlanned)} · {new Date(bl.createdAt).toLocaleDateString('ar-SA')}
+                      {bl.items.length} بند · {formatCurrency(bl.totalPlanned)} · {new Date(bl.createdAt).toLocaleDateString('ar-SA', { calendar: 'gregory', year: 'numeric', month: 'short', day: 'numeric' })}
                     </p>
                   </div>
                 </div>

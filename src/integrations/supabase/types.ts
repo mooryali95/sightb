@@ -200,6 +200,8 @@ export type Database = {
           amount_impact: number
           approved_by: string | null
           approved_date: string | null
+          auto_rebaseline: boolean | null
+          budget_items_json: Json | null
           change_type: string
           created_at: string
           description: string
@@ -214,6 +216,8 @@ export type Database = {
           amount_impact?: number
           approved_by?: string | null
           approved_date?: string | null
+          auto_rebaseline?: boolean | null
+          budget_items_json?: Json | null
           change_type?: string
           created_at?: string
           description: string
@@ -228,6 +232,8 @@ export type Database = {
           amount_impact?: number
           approved_by?: string | null
           approved_date?: string | null
+          auto_rebaseline?: boolean | null
+          budget_items_json?: Json | null
           change_type?: string
           created_at?: string
           description?: string

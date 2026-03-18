@@ -4,6 +4,7 @@ import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
   CostBaseline, BaselineItem, Resource, Custody, Milestone, ChangeOrder,
   Risk, IndirectCost, PeriodicSnapshot,
+  type ChangeOrderBudgetItem,
   type ContractType, type CostType, type CostClass, type RevenueType, type RevenueStatus,
   type MilestoneStatus, type ChangeOrderType, type ChangeOrderStatus,
   type RiskProbability, type RiskImpact, type RiskCategory, type RiskStatus,
@@ -139,6 +140,11 @@ export function mapMilestone(d: any): Milestone {
 }
 
 export function mapChangeOrder(d: any): ChangeOrder {
+  let parsedBudgetItems: ChangeOrderBudgetItem[] = [];
+  try {
+    const raw = d.budget_items_json;
+    if (raw) parsedBudgetItems = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {}
   return {
     id: d.id, projectId: d.project_id, description: d.description,
     changeType: (d.change_type || 'scope_addition') as ChangeOrderType,
@@ -149,6 +155,8 @@ export function mapChangeOrder(d: any): ChangeOrder {
     approvedBy: d.approved_by || undefined,
     approvedDate: d.approved_date || undefined,
     createdAt: d.created_at,
+    budgetItems: parsedBudgetItems,
+    autoRebaseline: d.auto_rebaseline !== false,
   };
 }
 
