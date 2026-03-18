@@ -150,7 +150,7 @@ export const useStore = create<AppState>()((set, get) => ({
   // ---- Initial state ----
   companies: [], portfolios: [], projects: [], budgetItems: [], expenses: [],
   revenues: [], baselines: [], resources: [], custodies: [], milestones: [],
-  changeOrders: [], risks: [], indirectCosts: [], snapshots: [],
+  changeOrders: [], risks: [], indirectCosts: [], snapshots: [], commitments: [],
   auditLog: [], loading: true, detailsLoading: false, detailsLoaded: false,
   projectDataLoaded: new Set<string>(),
 
