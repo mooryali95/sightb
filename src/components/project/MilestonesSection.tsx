@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
 import {
-  MILESTONE_STATUS_LABELS, MILESTONE_STATUS_COLORS,
-  type MilestoneStatus, type Milestone, type Project,
+  MILESTONE_STATUS_LABELS, MILESTONE_STATUS_COLORS, REVENUE_STATUS_LABELS,
+  type MilestoneStatus, type Milestone, type Project, type Revenue,
 } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,10 +20,11 @@ interface MilestonesSectionProps {
   milestones: Milestone[];
   project: Project;
   readOnly?: boolean;
+  revenues?: Revenue[];
 }
 
-export function MilestonesSection({ projectId, milestones, project, readOnly = false }: MilestonesSectionProps) {
-  const { addMilestone, updateMilestone, deleteMilestone, updateProject } = useStore();
+export function MilestonesSection({ projectId, milestones, project, readOnly = false, revenues = [] }: MilestonesSectionProps) {
+  const { addMilestone, updateMilestone, deleteMilestone, updateProject, updateRevenue } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -33,27 +34,23 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
   const [percentComplete, setPercentComplete] = useState('0');
   const [plannedStart, setPlannedStart] = useState('');
   const [plannedEnd, setPlannedEnd] = useState('');
+  const [linkedRevenueId, setLinkedRevenueId] = useState('');
+
+  // Revenue prompt
+  const [revenuePrompt, setRevenuePrompt] = useState<{ milestoneId: string; revenue: Revenue } | null>(null);
 
   const resetForm = () => {
-    setEditingId(null);
-    setName('');
-    setDescription('');
-    setWeight('');
-    setStatus('planned');
-    setPercentComplete('0');
-    setPlannedStart('');
-    setPlannedEnd('');
+    setEditingId(null); setName(''); setDescription(''); setWeight('');
+    setStatus('planned'); setPercentComplete('0'); setPlannedStart(''); setPlannedEnd('');
+    setLinkedRevenueId('');
   };
 
   const openEdit = (m: Milestone) => {
-    setEditingId(m.id);
-    setName(m.name);
-    setDescription(m.description || '');
-    setWeight(String(m.weight));
-    setStatus(m.status);
+    setEditingId(m.id); setName(m.name); setDescription(m.description || '');
+    setWeight(String(m.weight)); setStatus(m.status);
     setPercentComplete(String(m.percentComplete));
-    setPlannedStart(m.plannedStart || '');
-    setPlannedEnd(m.plannedEnd || '');
+    setPlannedStart(m.plannedStart || ''); setPlannedEnd(m.plannedEnd || '');
+    setLinkedRevenueId(m.linkedRevenueId || '');
     setOpen(true);
   };
 
@@ -62,6 +59,18 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     if (totalWeight === 0) return 0;
     const weighted = updatedMilestones.reduce((s, m) => s + (m.weight * m.percentComplete), 0);
     return Math.round(weighted / totalWeight);
+  };
+
+  const checkRevenuePrompt = (milestoneId: string, pct: number, statusVal?: string) => {
+    if (pct === 100 || statusVal === 'completed') {
+      const milestone = milestones.find(m => m.id === milestoneId);
+      if (milestone?.linkedRevenueId) {
+        const linkedRevenue = revenues.find(r => r.id === milestone.linkedRevenueId);
+        if (linkedRevenue && linkedRevenue.status === 'planned') {
+          setRevenuePrompt({ milestoneId, revenue: linkedRevenue });
+        }
+      }
+    }
   };
 
   const handleSubmit = async () => {
@@ -75,6 +84,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
       plannedStart: plannedStart || undefined,
       plannedEnd: plannedEnd || undefined,
       sortOrder: milestones.length,
+      linkedRevenueId: linkedRevenueId && linkedRevenueId !== 'none' ? linkedRevenueId : undefined,
     };
 
     if (editingId) {
@@ -83,8 +93,9 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
       const newPct = recalcProjectPercent(updated);
       await updateProject(projectId, { percentComplete: newPct });
       toast.success('تم تعديل المرحلة');
+      checkRevenuePrompt(editingId, data.percentComplete, data.status);
     } else {
-      await addMilestone({ projectId, ...data, linkedRevenueId: undefined, actualStart: undefined, actualEnd: undefined });
+      await addMilestone({ projectId, ...data, actualStart: undefined, actualEnd: undefined });
       toast.success('تمت إضافة المرحلة');
     }
     resetForm();
@@ -96,6 +107,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     const updated = milestones.map(ms => ms.id === m.id ? { ...ms, percentComplete: newPct } : ms);
     const projectPct = recalcProjectPercent(updated);
     await updateProject(projectId, { percentComplete: projectPct });
+    checkRevenuePrompt(m.id, newPct);
   };
 
   const totalWeight = milestones.reduce((s, m) => s + m.weight, 0);
@@ -162,6 +174,22 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
                   <Input type="date" value={plannedEnd} onChange={(e) => setPlannedEnd(e.target.value)} />
                 </div>
               </div>
+              {revenues.length > 0 && (
+                <div className="space-y-2">
+                  <Label>ربط بإيراد (اختياري)</Label>
+                  <Select value={linkedRevenueId} onValueChange={setLinkedRevenueId}>
+                    <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">بدون ربط</SelectItem>
+                      {revenues.map(r => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.description} — {formatCurrency(r.amount)} ({REVENUE_STATUS_LABELS[r.status]})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
             </div>
           </DialogContent>
@@ -178,7 +206,6 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           </div>
           <Progress value={weightedComplete} className="h-3" />
 
-          {/* Weight warning */}
           {totalWeight > 0 && (totalWeight < 0.99 || totalWeight > 1.01) && (
             <div className="p-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-xs flex items-center gap-1.5">
               ⚠️ مجموع الأوزان ({totalWeight.toFixed(2)}) {totalWeight < 0.99 ? 'أقل' : 'أكبر'} من 1 — يُفضل أن يكون المجموع = 1.00
@@ -197,12 +224,15 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           {milestones.map((m) => (
             <div key={m.id} className="p-3 rounded-lg border border-border bg-muted/10">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="text-sm font-medium">{m.name}</h4>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${MILESTONE_STATUS_COLORS[m.status]}`}>
                     {MILESTONE_STATUS_LABELS[m.status]}
                   </span>
                   {m.weight > 0 && <span className="text-[10px] text-muted-foreground">وزن: {m.weight}</span>}
+                  {m.linkedRevenueId && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">مربوط بإيراد</span>
+                  )}
                 </div>
                 {!readOnly && (
                 <div className="flex items-center gap-1">
@@ -241,6 +271,40 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           ))}
         </div>
       )}
+
+      {/* Revenue auto-suggest dialog */}
+      <Dialog open={!!revenuePrompt} onOpenChange={(v) => { if (!v) setRevenuePrompt(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>إصدار فاتورة؟</DialogTitle>
+          </DialogHeader>
+          {revenuePrompt && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                المرحلة اكتملت — هل تريد تحويل الدفعة المرتبطة إلى "مُفوتر"؟
+              </p>
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-sm font-medium">{revenuePrompt.revenue.description}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  المبلغ: {formatCurrency(revenuePrompt.revenue.amount)} · الحالة: {REVENUE_STATUS_LABELS[revenuePrompt.revenue.status]}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button className="flex-1" onClick={async () => {
+                  await updateRevenue(revenuePrompt.revenue.id, { status: 'invoiced' });
+                  toast.success('تم تحويل الدفعة إلى مُفوتر');
+                  setRevenuePrompt(null);
+                }}>
+                  نعم — أصدر الفاتورة
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setRevenuePrompt(null)}>
+                  لاحقاً
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -254,6 +254,72 @@ export type Database = {
           },
         ]
       }
+      commitments: {
+        Row: {
+          budget_item_id: string | null
+          contract_ref: string | null
+          created_at: string
+          description: string
+          end_date: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          spent_amount: number
+          start_date: string | null
+          status: string
+          total_amount: number
+          user_id: string
+          vendor_name: string | null
+        }
+        Insert: {
+          budget_item_id?: string | null
+          contract_ref?: string | null
+          created_at?: string
+          description: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          spent_amount?: number
+          start_date?: string | null
+          status?: string
+          total_amount?: number
+          user_id: string
+          vendor_name?: string | null
+        }
+        Update: {
+          budget_item_id?: string | null
+          contract_ref?: string | null
+          created_at?: string
+          description?: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          spent_amount?: number
+          start_date?: string | null
+          status?: string
+          total_amount?: number
+          user_id?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commitments_budget_item_id_fkey"
+            columns: ["budget_item_id"]
+            isOneToOne: false
+            referencedRelation: "budget_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commitments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           created_at: string

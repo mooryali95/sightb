@@ -40,6 +40,7 @@ import { MilestonesSection } from '@/components/project/MilestonesSection';
 import { ChangeOrdersSection } from '@/components/project/ChangeOrdersSection';
 import { RisksSection } from '@/components/project/RisksSection';
 import { WhatIfSection } from '@/components/project/WhatIfSection';
+import { CommitmentsSection } from '@/components/project/CommitmentsSection';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -47,7 +48,7 @@ export default function ProjectDetail() {
   const { isAdmin, canEdit: canEditRole } = useRole();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
-    milestones, changeOrders, risks, baselines,
+    milestones, changeOrders, risks, baselines, commitments,
     loadAll, updateProject, deleteProject,
   } = useStore();
 
@@ -100,6 +101,7 @@ export default function ProjectDetail() {
   const pMilestones = milestones.filter((m) => m.projectId === project.id);
   const pChangeOrders = changeOrders.filter((co) => co.projectId === project.id);
   const pRisks = risks.filter((r) => r.projectId === project.id);
+  const pCommitments = (commitments || []).filter((c) => c.projectId === project.id);
 
   const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues, pChangeOrders);
   const categoryBreakdown = getExpensesByCategory(pExpenses);
@@ -169,6 +171,7 @@ export default function ProjectDetail() {
       { value: 'budget', label: 'الموازنة', icon: PiggyBank },
       { value: 'baseline', label: 'خط الأساس', icon: Baseline },
       { value: 'expenses', label: 'المصروفات', icon: Receipt },
+      { value: 'commitments', label: 'الالتزامات', icon: Briefcase },
       { value: 'custody', label: 'العهد', icon: Wallet },
       { value: 'revenue', label: 'الإيرادات', icon: DollarSign },
     ],
@@ -401,12 +404,13 @@ export default function ProjectDetail() {
             })}
           </TabsList>
 
-          <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} revenues={pRevenues} /></TabsContent>
+          <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} durationMonths={project.durationMonths} /></TabsContent>
           <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} /></TabsContent>
           <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} /></TabsContent>
           <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="commitments"><CommitmentsSection projectId={project.id} commitments={pCommitments} totalPlanned={summary.totalPlanned} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} readOnly={isReadOnly} /></TabsContent>

@@ -314,6 +314,33 @@ export interface PeriodicSnapshot {
   createdAt: string;
 }
 
+// ======== Commitment Types ========
+export type CommitmentStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+export const COMMITMENT_STATUS_LABELS: Record<CommitmentStatus, string> = {
+  draft: 'مسودة', active: 'نشط', completed: 'مكتمل', cancelled: 'ملغي',
+};
+export const COMMITMENT_STATUS_COLORS: Record<CommitmentStatus, string> = {
+  draft: 'bg-muted text-muted-foreground',
+  active: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
+export interface Commitment {
+  id: string;
+  projectId: string;
+  budgetItemId?: string;
+  description: string;
+  vendorName?: string;
+  contractRef?: string;
+  totalAmount: number;
+  spentAmount: number;
+  status: CommitmentStatus;
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
+  createdAt: string;
+}
+
 // ======== Summary Interfaces ========
 export interface ProjectSummary {
   contractValue: number;

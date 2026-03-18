@@ -9,6 +9,8 @@ import {
   type MilestoneStatus, type ChangeOrderType, type ChangeOrderStatus,
   type RiskProbability, type RiskImpact, type RiskCategory, type RiskStatus,
   type IndirectCostCategory,
+  type CommitmentStatus,
+  Commitment,
 } from '@/types/project';
 
 // ---- getUserId ----
@@ -202,6 +204,23 @@ export function mapSnapshot(d: any): PeriodicSnapshot {
     period: d.period,
     snapshotDate: d.snapshot_date,
     metrics: d.metrics || {},
+    createdAt: d.created_at,
+  };
+}
+
+export function mapCommitment(d: any): Commitment {
+  return {
+    id: d.id, projectId: d.project_id,
+    budgetItemId: d.budget_item_id || undefined,
+    description: d.description,
+    vendorName: d.vendor_name || undefined,
+    contractRef: d.contract_ref || undefined,
+    totalAmount: Number(d.total_amount ?? 0),
+    spentAmount: Number(d.spent_amount ?? 0),
+    status: (d.status || 'active') as CommitmentStatus,
+    startDate: d.start_date || undefined,
+    endDate: d.end_date || undefined,
+    notes: d.notes || undefined,
     createdAt: d.created_at,
   };
 }

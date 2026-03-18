@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
   CostBaseline, Resource, Custody, Milestone, ChangeOrder,
-  Risk, IndirectCost, PeriodicSnapshot,
+  Risk, IndirectCost, PeriodicSnapshot, Commitment,
 } from '@/types/project';
 import { getTotalPlanned } from '@/lib/finance';
 import {
@@ -11,6 +11,7 @@ import {
   mapCompany, mapPortfolio, mapProject, mapBudgetItem,
   mapExpense, mapResource, mapCustody, mapRevenue, mapBaselineItem,
   mapMilestone, mapChangeOrder, mapRisk, mapIndirectCost, mapSnapshot,
+  mapCommitment,
 } from './helpers';
 
 export interface AuditLogEntry {
@@ -34,6 +35,7 @@ interface DataState {
   risks: Risk[];
   indirectCosts: IndirectCost[];
   snapshots: PeriodicSnapshot[];
+  commitments: Commitment[];
   auditLog: AuditLogEntry[];
   loading: boolean;
   detailsLoading: boolean;
@@ -134,15 +136,21 @@ interface SnapshotActions {
   loadSnapshots: (entityType: string, entityId: string) => Promise<PeriodicSnapshot[]>;
 }
 
+interface CommitmentActions {
+  addCommitment: (c: Omit<Commitment, 'id' | 'createdAt'>) => Promise<string>;
+  updateCommitment: (id: string, c: Partial<Commitment>) => Promise<void>;
+  deleteCommitment: (id: string) => Promise<void>;
+}
+
 type AppState = DataState & LoadActions & CompanyActions & PortfolioActions & ProjectActions &
   BudgetActions & ExpenseActions & RevenueActions & ResourceActions & CustodyActions & BaselineActions &
-  MilestoneActions & ChangeOrderActions & RiskActions & IndirectCostActions & SnapshotActions;
+  MilestoneActions & ChangeOrderActions & RiskActions & IndirectCostActions & SnapshotActions & CommitmentActions;
 
 export const useStore = create<AppState>()((set, get) => ({
   // ---- Initial state ----
   companies: [], portfolios: [], projects: [], budgetItems: [], expenses: [],
   revenues: [], baselines: [], resources: [], custodies: [], milestones: [],
-  changeOrders: [], risks: [], indirectCosts: [], snapshots: [],
+  changeOrders: [], risks: [], indirectCosts: [], snapshots: [], commitments: [],
   auditLog: [], loading: true, detailsLoading: false, detailsLoaded: false,
   projectDataLoaded: new Set<string>(),
 
@@ -177,7 +185,7 @@ export const useStore = create<AppState>()((set, get) => ({
       // Phase 2: Load detail data in background (non-blocking)
       if (!get().detailsLoaded) {
         set({ detailsLoading: true });
-        const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts] = await Promise.all([
+        const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts, commitments] = await Promise.all([
           supabase.from('budget_items').select('*').order('created_at', { ascending: false }),
           supabase.from('expenses').select('*').order('created_at', { ascending: false }),
           supabase.from('revenues').select('*').order('created_at', { ascending: false }),
@@ -187,6 +195,7 @@ export const useStore = create<AppState>()((set, get) => ({
           supabase.from('change_orders').select('*').order('created_at', { ascending: false }),
           supabase.from('risks').select('*').order('created_at', { ascending: false }),
           supabase.from('indirect_costs').select('*').order('created_at', { ascending: false }),
+          (supabase as any).from('commitments').select('*').order('created_at', { ascending: false }),
         ]);
 
         // Warn if any table hits the 1000 row limit
@@ -209,6 +218,7 @@ export const useStore = create<AppState>()((set, get) => ({
           changeOrders: (changeOrders.data || []).map(mapChangeOrder),
           risks: (risks.data || []).map(mapRisk),
           indirectCosts: (indirectCosts.data || []).map(mapIndirectCost),
+          commitments: (commitments.data || []).map(mapCommitment),
           detailsLoading: false,
           detailsLoaded: true,
         });
@@ -439,7 +449,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   deleteProject: async (id) => {
     // Sequential delete to avoid FK constraint failures
-    const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies'] as const;
+    const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies', 'commitments'] as const;
     for (const table of tables) {
       await (supabase as any).from(table).delete().eq('project_id', id);
     }
@@ -962,5 +972,41 @@ export const useStore = create<AppState>()((set, get) => ({
       snapshots: [...s.snapshots.filter(x => !(x.entityType === entityType && x.entityId === entityId)), ...mapped],
     }));
     return mapped;
+  },
+
+  // ---- Commitment slice ----
+  addCommitment: async (c) => {
+    const userId = await getUserId();
+    const { data, error } = await (supabase as any).from('commitments').insert({
+      user_id: userId, project_id: c.projectId, description: c.description,
+      vendor_name: c.vendorName || null, contract_ref: c.contractRef || null,
+      total_amount: c.totalAmount || 0, spent_amount: c.spentAmount || 0,
+      status: c.status || 'active', budget_item_id: c.budgetItemId || null,
+      start_date: c.startDate || null, end_date: c.endDate || null, notes: c.notes || null,
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapCommitment(data);
+    set((s) => ({ commitments: [mapped, ...s.commitments] }));
+    return mapped.id;
+  },
+
+  updateCommitment: async (id, c) => {
+    const updates: Record<string, unknown> = {};
+    if (c.description !== undefined) updates.description = c.description;
+    if (c.vendorName !== undefined) updates.vendor_name = c.vendorName;
+    if (c.contractRef !== undefined) updates.contract_ref = c.contractRef;
+    if (c.totalAmount !== undefined) updates.total_amount = c.totalAmount;
+    if (c.spentAmount !== undefined) updates.spent_amount = c.spentAmount;
+    if (c.status !== undefined) updates.status = c.status;
+    if (c.notes !== undefined) updates.notes = c.notes;
+    const { error } = await (supabase as any).from('commitments').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ commitments: s.commitments.map((x) => (x.id === id ? { ...x, ...c } : x)) }));
+  },
+
+  deleteCommitment: async (id) => {
+    const { error } = await (supabase as any).from('commitments').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ commitments: s.commitments.filter((x) => x.id !== id) }));
   },
 }));
