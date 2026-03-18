@@ -35,6 +35,7 @@ interface DataState {
   risks: Risk[];
   indirectCosts: IndirectCost[];
   snapshots: PeriodicSnapshot[];
+  commitments: Commitment[];
   auditLog: AuditLogEntry[];
   loading: boolean;
   detailsLoading: boolean;
