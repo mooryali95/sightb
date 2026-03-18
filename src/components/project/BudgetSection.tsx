@@ -409,7 +409,14 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                   return (
                     <tr key={item.id} className={spentPct > 100 ? 'bg-destructive/5' : ''}>
                       <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory]}</span></td>
-                      <td>{item.description}</td>
+                      <td>
+                        {item.description.startsWith('[أمر تغيير]') ? (
+                          <span className="flex items-center gap-1">
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-bold shrink-0">CO</span>
+                            <span>{item.description.replace('[أمر تغيير] ', '')}</span>
+                          </span>
+                        ) : item.description}
+                      </td>
                       <td className="text-xs">{resource?.name || '—'}</td>
                       <td className="text-xs text-muted-foreground">{getMonthDisplay(item)}</td>
                       <td className="text-xs text-muted-foreground">{COST_TYPE_LABELS[item.costType as CostType] || 'ثابت'}</td>
