@@ -11,6 +11,7 @@ import {
   mapCompany, mapPortfolio, mapProject, mapBudgetItem,
   mapExpense, mapResource, mapCustody, mapRevenue, mapBaselineItem,
   mapMilestone, mapChangeOrder, mapRisk, mapIndirectCost, mapSnapshot,
+  mapCommitment,
 } from './helpers';
 
 export interface AuditLogEntry {
