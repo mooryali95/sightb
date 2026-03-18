@@ -114,6 +114,7 @@ interface ChangeOrderActions {
   addChangeOrder: (co: Omit<ChangeOrder, 'id' | 'createdAt'>) => Promise<string>;
   updateChangeOrder: (id: string, co: Partial<ChangeOrder>) => Promise<void>;
   deleteChangeOrder: (id: string) => Promise<void>;
+  applyApprovedChangeOrder: (projectId: string, changeOrder: ChangeOrder) => Promise<void>;
 }
 
 interface RiskActions {
