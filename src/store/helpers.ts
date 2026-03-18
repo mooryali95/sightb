@@ -4,6 +4,7 @@ import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
   CostBaseline, BaselineItem, Resource, Custody, Milestone, ChangeOrder,
   Risk, IndirectCost, PeriodicSnapshot,
+  type ChangeOrderBudgetItem,
   type ContractType, type CostType, type CostClass, type RevenueType, type RevenueStatus,
   type MilestoneStatus, type ChangeOrderType, type ChangeOrderStatus,
   type RiskProbability, type RiskImpact, type RiskCategory, type RiskStatus,

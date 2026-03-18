@@ -194,10 +194,21 @@ export const CHANGE_ORDER_STATUS_COLORS: Record<ChangeOrderStatus, string> = {
   rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
+export interface ChangeOrderBudgetItem {
+  category: ExpenseCategory;
+  description: string;
+  plannedAmount: number;
+  costType: CostType;
+  startMonth?: number;
+  endMonth?: number;
+}
+
 export interface ChangeOrder {
   id: string; projectId: string; description: string; changeType: ChangeOrderType;
   amountImpact: number; durationImpact: number; status: ChangeOrderStatus;
   requestedBy?: string; approvedBy?: string; approvedDate?: string; createdAt: string;
+  budgetItems?: ChangeOrderBudgetItem[];
+  autoRebaseline?: boolean;
 }
 
 export interface CostBaseline {

@@ -770,10 +770,15 @@ export const useStore = create<AppState>()((set, get) => ({
       status: co.status || 'proposed',
       requested_by: co.requestedBy || null, approved_by: co.approvedBy || null,
       approved_date: co.approvedDate || null,
+      budget_items_json: JSON.stringify(co.budgetItems || []),
+      auto_rebaseline: co.autoRebaseline !== false,
     }).select().single();
     if (error) throw error;
     const mapped = mapChangeOrder(data);
     set((s) => ({ changeOrders: [mapped, ...s.changeOrders] }));
+    if (co.status === 'approved' && (co.budgetItems || []).length > 0) {
+      await get().applyApprovedChangeOrder(co.projectId, mapped);
+    }
     return mapped.id;
   },
 
@@ -787,9 +792,18 @@ export const useStore = create<AppState>()((set, get) => ({
     if (co.requestedBy !== undefined) updates.requested_by = co.requestedBy;
     if (co.approvedBy !== undefined) updates.approved_by = co.approvedBy;
     if (co.approvedDate !== undefined) updates.approved_date = co.approvedDate;
+    if (co.budgetItems !== undefined) updates.budget_items_json = JSON.stringify(co.budgetItems);
+    if (co.autoRebaseline !== undefined) updates.auto_rebaseline = co.autoRebaseline;
     const { error } = await (supabase as any).from('change_orders').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ changeOrders: s.changeOrders.map((x) => (x.id === id ? { ...x, ...co } : x)) }));
+    // Apply budget items when approving
+    if (co.status === 'approved') {
+      const changeOrder = get().changeOrders.find(c => c.id === id);
+      if (changeOrder && (changeOrder.budgetItems || []).length > 0) {
+        await get().applyApprovedChangeOrder(changeOrder.projectId, changeOrder);
+      }
+    }
   },
 
   deleteChangeOrder: async (id) => {
@@ -798,6 +812,36 @@ export const useStore = create<AppState>()((set, get) => ({
     const { error } = await (supabase as any).from('change_orders').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ changeOrders: s.changeOrders.filter((x) => x.id !== id) }));
+  },
+
+  applyApprovedChangeOrder: async (projectId, changeOrder) => {
+    const { toast } = await import('sonner');
+    const items = changeOrder.budgetItems || [];
+    // 1. Add budget items
+    for (const bi of items) {
+      await get().addBudgetItem({
+        projectId,
+        category: bi.category,
+        description: `[أمر تغيير] ${bi.description}`,
+        plannedAmount: bi.plannedAmount,
+        costType: bi.costType,
+        costClass: 'direct',
+        startMonth: bi.startMonth,
+        endMonth: bi.endMonth,
+      });
+    }
+    // 2. Auto-rebaseline
+    if (changeOrder.autoRebaseline !== false) {
+      try {
+        const baselines = get().baselines.filter(b => b.projectId === projectId);
+        const ver = baselines.length > 0 ? Math.max(...baselines.map(b => b.version)) : 0;
+        await get().createBaseline(projectId, `v${ver + 1} — ${changeOrder.description.substring(0, 40)}`);
+        toast.success('تم إضافة البنود وإعادة تثبيت خط الأساس');
+      } catch (e) {
+        console.error('Auto-rebaseline failed:', e);
+        toast.success('تم إضافة البنود. يرجى تثبيت خط الأساس يدوياً.');
+      }
+    }
   },
 
   // ---- Risk slice ----
