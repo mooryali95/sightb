@@ -101,6 +101,7 @@ export default function ProjectDetail() {
   const pMilestones = milestones.filter((m) => m.projectId === project.id);
   const pChangeOrders = changeOrders.filter((co) => co.projectId === project.id);
   const pRisks = risks.filter((r) => r.projectId === project.id);
+  const pCommitments = (commitments || []).filter((c) => c.projectId === project.id);
 
   const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues, pChangeOrders);
   const categoryBreakdown = getExpensesByCategory(pExpenses);
