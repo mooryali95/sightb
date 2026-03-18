@@ -449,7 +449,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   deleteProject: async (id) => {
     // Sequential delete to avoid FK constraint failures
-    const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies'] as const;
+    const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies', 'commitments'] as const;
     for (const table of tables) {
       await (supabase as any).from(table).delete().eq('project_id', id);
     }
