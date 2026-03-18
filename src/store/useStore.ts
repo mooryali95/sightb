@@ -971,4 +971,40 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
     return mapped;
   },
+
+  // ---- Commitment slice ----
+  addCommitment: async (c) => {
+    const userId = await getUserId();
+    const { data, error } = await (supabase as any).from('commitments').insert({
+      user_id: userId, project_id: c.projectId, description: c.description,
+      vendor_name: c.vendorName || null, contract_ref: c.contractRef || null,
+      total_amount: c.totalAmount || 0, spent_amount: c.spentAmount || 0,
+      status: c.status || 'active', budget_item_id: c.budgetItemId || null,
+      start_date: c.startDate || null, end_date: c.endDate || null, notes: c.notes || null,
+    }).select().single();
+    if (error) throw error;
+    const mapped = mapCommitment(data);
+    set((s) => ({ commitments: [mapped, ...s.commitments] }));
+    return mapped.id;
+  },
+
+  updateCommitment: async (id, c) => {
+    const updates: Record<string, unknown> = {};
+    if (c.description !== undefined) updates.description = c.description;
+    if (c.vendorName !== undefined) updates.vendor_name = c.vendorName;
+    if (c.contractRef !== undefined) updates.contract_ref = c.contractRef;
+    if (c.totalAmount !== undefined) updates.total_amount = c.totalAmount;
+    if (c.spentAmount !== undefined) updates.spent_amount = c.spentAmount;
+    if (c.status !== undefined) updates.status = c.status;
+    if (c.notes !== undefined) updates.notes = c.notes;
+    const { error } = await (supabase as any).from('commitments').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ commitments: s.commitments.map((x) => (x.id === id ? { ...x, ...c } : x)) }));
+  },
+
+  deleteCommitment: async (id) => {
+    const { error } = await (supabase as any).from('commitments').delete().eq('id', id);
+    if (error) throw error;
+    set((s) => ({ commitments: s.commitments.filter((x) => x.id !== id) }));
+  },
 }));
