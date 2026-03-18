@@ -48,7 +48,7 @@ export default function ProjectDetail() {
   const { isAdmin, canEdit: canEditRole } = useRole();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
-    milestones, changeOrders, risks, baselines,
+    milestones, changeOrders, risks, baselines, commitments,
     loadAll, updateProject, deleteProject,
   } = useStore();
 
