@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
   CostBaseline, Resource, Custody, Milestone, ChangeOrder,
-  Risk, IndirectCost, PeriodicSnapshot,
+  Risk, IndirectCost, PeriodicSnapshot, Commitment,
 } from '@/types/project';
 import { getTotalPlanned } from '@/lib/finance';
 import {
