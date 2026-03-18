@@ -40,6 +40,7 @@ import { MilestonesSection } from '@/components/project/MilestonesSection';
 import { ChangeOrdersSection } from '@/components/project/ChangeOrdersSection';
 import { RisksSection } from '@/components/project/RisksSection';
 import { WhatIfSection } from '@/components/project/WhatIfSection';
+import { CommitmentsSection } from '@/components/project/CommitmentsSection';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
