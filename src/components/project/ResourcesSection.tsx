@@ -16,53 +16,53 @@ interface ResourcesSectionProps {
   budgetItems?: BudgetItem[];
   expenses?: Expense[];
   readOnly?: boolean;
+  durationMonths?: number;
 }
 
-export function ResourcesSection({ projectId, resources, budgetItems = [], expenses: propExpenses, readOnly = false }: ResourcesSectionProps) {
-  const { addResource, updateResource, deleteResource, expenses: storeExpenses } = useStore();
+export function ResourcesSection({ projectId, resources, budgetItems = [], expenses: propExpenses, readOnly = false, durationMonths = 0 }: ResourcesSectionProps) {
+  const { addResource, updateResource, deleteResource, addBudgetItem, expenses: storeExpenses } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [monthlyCost, setMonthlyCost] = useState('');
 
+  // Budget prompt
+  const [budgetPrompt, setBudgetPrompt] = useState<{ resourceId: string; name: string; role: string; monthlyCost: number } | null>(null);
+
   const pExpenses = propExpenses || storeExpenses.filter(e => e.projectId === projectId);
 
   const resetForm = () => {
-    setEditingId(null);
-    setName('');
-    setRole('');
-    setMonthlyCost('');
+    setEditingId(null); setName(''); setRole(''); setMonthlyCost('');
   };
 
   const openEdit = (r: Resource) => {
-    setEditingId(r.id);
-    setName(r.name);
-    setRole(r.role || '');
-    setMonthlyCost(String(r.monthlyCost));
-    setOpen(true);
+    setEditingId(r.id); setName(r.name); setRole(r.role || '');
+    setMonthlyCost(String(r.monthlyCost)); setOpen(true);
   };
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
     if (editingId) {
       await updateResource(editingId, {
-        name: name.trim(),
-        role: role.trim() || undefined,
+        name: name.trim(), role: role.trim() || undefined,
         monthlyCost: parseFloat(monthlyCost) || 0,
       });
       toast.success('تم تعديل المورد');
     } else {
-      await addResource({
-        projectId,
-        name: name.trim(),
-        role: role.trim() || undefined,
-        monthlyCost: parseFloat(monthlyCost) || 0,
+      const newId = await addResource({
+        projectId, name: name.trim(),
+        role: role.trim() || undefined, monthlyCost: parseFloat(monthlyCost) || 0,
       });
       toast.success('تمت إضافة المورد');
+      if (parseFloat(monthlyCost) > 0 && durationMonths > 0) {
+        setBudgetPrompt({
+          resourceId: newId, name: name.trim(),
+          role: role.trim(), monthlyCost: parseFloat(monthlyCost),
+        });
+      }
     }
-    resetForm();
-    setOpen(false);
+    resetForm(); setOpen(false);
   };
 
   const totalMonthlyCost = resources.reduce((s, r) => s + r.monthlyCost, 0);
@@ -167,6 +167,50 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
           </table>
         </div>
       )}
+
+      {/* Budget auto-generate dialog */}
+      <Dialog open={!!budgetPrompt} onOpenChange={(v) => { if (!v) setBudgetPrompt(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>إنشاء بند موازنة؟</DialogTitle>
+          </DialogHeader>
+          {budgetPrompt && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                هل تريد إنشاء بند موازنة تلقائي لهذا المورد؟
+              </p>
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-sm font-medium">{budgetPrompt.name} {budgetPrompt.role && `— ${budgetPrompt.role}`}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(budgetPrompt.monthlyCost)} × {durationMonths} شهر = {formatCurrency(budgetPrompt.monthlyCost * (durationMonths || 1))}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button className="flex-1" onClick={async () => {
+                  await addBudgetItem({
+                    projectId,
+                    category: 'salary',
+                    description: `${budgetPrompt.name}${budgetPrompt.role ? ` — ${budgetPrompt.role}` : ''}`,
+                    plannedAmount: budgetPrompt.monthlyCost,
+                    costType: 'recurring',
+                    costClass: 'direct',
+                    startMonth: 1,
+                    endMonth: durationMonths || 1,
+                    resourceId: budgetPrompt.resourceId,
+                  });
+                  toast.success('تم إنشاء بند الموازنة');
+                  setBudgetPrompt(null);
+                }}>
+                  نعم — أنشئ البند
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setBudgetPrompt(null)}>
+                  لا — يدوياً لاحقاً
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
