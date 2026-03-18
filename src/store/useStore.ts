@@ -218,6 +218,7 @@ export const useStore = create<AppState>()((set, get) => ({
           changeOrders: (changeOrders.data || []).map(mapChangeOrder),
           risks: (risks.data || []).map(mapRisk),
           indirectCosts: (indirectCosts.data || []).map(mapIndirectCost),
+          commitments: (commitments.data || []).map(mapCommitment),
           detailsLoading: false,
           detailsLoaded: true,
         });
