@@ -235,9 +235,13 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           <div>
             <h3 className="text-sm font-semibold">بنود الموازنة</h3>
             {baselineLocked && !readOnly && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                🔒 الموازنة مقفلة — خط الأساس مثبّت. لتعديل الموازنة، استخدم أوامر التغيير.
-              </p>
+              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-2 flex-wrap">
+                <span>🔒 الموازنة مقفلة — لإضافة بنود، أنشئ أمر تغيير</span>
+                <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={() => {
+                  const tab = document.querySelector('[value="changeorders"]') as HTMLElement;
+                  tab?.click();
+                }}>أمر تغيير جديد</Button>
+              </div>
             )}
             <p className="text-xs text-muted-foreground">
               الإجمالي المخطط: {formatCurrency(totalPlanned)} · الفعلي: {formatCurrency(totalActual)} · المتبقي: {formatCurrency(totalPlanned - totalActual)}
