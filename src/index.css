@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Fonts loaded via index.html <link> for non-render-blocking */
 
 @tailwind base;
 @tailwind components;
