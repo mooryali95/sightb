@@ -59,6 +59,9 @@ export default function Landing() {
             <img
               src={basserhLogo}
               alt="بصيرة"
+              width={80}
+              height={80}
+              fetchPriority="high"
               className="w-20 h-20 rounded-2xl object-cover mx-auto mb-6 shadow-xl border-2 border-[hsl(var(--gold)/0.3)]"
             />
             <h1 className="text-4xl sm:text-5xl font-bold text-[hsl(var(--gold-light))] mb-4">
