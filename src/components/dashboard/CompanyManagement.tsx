@@ -62,8 +62,9 @@ export function CompanyManagement({
                     try {
                       await deleteCompany(company.id);
                       toast.success(`تم حذف "${company.name}"`);
-                    } catch (e: any) {
-                      toast.error(`فشل حذف الشركة: ${e.message}`);
+                     } catch (e: any) {
+                       console.error('[delete-company]', e);
+                       toast.error('حدث خطأ أثناء حذف الشركة. يرجى المحاولة مرة أخرى.');
                     }
                   }}
                 />
