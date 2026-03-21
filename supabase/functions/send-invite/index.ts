@@ -32,7 +32,7 @@ async function sendViaResend(to: string, subject: string, html: string) {
       Authorization: `Bearer ${resendKey}`,
     },
     body: JSON.stringify({
-      from: "SightB <noreply@basserh.com>",
+      from: "SightB <noreply@notify.sight.basserh.com>",
       to: [to],
       subject,
       html,
