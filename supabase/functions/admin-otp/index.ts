@@ -76,12 +76,18 @@ Deno.serve(async (req) => {
 
     const { action, code, fingerprint } = await req.json();
 
-    const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: user.id,
-      _role: "admin",
-    });
+    // Check if user has any edit-capable role (owner, admin, editor)
+    const { data: editRoles } = await supabase
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", user.id)
+      .in("role", ["owner", "admin", "editor"])
+      .limit(1);
 
-    if (!isAdmin) {
+    const canEditAnything = editRoles && editRoles.length > 0;
+
+    if (!canEditAnything) {
+      // Viewer — no OTP required
       return new Response(JSON.stringify({ requiresOtp: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
