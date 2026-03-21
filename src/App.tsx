@@ -45,6 +45,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <SessionTimeoutWarning />
           <BrowserRouter>
             <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
               <Suspense fallback={<PageLoader />}>
