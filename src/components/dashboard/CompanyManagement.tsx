@@ -92,7 +92,8 @@ export function CompanyManagement({
                         await unarchiveCompany(company.id);
                         toast.success(`تم إعادة تفعيل "${company.name}"`);
                       } catch (e: any) {
-                        toast.error(`فشل إعادة التفعيل: ${e.message}`);
+                        console.error('[unarchive]', e);
+                        toast.error('حدث خطأ أثناء إعادة تفعيل الشركة. يرجى المحاولة مرة أخرى.');
                       }
                     }}
                   >

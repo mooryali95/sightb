@@ -91,7 +91,8 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
       }
       resetForm(); setOpen(false);
     } catch (err: any) {
-      toast.error(err.message || 'حدث خطأ');
+      console.error('[change-order]', err);
+      toast.error('حدث خطأ أثناء حفظ أمر التغيير. يرجى المحاولة مرة أخرى.');
     }
   };
 
