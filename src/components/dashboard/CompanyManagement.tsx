@@ -47,7 +47,8 @@ export function CompanyManagement({
                       await archiveCompany(company.id);
                       toast.success(`تم أرشفة "${company.name}"`);
                     } catch (e: any) {
-                      toast.error(`فشل أرشفة الشركة: ${e.message}`);
+                      console.error('[archive]', e);
+                      toast.error('حدث خطأ أثناء أرشفة الشركة. يرجى المحاولة مرة أخرى.');
                     }
                   }}
                 >
