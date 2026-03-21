@@ -47,7 +47,8 @@ export function CompanyManagement({
                       await archiveCompany(company.id);
                       toast.success(`تم أرشفة "${company.name}"`);
                     } catch (e: any) {
-                      toast.error(`فشل أرشفة الشركة: ${e.message}`);
+                      console.error('[archive]', e);
+                      toast.error('حدث خطأ أثناء أرشفة الشركة. يرجى المحاولة مرة أخرى.');
                     }
                   }}
                 >
@@ -61,8 +62,9 @@ export function CompanyManagement({
                     try {
                       await deleteCompany(company.id);
                       toast.success(`تم حذف "${company.name}"`);
-                    } catch (e: any) {
-                      toast.error(`فشل حذف الشركة: ${e.message}`);
+                     } catch (e: any) {
+                       console.error('[delete-company]', e);
+                       toast.error('حدث خطأ أثناء حذف الشركة. يرجى المحاولة مرة أخرى.');
                     }
                   }}
                 />
@@ -90,7 +92,8 @@ export function CompanyManagement({
                         await unarchiveCompany(company.id);
                         toast.success(`تم إعادة تفعيل "${company.name}"`);
                       } catch (e: any) {
-                        toast.error(`فشل إعادة التفعيل: ${e.message}`);
+                        console.error('[unarchive]', e);
+                        toast.error('حدث خطأ أثناء إعادة تفعيل الشركة. يرجى المحاولة مرة أخرى.');
                       }
                     }}
                   >
