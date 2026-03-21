@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "next-themes";
+import { SessionTimeoutWarning } from "@/components/SessionTimeoutWarning";
 
 // Eagerly load landing/login (initial pages users see)
 import Landing from "./pages/Landing";
