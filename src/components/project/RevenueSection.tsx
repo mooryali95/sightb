@@ -19,9 +19,10 @@ interface RevenueSectionProps {
   revenues: any[];
   durationMonths: number;
   readOnly?: boolean;
+  taxPercent?: number;
 }
 
-export function RevenueSection({ projectId, revenues, durationMonths, readOnly = false }: RevenueSectionProps) {
+export function RevenueSection({ projectId, revenues, durationMonths, readOnly = false, taxPercent = 15 }: RevenueSectionProps) {
   const { addRevenue, deleteRevenue, updateRevenue } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
