@@ -128,7 +128,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
     unlinkedByCategory.set(e.category, (unlinkedByCategory.get(e.category) || 0) + e.amount);
   });
 
-  const budgetUtilization = contractValue > 0 ? (totalPlanned / contractValue) * 100 : 0;
+  const budgetUtilization = contractValueExTax > 0 ? (totalPlanned / contractValueExTax) * 100 : 0;
   const spendRate = totalPlanned > 0 ? (totalActual / totalPlanned) * 100 : 0;
 
   const getMonthDisplay = (item: any) => {
