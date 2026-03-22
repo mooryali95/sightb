@@ -74,6 +74,7 @@ export default function NewProject() {
         contractType,
         retentionPercent: parseFloat(retentionPercent) || 0,
         managementReserve: 0,
+        taxPercent: parseFloat(taxPercent) || 15,
       });
       navigate('/');
     } catch (error: any) {
