@@ -25,6 +25,7 @@ interface BudgetSectionProps {
   managementReserve?: number;
   readOnly?: boolean;
   baselineLocked?: boolean;
+  taxPercent?: number;
 }
 
 export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false }: BudgetSectionProps) {
