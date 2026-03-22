@@ -73,6 +73,7 @@ export interface Project {
   contractType: ContractType;
   retentionPercent: number;
   managementReserve: number;
+  taxPercent: number;
 }
 
 export type ExpenseCategory =

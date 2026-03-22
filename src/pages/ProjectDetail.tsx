@@ -58,7 +58,7 @@ export default function ProjectDetail() {
   useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded]);
 
   const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0 });
+  const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0, taxPercent: 15 });
   type TabGroup = 'planning' | 'finance' | 'tracking' | 'management';
   const [activeGroup, setActiveGroup] = useState<TabGroup>('planning');
   const [activeTab, setActiveTab] = useState('milestones');
@@ -76,6 +76,7 @@ export default function ProjectDetail() {
         retentionPercent: project.retentionPercent || 0,
         managementReserve: project.managementReserve || 0,
         percentComplete: project.percentComplete || 0,
+        taxPercent: project.taxPercent ?? 15,
       });
     }
   }, [project?.id]);
@@ -141,6 +142,7 @@ export default function ProjectDetail() {
         retentionPercent: editForm.retentionPercent,
         managementReserve: editForm.managementReserve,
         percentComplete: editForm.percentComplete,
+        taxPercent: editForm.taxPercent,
       });
       setEditOpen(false);
       toast.success('تم تحديث بيانات المشروع');
@@ -264,6 +266,10 @@ export default function ProjectDetail() {
                       <div className="space-y-1.5">
                         <Label>الاحتياطي الإداري</Label>
                         <Input type="number" min={0} value={editForm.managementReserve} onChange={e => setEditForm(f => ({ ...f, managementReserve: Number(e.target.value) }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>نسبة الضريبة (VAT) %</Label>
+                        <Input type="number" min={0} max={100} step={0.1} value={editForm.taxPercent} onChange={e => setEditForm(f => ({ ...f, taxPercent: Number(e.target.value) }))} />
                       </div>
                       <div className="space-y-1.5">
                         <Label>الوصف</Label>
@@ -406,12 +412,12 @@ export default function ProjectDetail() {
 
           <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} revenues={pRevenues} /></TabsContent>
           <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} durationMonths={project.durationMonths} /></TabsContent>
-          <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} /></TabsContent>
+          <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} taxPercent={project.taxPercent} /></TabsContent>
           <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} /></TabsContent>
           <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="commitments"><CommitmentsSection projectId={project.id} commitments={pCommitments} totalPlanned={summary.totalPlanned} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} /></TabsContent>
           <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} budgetItems={pBudget} /></TabsContent>

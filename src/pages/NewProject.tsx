@@ -34,6 +34,7 @@ export default function NewProject() {
   const [contractType, setContractType] = useState<ContractType>('lump_sum');
   const [retentionPercent, setRetentionPercent] = useState('0');
   const [loading, setLoading] = useState(false);
+  const [taxPercent, setTaxPercent] = useState('15');
 
   const editableCompanies = useMemo(() => companies.filter(c => isAdmin || canEdit('company', c.id)), [companies, isAdmin, canEdit]);
   const filteredPortfolios = portfolios.filter((p) => p.companyId === companyId);
@@ -73,6 +74,7 @@ export default function NewProject() {
         contractType,
         retentionPercent: parseFloat(retentionPercent) || 0,
         managementReserve: 0,
+        taxPercent: parseFloat(taxPercent) || 15,
       });
       navigate('/');
     } catch (error: any) {
@@ -150,6 +152,10 @@ export default function NewProject() {
             <div className="space-y-2">
               <Label>نسبة المحتجزات %</Label>
               <Input type="number" value={retentionPercent} onChange={(e) => setRetentionPercent(e.target.value)} min="0" max="100" step="0.1" />
+            </div>
+            <div className="space-y-2">
+              <Label>نسبة الضريبة (VAT) %</Label>
+              <Input type="number" value={taxPercent} onChange={(e) => setTaxPercent(e.target.value)} min="0" max="100" step="0.1" />
             </div>
           </div>
 

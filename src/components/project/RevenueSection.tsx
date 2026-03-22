@@ -19,9 +19,10 @@ interface RevenueSectionProps {
   revenues: any[];
   durationMonths: number;
   readOnly?: boolean;
+  taxPercent?: number;
 }
 
-export function RevenueSection({ projectId, revenues, durationMonths, readOnly = false }: RevenueSectionProps) {
+export function RevenueSection({ projectId, revenues, durationMonths, readOnly = false, taxPercent = 15 }: RevenueSectionProps) {
   const { addRevenue, deleteRevenue, updateRevenue } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -98,6 +99,8 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
   });
 
   const total = revenues.reduce((s: number, r: any) => s + r.amount, 0);
+  const totalTax = taxPercent > 0 ? total * (taxPercent / 100) : 0;
+  const totalWithTax = total + totalTax;
   const collectedTotal = revenues.filter((r: any) => r.status === 'collected').reduce((s: number, r: any) => s + r.amount, 0);
   const invoicedTotal = revenues.filter((r: any) => r.status === 'invoiced').reduce((s: number, r: any) => s + r.amount, 0);
   const plannedTotal = revenues.filter((r: any) => r.status === 'planned').reduce((s: number, r: any) => s + r.amount, 0);
@@ -107,7 +110,9 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold">الإيرادات</h3>
-          <p className="text-xs text-muted-foreground">الإجمالي: {formatCurrency(total)}</p>
+          <p className="text-xs text-muted-foreground">
+            الإجمالي: {formatCurrency(total)} · شامل الضريبة ({taxPercent}%): {formatCurrency(totalWithTax)}
+          </p>
         </div>
         {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
