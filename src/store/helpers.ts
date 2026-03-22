@@ -55,6 +55,7 @@ export function mapProject(d: any): Project {
     contractType: (d.contract_type || 'lump_sum') as ContractType,
     retentionPercent: Number(d.retention_percent ?? 0),
     managementReserve: Number(d.management_reserve ?? 0),
+    taxPercent: Number(d.tax_percent ?? 15),
   };
 }
 

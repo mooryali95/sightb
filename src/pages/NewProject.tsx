@@ -34,6 +34,7 @@ export default function NewProject() {
   const [contractType, setContractType] = useState<ContractType>('lump_sum');
   const [retentionPercent, setRetentionPercent] = useState('0');
   const [loading, setLoading] = useState(false);
+  const [taxPercent, setTaxPercent] = useState('15');
 
   const editableCompanies = useMemo(() => companies.filter(c => isAdmin || canEdit('company', c.id)), [companies, isAdmin, canEdit]);
   const filteredPortfolios = portfolios.filter((p) => p.companyId === companyId);

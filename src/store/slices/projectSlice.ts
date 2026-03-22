@@ -96,6 +96,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     if (p.contractType !== undefined) updates.contract_type = p.contractType;
     if (p.retentionPercent !== undefined) updates.retention_percent = p.retentionPercent;
     if (p.managementReserve !== undefined) updates.management_reserve = p.managementReserve;
+    if (p.taxPercent !== undefined) updates.tax_percent = p.taxPercent;
     const { error } = await (supabase as any).from('projects').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
