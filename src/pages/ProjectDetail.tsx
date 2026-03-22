@@ -268,6 +268,10 @@ export default function ProjectDetail() {
                         <Input type="number" min={0} value={editForm.managementReserve} onChange={e => setEditForm(f => ({ ...f, managementReserve: Number(e.target.value) }))} />
                       </div>
                       <div className="space-y-1.5">
+                        <Label>نسبة الضريبة (VAT) %</Label>
+                        <Input type="number" min={0} max={100} step={0.1} value={editForm.taxPercent} onChange={e => setEditForm(f => ({ ...f, taxPercent: Number(e.target.value) }))} />
+                      </div>
+                      <div className="space-y-1.5">
                         <Label>الوصف</Label>
                         <Textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} maxLength={500} rows={2} />
                       </div>
