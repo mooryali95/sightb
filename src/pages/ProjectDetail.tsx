@@ -76,6 +76,7 @@ export default function ProjectDetail() {
         retentionPercent: project.retentionPercent || 0,
         managementReserve: project.managementReserve || 0,
         percentComplete: project.percentComplete || 0,
+        taxPercent: project.taxPercent ?? 15,
       });
     }
   }, [project?.id]);
