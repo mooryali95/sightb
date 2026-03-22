@@ -92,9 +92,11 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
 
   const totalPlanned = getTotalPlanned(budgetItems);
   const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
-  const unallocated = contractValue - totalPlanned;
-  const plannedProfit = contractValue - totalPlanned;
-  const plannedProfitMargin = contractValue > 0 ? (plannedProfit / contractValue) * 100 : 0;
+  const taxAmount = contractValue > 0 && taxPercent > 0 ? contractValue - (contractValue / (1 + taxPercent / 100)) : 0;
+  const contractValueExTax = contractValue - taxAmount;
+  const unallocated = contractValueExTax - totalPlanned;
+  const plannedProfit = contractValueExTax - totalPlanned;
+  const plannedProfitMargin = contractValueExTax > 0 ? (plannedProfit / contractValueExTax) * 100 : 0;
 
   const categoryMap = new Map<string, { planned: number; actual: number }>();
   budgetItems.forEach((b: any) => {
