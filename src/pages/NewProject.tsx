@@ -153,6 +153,10 @@ export default function NewProject() {
               <Label>نسبة المحتجزات %</Label>
               <Input type="number" value={retentionPercent} onChange={(e) => setRetentionPercent(e.target.value)} min="0" max="100" step="0.1" />
             </div>
+            <div className="space-y-2">
+              <Label>نسبة الضريبة (VAT) %</Label>
+              <Input type="number" value={taxPercent} onChange={(e) => setTaxPercent(e.target.value)} min="0" max="100" step="0.1" />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

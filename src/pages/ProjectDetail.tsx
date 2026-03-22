@@ -142,6 +142,7 @@ export default function ProjectDetail() {
         retentionPercent: editForm.retentionPercent,
         managementReserve: editForm.managementReserve,
         percentComplete: editForm.percentComplete,
+        taxPercent: editForm.taxPercent,
       });
       setEditOpen(false);
       toast.success('تم تحديث بيانات المشروع');
