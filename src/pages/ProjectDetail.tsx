@@ -58,7 +58,7 @@ export default function ProjectDetail() {
   useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded]);
 
   const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0 });
+  const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0, taxPercent: 15 });
   type TabGroup = 'planning' | 'finance' | 'tracking' | 'management';
   const [activeGroup, setActiveGroup] = useState<TabGroup>('planning');
   const [activeTab, setActiveTab] = useState('milestones');
