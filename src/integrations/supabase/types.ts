@@ -858,6 +858,7 @@ export type Database = {
           retention_percent: number
           start_date: string | null
           status: string
+          tax_percent: number | null
           user_id: string
         }
         Insert: {
@@ -879,6 +880,7 @@ export type Database = {
           retention_percent?: number
           start_date?: string | null
           status?: string
+          tax_percent?: number | null
           user_id: string
         }
         Update: {
@@ -900,6 +902,7 @@ export type Database = {
           retention_percent?: number
           start_date?: string | null
           status?: string
+          tax_percent?: number | null
           user_id?: string
         }
         Relationships: [
