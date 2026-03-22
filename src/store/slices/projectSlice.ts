@@ -71,6 +71,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       contract_type: p.contractType || 'lump_sum',
       retention_percent: p.retentionPercent || 0,
       management_reserve: p.managementReserve || 0,
+      tax_percent: p.taxPercent ?? 15,
     } as any).select().single();
     if (error) throw error;
     const mapped = mapProject(data);
