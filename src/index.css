@@ -193,6 +193,7 @@
 
   .data-table {
     @apply w-full text-sm;
+    direction: rtl;
   }
 
   .data-table th {
@@ -200,7 +201,7 @@
   }
 
   .data-table td {
-    @apply px-4 py-3 border-b border-border/50;
+    @apply px-4 py-3 border-b border-border/50 text-right;
   }
 
   .data-table tr:hover td {
