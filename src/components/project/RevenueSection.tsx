@@ -110,7 +110,9 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold">الإيرادات</h3>
-          <p className="text-xs text-muted-foreground">الإجمالي: {formatCurrency(total)}</p>
+          <p className="text-xs text-muted-foreground">
+            الإجمالي: {formatCurrency(total)} · شامل الضريبة ({taxPercent}%): {formatCurrency(totalWithTax)}
+          </p>
         </div>
         {!readOnly && (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
