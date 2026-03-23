@@ -259,6 +259,8 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                 <th>الوصف</th>
                 <th>النوع</th>
                 <th>المبلغ</th>
+                <th>الضريبة</th>
+                <th>شامل الضريبة</th>
                 <th>الحالة</th>
                 <th>الشهر</th>
                 <th>التاريخ</th>
