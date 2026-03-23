@@ -24,6 +24,11 @@ interface ExportBudgetData {
   currency?: string;
   durationMonths?: number;
   plannedProfit?: number;
+  vatRate?: number;
+  contractValueInclVAT?: number;
+  totalVATOnExpenses?: number;
+  totalVATOnRevenues?: number;
+  netVATPayable?: number;
 }
 
 export function exportToExcel(data: ExportBudgetData) {
