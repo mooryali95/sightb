@@ -92,11 +92,11 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
 
   const totalPlanned = getTotalPlanned(budgetItems);
   const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
-  const taxAmount = contractValue > 0 && taxPercent > 0 ? contractValue - (contractValue / (1 + taxPercent / 100)) : 0;
-  const contractValueExTax = contractValue - taxAmount;
-  const unallocated = contractValueExTax - totalPlanned;
-  const plannedProfit = contractValueExTax - totalPlanned;
-  const plannedProfitMargin = contractValueExTax > 0 ? (plannedProfit / contractValueExTax) * 100 : 0;
+  const taxAmount = contractValue > 0 && taxPercent > 0 ? contractValue * (taxPercent / 100) : 0;
+  const contractValueInclTax = contractValue + taxAmount;
+  const unallocated = contractValue - totalPlanned;
+  const plannedProfit = contractValue - totalPlanned;
+  const plannedProfitMargin = contractValue > 0 ? (plannedProfit / contractValue) * 100 : 0;
 
   const categoryMap = new Map<string, { planned: number; actual: number }>();
   budgetItems.forEach((b: any) => {
@@ -128,7 +128,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
     unlinkedByCategory.set(e.category, (unlinkedByCategory.get(e.category) || 0) + e.amount);
   });
 
-  const budgetUtilization = contractValueExTax > 0 ? (totalPlanned / contractValueExTax) * 100 : 0;
+  const budgetUtilization = contractValue > 0 ? (totalPlanned / contractValue) * 100 : 0;
   const spendRate = totalPlanned > 0 ? (totalActual / totalPlanned) * 100 : 0;
 
   const getMonthDisplay = (item: any) => {
@@ -150,7 +150,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">قيمة العقد (شامل الضريبة)</p>
+              <p className="text-xs text-muted-foreground">قيمة العقد (بدون ضريبة)</p>
               <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contractValue)}</p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
@@ -158,8 +158,8 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
               <p className="text-sm font-mono font-bold mt-1 text-amber-600">{formatCurrency(taxAmount)}</p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">قيمة العقد (بدون ضريبة)</p>
-              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contractValueExTax)}</p>
+              <p className="text-xs text-muted-foreground">شامل الضريبة</p>
+              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contractValueInclTax)}</p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground">إجمالي المخطط</p>
@@ -182,7 +182,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           <div className="mb-4">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>نسبة ما خُطط للصرف من الموازنة ({budgetUtilization.toFixed(1)}%)</span>
-              <span>{formatCurrency(totalPlanned)} / {formatCurrency(contractValueExTax)}</span>
+              <span>{formatCurrency(totalPlanned)} / {formatCurrency(contractValue)}</span>
             </div>
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all bg-primary" style={{ width: `${Math.min(budgetUtilization, 100)}%` }} />
@@ -216,7 +216,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                 <tbody>
                   {Array.from(categoryMap.entries()).map(([cat, { planned, actual }]) => {
                     const rem = planned - actual;
-                    const pctOfContract = contractValueExTax > 0 ? (planned / contractValueExTax) * 100 : 0;
+                    const pctOfContract = contractValue > 0 ? (planned / contractValue) * 100 : 0;
                     return (
                       <tr key={cat}>
                         <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[cat as ExpenseCategory] || cat}</span></td>

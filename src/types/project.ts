@@ -132,6 +132,7 @@ export interface Expense {
   description: string; amount: number; date: string; month: number;
   responsible?: string; notes?: string; resourceId?: string; custodyId?: string;
   approvalStatus: ApprovalStatus; approvedBy?: string; vendor?: string; invoiceRef?: string;
+  isVatExempt: boolean;
 }
 
 export type RevenueType = 'advance' | 'milestone' | 'final' | 'retention' | 'variation' | 'deduction';
@@ -366,6 +367,12 @@ export interface ProjectSummary {
   percentComplete: number;
   managementReserve: number;
   bacWithoutReserve: number;
+  vatRate: number;
+  contractValueInclVAT: number;
+  totalActualInclVAT: number;
+  totalVATOnExpenses: number;
+  totalVATOnRevenues: number;
+  netVATPayable: number;
 }
 
 export type HealthStatus = 'healthy' | 'warning' | 'critical';

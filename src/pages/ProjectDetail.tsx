@@ -336,6 +336,33 @@ export default function ProjectDetail() {
 
         <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} managementReserve={project.managementReserve} />
 
+        {/* VAT Summary */}
+        {project.taxPercent > 0 && (summary.totalVATOnExpenses > 0 || summary.totalVATOnRevenues > 0) && (
+          <div className="stat-card mb-4">
+            <h3 className="text-sm font-semibold mb-3">ملخص ضريبة القيمة المضافة ({project.taxPercent}%)</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                <p className="text-xs text-muted-foreground">العقد شامل الضريبة</p>
+                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.contractValueInclVAT)}</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                <p className="text-xs text-muted-foreground">ضريبة مخرجات (فواتير)</p>
+                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.totalVATOnRevenues)}</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                <p className="text-xs text-muted-foreground">ضريبة مدخلات (مشتريات)</p>
+                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.totalVATOnExpenses)}</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                <p className="text-xs text-muted-foreground">المستحق لهيئة الزكاة</p>
+                <p className={`text-sm font-mono font-bold mt-1 ${summary.netVATPayable > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                  {formatCurrency(summary.netVATPayable)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Export Buttons - only for admin/editor */}
         {(isAdmin || canEditRole('project', project.id)) && (
           <div className="flex flex-wrap gap-2 mb-4">
@@ -346,6 +373,11 @@ export default function ProjectDetail() {
                 expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
                 totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
                 totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                vatRate: project.taxPercent,
+                contractValueInclVAT: summary.contractValueInclVAT,
+                totalVATOnExpenses: summary.totalVATOnExpenses,
+                totalVATOnRevenues: summary.totalVATOnRevenues,
+                netVATPayable: summary.netVATPayable,
               });
               toast.success('تم تصدير التقرير إلى Excel');
             }}>
@@ -414,7 +446,7 @@ export default function ProjectDetail() {
           <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} durationMonths={project.durationMonths} /></TabsContent>
           <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} taxPercent={project.taxPercent} /></TabsContent>
           <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} /></TabsContent>
-          <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} /></TabsContent>
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="commitments"><CommitmentsSection projectId={project.id} commitments={pCommitments} totalPlanned={summary.totalPlanned} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} /></TabsContent>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { addVAT, formatCurrency } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
@@ -135,8 +136,13 @@ export default function NewProject() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>قيمة العقد ({currency})</Label>
+              <Label>قيمة العقد (بدون ضريبة) ({currency})</Label>
               <Input type="number" value={contractValue} onChange={(e) => setContractValue(e.target.value)} placeholder="230,000" required />
+              {parseFloat(contractValue) > 0 && parseFloat(taxPercent) > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  شامل الضريبة: {formatCurrency(addVAT(parseFloat(contractValue), parseFloat(taxPercent)))}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>نوع العقد</Label>

@@ -1,0 +1,1 @@
+ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS is_vat_exempt BOOLEAN DEFAULT false;

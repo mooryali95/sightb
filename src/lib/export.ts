@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { formatCurrency, getCashFlowForecast } from './finance';
+import { formatCurrency, getCashFlowForecast, addVAT } from './finance';
 import { EXPENSE_CATEGORY_LABELS, CHANGE_ORDER_TYPE_LABELS, CHANGE_ORDER_STATUS_LABELS, type ExpenseCategory, type ChangeOrder, type BudgetItem, type Revenue } from '@/types/project';
 
 // Extend jsPDF type for autotable
@@ -24,6 +24,11 @@ interface ExportBudgetData {
   currency?: string;
   durationMonths?: number;
   plannedProfit?: number;
+  vatRate?: number;
+  contractValueInclVAT?: number;
+  totalVATOnExpenses?: number;
+  totalVATOnRevenues?: number;
+  netVATPayable?: number;
 }
 
 export function exportToExcel(data: ExportBudgetData) {
@@ -128,6 +133,11 @@ export function exportToExcel(data: ExportBudgetData) {
     { 'البند': 'الإيرادات المحصّلة', 'المبلغ': collectedRevenue },
     { 'البند': 'المتبقي من الموازنة', 'المبلغ': data.totalPlanned - data.totalActual },
     { 'البند': 'المتبقي من العقد', 'المبلغ': effectiveContract - data.totalActual },
+    { 'البند': '─── الضريبة ───', 'المبلغ': '' },
+    { 'البند': `ضريبة المخرجات (${data.vatRate || 15}%)`, 'المبلغ': data.totalVATOnRevenues || 0 },
+    { 'البند': 'ضريبة المدخلات (قابلة للاسترداد)', 'المبلغ': data.totalVATOnExpenses || 0 },
+    { 'البند': 'المستحق لهيئة الزكاة', 'المبلغ': data.netVATPayable || 0 },
+    { 'البند': 'قيمة العقد شامل الضريبة', 'المبلغ': data.contractValueInclVAT || addVAT(data.contractValue, data.vatRate || 15) },
   ];
   const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
   XLSX.utils.book_append_sheet(wb, wsSummary, 'الملخص');
