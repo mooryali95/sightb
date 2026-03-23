@@ -182,7 +182,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           <div className="mb-4">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>نسبة ما خُطط للصرف من الموازنة ({budgetUtilization.toFixed(1)}%)</span>
-              <span>{formatCurrency(totalPlanned)} / {formatCurrency(contractValueExTax)}</span>
+              <span>{formatCurrency(totalPlanned)} / {formatCurrency(contractValue)}</span>
             </div>
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all bg-primary" style={{ width: `${Math.min(budgetUtilization, 100)}%` }} />
