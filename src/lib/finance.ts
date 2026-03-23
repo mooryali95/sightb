@@ -15,6 +15,16 @@ export function formatNumber(value: number): string {
   return value.toLocaleString('en-US');
 }
 
+export function calcVAT(amount: number, vatRate: number = 15): number {
+  return Math.round(amount * vatRate / 100 * 100) / 100;
+}
+export function addVAT(amountExcl: number, vatRate: number = 15): number {
+  return Math.round((amountExcl * (1 + vatRate / 100)) * 100) / 100;
+}
+export function removeVAT(amountIncl: number, vatRate: number = 15): number {
+  return Math.round(amountIncl / (1 + vatRate / 100) * 100) / 100;
+}
+
 /**
  * Calculate the effective contract value after approved change orders
  */
