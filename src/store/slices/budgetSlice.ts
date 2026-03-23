@@ -74,6 +74,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
       approved_by: e.approvedBy || null,
       vendor: e.vendor || null,
       invoice_ref: e.invoiceRef || null,
+      is_vat_exempt: e.isVatExempt ?? false,
     }).select().single();
     if (error) throw error;
     const mapped = mapExpense(data);
