@@ -132,6 +132,7 @@ export interface Expense {
   description: string; amount: number; date: string; month: number;
   responsible?: string; notes?: string; resourceId?: string; custodyId?: string;
   approvalStatus: ApprovalStatus; approvedBy?: string; vendor?: string; invoiceRef?: string;
+  isVatExempt: boolean;
 }
 
 export type RevenueType = 'advance' | 'milestone' | 'final' | 'retention' | 'variation' | 'deduction';
