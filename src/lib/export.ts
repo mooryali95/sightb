@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { formatCurrency, getCashFlowForecast } from './finance';
+import { formatCurrency, getCashFlowForecast, addVAT } from './finance';
 import { EXPENSE_CATEGORY_LABELS, CHANGE_ORDER_TYPE_LABELS, CHANGE_ORDER_STATUS_LABELS, type ExpenseCategory, type ChangeOrder, type BudgetItem, type Revenue } from '@/types/project';
 
 // Extend jsPDF type for autotable
