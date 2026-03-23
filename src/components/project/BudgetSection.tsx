@@ -150,7 +150,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">قيمة العقد (شامل الضريبة)</p>
+              <p className="text-xs text-muted-foreground">قيمة العقد (بدون ضريبة)</p>
               <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contractValue)}</p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
@@ -158,8 +158,8 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
               <p className="text-sm font-mono font-bold mt-1 text-amber-600">{formatCurrency(taxAmount)}</p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">قيمة العقد (بدون ضريبة)</p>
-              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contractValueExTax)}</p>
+              <p className="text-xs text-muted-foreground">شامل الضريبة</p>
+              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contractValueInclTax)}</p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground">إجمالي المخطط</p>
