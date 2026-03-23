@@ -82,6 +82,7 @@ export function mapExpense(d: any): Expense {
     approvedBy: d.approved_by || undefined,
     vendor: d.vendor || undefined,
     invoiceRef: d.invoice_ref || undefined,
+    isVatExempt: d.is_vat_exempt ?? false,
   };
 }
 

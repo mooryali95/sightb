@@ -367,6 +367,12 @@ export interface ProjectSummary {
   percentComplete: number;
   managementReserve: number;
   bacWithoutReserve: number;
+  vatRate: number;
+  contractValueInclVAT: number;
+  totalActualInclVAT: number;
+  totalVATOnExpenses: number;
+  totalVATOnRevenues: number;
+  netVATPayable: number;
 }
 
 export type HealthStatus = 'healthy' | 'warning' | 'critical';

@@ -104,6 +104,21 @@ export function getProjectSummary(
   const managementReserve = project.managementReserve || 0;
   const bacWithoutReserve = totalPlanned - managementReserve;
 
+  // === VAT ===
+  const vatRate = (project as any).taxPercent || 15;
+  const contractValueInclVAT = addVAT(effectiveContractValue, vatRate);
+
+  const totalVATOnExpenses = expenses
+    .filter(e => (e as any).approvalStatus !== 'rejected' && !(e as any).isVatExempt)
+    .reduce((sum, e) => sum + calcVAT(e.amount, vatRate), 0);
+  const totalActualInclVAT = totalActual + totalVATOnExpenses;
+
+  const totalVATOnRevenues = revenues
+    .filter(r => r.status === 'invoiced' || r.status === 'collected')
+    .reduce((sum, r) => sum + calcVAT(r.amount, vatRate), 0);
+
+  const netVATPayable = totalVATOnRevenues - totalVATOnExpenses;
+
   return {
     contractValue: project.contractValue,
     effectiveContractValue,
@@ -126,6 +141,12 @@ export function getProjectSummary(
     percentComplete: project.percentComplete,
     managementReserve,
     bacWithoutReserve,
+    vatRate,
+    contractValueInclVAT,
+    totalActualInclVAT,
+    totalVATOnExpenses,
+    totalVATOnRevenues,
+    netVATPayable,
   };
 }
 
