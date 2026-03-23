@@ -373,6 +373,11 @@ export default function ProjectDetail() {
                 expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
                 totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
                 totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                vatRate: project.taxPercent,
+                contractValueInclVAT: summary.contractValueInclVAT,
+                totalVATOnExpenses: summary.totalVATOnExpenses,
+                totalVATOnRevenues: summary.totalVATOnRevenues,
+                netVATPayable: summary.netVATPayable,
               });
               toast.success('تم تصدير التقرير إلى Excel');
             }}>
