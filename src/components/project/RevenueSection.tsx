@@ -273,7 +273,8 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   <td>{r.description}</td>
                   <td className="text-xs">{REVENUE_TYPE_LABELS[r.revenueType as RevenueType] || r.revenueType}</td>
                   <td className="font-mono text-sm">{formatCurrency(r.amount)}</td>
-                  <td>
+                  <td className="font-mono text-xs text-emerald-600">{formatCurrency(calcVAT(r.amount, taxPercent))}</td>
+                  <td className="font-mono text-xs">{formatCurrency(addVAT(r.amount, taxPercent))}</td>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${REVENUE_STATUS_COLORS[r.status as RevenueStatus] || ''}`}>
                       {REVENUE_STATUS_LABELS[r.status as RevenueStatus] || r.status}
                     </span>

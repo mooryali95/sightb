@@ -216,7 +216,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                 <tbody>
                   {Array.from(categoryMap.entries()).map(([cat, { planned, actual }]) => {
                     const rem = planned - actual;
-                    const pctOfContract = contractValueExTax > 0 ? (planned / contractValueExTax) * 100 : 0;
+                    const pctOfContract = contractValue > 0 ? (planned / contractValue) * 100 : 0;
                     return (
                       <tr key={cat}>
                         <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[cat as ExpenseCategory] || cat}</span></td>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, calcVAT, addVAT, removeVAT } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS,
   type ExpenseCategory, type ApprovalStatus, type Resource, type Custody, type BudgetItem,
@@ -25,9 +25,10 @@ interface ExpensesSectionProps {
   revenues: any[];
   contractValue: number;
   readOnly?: boolean;
+  taxPercent?: number;
 }
 
-export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false }: ExpensesSectionProps) {
+export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15 }: ExpensesSectionProps) {
   const { addExpense, deleteExpense, updateExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -43,6 +44,8 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>('approved');
   const [vendor, setVendor] = useState('');
   const [invoiceRef, setInvoiceRef] = useState('');
+  const [isVatExempt, setIsVatExempt] = useState(false);
+  const [inputInclusive, setInputInclusive] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -75,6 +78,8 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setApprovalStatus('approved');
     setVendor('');
     setInvoiceRef('');
+    setIsVatExempt(false);
+    setInputInclusive(false);
   };
 
   const openEdit = (exp: any) => {
@@ -91,22 +96,28 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setApprovalStatus(exp.approvalStatus || 'approved');
     setVendor(exp.vendor || '');
     setInvoiceRef(exp.invoiceRef || '');
+    setIsVatExempt(exp.isVatExempt || false);
+    setInputInclusive(false);
     setOpen(true);
   };
 
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
+    const rawAmount = parseFloat(amount);
+    const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
+
     if (editingId) {
       await updateExpense(editingId, {
         category,
         description: description.trim(),
-        amount: parseFloat(amount),
+        amount: finalAmount,
         date,
         month: parseInt(month),
         responsible: responsible.trim() || undefined,
         approvalStatus,
         vendor: vendor.trim() || undefined,
         invoiceRef: invoiceRef.trim() || undefined,
+        isVatExempt,
       });
       toast.success('تم تعديل المصروف');
     } else {
@@ -114,7 +125,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         projectId,
         category,
         description: description.trim(),
-        amount: parseFloat(amount),
+        amount: finalAmount,
         date,
         month: parseInt(month),
         responsible: responsible.trim() || undefined,
@@ -124,6 +135,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         approvalStatus,
         vendor: vendor.trim() || undefined,
         invoiceRef: invoiceRef.trim() || undefined,
+        isVatExempt,
       });
       toast.success('تمت إضافة المصروف');
     }
@@ -289,6 +301,29 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     </Select>
                   </div>
                 </div>
+
+                {/* VAT controls */}
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" checked={isVatExempt} onChange={(e) => { setIsVatExempt(e.target.checked); if (e.target.checked) setInputInclusive(false); }} className="rounded" />
+                    معفى من الضريبة
+                  </label>
+                  {!isVatExempt && (
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input type="checkbox" checked={inputInclusive} onChange={(e) => setInputInclusive(e.target.checked)} className="rounded" />
+                      المبلغ شامل الضريبة
+                    </label>
+                  )}
+                </div>
+                {parseFloat(amount) > 0 && !isVatExempt && taxPercent > 0 && (
+                  <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                    {inputInclusive
+                      ? `بدون ضريبة: ${formatCurrency(removeVAT(parseFloat(amount), taxPercent))} · الضريبة: ${formatCurrency(parseFloat(amount) - removeVAT(parseFloat(amount), taxPercent))}`
+                      : `شامل الضريبة: ${formatCurrency(addVAT(parseFloat(amount), taxPercent))} · الضريبة: ${formatCurrency(calcVAT(parseFloat(amount), taxPercent))}`
+                    }
+                  </p>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>التاريخ</Label>
@@ -422,6 +457,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                   <th>الفئة</th>
                   <th>الوصف</th>
                   <th>المبلغ</th>
+                  <th className="w-16">الضريبة</th>
                   <th>الحالة</th>
                   <th className="hidden sm:table-cell">الشهر</th>
                   <th className="hidden md:table-cell">بند الموازنة</th>
@@ -447,6 +483,17 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         </div>
                       </td>
                       <td className="font-mono text-sm">{formatCurrency(exp.amount)}</td>
+                      <td className="text-[10px]">
+                        {exp.isVatExempt ? (
+                          <span className="text-muted-foreground">معفى</span>
+                        ) : taxPercent > 0 ? (
+                          <span className="text-emerald-600" title={`شامل: ${formatCurrency(addVAT(exp.amount, taxPercent))}`}>
+                            +{formatCurrency(calcVAT(exp.amount, taxPercent))}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
                       <td>
                         <Badge className={`text-[10px] ${APPROVAL_STATUS_COLORS[status as ApprovalStatus] || ''}`}>
                           {APPROVAL_STATUS_LABELS[status as ApprovalStatus] || status}
