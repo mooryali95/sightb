@@ -336,6 +336,33 @@ export default function ProjectDetail() {
 
         <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} managementReserve={project.managementReserve} />
 
+        {/* VAT Summary */}
+        {project.taxPercent > 0 && (summary.totalVATOnExpenses > 0 || summary.totalVATOnRevenues > 0) && (
+          <div className="stat-card mb-4">
+            <h3 className="text-sm font-semibold mb-3">ملخص ضريبة القيمة المضافة ({project.taxPercent}%)</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                <p className="text-xs text-muted-foreground">العقد شامل الضريبة</p>
+                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.contractValueInclVAT)}</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                <p className="text-xs text-muted-foreground">ضريبة مخرجات (فواتير)</p>
+                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.totalVATOnRevenues)}</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                <p className="text-xs text-muted-foreground">ضريبة مدخلات (مشتريات)</p>
+                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.totalVATOnExpenses)}</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
+                <p className="text-xs text-muted-foreground">المستحق لهيئة الزكاة</p>
+                <p className={`text-sm font-mono font-bold mt-1 ${summary.netVATPayable > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                  {formatCurrency(summary.netVATPayable)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Export Buttons - only for admin/editor */}
         {(isAdmin || canEditRole('project', project.id)) && (
           <div className="flex flex-wrap gap-2 mb-4">
