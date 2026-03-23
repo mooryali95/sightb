@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { addVAT, formatCurrency } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
