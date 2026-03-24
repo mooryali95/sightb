@@ -41,6 +41,8 @@ import { ChangeOrdersSection } from '@/components/project/ChangeOrdersSection';
 import { RisksSection } from '@/components/project/RisksSection';
 import { WhatIfSection } from '@/components/project/WhatIfSection';
 import { CommitmentsSection } from '@/components/project/CommitmentsSection';
+import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
+import { Progress } from '@/components/ui/progress';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
