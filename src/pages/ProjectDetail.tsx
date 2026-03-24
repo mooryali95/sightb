@@ -352,53 +352,149 @@ export default function ProjectDetail() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard
-            title={summary.effectiveContractValue !== summary.contractValue ? 'القيمة المعدّلة للعقد' : 'قيمة العقد'}
-            value={formatCurrency(summary.effectiveContractValue)}
-            icon={<DollarSign className="w-4 h-4" />}
-            subtitle={summary.effectiveContractValue !== summary.contractValue ? `الأصلية: ${formatCurrency(summary.contractValue)}` : undefined}
-          />
-          <StatCard title="المصروفات الفعلية" value={formatCurrency(summary.totalActual)} icon={<TrendingDown className="w-4 h-4" />} trend="down" subtitle={`المخطط: ${formatCurrency(summary.totalPlanned)}`} />
-          <StatCard title="الربح المخطط" value={formatCurrency(summary.plannedProfit)} icon={<TrendingUp className="w-4 h-4" />} trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`} />
-          <StatCard title="المتبقي من الموازنة" value={formatCurrency(summary.budgetRemaining)} icon={<Target className="w-4 h-4" />} trend={summary.budgetRemaining >= 0 ? 'up' : 'down'} />
+        {/* ══════ شريط الحالة السريع ══════ */}
+        <div className={`flex flex-wrap items-center gap-2 text-xs p-2.5 rounded-lg border mb-4 ${healthScore.bg}`}>
+          <span className={`font-bold ${healthScore.color}`}>{healthScore.label}</span>
+          <span className="text-muted-foreground">|</span>
+          <Badge className={`text-[10px] ${PROJECT_STATUS_COLORS[project.status]}`}>{PROJECT_STATUS_LABELS[project.status]}</Badge>
+          <span className="text-muted-foreground">|</span>
+          <span>الإنجاز {project.percentComplete}%</span>
+          <span className="text-muted-foreground">|</span>
+          <span>الشهر {currentMonth} من {project.durationMonths}</span>
+          {daysRemaining !== null && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span className={daysRemaining < 30 ? 'text-destructive font-medium' : ''}>
+                {daysRemaining} يوم متبقي
+              </span>
+            </>
+          )}
+          {evm && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span className={evm.cpi >= 1 ? 'text-emerald-600' : 'text-destructive'}>CPI {evm.cpi.toFixed(2)}</span>
+              <span className={evm.spi >= 1 ? 'text-emerald-600' : 'text-destructive'}>SPI {evm.spi.toFixed(2)}</span>
+            </>
+          )}
+          {openRisksCount > 0 && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span>{openRisksCount} خطر مفتوح</span>
+            </>
+          )}
         </div>
 
-        {summary.collectedRevenue > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <StatCard title="محصّل" value={formatCurrency(summary.collectedRevenue)} icon={<DollarSign className="w-4 h-4" />} />
-            <StatCard title="ذمم مدينة" value={formatCurrency(summary.accountsReceivable)} icon={<Receipt className="w-4 h-4" />} />
-            <StatCard title="الربح المحقق" value={formatCurrency(summary.realizedProfit)} icon={<TrendingUp className="w-4 h-4" />} trend={summary.realizedProfit >= 0 ? 'up' : 'down'} />
+        {/* ══════ الصف الأول: المالية الأساسية (5 بطاقات) ══════ */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+          <StatCard
+            title={summary.effectiveContractValue !== summary.contractValue ? 'القيمة المعدّلة' : 'قيمة العقد'}
+            value={formatCurrency(summary.effectiveContractValue)}
+            icon={<DollarSign className="w-4 h-4" />}
+            subtitle={summary.effectiveContractValue !== summary.contractValue
+              ? `الأصلية: ${formatCurrency(summary.contractValue)}`
+              : vatRate > 0 ? `شامل ض: ${formatCurrency(addVAT(summary.effectiveContractValue, vatRate))}` : undefined}
+          />
+          <div className="stat-card">
+            <div className="flex items-start justify-between mb-3">
+              <span className="text-xs font-medium text-muted-foreground">الصرف من الموازنة</span>
+              <TrendingDown className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <p className="stat-value">{formatCurrency(summary.totalActual)}</p>
+            <p className="text-xs text-muted-foreground mt-1">من {formatCurrency(summary.totalPlanned)}</p>
+            <div className="mt-2">
+              <Progress value={Math.min(summary.spendRate, 100)} className="h-1.5" />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">{summary.spendRate.toFixed(1)}% من الموازنة</p>
+          </div>
+          <StatCard title="الربح المخطط" value={formatCurrency(summary.plannedProfit)} icon={<TrendingUp className="w-4 h-4" />}
+            trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`} />
+          <StatCard
+            title={totalCommitted > 0 ? 'المتاح الفعلي' : 'المتبقي من الموازنة'}
+            value={formatCurrency(totalCommitted > 0 ? availableBudget : summary.budgetRemaining)}
+            icon={<Target className="w-4 h-4" />}
+            trend={(totalCommitted > 0 ? availableBudget : summary.budgetRemaining) >= 0 ? 'up' : 'down'}
+            subtitle={totalCommitted > 0 ? `ملتزم: ${formatCurrency(totalCommitted)}` : `من أصل ${formatCurrency(summary.totalPlanned)}`}
+          />
+          {evm ? (
+            <StatCard title="التكلفة المتوقعة (EAC)" value={formatCurrency(evm.eac)} icon={<BarChart3 className="w-4 h-4" />}
+              trend={evm.vac >= 0 ? 'up' : 'down'}
+              subtitle={evm.vac >= 0 ? `وفر متوقع: ${formatCurrency(evm.vac)}` : `تجاوز متوقع: ${formatCurrency(Math.abs(evm.vac))}`} />
+          ) : (
+            <StatCard title="الشهر الحالي" value={`${currentMonth} / ${project.durationMonths}`} icon={<Clock className="w-4 h-4" />}
+              subtitle={`شهر ${currentMonth} من ${project.durationMonths}`} />
+          )}
+        </div>
+
+        {/* ══════ الصف الثاني: الأداء والتحصيل ══════ */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          {evm ? (
+            <div className="stat-card text-center">
+              <p className="text-xs text-muted-foreground">أداء التكلفة (CPI)</p>
+              <p className={`text-xl font-mono font-bold ${evm.cpi >= 1 ? 'text-emerald-600' : evm.cpi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.cpi.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">{evm.cpi >= 1 ? 'ضمن الميزانية ✓' : evm.cpi >= 0.9 ? 'قريب من الحد' : 'تجاوز ✗'}</p>
+            </div>
+          ) : (
+            <div className="stat-card text-center">
+              <p className="text-xs text-muted-foreground">أداء التكلفة</p>
+              <p className="text-sm text-muted-foreground mt-2">لا يوجد خط أساس</p>
+            </div>
+          )}
+          {evm ? (
+            <div className="stat-card text-center">
+              <p className="text-xs text-muted-foreground">أداء الجدول (SPI)</p>
+              <p className={`text-xl font-mono font-bold ${evm.spi >= 1 ? 'text-emerald-600' : evm.spi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.spi.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">{evm.spi >= 1 ? 'في الموعد ✓' : evm.spi >= 0.9 ? 'تأخر طفيف' : 'متأخر ✗'}</p>
+            </div>
+          ) : (
+            <div className="stat-card text-center">
+              <p className="text-xs text-muted-foreground">أداء الجدول</p>
+              <p className="text-sm text-muted-foreground mt-2">لا يوجد خط أساس</p>
+            </div>
+          )}
+          <StatCard title="محصّل" value={formatCurrency(summary.collectedRevenue)} icon={<DollarSign className="w-4 h-4" />}
+            subtitle={summary.effectiveContractValue > 0 ? `${(summary.collectedRevenue / summary.effectiveContractValue * 100).toFixed(0)}% من العقد` : undefined} />
+          <StatCard title="ذمم مدينة" value={formatCurrency(summary.accountsReceivable)} icon={<Receipt className="w-4 h-4" />}
+            subtitle={summary.accountsReceivable > 0 ? `${pRevenues.filter(r => r.status === 'invoiced').length} فاتورة معلّقة` : 'لا فواتير معلّقة'} />
+        </div>
+
+        {/* ══════ الصف الثالث: الربح المحقق ومعدل الحرق ══════ */}
+        {(summary.collectedRevenue > 0 || summary.totalActual > 0) && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <StatCard title="الربح المحقق" value={formatCurrency(summary.realizedProfit)} icon={<TrendingUp className="w-4 h-4" />}
+              trend={summary.realizedProfit >= 0 ? 'up' : 'down'}
+              subtitle={summary.plannedProfit !== 0 ? `المخطط: ${formatCurrency(summary.plannedProfit)}` : undefined} />
+            <StatCard title="معدل الحرق الشهري" value={formatCurrency(summary.burnRate)} icon={<TrendingDown className="w-4 h-4" />}
+              subtitle={monthsRemaining !== null && monthsRemaining > 0 ? `يكفي لـ ${monthsRemaining.toFixed(1)} شهر` : summary.burnRate === 0 ? 'لم يبدأ الصرف' : 'الميزانية مستنفدة'} />
+            {evm ? (
+              <div className="stat-card text-center">
+                <p className="text-xs text-muted-foreground">الأداء المطلوب (TCPI)</p>
+                <p className="text-xl font-mono font-bold">{evm.tcpiBAC.toFixed(2)}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {evm.tcpiBAC <= 1.0 ? 'مريح — الأداء كافٍ' : evm.tcpiBAC <= 1.1 ? 'ممكن — تحسين طفيف' : evm.tcpiBAC <= 1.2 ? 'صعب — يحتاج تدخل' : 'شبه مستحيل — راجع الخطة'}
+                </p>
+              </div>
+            ) : (
+              <StatCard title="المتبقي من العقد" value={formatCurrency(summary.contractRemaining)} icon={<DollarSign className="w-4 h-4" />}
+                subtitle={`${formatCurrency(summary.contractRemaining)} متبقي`} />
+            )}
           </div>
         )}
 
-        <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} managementReserve={project.managementReserve} />
-
-        {/* VAT Summary */}
-        {project.taxPercent > 0 && (summary.totalVATOnExpenses > 0 || summary.totalVATOnRevenues > 0) && (
-          <div className="stat-card mb-4">
-            <h3 className="text-sm font-semibold mb-3">ملخص ضريبة القيمة المضافة ({project.taxPercent}%)</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                <p className="text-xs text-muted-foreground">العقد شامل الضريبة</p>
-                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.contractValueInclVAT)}</p>
+        {/* ══════ تنبيهات سريعة ══════ */}
+        {(pendingExpensesCount > 0 || pendingChangeOrders > 0) && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {pendingExpensesCount > 0 && (
+              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <Clock className="w-3 h-3" />
+                {pendingExpensesCount} مصروف بانتظار الاعتماد
               </div>
-              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                <p className="text-xs text-muted-foreground">ضريبة مخرجات (فواتير)</p>
-                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.totalVATOnRevenues)}</p>
+            )}
+            {pendingChangeOrders > 0 && (
+              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <FileEdit className="w-3 h-3" />
+                {pendingChangeOrders} أمر تغيير مقترح
               </div>
-              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                <p className="text-xs text-muted-foreground">ضريبة مدخلات (مشتريات)</p>
-                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.totalVATOnExpenses)}</p>
-              </div>
-              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                <p className="text-xs text-muted-foreground">المستحق لهيئة الزكاة</p>
-                <p className={`text-sm font-mono font-bold mt-1 ${summary.netVATPayable > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-                  {formatCurrency(summary.netVATPayable)}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
