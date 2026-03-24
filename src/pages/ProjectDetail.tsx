@@ -4,7 +4,7 @@ import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown } from '@/lib/finance';
+import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown, calculateEVM, getCurrentMonth, addVAT } from '@/lib/finance';
 import { cn } from '@/lib/utils';
 import { EXPENSE_CATEGORY_LABELS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ExpenseCategory, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
-  Briefcase, Pencil, FlaskConical,
+  Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
@@ -41,6 +41,8 @@ import { ChangeOrdersSection } from '@/components/project/ChangeOrdersSection';
 import { RisksSection } from '@/components/project/RisksSection';
 import { WhatIfSection } from '@/components/project/WhatIfSection';
 import { CommitmentsSection } from '@/components/project/CommitmentsSection';
+import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
+import { Progress } from '@/components/ui/progress';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -59,9 +61,9 @@ export default function ProjectDetail() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0, taxPercent: 15 });
-  type TabGroup = 'planning' | 'finance' | 'tracking' | 'management';
-  const [activeGroup, setActiveGroup] = useState<TabGroup>('planning');
-  const [activeTab, setActiveTab] = useState('milestones');
+  type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management';
+  const [activeGroup, setActiveGroup] = useState<TabGroup>('summary');
+  const [activeTab, setActiveTab] = useState('overview');
 
   const project = projects.find((p) => p.id === id);
   const isReadOnly = project ? !canEditRole('project', project.id) : true;
@@ -117,6 +119,39 @@ export default function ProjectDetail() {
   const getActualForItem = (item: any) =>
     pExpenses.filter((e) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
 
+  // === Computed values for top section & executive summary ===
+  const projectBaselines = baselines.filter(b => b.projectId === project.id);
+  const activeBaseline = projectBaselines.find(b => b.isActive);
+  const currentMonth = getCurrentMonth(project.startDate, project.durationMonths);
+  const evm = activeBaseline
+    ? calculateEVM(activeBaseline.items, pExpenses, project.durationMonths, Math.min(project.durationMonths, currentMonth), project.percentComplete, project.managementReserve || 0)
+    : null;
+
+  const activeCommitments = pCommitments.filter(c => c.status === 'active');
+  const totalCommitted = activeCommitments.reduce((s, c) => s + c.totalAmount, 0);
+  const availableBudget = summary.totalPlanned - totalCommitted;
+
+  const daysRemaining = project.endDate
+    ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const monthsRemaining = summary.burnRate > 0 ? Math.max(0, summary.budgetRemaining / summary.burnRate) : null;
+
+  const vatRate = project.taxPercent || 15;
+
+  const healthScore = (() => {
+    let score = 0;
+    if (summary.spendRate <= 100) score++;
+    if (!evm || evm.spi >= 0.9) score++;
+    if (pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length === 0) score++;
+    if (summary.plannedProfit >= 0) score++;
+    if (score >= 4) return { label: 'سليم', color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' };
+    if (score >= 2) return { label: 'يحتاج انتباه', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' };
+    return { label: 'حرج', color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' };
+  })();
+
+  const openRisksCount = pRisks.filter(r => r.status === 'open' || r.status === 'mitigating').length;
+  const pendingExpensesCount = pExpenses.filter(e => e.approvalStatus === 'pending').length;
+
   const totalAllRevenue = pRevenues.reduce((s, r) => s + r.amount, 0);
 
   const handleDeleteProject = async () => {
@@ -158,6 +193,7 @@ export default function ProjectDetail() {
   const managementBadge = pendingChangeOrders + openHighRisks;
 
   const tabGroups: { key: TabGroup; label: string; icon: typeof MilestoneIcon; defaultTab: string; badge: number }[] = [
+    { key: 'summary', label: 'الملخص', icon: LayoutDashboard, defaultTab: 'overview', badge: 0 },
     { key: 'planning', label: 'التخطيط', icon: MilestoneIcon, defaultTab: 'milestones', badge: 0 },
     { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'budget', badge: 0 },
     { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: 0 },
@@ -165,6 +201,9 @@ export default function ProjectDetail() {
   ];
 
   const subTabs: Record<TabGroup, { value: string; label: string; icon: typeof MilestoneIcon }[]> = {
+    summary: [
+      { value: 'overview', label: 'نظرة شاملة', icon: LayoutDashboard },
+    ],
     planning: [
       { value: 'milestones', label: 'المراحل', icon: MilestoneIcon },
       { value: 'resources', label: 'الموارد', icon: Users },
@@ -313,53 +352,149 @@ export default function ProjectDetail() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard
-            title={summary.effectiveContractValue !== summary.contractValue ? 'القيمة المعدّلة للعقد' : 'قيمة العقد'}
-            value={formatCurrency(summary.effectiveContractValue)}
-            icon={<DollarSign className="w-4 h-4" />}
-            subtitle={summary.effectiveContractValue !== summary.contractValue ? `الأصلية: ${formatCurrency(summary.contractValue)}` : undefined}
-          />
-          <StatCard title="المصروفات الفعلية" value={formatCurrency(summary.totalActual)} icon={<TrendingDown className="w-4 h-4" />} trend="down" subtitle={`المخطط: ${formatCurrency(summary.totalPlanned)}`} />
-          <StatCard title="الربح المخطط" value={formatCurrency(summary.plannedProfit)} icon={<TrendingUp className="w-4 h-4" />} trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`} />
-          <StatCard title="المتبقي من الموازنة" value={formatCurrency(summary.budgetRemaining)} icon={<Target className="w-4 h-4" />} trend={summary.budgetRemaining >= 0 ? 'up' : 'down'} />
+        {/* ══════ شريط الحالة السريع ══════ */}
+        <div className={`flex flex-wrap items-center gap-2 text-xs p-2.5 rounded-lg border mb-4 ${healthScore.bg}`}>
+          <span className={`font-bold ${healthScore.color}`}>{healthScore.label}</span>
+          <span className="text-muted-foreground">|</span>
+          <Badge className={`text-[10px] ${PROJECT_STATUS_COLORS[project.status]}`}>{PROJECT_STATUS_LABELS[project.status]}</Badge>
+          <span className="text-muted-foreground">|</span>
+          <span>الإنجاز {project.percentComplete}%</span>
+          <span className="text-muted-foreground">|</span>
+          <span>الشهر {currentMonth} من {project.durationMonths}</span>
+          {daysRemaining !== null && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span className={daysRemaining < 30 ? 'text-destructive font-medium' : ''}>
+                {daysRemaining} يوم متبقي
+              </span>
+            </>
+          )}
+          {evm && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span className={evm.cpi >= 1 ? 'text-emerald-600' : 'text-destructive'}>CPI {evm.cpi.toFixed(2)}</span>
+              <span className={evm.spi >= 1 ? 'text-emerald-600' : 'text-destructive'}>SPI {evm.spi.toFixed(2)}</span>
+            </>
+          )}
+          {openRisksCount > 0 && (
+            <>
+              <span className="text-muted-foreground">|</span>
+              <span>{openRisksCount} خطر مفتوح</span>
+            </>
+          )}
         </div>
 
-        {summary.collectedRevenue > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <StatCard title="محصّل" value={formatCurrency(summary.collectedRevenue)} icon={<DollarSign className="w-4 h-4" />} />
-            <StatCard title="ذمم مدينة" value={formatCurrency(summary.accountsReceivable)} icon={<Receipt className="w-4 h-4" />} />
-            <StatCard title="الربح المحقق" value={formatCurrency(summary.realizedProfit)} icon={<TrendingUp className="w-4 h-4" />} trend={summary.realizedProfit >= 0 ? 'up' : 'down'} />
+        {/* ══════ الصف الأول: المالية الأساسية (5 بطاقات) ══════ */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+          <StatCard
+            title={summary.effectiveContractValue !== summary.contractValue ? 'القيمة المعدّلة' : 'قيمة العقد'}
+            value={formatCurrency(summary.effectiveContractValue)}
+            icon={<DollarSign className="w-4 h-4" />}
+            subtitle={summary.effectiveContractValue !== summary.contractValue
+              ? `الأصلية: ${formatCurrency(summary.contractValue)}`
+              : vatRate > 0 ? `شامل ض: ${formatCurrency(addVAT(summary.effectiveContractValue, vatRate))}` : undefined}
+          />
+          <div className="stat-card">
+            <div className="flex items-start justify-between mb-3">
+              <span className="text-xs font-medium text-muted-foreground">الصرف من الموازنة</span>
+              <TrendingDown className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <p className="stat-value">{formatCurrency(summary.totalActual)}</p>
+            <p className="text-xs text-muted-foreground mt-1">من {formatCurrency(summary.totalPlanned)}</p>
+            <div className="mt-2">
+              <Progress value={Math.min(summary.spendRate, 100)} className="h-1.5" />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">{summary.spendRate.toFixed(1)}% من الموازنة</p>
+          </div>
+          <StatCard title="الربح المخطط" value={formatCurrency(summary.plannedProfit)} icon={<TrendingUp className="w-4 h-4" />}
+            trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`} />
+          <StatCard
+            title={totalCommitted > 0 ? 'المتاح الفعلي' : 'المتبقي من الموازنة'}
+            value={formatCurrency(totalCommitted > 0 ? availableBudget : summary.budgetRemaining)}
+            icon={<Target className="w-4 h-4" />}
+            trend={(totalCommitted > 0 ? availableBudget : summary.budgetRemaining) >= 0 ? 'up' : 'down'}
+            subtitle={totalCommitted > 0 ? `ملتزم: ${formatCurrency(totalCommitted)}` : `من أصل ${formatCurrency(summary.totalPlanned)}`}
+          />
+          {evm ? (
+            <StatCard title="التكلفة المتوقعة (EAC)" value={formatCurrency(evm.eac)} icon={<BarChart3 className="w-4 h-4" />}
+              trend={evm.vac >= 0 ? 'up' : 'down'}
+              subtitle={evm.vac >= 0 ? `وفر متوقع: ${formatCurrency(evm.vac)}` : `تجاوز متوقع: ${formatCurrency(Math.abs(evm.vac))}`} />
+          ) : (
+            <StatCard title="الشهر الحالي" value={`${currentMonth} / ${project.durationMonths}`} icon={<Clock className="w-4 h-4" />}
+              subtitle={`شهر ${currentMonth} من ${project.durationMonths}`} />
+          )}
+        </div>
+
+        {/* ══════ الصف الثاني: الأداء والتحصيل ══════ */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          {evm ? (
+            <div className="stat-card text-center">
+              <p className="text-xs text-muted-foreground">أداء التكلفة (CPI)</p>
+              <p className={`text-xl font-mono font-bold ${evm.cpi >= 1 ? 'text-emerald-600' : evm.cpi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.cpi.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">{evm.cpi >= 1 ? 'ضمن الميزانية ✓' : evm.cpi >= 0.9 ? 'قريب من الحد' : 'تجاوز ✗'}</p>
+            </div>
+          ) : (
+            <div className="stat-card text-center">
+              <p className="text-xs text-muted-foreground">أداء التكلفة</p>
+              <p className="text-sm text-muted-foreground mt-2">لا يوجد خط أساس</p>
+            </div>
+          )}
+          {evm ? (
+            <div className="stat-card text-center">
+              <p className="text-xs text-muted-foreground">أداء الجدول (SPI)</p>
+              <p className={`text-xl font-mono font-bold ${evm.spi >= 1 ? 'text-emerald-600' : evm.spi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.spi.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">{evm.spi >= 1 ? 'في الموعد ✓' : evm.spi >= 0.9 ? 'تأخر طفيف' : 'متأخر ✗'}</p>
+            </div>
+          ) : (
+            <div className="stat-card text-center">
+              <p className="text-xs text-muted-foreground">أداء الجدول</p>
+              <p className="text-sm text-muted-foreground mt-2">لا يوجد خط أساس</p>
+            </div>
+          )}
+          <StatCard title="محصّل" value={formatCurrency(summary.collectedRevenue)} icon={<DollarSign className="w-4 h-4" />}
+            subtitle={summary.effectiveContractValue > 0 ? `${(summary.collectedRevenue / summary.effectiveContractValue * 100).toFixed(0)}% من العقد` : undefined} />
+          <StatCard title="ذمم مدينة" value={formatCurrency(summary.accountsReceivable)} icon={<Receipt className="w-4 h-4" />}
+            subtitle={summary.accountsReceivable > 0 ? `${pRevenues.filter(r => r.status === 'invoiced').length} فاتورة معلّقة` : 'لا فواتير معلّقة'} />
+        </div>
+
+        {/* ══════ الصف الثالث: الربح المحقق ومعدل الحرق ══════ */}
+        {(summary.collectedRevenue > 0 || summary.totalActual > 0) && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <StatCard title="الربح المحقق" value={formatCurrency(summary.realizedProfit)} icon={<TrendingUp className="w-4 h-4" />}
+              trend={summary.realizedProfit >= 0 ? 'up' : 'down'}
+              subtitle={summary.plannedProfit !== 0 ? `المخطط: ${formatCurrency(summary.plannedProfit)}` : undefined} />
+            <StatCard title="معدل الحرق الشهري" value={formatCurrency(summary.burnRate)} icon={<TrendingDown className="w-4 h-4" />}
+              subtitle={monthsRemaining !== null && monthsRemaining > 0 ? `يكفي لـ ${monthsRemaining.toFixed(1)} شهر` : summary.burnRate === 0 ? 'لم يبدأ الصرف' : 'الميزانية مستنفدة'} />
+            {evm ? (
+              <div className="stat-card text-center">
+                <p className="text-xs text-muted-foreground">الأداء المطلوب (TCPI)</p>
+                <p className="text-xl font-mono font-bold">{evm.tcpiBAC.toFixed(2)}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {evm.tcpiBAC <= 1.0 ? 'مريح — الأداء كافٍ' : evm.tcpiBAC <= 1.1 ? 'ممكن — تحسين طفيف' : evm.tcpiBAC <= 1.2 ? 'صعب — يحتاج تدخل' : 'شبه مستحيل — راجع الخطة'}
+                </p>
+              </div>
+            ) : (
+              <StatCard title="المتبقي من العقد" value={formatCurrency(summary.contractRemaining)} icon={<DollarSign className="w-4 h-4" />}
+                subtitle={`${formatCurrency(summary.contractRemaining)} متبقي`} />
+            )}
           </div>
         )}
 
-        <BudgetAlerts totalPlanned={summary.totalPlanned} totalActual={summary.totalActual} contractValue={summary.effectiveContractValue} budgetItems={pBudget} expenses={pExpenses} managementReserve={project.managementReserve} />
-
-        {/* VAT Summary */}
-        {project.taxPercent > 0 && (summary.totalVATOnExpenses > 0 || summary.totalVATOnRevenues > 0) && (
-          <div className="stat-card mb-4">
-            <h3 className="text-sm font-semibold mb-3">ملخص ضريبة القيمة المضافة ({project.taxPercent}%)</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                <p className="text-xs text-muted-foreground">العقد شامل الضريبة</p>
-                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.contractValueInclVAT)}</p>
+        {/* ══════ تنبيهات سريعة ══════ */}
+        {(pendingExpensesCount > 0 || pendingChangeOrders > 0) && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {pendingExpensesCount > 0 && (
+              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <Clock className="w-3 h-3" />
+                {pendingExpensesCount} مصروف بانتظار الاعتماد
               </div>
-              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                <p className="text-xs text-muted-foreground">ضريبة مخرجات (فواتير)</p>
-                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.totalVATOnRevenues)}</p>
+            )}
+            {pendingChangeOrders > 0 && (
+              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <FileEdit className="w-3 h-3" />
+                {pendingChangeOrders} أمر تغيير مقترح
               </div>
-              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                <p className="text-xs text-muted-foreground">ضريبة مدخلات (مشتريات)</p>
-                <p className="text-sm font-mono font-bold mt-1">{formatCurrency(summary.totalVATOnExpenses)}</p>
-              </div>
-              <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                <p className="text-xs text-muted-foreground">المستحق لهيئة الزكاة</p>
-                <p className={`text-sm font-mono font-bold mt-1 ${summary.netVATPayable > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-                  {formatCurrency(summary.netVATPayable)}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -442,6 +577,15 @@ export default function ProjectDetail() {
             })}
           </TabsList>
 
+          <TabsContent value="overview">
+            <ExecutiveSummary
+              project={project} summary={summary} milestones={pMilestones} risks={pRisks}
+              changeOrders={pChangeOrders} expenses={pExpenses} revenues={pRevenues}
+              budgetItems={pBudget} commitments={pCommitments} baselines={projectBaselines}
+              evm={evm} currentMonth={currentMonth} daysRemaining={daysRemaining}
+              totalCommitted={totalCommitted} availableBudget={availableBudget} healthScore={healthScore}
+            />
+          </TabsContent>
           <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} revenues={pRevenues} /></TabsContent>
           <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} durationMonths={project.durationMonths} /></TabsContent>
           <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} taxPercent={project.taxPercent} /></TabsContent>
