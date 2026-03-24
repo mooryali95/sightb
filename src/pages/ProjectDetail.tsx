@@ -61,9 +61,9 @@ export default function ProjectDetail() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0, taxPercent: 15 });
-  type TabGroup = 'planning' | 'finance' | 'tracking' | 'management';
-  const [activeGroup, setActiveGroup] = useState<TabGroup>('planning');
-  const [activeTab, setActiveTab] = useState('milestones');
+  type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management';
+  const [activeGroup, setActiveGroup] = useState<TabGroup>('summary');
+  const [activeTab, setActiveTab] = useState('overview');
 
   const project = projects.find((p) => p.id === id);
   const isReadOnly = project ? !canEditRole('project', project.id) : true;
