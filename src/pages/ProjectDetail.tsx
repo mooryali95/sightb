@@ -193,6 +193,7 @@ export default function ProjectDetail() {
   const managementBadge = pendingChangeOrders + openHighRisks;
 
   const tabGroups: { key: TabGroup; label: string; icon: typeof MilestoneIcon; defaultTab: string; badge: number }[] = [
+    { key: 'summary', label: 'الملخص', icon: LayoutDashboard, defaultTab: 'overview', badge: 0 },
     { key: 'planning', label: 'التخطيط', icon: MilestoneIcon, defaultTab: 'milestones', badge: 0 },
     { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'budget', badge: 0 },
     { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: 0 },
@@ -200,6 +201,9 @@ export default function ProjectDetail() {
   ];
 
   const subTabs: Record<TabGroup, { value: string; label: string; icon: typeof MilestoneIcon }[]> = {
+    summary: [
+      { value: 'overview', label: 'نظرة شاملة', icon: LayoutDashboard },
+    ],
     planning: [
       { value: 'milestones', label: 'المراحل', icon: MilestoneIcon },
       { value: 'resources', label: 'الموارد', icon: Users },
