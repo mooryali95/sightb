@@ -577,6 +577,15 @@ export default function ProjectDetail() {
             })}
           </TabsList>
 
+          <TabsContent value="overview">
+            <ExecutiveSummary
+              project={project} summary={summary} milestones={pMilestones} risks={pRisks}
+              changeOrders={pChangeOrders} expenses={pExpenses} revenues={pRevenues}
+              budgetItems={pBudget} commitments={pCommitments} baselines={projectBaselines}
+              evm={evm} currentMonth={currentMonth} daysRemaining={daysRemaining}
+              totalCommitted={totalCommitted} availableBudget={availableBudget} healthScore={healthScore}
+            />
+          </TabsContent>
           <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} revenues={pRevenues} /></TabsContent>
           <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} durationMonths={project.durationMonths} /></TabsContent>
           <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} taxPercent={project.taxPercent} /></TabsContent>
