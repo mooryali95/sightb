@@ -119,6 +119,39 @@ export default function ProjectDetail() {
   const getActualForItem = (item: any) =>
     pExpenses.filter((e) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
 
+  // === Computed values for top section & executive summary ===
+  const projectBaselines = baselines.filter(b => b.projectId === project.id);
+  const activeBaseline = projectBaselines.find(b => b.isActive);
+  const currentMonth = getCurrentMonth(project.startDate, project.durationMonths);
+  const evm = activeBaseline
+    ? calculateEVM(activeBaseline.items, pExpenses, project.durationMonths, Math.min(project.durationMonths, currentMonth), project.percentComplete, project.managementReserve || 0)
+    : null;
+
+  const activeCommitments = pCommitments.filter(c => c.status === 'active');
+  const totalCommitted = activeCommitments.reduce((s, c) => s + c.totalAmount, 0);
+  const availableBudget = summary.totalPlanned - totalCommitted;
+
+  const daysRemaining = project.endDate
+    ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const monthsRemaining = summary.burnRate > 0 ? Math.max(0, summary.budgetRemaining / summary.burnRate) : null;
+
+  const vatRate = project.taxPercent || 15;
+
+  const healthScore = (() => {
+    let score = 0;
+    if (summary.spendRate <= 100) score++;
+    if (!evm || evm.spi >= 0.9) score++;
+    if (pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length === 0) score++;
+    if (summary.plannedProfit >= 0) score++;
+    if (score >= 4) return { label: 'سليم', color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' };
+    if (score >= 2) return { label: 'يحتاج انتباه', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' };
+    return { label: 'حرج', color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' };
+  })();
+
+  const openRisksCount = pRisks.filter(r => r.status === 'open' || r.status === 'mitigating').length;
+  const pendingExpensesCount = pExpenses.filter(e => e.approvalStatus === 'pending').length;
+
   const totalAllRevenue = pRevenues.reduce((s, r) => s + r.amount, 0);
 
   const handleDeleteProject = async () => {
