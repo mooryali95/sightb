@@ -134,6 +134,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (r.month !== undefined) updates.month = r.month;
     if (r.revenueType !== undefined) updates.revenue_type = r.revenueType;
     if (r.status !== undefined) updates.status = r.status;
+    if (r.milestoneId !== undefined) updates.milestone_id = r.milestoneId;
     if (r.invoiceNumber !== undefined) updates.invoice_number = r.invoiceNumber;
     if (r.invoiceDate !== undefined) updates.invoice_date = r.invoiceDate;
     if (r.collectionDate !== undefined) updates.collection_date = r.collectionDate;

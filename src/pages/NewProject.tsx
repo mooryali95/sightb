@@ -76,6 +76,7 @@ export default function NewProject() {
         retentionPercent: parseFloat(retentionPercent) || 0,
         managementReserve: 0,
         taxPercent: parseFloat(taxPercent) || 15,
+        vatInclusive: false,
       });
       navigate('/');
     } catch (error: any) {
