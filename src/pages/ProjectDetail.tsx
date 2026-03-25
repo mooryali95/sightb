@@ -468,9 +468,11 @@ export default function ProjectDetail() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <StatCard title="الربح المحقق" value={formatCurrency(summary.realizedProfit)} icon={<TrendingUp className="w-4 h-4" />}
               trend={summary.realizedProfit >= 0 ? 'up' : 'down'}
-              subtitle={summary.plannedProfit !== 0 ? `المخطط: ${formatCurrency(summary.plannedProfit)}` : undefined} />
+              subtitle={summary.plannedProfit !== 0 ? `المخطط: ${formatCurrency(summary.plannedProfit)}` : undefined}
+              tooltip="المحصّل ناقص المصروفات — الربح الذي دخل حسابك فعلاً" />
             <StatCard title="معدل الحرق الشهري" value={formatCurrency(summary.burnRate)} icon={<TrendingDown className="w-4 h-4" />}
-              subtitle={monthsRemaining !== null && monthsRemaining > 0 ? `يكفي لـ ${monthsRemaining.toFixed(1)} شهر` : summary.burnRate === 0 ? 'لم يبدأ الصرف' : 'الميزانية مستنفدة'} />
+              subtitle={monthsRemaining !== null && monthsRemaining > 0 ? `يكفي لـ ${monthsRemaining.toFixed(1)} شهر` : summary.burnRate === 0 ? 'لم يبدأ الصرف' : 'الميزانية مستنفدة'}
+              tooltip="متوسط الصرف الشهري = المصروفات ÷ الأشهر المنقضية" />
             {evm ? (
               <div className="stat-card text-center">
                 <p className="text-xs text-muted-foreground">الأداء المطلوب (TCPI)</p>
