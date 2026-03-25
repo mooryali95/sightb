@@ -390,6 +390,7 @@ export default function ProjectDetail() {
             title={summary.effectiveContractValue !== summary.contractValue ? 'القيمة المعدّلة' : 'قيمة العقد'}
             value={formatCurrency(summary.effectiveContractValue)}
             icon={<DollarSign className="w-4 h-4" />}
+            tooltip="إجمالي قيمة العقد بعد أوامر التغيير المعتمدة — بدون ضريبة"
             subtitle={summary.effectiveContractValue !== summary.contractValue
               ? `الأصلية: ${formatCurrency(summary.contractValue)}`
               : vatRate > 0 ? `شامل ض: ${formatCurrency(addVAT(summary.effectiveContractValue, vatRate))}` : undefined}
@@ -407,18 +408,21 @@ export default function ProjectDetail() {
             <p className="text-[10px] text-muted-foreground mt-1">{summary.spendRate.toFixed(1)}% من الموازنة</p>
           </div>
           <StatCard title="الربح المخطط" value={formatCurrency(summary.plannedProfit)} icon={<TrendingUp className="w-4 h-4" />}
-            trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`} />
+            trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`}
+            tooltip="قيمة العقد ناقص الموازنة المخططة — الربح المتوقع إذا سارت الأمور حسب الخطة" />
           <StatCard
             title={totalCommitted > 0 ? 'المتاح الفعلي' : 'المتبقي من الموازنة'}
             value={formatCurrency(totalCommitted > 0 ? availableBudget : summary.budgetRemaining)}
             icon={<Target className="w-4 h-4" />}
             trend={(totalCommitted > 0 ? availableBudget : summary.budgetRemaining) >= 0 ? 'up' : 'down'}
             subtitle={totalCommitted > 0 ? `ملتزم: ${formatCurrency(totalCommitted)}` : `من أصل ${formatCurrency(summary.totalPlanned)}`}
+            tooltip="الموازنة ناقص المصروفات. سالب = تجاوز"
           />
           {evm ? (
             <StatCard title="التكلفة المتوقعة (EAC)" value={formatCurrency(evm.eac)} icon={<BarChart3 className="w-4 h-4" />}
               trend={evm.vac >= 0 ? 'up' : 'down'}
-              subtitle={evm.vac >= 0 ? `وفر متوقع: ${formatCurrency(evm.vac)}` : `تجاوز متوقع: ${formatCurrency(Math.abs(evm.vac))}`} />
+              subtitle={evm.vac >= 0 ? `وفر متوقع: ${formatCurrency(evm.vac)}` : `تجاوز متوقع: ${formatCurrency(Math.abs(evm.vac))}`}
+              tooltip="التكلفة المتوقعة عند إكمال المشروع بناءً على الأداء الحالي" />
           ) : (
             <StatCard title="الشهر الحالي" value={`${currentMonth} / ${project.durationMonths}`} icon={<Clock className="w-4 h-4" />}
               subtitle={`شهر ${currentMonth} من ${project.durationMonths}`} />
@@ -452,9 +456,11 @@ export default function ProjectDetail() {
             </div>
           )}
           <StatCard title="محصّل" value={formatCurrency(summary.collectedRevenue)} icon={<DollarSign className="w-4 h-4" />}
-            subtitle={summary.effectiveContractValue > 0 ? `${(summary.collectedRevenue / summary.effectiveContractValue * 100).toFixed(0)}% من العقد` : undefined} />
+            subtitle={summary.effectiveContractValue > 0 ? `${(summary.collectedRevenue / summary.effectiveContractValue * 100).toFixed(0)}% من العقد` : undefined}
+            tooltip="المبالغ المحصّلة فعلياً — بدون ضريبة" />
           <StatCard title="ذمم مدينة" value={formatCurrency(summary.accountsReceivable)} icon={<Receipt className="w-4 h-4" />}
-            subtitle={summary.accountsReceivable > 0 ? `${pRevenues.filter(r => r.status === 'invoiced').length} فاتورة معلّقة` : 'لا فواتير معلّقة'} />
+            subtitle={summary.accountsReceivable > 0 ? `${pRevenues.filter(r => r.status === 'invoiced').length} فاتورة معلّقة` : 'لا فواتير معلّقة'}
+            tooltip="فواتير أُصدرت ولم تُحصّل" />
         </div>
 
         {/* ══════ الصف الثالث: الربح المحقق ومعدل الحرق ══════ */}
@@ -462,9 +468,11 @@ export default function ProjectDetail() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <StatCard title="الربح المحقق" value={formatCurrency(summary.realizedProfit)} icon={<TrendingUp className="w-4 h-4" />}
               trend={summary.realizedProfit >= 0 ? 'up' : 'down'}
-              subtitle={summary.plannedProfit !== 0 ? `المخطط: ${formatCurrency(summary.plannedProfit)}` : undefined} />
+              subtitle={summary.plannedProfit !== 0 ? `المخطط: ${formatCurrency(summary.plannedProfit)}` : undefined}
+              tooltip="المحصّل ناقص المصروفات — الربح الذي دخل حسابك فعلاً" />
             <StatCard title="معدل الحرق الشهري" value={formatCurrency(summary.burnRate)} icon={<TrendingDown className="w-4 h-4" />}
-              subtitle={monthsRemaining !== null && monthsRemaining > 0 ? `يكفي لـ ${monthsRemaining.toFixed(1)} شهر` : summary.burnRate === 0 ? 'لم يبدأ الصرف' : 'الميزانية مستنفدة'} />
+              subtitle={monthsRemaining !== null && monthsRemaining > 0 ? `يكفي لـ ${monthsRemaining.toFixed(1)} شهر` : summary.burnRate === 0 ? 'لم يبدأ الصرف' : 'الميزانية مستنفدة'}
+              tooltip="متوسط الصرف الشهري = المصروفات ÷ الأشهر المنقضية" />
             {evm ? (
               <div className="stat-card text-center">
                 <p className="text-xs text-muted-foreground">الأداء المطلوب (TCPI)</p>
@@ -593,7 +601,7 @@ export default function ProjectDetail() {
           <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} /></TabsContent>
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="commitments"><CommitmentsSection projectId={project.id} commitments={pCommitments} totalPlanned={summary.totalPlanned} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} /></TabsContent>
+          <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} milestones={pMilestones} /></TabsContent>
           <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} budgetItems={pBudget} /></TabsContent>

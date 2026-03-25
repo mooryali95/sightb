@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency, calcVAT, addVAT } from '@/lib/finance';
+import { formatCurrency, calcVAT, addVAT, removeVAT } from '@/lib/finance';
 import {
   REVENUE_TYPE_LABELS, REVENUE_STATUS_LABELS, REVENUE_STATUS_COLORS,
-  type RevenueType, type RevenueStatus,
+  MILESTONE_STATUS_LABELS, MILESTONE_STATUS_COLORS,
+  type RevenueType, type RevenueStatus, type Milestone, type MilestoneStatus,
 } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Pencil } from 'lucide-react';
@@ -20,9 +22,10 @@ interface RevenueSectionProps {
   durationMonths: number;
   readOnly?: boolean;
   taxPercent?: number;
+  milestones?: Milestone[];
 }
 
-export function RevenueSection({ projectId, revenues, durationMonths, readOnly = false, taxPercent = 15 }: RevenueSectionProps) {
+export function RevenueSection({ projectId, revenues, durationMonths, readOnly = false, taxPercent = 0, milestones }: RevenueSectionProps) {
   const { addRevenue, deleteRevenue, updateRevenue } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -35,50 +38,38 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [collectionDate, setCollectionDate] = useState('');
+  const [milestoneId, setMilestoneId] = useState('');
+  const [inputInclusive, setInputInclusive] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
   const resetForm = () => {
-    setEditingId(null);
-    setDescription('');
-    setAmount('');
-    setMonth('1');
-    setDate(new Date().toISOString().split('T')[0]);
-    setRevenueType('milestone');
-    setStatus('collected');
-    setInvoiceNumber('');
-    setInvoiceDate('');
-    setCollectionDate('');
+    setEditingId(null); setDescription(''); setAmount(''); setMonth('1');
+    setDate(new Date().toISOString().split('T')[0]); setRevenueType('milestone');
+    setStatus('collected'); setInvoiceNumber(''); setInvoiceDate('');
+    setCollectionDate(''); setMilestoneId(''); setInputInclusive(false);
   };
 
   const openEdit = (rev: any) => {
-    setEditingId(rev.id);
-    setDescription(rev.description);
-    setAmount(String(rev.amount));
-    setMonth(String(rev.month));
-    setDate(rev.date);
-    setRevenueType(rev.revenueType || 'milestone');
-    setStatus(rev.status || 'collected');
-    setInvoiceNumber(rev.invoiceNumber || '');
-    setInvoiceDate(rev.invoiceDate || '');
-    setCollectionDate(rev.collectionDate || '');
-    setOpen(true);
+    setEditingId(rev.id); setDescription(rev.description); setAmount(String(rev.amount));
+    setMonth(String(rev.month)); setDate(rev.date); setRevenueType(rev.revenueType || 'milestone');
+    setStatus(rev.status || 'collected'); setInvoiceNumber(rev.invoiceNumber || '');
+    setInvoiceDate(rev.invoiceDate || ''); setCollectionDate(rev.collectionDate || '');
+    setMilestoneId(rev.milestoneId || ''); setInputInclusive(false); setOpen(true);
   };
 
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
+    const rawAmount = parseFloat(amount);
+    const finalAmount = inputInclusive && taxPercent > 0 ? removeVAT(rawAmount, taxPercent) : rawAmount;
     const data = {
-      description: description.trim(),
-      amount: parseFloat(amount),
-      date,
-      month: parseInt(month),
-      revenueType,
-      status,
-      invoiceNumber: invoiceNumber || undefined,
-      invoiceDate: invoiceDate || undefined,
+      description: description.trim(), amount: finalAmount, date,
+      month: parseInt(month), revenueType, status,
+      invoiceNumber: invoiceNumber || undefined, invoiceDate: invoiceDate || undefined,
       collectionDate: collectionDate || undefined,
+      milestoneId: milestoneId && milestoneId !== 'none' ? milestoneId : undefined,
     };
     if (editingId) {
       await updateRevenue(editingId, data);
@@ -87,8 +78,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
       await addRevenue({ projectId, ...data });
       toast.success('تمت إضافة الإيراد');
     }
-    resetForm();
-    setOpen(false);
+    resetForm(); setOpen(false);
   };
 
   const filteredRevenues = revenues.filter((rev: any) => {
@@ -105,13 +95,16 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
   const invoicedTotal = revenues.filter((r: any) => r.status === 'invoiced').reduce((s: number, r: any) => s + r.amount, 0);
   const plannedTotal = revenues.filter((r: any) => r.status === 'planned').reduce((s: number, r: any) => s + r.amount, 0);
 
+  const showVAT = taxPercent > 0;
+
   return (
     <div className="stat-card">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold">الإيرادات</h3>
           <p className="text-xs text-muted-foreground">
-            الإجمالي: {formatCurrency(total)} · شامل الضريبة ({taxPercent}%): {formatCurrency(totalWithTax)}
+            الإجمالي: {formatCurrency(total)}
+            {showVAT && ` · شامل الضريبة (${taxPercent}%): ${formatCurrency(totalWithTax)}`}
           </p>
         </div>
         {!readOnly && (
@@ -119,7 +112,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة إيراد</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? 'تعديل الإيراد' : 'إضافة إيراد'}</DialogTitle>
             </DialogHeader>
@@ -145,6 +138,23 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   </Select>
                 </div>
               </div>
+              {/* VAT inclusive toggle */}
+              {showVAT && (
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" checked={inputInclusive} onChange={(e) => setInputInclusive(e.target.checked)} className="rounded" />
+                    المبلغ شامل الضريبة
+                  </label>
+                </div>
+              )}
+              {parseFloat(amount) > 0 && showVAT && (
+                <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                  {inputInclusive
+                    ? `بدون ضريبة: ${formatCurrency(removeVAT(parseFloat(amount), taxPercent))} · الضريبة: ${formatCurrency(parseFloat(amount) - removeVAT(parseFloat(amount), taxPercent))}`
+                    : `شامل الضريبة: ${formatCurrency(addVAT(parseFloat(amount), taxPercent))} · الضريبة: ${formatCurrency(calcVAT(parseFloat(amount), taxPercent))}`
+                  }
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>نوع الإيراد</Label>
@@ -173,6 +183,23 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                 <Label>التاريخ</Label>
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </div>
+              {/* Milestone link */}
+              {milestones && milestones.length > 0 && (
+                <div className="space-y-2">
+                  <Label>ربط بمرحلة / تسليمة</Label>
+                  <Select value={milestoneId} onValueChange={setMilestoneId}>
+                    <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">بدون ربط</SelectItem>
+                      {milestones.map(m => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name} ({MILESTONE_STATUS_LABELS[m.status as MilestoneStatus]}) — وزن {(m.weight * 100).toFixed(0)}%
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               {(status === 'invoiced' || status === 'collected') && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -259,9 +286,10 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                 <th>الوصف</th>
                 <th>النوع</th>
                 <th>المبلغ</th>
-                <th>الضريبة</th>
-                <th>شامل الضريبة</th>
+                {showVAT && <th>الضريبة</th>}
+                {showVAT && <th>شامل الضريبة</th>}
                 <th>الحالة</th>
+                {milestones && milestones.length > 0 && <th>التسليمة</th>}
                 <th>الشهر</th>
                 <th>التاريخ</th>
                 {!readOnly && <th></th>}
@@ -273,13 +301,27 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   <td>{r.description}</td>
                   <td className="text-xs">{REVENUE_TYPE_LABELS[r.revenueType as RevenueType] || r.revenueType}</td>
                   <td className="font-mono text-sm">{formatCurrency(r.amount)}</td>
-                  <td className="font-mono text-xs text-emerald-600">{formatCurrency(calcVAT(r.amount, taxPercent))}</td>
-                  <td className="font-mono text-xs">{formatCurrency(addVAT(r.amount, taxPercent))}</td>
+                  {showVAT && <td className="font-mono text-xs text-emerald-600">{formatCurrency(calcVAT(r.amount, taxPercent))}</td>}
+                  {showVAT && <td className="font-mono text-xs">{formatCurrency(addVAT(r.amount, taxPercent))}</td>}
                   <td>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${REVENUE_STATUS_COLORS[r.status as RevenueStatus] || ''}`}>
                       {REVENUE_STATUS_LABELS[r.status as RevenueStatus] || r.status}
                     </span>
                   </td>
+                  {milestones && milestones.length > 0 && (
+                    <td className="text-xs">
+                      {(() => {
+                        if (!r.milestoneId || !milestones) return '—';
+                        const m = milestones.find((ms: any) => ms.id === r.milestoneId);
+                        if (!m) return '—';
+                        return (
+                          <Badge className={`text-[9px] ${MILESTONE_STATUS_COLORS[m.status as MilestoneStatus] || ''}`}>
+                            {m.name}
+                          </Badge>
+                        );
+                      })()}
+                    </td>
+                  )}
                   <td>شهر {r.month}</td>
                   <td className="text-muted-foreground text-sm">{r.date}</td>
                   {!readOnly && (

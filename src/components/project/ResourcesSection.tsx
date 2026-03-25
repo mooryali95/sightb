@@ -68,6 +68,9 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
   const totalMonthlyCost = resources.reduce((s, r) => s + r.monthlyCost, 0);
   const hasBudgetData = budgetItems.length > 0;
 
+  // Check if any resource has estimated (no linked budget item) planned cost
+  const hasEstimated = resources.some(r => budgetItems.filter(b => b.resourceId === r.id).length === 0 && r.monthlyCost > 0);
+
   return (
     <div className="stat-card">
       <div className="flex items-center justify-between mb-4">
@@ -115,17 +118,21 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                 <th>الاسم</th>
                 <th>الدور</th>
                 <th>التكلفة الشهرية</th>
-                {hasBudgetData && <th>المخطط</th>}
+                <th>المخطط</th>
                 <th>إجمالي الصرف</th>
-                {hasBudgetData && <th>الانحراف</th>}
-                {hasBudgetData && <th>نسبة الانحراف</th>}
+                <th>الانحراف</th>
+                <th>نسبة الانحراف</th>
                 {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
               {resources.map((r) => {
                 const totalSpent = pExpenses.filter(e => e.resourceId === r.id).reduce((s, e) => s + e.amount, 0);
-                const plannedForResource = getTotalPlanned(budgetItems.filter(b => b.resourceId === r.id));
+                const linkedBudget = budgetItems.filter(b => b.resourceId === r.id);
+                const plannedForResource = linkedBudget.length > 0
+                  ? getTotalPlanned(linkedBudget)
+                  : r.monthlyCost * (durationMonths || 1);
+                const isEstimated = linkedBudget.length === 0 && r.monthlyCost > 0;
                 const variance = plannedForResource - totalSpent;
                 const variancePct = plannedForResource > 0 ? (variance / plannedForResource) * 100 : 0;
 
@@ -134,22 +141,23 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                     <td className="font-medium">{r.name}</td>
                     <td className="text-muted-foreground">{r.role || '—'}</td>
                     <td className="font-mono text-sm">{formatCurrency(r.monthlyCost)}</td>
-                    {hasBudgetData && (
-                      <td className="font-mono text-sm">{plannedForResource > 0 ? formatCurrency(plannedForResource) : '—'}</td>
-                    )}
+                    <td className="font-mono text-sm">
+                      {plannedForResource > 0 ? (
+                        <span className="flex items-center gap-1">
+                          {formatCurrency(plannedForResource)}
+                          {isEstimated && <span className="text-amber-500 text-[10px]">*</span>}
+                        </span>
+                      ) : '—'}
+                    </td>
                     <td className="font-mono text-sm">{formatCurrency(totalSpent)}</td>
-                    {hasBudgetData && (
-                      <td>
-                        {plannedForResource > 0 ? (
-                          <span className={variance >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(variance)}</span>
-                        ) : '—'}
-                      </td>
-                    )}
-                    {hasBudgetData && (
-                      <td className="text-xs text-muted-foreground">
-                        {plannedForResource > 0 ? `${variancePct.toFixed(1)}%` : '—'}
-                      </td>
-                    )}
+                    <td>
+                      {plannedForResource > 0 ? (
+                        <span className={variance >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(variance)}</span>
+                      ) : '—'}
+                    </td>
+                    <td className="text-xs text-muted-foreground">
+                      {plannedForResource > 0 ? `${variancePct.toFixed(1)}%` : '—'}
+                    </td>
                     {!readOnly && (
                     <td>
                       <div className="flex items-center gap-0.5">
@@ -165,6 +173,9 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
               })}
             </tbody>
           </table>
+          {hasEstimated && (
+            <p className="text-[10px] text-muted-foreground mt-2">* تقديري = التكلفة الشهرية × مدة المشروع — لم يُربط ببند موازنة بعد</p>
+          )}
         </div>
       )}
 

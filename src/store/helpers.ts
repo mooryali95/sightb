@@ -56,6 +56,7 @@ export function mapProject(d: any): Project {
     retentionPercent: Number(d.retention_percent ?? 0),
     managementReserve: Number(d.management_reserve ?? 0),
     taxPercent: Number(d.tax_percent ?? 15),
+    vatInclusive: d.vat_inclusive ?? false,
   };
 }
 
@@ -112,6 +113,7 @@ export function mapRevenue(d: any): Revenue {
     invoiceNumber: d.invoice_number || undefined,
     invoiceDate: d.invoice_date || undefined,
     collectionDate: d.collection_date || undefined,
+    milestoneId: d.milestone_id || undefined,
   };
 }
 

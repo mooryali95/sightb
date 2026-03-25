@@ -863,6 +863,7 @@ export type Database = {
           status: string
           tax_percent: number | null
           user_id: string
+          vat_inclusive: boolean | null
         }
         Insert: {
           client_logo?: string | null
@@ -885,6 +886,7 @@ export type Database = {
           status?: string
           tax_percent?: number | null
           user_id: string
+          vat_inclusive?: boolean | null
         }
         Update: {
           client_logo?: string | null
@@ -907,6 +909,7 @@ export type Database = {
           status?: string
           tax_percent?: number | null
           user_id?: string
+          vat_inclusive?: boolean | null
         }
         Relationships: [
           {
@@ -973,6 +976,7 @@ export type Database = {
           id: string
           invoice_date: string | null
           invoice_number: string | null
+          milestone_id: string | null
           month: number
           project_id: string
           revenue_type: string
@@ -988,6 +992,7 @@ export type Database = {
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
+          milestone_id?: string | null
           month?: number
           project_id: string
           revenue_type?: string
@@ -1003,6 +1008,7 @@ export type Database = {
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
+          milestone_id?: string | null
           month?: number
           project_id?: string
           revenue_type?: string
@@ -1010,6 +1016,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "revenues_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "revenues_project_id_fkey"
             columns: ["project_id"]

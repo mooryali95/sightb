@@ -15,13 +15,16 @@ export function formatNumber(value: number): string {
   return value.toLocaleString('en-US');
 }
 
-export function calcVAT(amount: number, vatRate: number = 15): number {
+export function calcVAT(amount: number, vatRate: number): number {
+  if (!vatRate || vatRate <= 0) return 0;
   return Math.round(amount * vatRate / 100 * 100) / 100;
 }
-export function addVAT(amountExcl: number, vatRate: number = 15): number {
+export function addVAT(amountExcl: number, vatRate: number): number {
+  if (!vatRate || vatRate <= 0) return amountExcl;
   return Math.round((amountExcl * (1 + vatRate / 100)) * 100) / 100;
 }
-export function removeVAT(amountIncl: number, vatRate: number = 15): number {
+export function removeVAT(amountIncl: number, vatRate: number): number {
+  if (!vatRate || vatRate <= 0) return amountIncl;
   return Math.round(amountIncl / (1 + vatRate / 100) * 100) / 100;
 }
 
@@ -105,8 +108,8 @@ export function getProjectSummary(
   const bacWithoutReserve = totalPlanned - managementReserve;
 
   // === VAT ===
-  const vatRate = (project as any).taxPercent || 15;
-  const contractValueInclVAT = addVAT(effectiveContractValue, vatRate);
+  const vatRate = (project as any).taxPercent || 0;
+  const contractValueInclVAT = vatRate > 0 ? addVAT(effectiveContractValue, vatRate) : effectiveContractValue;
 
   const totalVATOnExpenses = expenses
     .filter(e => (e as any).approvalStatus !== 'rejected' && !(e as any).isVatExempt)
