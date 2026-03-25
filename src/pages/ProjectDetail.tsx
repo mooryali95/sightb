@@ -456,9 +456,11 @@ export default function ProjectDetail() {
             </div>
           )}
           <StatCard title="محصّل" value={formatCurrency(summary.collectedRevenue)} icon={<DollarSign className="w-4 h-4" />}
-            subtitle={summary.effectiveContractValue > 0 ? `${(summary.collectedRevenue / summary.effectiveContractValue * 100).toFixed(0)}% من العقد` : undefined} />
+            subtitle={summary.effectiveContractValue > 0 ? `${(summary.collectedRevenue / summary.effectiveContractValue * 100).toFixed(0)}% من العقد` : undefined}
+            tooltip="المبالغ المحصّلة فعلياً — بدون ضريبة" />
           <StatCard title="ذمم مدينة" value={formatCurrency(summary.accountsReceivable)} icon={<Receipt className="w-4 h-4" />}
-            subtitle={summary.accountsReceivable > 0 ? `${pRevenues.filter(r => r.status === 'invoiced').length} فاتورة معلّقة` : 'لا فواتير معلّقة'} />
+            subtitle={summary.accountsReceivable > 0 ? `${pRevenues.filter(r => r.status === 'invoiced').length} فاتورة معلّقة` : 'لا فواتير معلّقة'}
+            tooltip="فواتير أُصدرت ولم تُحصّل" />
         </div>
 
         {/* ══════ الصف الثالث: الربح المحقق ومعدل الحرق ══════ */}
