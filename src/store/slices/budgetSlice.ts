@@ -115,6 +115,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
       description: r.description, amount: r.amount, date: r.date, month: r.month,
       revenue_type: r.revenueType || 'milestone',
       status: r.status || 'collected',
+      milestone_id: r.milestoneId || null,
       invoice_number: r.invoiceNumber || null,
       invoice_date: r.invoiceDate || null,
       collection_date: r.collectionDate || null,
