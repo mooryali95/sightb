@@ -74,6 +74,7 @@ export interface Project {
   retentionPercent: number;
   managementReserve: number;
   taxPercent: number;
+  vatInclusive: boolean;
 }
 
 export type ExpenseCategory =
