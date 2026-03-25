@@ -113,6 +113,7 @@ export function mapRevenue(d: any): Revenue {
     invoiceNumber: d.invoice_number || undefined,
     invoiceDate: d.invoice_date || undefined,
     collectionDate: d.collection_date || undefined,
+    milestoneId: d.milestone_id || undefined,
   };
 }
 

@@ -108,8 +108,8 @@ export function getProjectSummary(
   const bacWithoutReserve = totalPlanned - managementReserve;
 
   // === VAT ===
-  const vatRate = (project as any).taxPercent || 15;
-  const contractValueInclVAT = addVAT(effectiveContractValue, vatRate);
+  const vatRate = (project as any).taxPercent || 0;
+  const contractValueInclVAT = vatRate > 0 ? addVAT(effectiveContractValue, vatRate) : effectiveContractValue;
 
   const totalVATOnExpenses = expenses
     .filter(e => (e as any).approvalStatus !== 'rejected' && !(e as any).isVatExempt)

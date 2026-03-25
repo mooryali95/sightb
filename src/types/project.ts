@@ -158,6 +158,7 @@ export interface Revenue {
   id: string; projectId: string; description: string; amount: number;
   date: string; month: number; revenueType: RevenueType; status: RevenueStatus;
   invoiceNumber?: string; invoiceDate?: string; collectionDate?: string;
+  milestoneId?: string;
 }
 
 export type MilestoneStatus = 'planned' | 'in_progress' | 'completed' | 'delayed';
