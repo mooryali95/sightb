@@ -390,6 +390,7 @@ export default function ProjectDetail() {
             title={summary.effectiveContractValue !== summary.contractValue ? 'القيمة المعدّلة' : 'قيمة العقد'}
             value={formatCurrency(summary.effectiveContractValue)}
             icon={<DollarSign className="w-4 h-4" />}
+            tooltip="إجمالي قيمة العقد بعد أوامر التغيير المعتمدة — بدون ضريبة"
             subtitle={summary.effectiveContractValue !== summary.contractValue
               ? `الأصلية: ${formatCurrency(summary.contractValue)}`
               : vatRate > 0 ? `شامل ض: ${formatCurrency(addVAT(summary.effectiveContractValue, vatRate))}` : undefined}
@@ -407,18 +408,21 @@ export default function ProjectDetail() {
             <p className="text-[10px] text-muted-foreground mt-1">{summary.spendRate.toFixed(1)}% من الموازنة</p>
           </div>
           <StatCard title="الربح المخطط" value={formatCurrency(summary.plannedProfit)} icon={<TrendingUp className="w-4 h-4" />}
-            trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`} />
+            trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`}
+            tooltip="قيمة العقد ناقص الموازنة المخططة — الربح المتوقع إذا سارت الأمور حسب الخطة" />
           <StatCard
             title={totalCommitted > 0 ? 'المتاح الفعلي' : 'المتبقي من الموازنة'}
             value={formatCurrency(totalCommitted > 0 ? availableBudget : summary.budgetRemaining)}
             icon={<Target className="w-4 h-4" />}
             trend={(totalCommitted > 0 ? availableBudget : summary.budgetRemaining) >= 0 ? 'up' : 'down'}
             subtitle={totalCommitted > 0 ? `ملتزم: ${formatCurrency(totalCommitted)}` : `من أصل ${formatCurrency(summary.totalPlanned)}`}
+            tooltip="الموازنة ناقص المصروفات. سالب = تجاوز"
           />
           {evm ? (
             <StatCard title="التكلفة المتوقعة (EAC)" value={formatCurrency(evm.eac)} icon={<BarChart3 className="w-4 h-4" />}
               trend={evm.vac >= 0 ? 'up' : 'down'}
-              subtitle={evm.vac >= 0 ? `وفر متوقع: ${formatCurrency(evm.vac)}` : `تجاوز متوقع: ${formatCurrency(Math.abs(evm.vac))}`} />
+              subtitle={evm.vac >= 0 ? `وفر متوقع: ${formatCurrency(evm.vac)}` : `تجاوز متوقع: ${formatCurrency(Math.abs(evm.vac))}`}
+              tooltip="التكلفة المتوقعة عند إكمال المشروع بناءً على الأداء الحالي" />
           ) : (
             <StatCard title="الشهر الحالي" value={`${currentMonth} / ${project.durationMonths}`} icon={<Clock className="w-4 h-4" />}
               subtitle={`شهر ${currentMonth} من ${project.durationMonths}`} />
