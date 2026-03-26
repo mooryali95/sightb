@@ -26,6 +26,7 @@ interface ExpensesSectionProps {
   contractValue: number;
   readOnly?: boolean;
   taxPercent?: number;
+  projectStatus?: string;
 }
 
 export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15 }: ExpensesSectionProps) {
