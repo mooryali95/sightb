@@ -95,11 +95,19 @@ Deno.serve(async (req) => {
 
     if (action === "check") {
       if (fingerprint) {
+        // Clean up expired devices for this user
+        await supabase
+          .from("trusted_devices")
+          .delete()
+          .eq("user_id", user.id)
+          .lt("expires_at", new Date().toISOString());
+
         const { data: trusted } = await supabase
           .from("trusted_devices")
           .select("id")
           .eq("user_id", user.id)
           .eq("fingerprint", fingerprint)
+          .gte("expires_at", new Date().toISOString())
           .maybeSingle();
 
         if (trusted) {
