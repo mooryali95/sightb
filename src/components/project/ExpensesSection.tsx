@@ -29,7 +29,7 @@ interface ExpensesSectionProps {
   projectStatus?: string;
 }
 
-export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15 }: ExpensesSectionProps) {
+export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15, projectStatus }: ExpensesSectionProps) {
   const { addExpense, deleteExpense, updateExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
