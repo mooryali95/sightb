@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
 import {
@@ -39,6 +39,20 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
   // Revenue prompt
   const [revenuePrompt, setRevenuePrompt] = useState<{ milestoneId: string; revenue: Revenue } | null>(null);
 
+  // Auto-detect delayed milestones (once per mount)
+  const delayChecked = useRef(false);
+  useEffect(() => {
+    if (delayChecked.current || readOnly || milestones.length === 0) return;
+    delayChecked.current = true;
+    const now = new Date().toISOString().split('T')[0];
+    milestones.forEach(async (m) => {
+      if (m.plannedEnd && m.plannedEnd < now && m.status !== 'completed' && m.status !== 'delayed') {
+        await updateMilestone(m.id, { status: 'delayed' });
+        toast.info(`المرحلة "${m.name}" تحولت لـ "متأخرة" تلقائياً`);
+      }
+    });
+  }, [milestones.length]);
+
   const resetForm = () => {
     setEditingId(null); setName(''); setDescription(''); setWeight('');
     setStatus('planned'); setPercentComplete('0'); setPlannedStart(''); setPlannedEnd('');
@@ -73,14 +87,34 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     }
   };
 
+  const checkProjectAutoComplete = async (updatedMilestones: Milestone[], projectPct: number) => {
+    if (updatedMilestones.length === 0) return;
+    const allCompleted = updatedMilestones.every(m => m.status === 'completed' || m.percentComplete === 100);
+    if (allCompleted && projectPct === 100 && project.status === 'active') {
+      await updateProject(projectId, { status: 'completed', percentComplete: 100 });
+      toast.success('🎉 المشروع اكتمل — تم تحويل حالته إلى "مكتمل" تلقائياً');
+    }
+    if (!allCompleted && project.status === 'completed') {
+      await updateProject(projectId, { status: 'active' });
+      toast.info('المشروع عاد لحالة "نشط" — بعض المراحل لم تكتمل');
+    }
+  };
+
   const handleSubmit = async () => {
     if (!name.trim()) return;
+    let pct = parseInt(percentComplete) || 0;
+    let st = status;
+
+    // Auto status based on percent
+    if (pct === 100 && st !== 'completed') st = 'completed';
+    if (pct > 0 && pct < 100 && st === 'planned') st = 'in_progress';
+
     const data = {
       name: name.trim(),
       description: description || undefined,
       weight: parseFloat(weight) || 0,
-      status,
-      percentComplete: parseInt(percentComplete) || 0,
+      status: st,
+      percentComplete: pct,
       plannedStart: plannedStart || undefined,
       plannedEnd: plannedEnd || undefined,
       sortOrder: milestones.length,
@@ -94,6 +128,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
       await updateProject(projectId, { percentComplete: newPct });
       toast.success('تم تعديل المرحلة');
       checkRevenuePrompt(editingId, data.percentComplete, data.status);
+      await checkProjectAutoComplete(updated, newPct);
     } else {
       await addMilestone({ projectId, ...data, actualStart: undefined, actualEnd: undefined });
       toast.success('تمت إضافة المرحلة');
@@ -103,11 +138,26 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
   };
 
   const handlePercentChange = async (m: Milestone, newPct: number) => {
-    await updateMilestone(m.id, { percentComplete: newPct });
-    const updated = milestones.map(ms => ms.id === m.id ? { ...ms, percentComplete: newPct } : ms);
+    const updates: Partial<Milestone> = { percentComplete: newPct };
+
+    // Auto status transitions
+    if (newPct === 100 && m.status !== 'completed') {
+      updates.status = 'completed';
+      toast.success(`✓ المرحلة "${m.name}" اكتملت تلقائياً`);
+    }
+    if (newPct < 100 && newPct > 0 && m.status === 'completed') {
+      updates.status = 'in_progress';
+    }
+    if (newPct > 0 && m.status === 'planned') {
+      updates.status = 'in_progress';
+    }
+
+    await updateMilestone(m.id, updates);
+    const updated = milestones.map(ms => ms.id === m.id ? { ...ms, ...updates } : ms);
     const projectPct = recalcProjectPercent(updated);
     await updateProject(projectId, { percentComplete: projectPct });
-    checkRevenuePrompt(m.id, newPct);
+    await checkProjectAutoComplete(updated, projectPct);
+    checkRevenuePrompt(m.id, newPct, updates.status);
   };
 
   const totalWeight = milestones.reduce((s, m) => s + m.weight, 0);

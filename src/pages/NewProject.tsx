@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { addVAT, formatCurrency } from '@/lib/finance';
+import { calcVAT, addVAT, removeVAT, formatCurrency } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
@@ -13,6 +13,7 @@ import { Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectSchema } from '@/lib/validations';
 import { PROJECT_STATUS_LABELS, CONTRACT_TYPE_LABELS, type ProjectStatus, type ContractType } from '@/types/project';
+import { cn } from '@/lib/utils';
 
 export default function NewProject() {
   const [searchParams] = useSearchParams();
@@ -36,18 +37,23 @@ export default function NewProject() {
   const [retentionPercent, setRetentionPercent] = useState('0');
   const [loading, setLoading] = useState(false);
   const [taxPercent, setTaxPercent] = useState('15');
+  const [vatInclusive, setVatInclusive] = useState(false);
 
   const editableCompanies = useMemo(() => companies.filter(c => isAdmin || canEdit('company', c.id)), [companies, isAdmin, canEdit]);
   const filteredPortfolios = portfolios.filter((p) => p.companyId === companyId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const rawValue = parseFloat(contractValue) || 0;
+    const rate = parseFloat(taxPercent) || 15;
+    const finalContractValue = vatInclusive ? removeVAT(rawValue, rate) : rawValue;
+
     const result = projectSchema.safeParse({
       name,
       companyId,
       portfolioId: portfolioId && portfolioId !== 'none' ? portfolioId : undefined,
       description: description || undefined,
-      contractValue: parseFloat(contractValue) || 0,
+      contractValue: finalContractValue,
       durationMonths: parseInt(durationMonths) || 4,
       resourceCount: parseInt(resourceCount) || 1,
       startDate: startDate || undefined,
@@ -86,6 +92,9 @@ export default function NewProject() {
       setLoading(false);
     }
   };
+
+  const parsedValue = parseFloat(contractValue) || 0;
+  const parsedTax = parseFloat(taxPercent) || 0;
 
   return (
     <AppLayout>
@@ -137,13 +146,8 @@ export default function NewProject() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>قيمة العقد (بدون ضريبة) ({currency})</Label>
+              <Label>قيمة العقد {vatInclusive ? '(شاملة الضريبة)' : '(بدون ضريبة)'} ({currency})</Label>
               <Input type="number" value={contractValue} onChange={(e) => setContractValue(e.target.value)} placeholder="230,000" required />
-              {parseFloat(contractValue) > 0 && parseFloat(taxPercent) > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  شامل الضريبة: {formatCurrency(addVAT(parseFloat(contractValue), parseFloat(taxPercent)))}
-                </p>
-              )}
             </div>
             <div className="space-y-2">
               <Label>نوع العقد</Label>
@@ -165,6 +169,61 @@ export default function NewProject() {
               <Input type="number" value={taxPercent} onChange={(e) => setTaxPercent(e.target.value)} min="0" max="100" step="0.1" />
             </div>
           </div>
+
+          {/* VAT inclusive/exclusive toggle */}
+          {parsedTax > 0 && (
+            <div className="space-y-3">
+              <Label>القيمة المُدخلة</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVatInclusive(false)}
+                  className={cn(
+                    "flex-1 p-2 rounded-lg border text-xs text-center transition-colors",
+                    !vatInclusive ? "border-primary bg-primary/10 font-semibold" : "border-border hover:bg-muted/50"
+                  )}
+                >
+                  بدون ضريبة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVatInclusive(true)}
+                  className={cn(
+                    "flex-1 p-2 rounded-lg border text-xs text-center transition-colors",
+                    vatInclusive ? "border-primary bg-primary/10 font-semibold" : "border-border hover:bg-muted/50"
+                  )}
+                >
+                  شاملة الضريبة
+                </button>
+              </div>
+
+              {parsedValue > 0 && (
+                <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">بدون ضريبة:</span>
+                    <span className="font-mono font-semibold">
+                      {formatCurrency(vatInclusive ? removeVAT(parsedValue, parsedTax) : parsedValue)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">الضريبة ({taxPercent}%):</span>
+                    <span className="font-mono text-amber-600">
+                      {formatCurrency(vatInclusive
+                        ? parsedValue - removeVAT(parsedValue, parsedTax)
+                        : calcVAT(parsedValue, parsedTax)
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-border pt-1.5">
+                    <span className="text-muted-foreground font-medium">شامل الضريبة:</span>
+                    <span className="font-mono font-bold">
+                      {formatCurrency(vatInclusive ? parsedValue : addVAT(parsedValue, parsedTax))}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getTotalPlanned, calculateEVM, getEffectiveContractValue, getCurrentMonth } from '../finance';
+import { getTotalPlanned, calculateEVM, getEffectiveContractValue, getCurrentMonth, calcVAT, addVAT, removeVAT } from '../finance';
 
 describe('getTotalPlanned', () => {
   it('should sum fixed items normally', () => {
@@ -85,5 +85,62 @@ describe('getCurrentMonth', () => {
     const pastDate = new Date();
     pastDate.setFullYear(pastDate.getFullYear() - 2);
     expect(getCurrentMonth(pastDate.toISOString(), 6)).toBe(6);
+  });
+});
+
+describe('calcVAT', () => {
+  it('should calculate 15% VAT correctly', () => {
+    expect(calcVAT(100000, 15)).toBe(15000);
+    expect(calcVAT(250000, 15)).toBe(37500);
+  });
+
+  it('should calculate non-standard VAT rates', () => {
+    expect(calcVAT(100000, 20)).toBe(20000);
+    expect(calcVAT(100000, 5)).toBe(5000);
+    expect(calcVAT(100000, 0)).toBe(0);
+  });
+
+  it('should handle zero amounts', () => {
+    expect(calcVAT(0, 15)).toBe(0);
+  });
+});
+
+describe('addVAT', () => {
+  it('should add VAT to exclusive amount', () => {
+    expect(addVAT(100000, 15)).toBe(115000);
+    expect(addVAT(250000, 15)).toBe(287500);
+  });
+
+  it('should return same amount when rate is 0', () => {
+    expect(addVAT(100000, 0)).toBe(100000);
+  });
+});
+
+describe('removeVAT', () => {
+  it('should extract exclusive from inclusive amount', () => {
+    expect(removeVAT(115000, 15)).toBe(100000);
+    expect(removeVAT(287500, 15)).toBe(250000);
+  });
+
+  it('should be inverse of addVAT', () => {
+    const original = 173500;
+    const withVAT = addVAT(original, 15);
+    const backToOriginal = removeVAT(withVAT, 15);
+    expect(backToOriginal).toBe(original);
+  });
+
+  it('should return same amount when rate is 0', () => {
+    expect(removeVAT(100000, 0)).toBe(100000);
+  });
+});
+
+describe('getTotalPlanned with VAT context', () => {
+  it('should not include VAT in totalPlanned', () => {
+    const items = [
+      { plannedAmount: 50000, costType: 'fixed' },
+      { plannedAmount: 10000, costType: 'recurring', startMonth: 1, endMonth: 3 },
+    ];
+    const total = getTotalPlanned(items);
+    expect(total).toBe(80000); // 50000 + 10000×3
   });
 });

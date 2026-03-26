@@ -1167,18 +1167,21 @@ export type Database = {
       trusted_devices: {
         Row: {
           created_at: string
+          expires_at: string
           fingerprint: string
           id: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          expires_at?: string
           fingerprint: string
           id?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          expires_at?: string
           fingerprint?: string
           id?: string
           user_id?: string

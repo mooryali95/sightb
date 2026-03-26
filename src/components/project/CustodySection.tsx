@@ -107,7 +107,15 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     <td className="font-medium">{c.resourceName}</td>
                     <td className="font-mono text-sm">{formatCurrency(c.amount)}</td>
                     <td className="font-mono text-sm">{formatCurrency(c.spent)}</td>
-                    <td><span className={c.remaining >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(c.remaining)}</span></td>
+                    <td>
+                      <span className={c.remaining >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(c.remaining)}</span>
+                      {c.remaining <= 0 && (
+                        <span className="text-[9px] text-destructive mr-1">⚠️ مستنفدة</span>
+                      )}
+                      {c.remaining > 0 && c.remaining < c.amount * 0.1 && (
+                        <span className="text-[9px] text-amber-600 mr-1">⚠️ أقل من 10%</span>
+                      )}
+                    </td>
                     <td className="hidden sm:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
