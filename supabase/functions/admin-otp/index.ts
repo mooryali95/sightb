@@ -260,7 +260,11 @@ Deno.serve(async (req) => {
 
       if (fingerprint) {
         await supabase.from("trusted_devices").upsert(
-          { user_id: user.id, fingerprint },
+          {
+            user_id: user.id,
+            fingerprint,
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          },
           { onConflict: "user_id,fingerprint" }
         );
       }

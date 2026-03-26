@@ -139,6 +139,13 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         isVatExempt,
       });
       toast.success('تمت إضافة المصروف');
+
+      // Auto-activate project on first expense
+      if (projectStatus && ['planning', 'approved', 'pending_approval'].includes(projectStatus)) {
+        const { updateProject } = useStore.getState();
+        await updateProject(projectId, { status: 'active' });
+        toast.info('المشروع تحوّل لحالة "نشط" تلقائياً');
+      }
     }
     resetForm();
     setOpen(false);
