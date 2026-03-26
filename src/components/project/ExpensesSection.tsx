@@ -26,9 +26,10 @@ interface ExpensesSectionProps {
   contractValue: number;
   readOnly?: boolean;
   taxPercent?: number;
+  projectStatus?: string;
 }
 
-export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15 }: ExpensesSectionProps) {
+export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15, projectStatus }: ExpensesSectionProps) {
   const { addExpense, deleteExpense, updateExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -138,6 +139,13 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         isVatExempt,
       });
       toast.success('تمت إضافة المصروف');
+
+      // Auto-activate project on first expense
+      if (projectStatus && ['planning', 'approved', 'pending_approval'].includes(projectStatus)) {
+        const { updateProject } = useStore.getState();
+        await updateProject(projectId, { status: 'active' });
+        toast.info('المشروع تحوّل لحالة "نشط" تلقائياً');
+      }
     }
     resetForm();
     setOpen(false);

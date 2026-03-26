@@ -95,11 +95,19 @@ Deno.serve(async (req) => {
 
     if (action === "check") {
       if (fingerprint) {
+        // Clean up expired devices for this user
+        await supabase
+          .from("trusted_devices")
+          .delete()
+          .eq("user_id", user.id)
+          .lt("expires_at", new Date().toISOString());
+
         const { data: trusted } = await supabase
           .from("trusted_devices")
           .select("id")
           .eq("user_id", user.id)
           .eq("fingerprint", fingerprint)
+          .gte("expires_at", new Date().toISOString())
           .maybeSingle();
 
         if (trusted) {
@@ -252,7 +260,11 @@ Deno.serve(async (req) => {
 
       if (fingerprint) {
         await supabase.from("trusted_devices").upsert(
-          { user_id: user.id, fingerprint },
+          {
+            user_id: user.id,
+            fingerprint,
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          },
           { onConflict: "user_id,fingerprint" }
         );
       }

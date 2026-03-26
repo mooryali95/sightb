@@ -48,13 +48,23 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
 
   const handleSubmit = async () => {
     if (!description.trim() || !totalAmount) return;
+    const spent = parseFloat(spentAmount) || 0;
+    const total = parseFloat(totalAmount) || 0;
+
+    // Auto-complete if fully spent
+    let autoStatus = status;
+    if (spent >= total && total > 0 && status === 'active') {
+      autoStatus = 'completed';
+      toast.success('✓ الالتزام اكتمل تلقائياً — المبلغ صُرف بالكامل');
+    }
+
     const data = {
       description: description.trim(),
       vendorName: vendorName.trim() || undefined,
       contractRef: contractRef.trim() || undefined,
-      totalAmount: parseFloat(totalAmount) || 0,
-      spentAmount: parseFloat(spentAmount) || 0,
-      status,
+      totalAmount: total,
+      spentAmount: spent,
+      status: autoStatus,
       notes: notes.trim() || undefined,
     };
     if (editingId) {
