@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { formatCurrency, getPlannedMonthlyCashFlow, getMonthlyBreakdown } from '@/lib/finance';
 import {
   Project, ProjectSummary, Milestone, Risk, ChangeOrder, Expense, Revenue,
@@ -5,10 +6,11 @@ import {
 } from '@/types/project';
 import {
   DollarSign, TrendingUp, TrendingDown, AlertTriangle, Clock,
-  CheckCircle2, XCircle, Shield, BarChart3, Receipt, Calendar,
+  CheckCircle2, XCircle, Shield, BarChart3, Receipt, Calendar, ChevronDown,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Props {
   project: Project;
@@ -47,9 +49,28 @@ export function ExecutiveSummary({
 
   const plannedMonthly = getPlannedMonthlyCashFlow(budgetItems, project.durationMonths);
   const actualMonthly = getMonthlyBreakdown(expenses, project.durationMonths);
-  const currentMonthPlanned = plannedMonthly[currentMonth - 1] || 0;
-  const currentMonthActual = actualMonthly[currentMonth - 1] || 0;
-  const currentMonthVariance = currentMonthPlanned - currentMonthActual;
+
+  // Month selector state: 'current' | 'all' | specific month number
+  const [selectedMonth, setSelectedMonth] = useState<string>('current');
+
+  const monthPerformance = useMemo(() => {
+    if (selectedMonth === 'all') {
+      // Cumulative across all elapsed months
+      const elapsed = Math.min(project.durationMonths, currentMonth);
+      let totalPlanned = 0, totalActual = 0;
+      for (let i = 0; i < elapsed; i++) {
+        totalPlanned += plannedMonthly[i] || 0;
+        totalActual += actualMonthly[i] || 0;
+      }
+      const diff = totalPlanned - totalActual;
+      return { planned: totalPlanned, actual: totalActual, diff, label: `إجمالي ${elapsed} شهر` };
+    }
+    const monthIdx = selectedMonth === 'current' ? currentMonth - 1 : parseInt(selectedMonth) - 1;
+    const planned = plannedMonthly[monthIdx] || 0;
+    const actual = actualMonthly[monthIdx] || 0;
+    const diff = planned - actual;
+    return { planned, actual, diff, label: `شهر ${monthIdx + 1}` };
+  }, [selectedMonth, currentMonth, plannedMonthly, actualMonthly, project.durationMonths]);
 
   const budgetPieData = [
     { name: 'مصروف', value: summary.totalActual, fill: 'hsl(0, 72%, 51%)' },
@@ -68,40 +89,84 @@ export function ExecutiveSummary({
     <div className={`rounded-xl border border-border bg-card p-4 ${className}`}>{children}</div>
   );
 
-  const SectionTitle = ({ icon: Icon, children }: { icon: typeof DollarSign; children: React.ReactNode }) => (
-    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-      <Icon className="w-4 h-4 text-primary" />
-      {children}
-    </h3>
+  const SectionTitle = ({ icon: Icon, children, actions }: { icon: typeof DollarSign; children: React.ReactNode; actions?: React.ReactNode }) => (
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="text-sm font-semibold flex items-center gap-2">
+        <Icon className="w-4 h-4 text-primary" />
+        {children}
+      </h3>
+      {actions}
+    </div>
   );
+
+  // Build month options
+  const monthOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [
+      { value: 'current', label: `الشهر الحالي (${currentMonth})` },
+      { value: 'all', label: 'إجمالي الأشهر' },
+    ];
+    const elapsed = Math.min(project.durationMonths, currentMonth);
+    for (let i = 1; i <= elapsed; i++) {
+      if (i !== currentMonth) {
+        opts.push({ value: String(i), label: `شهر ${i}` });
+      }
+    }
+    return opts;
+  }, [currentMonth, project.durationMonths]);
 
   return (
     <div className="space-y-4" dir="rtl">
-      {/* ═══ 1. أداء الشهر الحالي ═══ */}
+      {/* ═══ 1. أداء الشهر ═══ */}
       <SectionCard>
-        <SectionTitle icon={Calendar}>أداء الشهر الحالي (شهر {currentMonth})</SectionTitle>
+        <SectionTitle
+          icon={Calendar}
+          actions={
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[180px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        >
+          الأداء المالي — {monthPerformance.label}
+        </SectionTitle>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="text-center p-3 rounded-lg bg-muted/40">
-            <p className="text-[10px] text-muted-foreground">المخطط لهذا الشهر</p>
-            <p className="text-sm font-mono font-bold mt-1">{formatCurrency(currentMonthPlanned)}</p>
+            <p className="text-[10px] text-muted-foreground">المخطط</p>
+            <p className="text-sm font-mono font-bold mt-1">{formatCurrency(monthPerformance.planned)}</p>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/40">
-            <p className="text-[10px] text-muted-foreground">المصروف هذا الشهر</p>
-            <p className="text-sm font-mono font-bold mt-1">{formatCurrency(currentMonthActual)}</p>
+            <p className="text-[10px] text-muted-foreground">المصروف</p>
+            <p className="text-sm font-mono font-bold mt-1">{formatCurrency(monthPerformance.actual)}</p>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/40">
-            <p className="text-[10px] text-muted-foreground">الانحراف</p>
-            <p className={`text-sm font-mono font-bold mt-1 ${currentMonthVariance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-              {currentMonthVariance >= 0 ? '+' : ''}{formatCurrency(currentMonthVariance)}
+            <p className="text-[10px] text-muted-foreground">{monthPerformance.diff >= 0 ? 'وفر' : 'تجاوز'}</p>
+            <p className={`text-sm font-mono font-bold mt-1 ${monthPerformance.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+              {formatCurrency(Math.abs(monthPerformance.diff))}
             </p>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/40">
             <p className="text-[10px] text-muted-foreground">الحكم</p>
-            <p className={`text-sm font-bold mt-1 ${currentMonthVariance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-              {currentMonthActual === 0 ? 'لا صرف بعد' : currentMonthVariance > 0 ? 'وفر 👍' : currentMonthVariance < 0 ? 'تجاوز ⚠️' : 'مطابق ✓'}
+            <p className={`text-sm font-bold mt-1 ${monthPerformance.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+              {monthPerformance.actual === 0 ? 'لا صرف بعد' : monthPerformance.diff > 0 ? 'وفر 👍' : monthPerformance.diff < 0 ? 'تجاوز ⚠️' : 'مطابق ✓'}
             </p>
           </div>
         </div>
+        {/* Spending progress bar */}
+        {monthPerformance.planned > 0 && (
+          <div className="mt-3">
+            <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+              <span>نسبة الصرف</span>
+              <span>{((monthPerformance.actual / monthPerformance.planned) * 100).toFixed(0)}%</span>
+            </div>
+            <Progress value={Math.min(150, (monthPerformance.actual / monthPerformance.planned) * 100)} className="h-1.5" />
+          </div>
+        )}
       </SectionCard>
 
       {/* ═══ 2. EVM ═══ */}
@@ -135,7 +200,7 @@ export function ExecutiveSummary({
         </SectionCard>
       )}
 
-      {/* ═══ 3. الموازنة + المراحل (جنب بجنب) ═══ */}
+      {/* ═══ 3. الموازنة + المراحل ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SectionCard>
           <SectionTitle icon={DollarSign}>توزيع الموازنة</SectionTitle>
