@@ -121,7 +121,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                 <th>المخطط</th>
                 <th>إجمالي الصرف</th>
                 <th>الانحراف</th>
-                <th>نسبة الانحراف</th>
+                <th>نسبة الصرف</th>
                 {!readOnly && <th></th>}
               </tr>
             </thead>
