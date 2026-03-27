@@ -18,11 +18,19 @@ const TABLE_NAME_LABELS: Record<string, string> = {
 const ACTION_LABELS: Record<string, string> = {
   delete: 'حذف',
   update: 'تعديل',
+  insert: 'إضافة',
+  DELETE: 'حذف',
+  UPDATE: 'تعديل',
+  INSERT: 'إضافة',
 };
 
 const ACTION_COLORS: Record<string, string> = {
   delete: 'bg-destructive/10 text-destructive',
   update: 'bg-primary/10 text-primary',
+  insert: 'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
+  DELETE: 'bg-destructive/10 text-destructive',
+  UPDATE: 'bg-primary/10 text-primary',
+  INSERT: 'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
 };
 
 interface AuditLogSectionProps {
@@ -58,9 +66,14 @@ export function AuditLogSection({ projectId }: AuditLogSectionProps) {
             return (
               <div key={entry.id} className="p-3 rounded-lg border border-border bg-muted/20">
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${ACTION_COLORS[entry.action] || ACTION_COLORS.delete}`}>
-                    {ACTION_LABELS[entry.action] || entry.action} {TABLE_NAME_LABELS[entry.tableName] || entry.tableName}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${ACTION_COLORS[entry.action] || ACTION_COLORS.update}`}>
+                    {ACTION_LABELS[entry.action] || entry.action || 'تعديل'} {TABLE_NAME_LABELS[entry.tableName] || entry.tableName}
                   </span>
+                  {entry.recordData && (entry.recordData.name || entry.recordData.title || entry.recordData.description) && (
+                    <span className="text-muted-foreground text-xs mr-2">
+                      {entry.recordData.name || entry.recordData.title || (typeof entry.recordData.description === 'string' ? entry.recordData.description.substring(0, 40) : '')}
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {new Date(entry.createdAt).toLocaleDateString('ar-SA', { calendar: 'gregory', year: 'numeric', month: '2-digit', day: '2-digit' })} — {new Date(entry.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
                   </span>

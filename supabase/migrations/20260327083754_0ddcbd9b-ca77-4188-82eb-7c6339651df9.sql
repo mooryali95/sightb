@@ -1,0 +1,4 @@
+ALTER TABLE public.custodies
+  ADD COLUMN IF NOT EXISTS received_date TEXT,
+  ADD COLUMN IF NOT EXISTS closed_date TEXT,
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';

@@ -60,24 +60,30 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
     try {
       if (editingRisk) {
         await updateRisk(editingRisk.id, {
-          title, description: description || undefined, probability, impact,
+          title: title.trim(),
+          description: description.trim() || null,
+          probability, impact,
           financialImpact: parseFloat(financialImpact) || 0, category, status,
-          mitigationPlan: mitigationPlan || undefined, owner: owner || undefined,
+          mitigationPlan: mitigationPlan.trim() || null,
+          owner: owner.trim() || null,
         });
         toast.success('تم تحديث الخطر');
       } else {
         await addRisk({
           projectId: projectId || undefined,
           portfolioId: portfolioId || undefined,
-          title, description: description || undefined, probability, impact,
+          title: title.trim(),
+          description: description.trim() || undefined, probability, impact,
           financialImpact: parseFloat(financialImpact) || 0, category, status,
-          mitigationPlan: mitigationPlan || undefined, owner: owner || undefined,
+          mitigationPlan: mitigationPlan.trim() || undefined,
+          owner: owner.trim() || undefined,
         });
         toast.success('تم إضافة الخطر');
       }
       resetForm(); setOpen(false);
     } catch (e: any) {
-      toast.error('حدث خطأ');
+      console.error('[updateRisk]', e);
+      toast.error(e.message || 'حدث خطأ عند تحديث الخطر');
     }
   };
 

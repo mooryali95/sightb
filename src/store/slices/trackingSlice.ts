@@ -194,14 +194,15 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   updateRisk: async (id, r) => {
     const updates: Record<string, unknown> = {};
     if (r.title !== undefined) updates.title = r.title;
-    if (r.description !== undefined) updates.description = r.description;
+    if (r.description !== undefined) updates.description = r.description || null;
     if (r.probability !== undefined) updates.probability = r.probability;
     if (r.impact !== undefined) updates.impact = r.impact;
     if (r.financialImpact !== undefined) updates.financial_impact = r.financialImpact;
     if (r.category !== undefined) updates.category = r.category;
     if (r.status !== undefined) updates.status = r.status;
-    if (r.mitigationPlan !== undefined) updates.mitigation_plan = r.mitigationPlan;
-    if (r.owner !== undefined) updates.owner = r.owner;
+    if (r.mitigationPlan !== undefined) updates.mitigation_plan = r.mitigationPlan || null;
+    if (r.owner !== undefined) updates.owner = r.owner || null;
+    if (r.identifiedDate !== undefined) updates.identified_date = r.identifiedDate;
     if (r.identifiedDate !== undefined) updates.identified_date = r.identifiedDate;
     if (r.closedDate !== undefined) updates.closed_date = r.closedDate;
     const { error } = await (supabase as any).from('risks').update(updates).eq('id', id);
@@ -253,7 +254,9 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
       user_id: userId, project_id: c.projectId || null,
       company_id: c.companyId || null, resource_name: c.resourceName,
       amount: c.amount, notes: c.notes || null,
-    }).select().single();
+      received_date: (c as any).receivedDate || new Date().toISOString().split('T')[0],
+      status: 'active',
+    } as any).select().single();
     if (error) throw error;
     const mapped = mapCustody(data, get().expenses);
     set((s) => ({ custodies: [mapped, ...s.custodies] }));

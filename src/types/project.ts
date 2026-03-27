@@ -108,6 +108,9 @@ export interface Resource {
 export interface Custody {
   id: string; projectId?: string; companyId?: string; resourceName: string;
   amount: number; spent: number; remaining: number; notes?: string; createdAt: string;
+  receivedDate?: string;
+  closedDate?: string;
+  status: 'active' | 'closed';
 }
 
 export interface BudgetItem {
