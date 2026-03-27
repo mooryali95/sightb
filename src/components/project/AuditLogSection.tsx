@@ -27,6 +27,10 @@ const ACTION_LABELS: Record<string, string> = {
 const ACTION_COLORS: Record<string, string> = {
   delete: 'bg-destructive/10 text-destructive',
   update: 'bg-primary/10 text-primary',
+  insert: 'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
+  DELETE: 'bg-destructive/10 text-destructive',
+  UPDATE: 'bg-primary/10 text-primary',
+  INSERT: 'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
 };
 
 interface AuditLogSectionProps {
