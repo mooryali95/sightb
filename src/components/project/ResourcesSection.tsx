@@ -134,7 +134,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                   : r.monthlyCost * (durationMonths || 1);
                 const isEstimated = linkedBudget.length === 0 && r.monthlyCost > 0;
                 const variance = plannedForResource - totalSpent;
-                const variancePct = plannedForResource > 0 ? (variance / plannedForResource) * 100 : 0;
+                const spentPct = plannedForResource > 0 ? (totalSpent / plannedForResource) * 100 : 0;
 
                 return (
                   <tr key={r.id}>
