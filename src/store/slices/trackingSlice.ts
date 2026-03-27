@@ -202,7 +202,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (r.status !== undefined) updates.status = r.status;
     if (r.mitigationPlan !== undefined) updates.mitigation_plan = r.mitigationPlan || null;
     if (r.owner !== undefined) updates.owner = r.owner || null;
-    if (r.description !== undefined) updates.description = r.description || null;
+    if (r.identifiedDate !== undefined) updates.identified_date = r.identifiedDate;
     if (r.identifiedDate !== undefined) updates.identified_date = r.identifiedDate;
     if (r.closedDate !== undefined) updates.closed_date = r.closedDate;
     const { error } = await (supabase as any).from('risks').update(updates).eq('id', id);
