@@ -66,9 +66,14 @@ export function AuditLogSection({ projectId }: AuditLogSectionProps) {
             return (
               <div key={entry.id} className="p-3 rounded-lg border border-border bg-muted/20">
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${ACTION_COLORS[entry.action] || ACTION_COLORS.delete}`}>
-                    {ACTION_LABELS[entry.action] || entry.action} {TABLE_NAME_LABELS[entry.tableName] || entry.tableName}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${ACTION_COLORS[entry.action] || ACTION_COLORS.update}`}>
+                    {ACTION_LABELS[entry.action] || entry.action || 'تعديل'} {TABLE_NAME_LABELS[entry.tableName] || entry.tableName}
                   </span>
+                  {entry.recordData && (entry.recordData.name || entry.recordData.title || entry.recordData.description) && (
+                    <span className="text-muted-foreground text-xs mr-2">
+                      {entry.recordData.name || entry.recordData.title || (typeof entry.recordData.description === 'string' ? entry.recordData.description.substring(0, 40) : '')}
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {new Date(entry.createdAt).toLocaleDateString('ar-SA', { calendar: 'gregory', year: 'numeric', month: '2-digit', day: '2-digit' })} — {new Date(entry.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
                   </span>

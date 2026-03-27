@@ -155,8 +155,14 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                         <span className={variance >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(variance)}</span>
                       ) : '—'}
                     </td>
-                    <td className="text-xs text-muted-foreground">
-                      {plannedForResource > 0 ? `${variancePct.toFixed(1)}%` : '—'}
+                    <td className="text-xs">
+                      {plannedForResource > 0 ? (
+                        <span className={spentPct > 100 ? 'text-destructive font-bold' : spentPct > 90 ? 'text-amber-600' : 'text-muted-foreground'}>
+                          {spentPct.toFixed(0)}%
+                        </span>
+                      ) : totalSpent > 0 ? (
+                        <span className="text-amber-600">صرف بدون خطة</span>
+                      ) : '—'}
                     </td>
                     {!readOnly && (
                     <td>

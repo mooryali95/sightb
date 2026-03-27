@@ -29,8 +29,12 @@ export function AttentionProjects({
     return s.spendRate > 90 || p.status === 'on-hold' || p.status === 'cancelled';
   });
 
+  const filteredProjectIds = new Set(filteredProjects.map((p: any) => p.id));
   const openRisks = risks
-    .filter((r: any) => r.status === 'open' || r.status === 'mitigating')
+    .filter((r: any) =>
+      (r.status === 'open' || r.status === 'mitigating') &&
+      (r.projectId ? filteredProjectIds.has(r.projectId) : true)
+    )
     .sort((a: any, b: any) => b.financialImpact - a.financialImpact)
     .slice(0, 5);
 

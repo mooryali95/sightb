@@ -394,8 +394,10 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                       </SelectContent>
                     </Select>
                     {custodyId && custodyId !== 'none' && (() => {
-                      const selectedCustody = custodies.find(c => c.id === custodyId);
-                      if (!selectedCustody) return null;
+                      const c = custodies.find(c => c.id === custodyId);
+                      if (!c) return null;
+                      const spent = expenses.filter(e => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
+                      const selectedCustody = { ...c, spent, remaining: c.amount - spent };
                       const parsedAmount = parseFloat(amount) || 0;
                       return (
                         <div className="space-y-1">
