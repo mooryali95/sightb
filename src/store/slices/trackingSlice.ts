@@ -194,7 +194,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   updateRisk: async (id, r) => {
     const updates: Record<string, unknown> = {};
     if (r.title !== undefined) updates.title = r.title;
-    if (r.description !== undefined) updates.description = r.description;
+    if (r.description !== undefined) updates.description = r.description || null;
     if (r.probability !== undefined) updates.probability = r.probability;
     if (r.impact !== undefined) updates.impact = r.impact;
     if (r.financialImpact !== undefined) updates.financial_impact = r.financialImpact;

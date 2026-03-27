@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
 import { type Custody } from '@/types/project';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CustodySectionProps {
   projectId: string;
@@ -24,6 +25,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   const [resourceName, setResourceName] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
+  const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
 
   const handleAdd = async () => {
     if (!resourceName.trim() || !amount) return;
@@ -32,8 +34,11 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
       resourceName: resourceName.trim(),
       amount: parseFloat(amount),
       notes: notes.trim() || undefined,
-    });
+      status: 'active',
+      receivedDate,
+    } as any);
     setResourceName(''); setAmount(''); setNotes('');
+    setReceivedDate(new Date().toISOString().split('T')[0]);
     setOpen(false);
     toast.success('تمت إضافة العهدة');
   };
@@ -42,6 +47,18 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
     const spent = expenses.filter((e: any) => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
     return { ...c, spent, remaining: c.amount - spent };
   });
+
+  // Auto-close exhausted custodies
+  useEffect(() => {
+    enrichedCustodies.forEach(async (c) => {
+      if (c.remaining <= 0 && c.status === 'active' && !c.closedDate) {
+        await (supabase as any).from('custodies').update({
+          status: 'closed',
+          closed_date: new Date().toISOString().split('T')[0],
+        }).eq('id', c.id);
+      }
+    });
+  }, [enrichedCustodies.map(c => `${c.id}:${c.remaining}`).join(',')]);
 
   const totalAmount = enrichedCustodies.reduce((s, c) => s + c.amount, 0);
   const totalSpent = enrichedCustodies.reduce((s, c) => s + c.spent, 0);
@@ -72,6 +89,10 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
               </div>
               <div className="space-y-2">
+                <Label>تاريخ استلام العهدة</Label>
+                <Input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
                 <Label>ملاحظات (اختياري)</Label>
                 <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="مثال: عهدة مشتريات شهر مارس" />
               </div>
@@ -95,6 +116,8 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 <th>المصروف</th>
                 <th>المتبقي</th>
                 <th className="hidden sm:table-cell">نسبة الصرف</th>
+                <th>الاستلام</th>
+                <th>الحالة</th>
                 <th className="hidden md:table-cell">ملاحظات</th>
                 {!readOnly && <th></th>}
               </tr>
@@ -119,10 +142,18 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     <td className="hidden sm:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: pct > 100 ? 'hsl(var(--loss))' : 'hsl(var(--primary))' }} />
+                          <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: pct > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
                         </div>
                         <span className="text-xs text-muted-foreground">{pct.toFixed(0)}%</span>
                       </div>
+                    </td>
+                    <td className="text-xs text-muted-foreground">{c.receivedDate || '—'}</td>
+                    <td>
+                      {c.remaining <= 0 ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">مُغلقة</span>
+                      ) : (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">نشطة</span>
+                      )}
                     </td>
                     <td className="text-muted-foreground text-xs hidden md:table-cell">{c.notes || '—'}</td>
                     {!readOnly && <td><ConfirmDeleteDialog title="حذف العهدة" description="هل أنت متأكد من حذف هذه العهدة؟" onConfirm={() => deleteCustody(c.id)} /></td>}
