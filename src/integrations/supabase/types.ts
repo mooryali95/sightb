@@ -394,32 +394,41 @@ export type Database = {
       custodies: {
         Row: {
           amount: number
+          closed_date: string | null
           company_id: string | null
           created_at: string
           id: string
           notes: string | null
           project_id: string | null
+          received_date: string | null
           resource_name: string
+          status: string
           user_id: string
         }
         Insert: {
           amount?: number
+          closed_date?: string | null
           company_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
           project_id?: string | null
+          received_date?: string | null
           resource_name: string
+          status?: string
           user_id: string
         }
         Update: {
           amount?: number
+          closed_date?: string | null
           company_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
           project_id?: string | null
+          received_date?: string | null
           resource_name?: string
+          status?: string
           user_id?: string
         }
         Relationships: [

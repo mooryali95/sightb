@@ -96,11 +96,15 @@ export function mapResource(d: any): Resource {
 
 export function mapCustody(d: any, expenses: Expense[]): Custody {
   const spent = expenses.filter(e => e.custodyId === d.id).reduce((s, e) => s + e.amount, 0);
+  const remaining = Number(d.amount) - spent;
   return {
     id: d.id, projectId: d.project_id || undefined, companyId: d.company_id || undefined,
     resourceName: d.resource_name, amount: Number(d.amount),
-    spent, remaining: Number(d.amount) - spent,
+    spent, remaining,
     notes: d.notes || undefined, createdAt: d.created_at,
+    receivedDate: d.received_date || undefined,
+    closedDate: d.closed_date || undefined,
+    status: (d.status || 'active') as Custody['status'],
   };
 }
 

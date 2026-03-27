@@ -254,7 +254,9 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
       user_id: userId, project_id: c.projectId || null,
       company_id: c.companyId || null, resource_name: c.resourceName,
       amount: c.amount, notes: c.notes || null,
-    }).select().single();
+      received_date: (c as any).receivedDate || new Date().toISOString().split('T')[0],
+      status: 'active',
+    } as any).select().single();
     if (error) throw error;
     const mapped = mapCustody(data, get().expenses);
     set((s) => ({ custodies: [mapped, ...s.custodies] }));
