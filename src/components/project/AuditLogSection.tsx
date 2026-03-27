@@ -18,6 +18,10 @@ const TABLE_NAME_LABELS: Record<string, string> = {
 const ACTION_LABELS: Record<string, string> = {
   delete: 'حذف',
   update: 'تعديل',
+  insert: 'إضافة',
+  DELETE: 'حذف',
+  UPDATE: 'تعديل',
+  INSERT: 'إضافة',
 };
 
 const ACTION_COLORS: Record<string, string> = {
