@@ -384,9 +384,13 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                       <SelectTrigger><SelectValue placeholder="اختر العهدة" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">بدون عهدة</SelectItem>
-                        {custodies.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.resourceName} — متبقي: {formatCurrency(c.remaining)}</SelectItem>
-                        ))}
+                        {custodies.map((c) => {
+                          const custodySpent = expenses.filter(e => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
+                          const custodyRemaining = c.amount - custodySpent;
+                          return (
+                            <SelectItem key={c.id} value={c.id}>{c.resourceName} — متبقي: {formatCurrency(custodyRemaining)}</SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     {custodyId && custodyId !== 'none' && (() => {
