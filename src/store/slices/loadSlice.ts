@@ -21,6 +21,7 @@ export interface LoadSlice {
   loadProjectData: (projectId: string) => Promise<void>;
   loadCompanyData: (companyId: string) => Promise<void>;
   loadAuditLog: (projectId: string) => Promise<void>;
+  subscribeToProject: (projectId: string) => () => void;
 }
 
 /**
