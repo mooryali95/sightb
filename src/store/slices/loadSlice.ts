@@ -199,4 +199,44 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
       throw error;
     }
   },
+
+  subscribeToProject: (projectId: string) => {
+    const tables = ['expenses', 'revenues', 'milestones', 'budget_items', 'change_orders'] as const;
+    const mappers: Record<string, { key: string; map: (d: any) => any }> = {
+      expenses: { key: 'expenses', map: mapExpense },
+      revenues: { key: 'revenues', map: mapRevenue },
+      milestones: { key: 'milestones', map: mapMilestone },
+      budget_items: { key: 'budgetItems', map: mapBudgetItem },
+      change_orders: { key: 'changeOrders', map: mapChangeOrder },
+    };
+
+    const channel = supabase
+      .channel(`project-${projectId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        filter: `project_id=eq.${projectId}`,
+      }, (payload) => {
+        const table = payload.table;
+        const m = mappers[table];
+        if (!m) return;
+
+        if (payload.eventType === 'INSERT') {
+          set((s: any) => ({ [m.key]: [m.map(payload.new), ...s[m.key]] }));
+        } else if (payload.eventType === 'UPDATE') {
+          set((s: any) => ({
+            [m.key]: s[m.key].map((item: any) =>
+              item.id === (payload.new as any).id ? m.map(payload.new) : item
+            ),
+          }));
+        } else if (payload.eventType === 'DELETE') {
+          set((s: any) => ({
+            [m.key]: s[m.key].filter((item: any) => item.id !== (payload.old as any).id),
+          }));
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  },
 });
