@@ -54,10 +54,16 @@ export default function ProjectDetail() {
     loadAll, updateProject, deleteProject,
   } = useStore();
 
-  const { detailsLoaded, detailsLoading, loadProjectData } = useStore();
+  const { detailsLoaded, detailsLoading, loadProjectData, subscribeToProject } = useStore();
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded]);
+  // Realtime subscription for collaborative editing
+  useEffect(() => {
+    if (!id) return;
+    const unsub = subscribeToProject(id);
+    return unsub;
+  }, [id]);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0, taxPercent: 15 });
