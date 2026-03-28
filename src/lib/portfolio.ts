@@ -89,6 +89,7 @@ export function getPortfolioSummary(
     aggregatePlannedMargin,
     targetMargin: portfolio.targetMargin,
     projectCount: projects.length,
+    averageCPI,
   });
 
   return {
@@ -185,6 +186,7 @@ export function getCompanySummary(
     aggregatePlannedMargin: netProfitMargin,
     targetMargin: 0,
     projectCount: allSummaries.reduce((s, ps) => s + ps.projectCount, 0),
+    averageCPI: undefined,
   });
 
   return {
@@ -211,14 +213,25 @@ export function getHealthScore(params: {
   aggregatePlannedMargin: number;
   targetMargin: number;
   projectCount: number;
+  averageCPI?: number;
 }): HealthStatus {
-  const { atRiskProjects, aggregatePlannedMargin, targetMargin, projectCount } = params;
+  const { atRiskProjects, aggregatePlannedMargin, targetMargin, projectCount, averageCPI } = params;
 
-  // Critical: 3+ at risk or negative margin
-  if (atRiskProjects >= 3 || aggregatePlannedMargin < 0) return 'critical';
+  const riskRatio = projectCount > 0 ? atRiskProjects / projectCount : 0;
 
-  // Warning: 1-2 at risk or margin below target
-  if (atRiskProjects >= 1 || (targetMargin > 0 && aggregatePlannedMargin < targetMargin)) return 'warning';
+  // Critical: 50%+ at risk, negative margin, or very low CPI
+  if (
+    riskRatio >= 0.5 ||
+    aggregatePlannedMargin < 0 ||
+    (averageCPI !== undefined && averageCPI > 0 && averageCPI < 0.7)
+  ) return 'critical';
+
+  // Warning: 25%+ at risk, margin below target, or low CPI
+  if (
+    riskRatio >= 0.25 ||
+    (targetMargin > 0 && aggregatePlannedMargin < targetMargin) ||
+    (averageCPI !== undefined && averageCPI > 0 && averageCPI < 0.9)
+  ) return 'warning';
 
   return 'healthy';
 }

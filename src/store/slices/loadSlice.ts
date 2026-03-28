@@ -21,6 +21,35 @@ export interface LoadSlice {
   loadProjectData: (projectId: string) => Promise<void>;
   loadCompanyData: (companyId: string) => Promise<void>;
   loadAuditLog: (projectId: string) => Promise<void>;
+  subscribeToProject: (projectId: string) => () => void;
+}
+
+/**
+ * Paginated fetch to overcome Supabase's 1000-row default limit.
+ */
+async function fetchAll(
+  table: string,
+  orderCol = 'created_at',
+  ascending = false,
+  filters?: Record<string, string>,
+): Promise<any[]> {
+  const PAGE = 1000;
+  let from = 0;
+  const all: any[] = [];
+  while (true) {
+    let q = (supabase as any).from(table).select('*')
+      .order(orderCol, { ascending })
+      .range(from, from + PAGE - 1);
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => { q = q.eq(k, v); });
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    all.push(...(data || []));
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
 }
 
 export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, get) => ({
@@ -57,39 +86,32 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
 
       if (!get().detailsLoaded) {
         set({ detailsLoading: true });
-        const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts, commitments] = await Promise.all([
-          supabase.from('budget_items').select('*').order('created_at', { ascending: false }),
-          supabase.from('expenses').select('*').order('created_at', { ascending: false }),
-          supabase.from('revenues').select('*').order('created_at', { ascending: false }),
-          supabase.from('resources').select('*').order('created_at', { ascending: false }),
-          supabase.from('custodies').select('*').order('created_at', { ascending: false }),
-          supabase.from('milestones').select('*').order('sort_order', { ascending: true }),
-          supabase.from('change_orders').select('*').order('created_at', { ascending: false }),
-          supabase.from('risks').select('*').order('created_at', { ascending: false }),
-          supabase.from('indirect_costs').select('*').order('created_at', { ascending: false }),
-          (supabase as any).from('commitments').select('*').order('created_at', { ascending: false }),
+        const [budgetItemsData, expensesData, revenuesData, resourcesData, custodiesData, milestonesData, changeOrdersData, risksData, indirectCostsData, commitmentsData] = await Promise.all([
+          fetchAll('budget_items'),
+          fetchAll('expenses'),
+          fetchAll('revenues'),
+          fetchAll('resources'),
+          fetchAll('custodies'),
+          fetchAll('milestones', 'sort_order', true),
+          fetchAll('change_orders'),
+          fetchAll('risks'),
+          fetchAll('indirect_costs'),
+          fetchAll('commitments'),
         ]);
 
-        const tables = { budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts };
-        for (const [name, result] of Object.entries(tables)) {
-          if (result.data && result.data.length >= 1000) {
-            console.warn(`[Store] جدول ${name} وصل للحد الأقصى (1000 صف). قد تكون هناك بيانات مفقودة.`);
-          }
-        }
-
-        const mappedExpenses = (expenses.data || []).map(mapExpense);
+        const mappedExpenses = expensesData.map(mapExpense);
 
         set({
-          budgetItems: (budgetItems.data || []).map(mapBudgetItem),
+          budgetItems: budgetItemsData.map(mapBudgetItem),
           expenses: mappedExpenses,
-          revenues: (revenues.data || []).map(mapRevenue),
-          resources: (resources.data || []).map(mapResource),
-          custodies: (custodies.data || []).map((c) => mapCustody(c, mappedExpenses)),
-          milestones: (milestones.data || []).map(mapMilestone),
-          changeOrders: (changeOrders.data || []).map(mapChangeOrder),
-          risks: (risks.data || []).map(mapRisk),
-          indirectCosts: (indirectCosts.data || []).map(mapIndirectCost),
-          commitments: (commitments.data || []).map(mapCommitment),
+          revenues: revenuesData.map(mapRevenue),
+          resources: resourcesData.map(mapResource),
+          custodies: custodiesData.map((c: any) => mapCustody(c, mappedExpenses)),
+          milestones: milestonesData.map(mapMilestone),
+          changeOrders: changeOrdersData.map(mapChangeOrder),
+          risks: risksData.map(mapRisk),
+          indirectCosts: indirectCostsData.map(mapIndirectCost),
+          commitments: commitmentsData.map(mapCommitment),
           detailsLoading: false,
           detailsLoaded: true,
         });
@@ -105,30 +127,30 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
     if (get().detailsLoaded || get().projectDataLoaded.has(projectId)) return;
 
     try {
-      const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks] = await Promise.all([
-        supabase.from('budget_items').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('expenses').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('revenues').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('resources').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('custodies').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('milestones').select('*').eq('project_id', projectId).order('sort_order', { ascending: true }),
-        supabase.from('change_orders').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('risks').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      const [budgetItemsData, expensesData, revenuesData, resourcesData, custodiesData, milestonesData, changeOrdersData, risksData] = await Promise.all([
+        fetchAll('budget_items', 'created_at', false, { project_id: projectId }),
+        fetchAll('expenses', 'created_at', false, { project_id: projectId }),
+        fetchAll('revenues', 'created_at', false, { project_id: projectId }),
+        fetchAll('resources', 'created_at', false, { project_id: projectId }),
+        fetchAll('custodies', 'created_at', false, { project_id: projectId }),
+        fetchAll('milestones', 'sort_order', true, { project_id: projectId }),
+        fetchAll('change_orders', 'created_at', false, { project_id: projectId }),
+        fetchAll('risks', 'created_at', false, { project_id: projectId }),
       ]);
 
-      const mappedExpenses = (expenses.data || []).map(mapExpense);
+      const mappedExpenses = expensesData.map(mapExpense);
       const loaded = new Set(get().projectDataLoaded);
       loaded.add(projectId);
 
       set((s) => ({
-        budgetItems: [...s.budgetItems.filter(b => b.projectId !== projectId), ...(budgetItems.data || []).map(mapBudgetItem)],
+        budgetItems: [...s.budgetItems.filter(b => b.projectId !== projectId), ...budgetItemsData.map(mapBudgetItem)],
         expenses: [...s.expenses.filter(e => e.projectId !== projectId), ...mappedExpenses],
-        revenues: [...s.revenues.filter(r => r.projectId !== projectId), ...(revenues.data || []).map(mapRevenue)],
-        resources: [...s.resources.filter(r => r.projectId !== projectId), ...(resources.data || []).map(mapResource)],
-        custodies: [...s.custodies.filter(c => c.projectId !== projectId), ...(custodies.data || []).map(c => mapCustody(c, mappedExpenses))],
-        milestones: [...s.milestones.filter(m => m.projectId !== projectId), ...(milestones.data || []).map(mapMilestone)],
-        changeOrders: [...s.changeOrders.filter(co => co.projectId !== projectId), ...(changeOrders.data || []).map(mapChangeOrder)],
-        risks: [...s.risks.filter(r => r.projectId !== projectId), ...(risks.data || []).map(mapRisk)],
+        revenues: [...s.revenues.filter(r => r.projectId !== projectId), ...revenuesData.map(mapRevenue)],
+        resources: [...s.resources.filter(r => r.projectId !== projectId), ...resourcesData.map(mapResource)],
+        custodies: [...s.custodies.filter(c => c.projectId !== projectId), ...custodiesData.map((c: any) => mapCustody(c, mappedExpenses))],
+        milestones: [...s.milestones.filter(m => m.projectId !== projectId), ...milestonesData.map(mapMilestone)],
+        changeOrders: [...s.changeOrders.filter(co => co.projectId !== projectId), ...changeOrdersData.map(mapChangeOrder)],
+        risks: [...s.risks.filter(r => r.projectId !== projectId), ...risksData.map(mapRisk)],
         projectDataLoaded: loaded,
       }));
     } catch (error: any) {
@@ -176,5 +198,45 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
       console.error('[Store.loadAuditLog]', error);
       throw error;
     }
+  },
+
+  subscribeToProject: (projectId: string) => {
+    const tables = ['expenses', 'revenues', 'milestones', 'budget_items', 'change_orders'] as const;
+    const mappers: Record<string, { key: string; map: (d: any) => any }> = {
+      expenses: { key: 'expenses', map: mapExpense },
+      revenues: { key: 'revenues', map: mapRevenue },
+      milestones: { key: 'milestones', map: mapMilestone },
+      budget_items: { key: 'budgetItems', map: mapBudgetItem },
+      change_orders: { key: 'changeOrders', map: mapChangeOrder },
+    };
+
+    const channel = supabase
+      .channel(`project-${projectId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        filter: `project_id=eq.${projectId}`,
+      }, (payload) => {
+        const table = payload.table;
+        const m = mappers[table];
+        if (!m) return;
+
+        if (payload.eventType === 'INSERT') {
+          set((s: any) => ({ [m.key]: [m.map(payload.new), ...s[m.key]] }));
+        } else if (payload.eventType === 'UPDATE') {
+          set((s: any) => ({
+            [m.key]: s[m.key].map((item: any) =>
+              item.id === (payload.new as any).id ? m.map(payload.new) : item
+            ),
+          }));
+        } else if (payload.eventType === 'DELETE') {
+          set((s: any) => ({
+            [m.key]: s[m.key].filter((item: any) => item.id !== (payload.old as any).id),
+          }));
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   },
 });

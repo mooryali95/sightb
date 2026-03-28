@@ -51,6 +51,21 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
     const spent = parseFloat(spentAmount) || 0;
     const total = parseFloat(totalAmount) || 0;
 
+    // Budget overrun validation (only for new commitments)
+    if (!editingId) {
+      const currentTotalCommitted = commitments
+        .filter(c => c.status === 'active')
+        .reduce((s, c) => s + c.totalAmount, 0);
+      const newTotal = currentTotalCommitted + total;
+      if (newTotal > totalPlanned && totalPlanned > 0) {
+        const over = newTotal - totalPlanned;
+        const confirmed = window.confirm(
+          `هذا الالتزام يتجاوز الميزانية بمقدار ${formatCurrency(over)}. هل تريد المتابعة؟`
+        );
+        if (!confirmed) return;
+      }
+    }
+
     // Auto-complete if fully spent
     let autoStatus = status;
     if (spent >= total && total > 0 && status === 'active') {
