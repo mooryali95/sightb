@@ -127,30 +127,30 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
     if (get().detailsLoaded || get().projectDataLoaded.has(projectId)) return;
 
     try {
-      const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks] = await Promise.all([
-        supabase.from('budget_items').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('expenses').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('revenues').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('resources').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('custodies').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('milestones').select('*').eq('project_id', projectId).order('sort_order', { ascending: true }),
-        supabase.from('change_orders').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
-        supabase.from('risks').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      const [budgetItemsData, expensesData, revenuesData, resourcesData, custodiesData, milestonesData, changeOrdersData, risksData] = await Promise.all([
+        fetchAll('budget_items', 'created_at', false, { project_id: projectId }),
+        fetchAll('expenses', 'created_at', false, { project_id: projectId }),
+        fetchAll('revenues', 'created_at', false, { project_id: projectId }),
+        fetchAll('resources', 'created_at', false, { project_id: projectId }),
+        fetchAll('custodies', 'created_at', false, { project_id: projectId }),
+        fetchAll('milestones', 'sort_order', true, { project_id: projectId }),
+        fetchAll('change_orders', 'created_at', false, { project_id: projectId }),
+        fetchAll('risks', 'created_at', false, { project_id: projectId }),
       ]);
 
-      const mappedExpenses = (expenses.data || []).map(mapExpense);
+      const mappedExpenses = expensesData.map(mapExpense);
       const loaded = new Set(get().projectDataLoaded);
       loaded.add(projectId);
 
       set((s) => ({
-        budgetItems: [...s.budgetItems.filter(b => b.projectId !== projectId), ...(budgetItems.data || []).map(mapBudgetItem)],
+        budgetItems: [...s.budgetItems.filter(b => b.projectId !== projectId), ...budgetItemsData.map(mapBudgetItem)],
         expenses: [...s.expenses.filter(e => e.projectId !== projectId), ...mappedExpenses],
-        revenues: [...s.revenues.filter(r => r.projectId !== projectId), ...(revenues.data || []).map(mapRevenue)],
-        resources: [...s.resources.filter(r => r.projectId !== projectId), ...(resources.data || []).map(mapResource)],
-        custodies: [...s.custodies.filter(c => c.projectId !== projectId), ...(custodies.data || []).map(c => mapCustody(c, mappedExpenses))],
-        milestones: [...s.milestones.filter(m => m.projectId !== projectId), ...(milestones.data || []).map(mapMilestone)],
-        changeOrders: [...s.changeOrders.filter(co => co.projectId !== projectId), ...(changeOrders.data || []).map(mapChangeOrder)],
-        risks: [...s.risks.filter(r => r.projectId !== projectId), ...(risks.data || []).map(mapRisk)],
+        revenues: [...s.revenues.filter(r => r.projectId !== projectId), ...revenuesData.map(mapRevenue)],
+        resources: [...s.resources.filter(r => r.projectId !== projectId), ...resourcesData.map(mapResource)],
+        custodies: [...s.custodies.filter(c => c.projectId !== projectId), ...custodiesData.map((c: any) => mapCustody(c, mappedExpenses))],
+        milestones: [...s.milestones.filter(m => m.projectId !== projectId), ...milestonesData.map(mapMilestone)],
+        changeOrders: [...s.changeOrders.filter(co => co.projectId !== projectId), ...changeOrdersData.map(mapChangeOrder)],
+        risks: [...s.risks.filter(r => r.projectId !== projectId), ...risksData.map(mapRisk)],
         projectDataLoaded: loaded,
       }));
     } catch (error: any) {
