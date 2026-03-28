@@ -14,6 +14,9 @@ import { Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { GanttChart } from './GanttChart';
+import { List, GanttChartSquare } from 'lucide-react';
 
 interface MilestonesSectionProps {
   projectId: string;
