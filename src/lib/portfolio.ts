@@ -89,6 +89,7 @@ export function getPortfolioSummary(
     aggregatePlannedMargin,
     targetMargin: portfolio.targetMargin,
     projectCount: projects.length,
+    averageCPI,
   });
 
   return {
