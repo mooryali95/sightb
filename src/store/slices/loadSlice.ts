@@ -23,6 +23,34 @@ export interface LoadSlice {
   loadAuditLog: (projectId: string) => Promise<void>;
 }
 
+/**
+ * Paginated fetch to overcome Supabase's 1000-row default limit.
+ */
+async function fetchAll(
+  table: string,
+  orderCol = 'created_at',
+  ascending = false,
+  filters?: Record<string, string>,
+): Promise<any[]> {
+  const PAGE = 1000;
+  let from = 0;
+  const all: any[] = [];
+  while (true) {
+    let q = supabase.from(table).select('*')
+      .order(orderCol, { ascending })
+      .range(from, from + PAGE - 1);
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => { q = q.eq(k, v) as any; });
+    }
+    const { data, error } = await (q as any);
+    if (error) throw error;
+    all.push(...(data || []));
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
 export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, get) => ({
   loading: true,
   detailsLoading: false,
