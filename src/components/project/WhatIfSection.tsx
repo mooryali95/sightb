@@ -47,8 +47,9 @@ export function WhatIfSection({
     const monthlyBurnRate = newDuration > 0 ? projectedTotal / newDuration : 0;
     const monthsRemaining = monthlyBurnRate > 0 ? budgetRemaining / monthlyBurnRate : 0;
 
-    // EVM-like indicators
-    const ev = newContract * (percentComplete / 100);
+    // EVM indicators — EV = BAC × %Complete (PMI standard)
+    const bac = projectedTotal; // BAC = الميزانية المخططة (ليست قيمة العقد)
+    const ev = bac * (percentComplete / 100);
     const cpi = newExpenses > 0 ? ev / newExpenses : 1;
     const eac = cpi > 0 ? projectedTotal / cpi : projectedTotal;
 

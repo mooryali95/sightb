@@ -85,39 +85,32 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
 
       if (!get().detailsLoaded) {
         set({ detailsLoading: true });
-        const [budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts, commitments] = await Promise.all([
-          supabase.from('budget_items').select('*').order('created_at', { ascending: false }),
-          supabase.from('expenses').select('*').order('created_at', { ascending: false }),
-          supabase.from('revenues').select('*').order('created_at', { ascending: false }),
-          supabase.from('resources').select('*').order('created_at', { ascending: false }),
-          supabase.from('custodies').select('*').order('created_at', { ascending: false }),
-          supabase.from('milestones').select('*').order('sort_order', { ascending: true }),
-          supabase.from('change_orders').select('*').order('created_at', { ascending: false }),
-          supabase.from('risks').select('*').order('created_at', { ascending: false }),
-          supabase.from('indirect_costs').select('*').order('created_at', { ascending: false }),
-          (supabase as any).from('commitments').select('*').order('created_at', { ascending: false }),
+        const [budgetItemsData, expensesData, revenuesData, resourcesData, custodiesData, milestonesData, changeOrdersData, risksData, indirectCostsData, commitmentsData] = await Promise.all([
+          fetchAll('budget_items'),
+          fetchAll('expenses'),
+          fetchAll('revenues'),
+          fetchAll('resources'),
+          fetchAll('custodies'),
+          fetchAll('milestones', 'sort_order', true),
+          fetchAll('change_orders'),
+          fetchAll('risks'),
+          fetchAll('indirect_costs'),
+          fetchAll('commitments'),
         ]);
 
-        const tables = { budgetItems, expenses, revenues, resources, custodies, milestones, changeOrders, risks, indirectCosts };
-        for (const [name, result] of Object.entries(tables)) {
-          if (result.data && result.data.length >= 1000) {
-            console.warn(`[Store] جدول ${name} وصل للحد الأقصى (1000 صف). قد تكون هناك بيانات مفقودة.`);
-          }
-        }
-
-        const mappedExpenses = (expenses.data || []).map(mapExpense);
+        const mappedExpenses = expensesData.map(mapExpense);
 
         set({
-          budgetItems: (budgetItems.data || []).map(mapBudgetItem),
+          budgetItems: budgetItemsData.map(mapBudgetItem),
           expenses: mappedExpenses,
-          revenues: (revenues.data || []).map(mapRevenue),
-          resources: (resources.data || []).map(mapResource),
-          custodies: (custodies.data || []).map((c) => mapCustody(c, mappedExpenses)),
-          milestones: (milestones.data || []).map(mapMilestone),
-          changeOrders: (changeOrders.data || []).map(mapChangeOrder),
-          risks: (risks.data || []).map(mapRisk),
-          indirectCosts: (indirectCosts.data || []).map(mapIndirectCost),
-          commitments: (commitments.data || []).map(mapCommitment),
+          revenues: revenuesData.map(mapRevenue),
+          resources: resourcesData.map(mapResource),
+          custodies: custodiesData.map((c: any) => mapCustody(c, mappedExpenses)),
+          milestones: milestonesData.map(mapMilestone),
+          changeOrders: changeOrdersData.map(mapChangeOrder),
+          risks: risksData.map(mapRisk),
+          indirectCosts: indirectCostsData.map(mapIndirectCost),
+          commitments: commitmentsData.map(mapCommitment),
           detailsLoading: false,
           detailsLoaded: true,
         });

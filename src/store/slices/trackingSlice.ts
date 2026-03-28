@@ -161,7 +161,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
         toast.success('تم إضافة البنود وإعادة تثبيت خط الأساس');
       } catch (e) {
         console.error('Auto-rebaseline failed:', e);
-        toast.success('تم إضافة البنود. يرجى تثبيت خط الأساس يدوياً.');
+        toast.error('تم إضافة بنود أمر التغيير، لكن فشل إنشاء خط الأساس تلقائياً. يرجى إنشاؤه يدوياً من تبويب خط الأساس.');
       }
     }
   },
