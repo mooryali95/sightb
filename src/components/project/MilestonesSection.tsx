@@ -273,7 +273,18 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           <p className="text-xs text-muted-foreground mt-1">أضف مراحل المشروع لتتبع الإنجاز وربط مؤشرات EVM</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <Tabs defaultValue="list" className="space-y-3">
+          <TabsList className="h-8">
+            <TabsTrigger value="list" className="gap-1 text-xs"><List className="w-3.5 h-3.5" />قائمة</TabsTrigger>
+            <TabsTrigger value="gantt" className="gap-1 text-xs"><GanttChartSquare className="w-3.5 h-3.5" />Gantt</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="gantt">
+            <GanttChart milestones={milestones} onMilestoneClick={(m) => !readOnly && openEdit(m)} />
+          </TabsContent>
+
+          <TabsContent value="list">
+          <div className="space-y-3">
           {milestones.map((m) => (
             <div key={m.id} className="p-3 rounded-lg border border-border bg-muted/10">
               <div className="flex items-center justify-between mb-2">
@@ -322,7 +333,9 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
               )}
             </div>
           ))}
-        </div>
+          </div>
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Revenue auto-suggest dialog */}
