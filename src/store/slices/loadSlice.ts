@@ -36,13 +36,13 @@ async function fetchAll(
   let from = 0;
   const all: any[] = [];
   while (true) {
-    let q = supabase.from(table).select('*')
+    let q = (supabase as any).from(table).select('*')
       .order(orderCol, { ascending })
       .range(from, from + PAGE - 1);
     if (filters) {
-      Object.entries(filters).forEach(([k, v]) => { q = q.eq(k, v) as any; });
+      Object.entries(filters).forEach(([k, v]) => { q = q.eq(k, v); });
     }
-    const { data, error } = await (q as any);
+    const { data, error } = await q;
     if (error) throw error;
     all.push(...(data || []));
     if (!data || data.length < PAGE) break;
