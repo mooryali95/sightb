@@ -186,6 +186,7 @@ export function getCompanySummary(
     aggregatePlannedMargin: netProfitMargin,
     targetMargin: 0,
     projectCount: allSummaries.reduce((s, ps) => s + ps.projectCount, 0),
+    averageCPI: undefined,
   });
 
   return {
