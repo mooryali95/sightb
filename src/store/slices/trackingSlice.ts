@@ -232,7 +232,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   },
 
   updateResource: async (id, r) => {
-    const updates: Record<string, unknown> = {};
+    const updates: { name?: string; role?: string; monthly_cost?: number } = {};
     if (r.name !== undefined) updates.name = r.name;
     if (r.role !== undefined) updates.role = r.role;
     if (r.monthlyCost !== undefined) updates.monthly_cost = r.monthlyCost;
