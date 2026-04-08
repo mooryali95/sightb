@@ -38,6 +38,9 @@ export default function Dashboard() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [timePeriod, setTimePeriod] = useState<string>('all');
+  const [showInactive, setShowInactive] = useState(false);
+
+  const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'] as const;
 
   useEffect(() => {
     loadAll().catch(() => {
@@ -87,13 +90,14 @@ export default function Dashboard() {
       }
       if (filterCompany !== 'all' && p.companyId !== filterCompany) return false;
       if (filterStatus !== 'all' && p.status !== filterStatus) return false;
+      if (filterStatus === 'all' && !showInactive && INACTIVE_STATUSES.includes(p.status as any)) return false;
       if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [projects, companies, filterCompany, filterStatus, searchQuery]);
+  }, [projects, companies, filterCompany, filterStatus, searchQuery, showInactive]);
 
-  const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '' || timePeriod !== 'all';
-  const clearFilters = () => { setFilterCompany('all'); setFilterStatus('all'); setSearchQuery(''); setTimePeriod('all'); };
+  const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '' || timePeriod !== 'all' || showInactive;
+  const clearFilters = () => { setFilterCompany('all'); setFilterStatus('all'); setSearchQuery(''); setTimePeriod('all'); setShowInactive(false); };
 
   // Stats
   const totalContractValue = filteredProjects.reduce((s, p) => s + p.contractValue, 0);
@@ -165,6 +169,7 @@ export default function Dashboard() {
               hasActiveFilters={hasActiveFilters} clearFilters={clearFilters}
               filteredCount={filteredProjects.length} totalCount={projects.length}
               isMobile={isMobile} filtersOpen={filtersOpen} setFiltersOpen={setFiltersOpen}
+              showInactive={showInactive} setShowInactive={setShowInactive}
             />
 
             <DashboardStats
