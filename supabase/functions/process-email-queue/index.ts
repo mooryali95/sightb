@@ -7,6 +7,7 @@ const DEFAULT_BATCH_SIZE = 10
 const DEFAULT_SEND_DELAY_MS = 200
 const DEFAULT_AUTH_TTL_MINUTES = 15
 const DEFAULT_TRANSACTIONAL_TTL_MINUTES = 60
+const AUTH_LABELS = new Set(['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'reauthentication', 'otp'])
 
 // Check if an error is a rate-limit (429) response.
 // Uses EmailAPIError.status when available (email-js >=0.x with structured errors),
@@ -64,6 +65,20 @@ function getEmailText(payload: Record<string, unknown>): string {
 
   const subject = payload.subject
   return typeof subject === 'string' && subject.trim().length > 0 ? subject.trim() : 'Notification'
+}
+
+function getEmailPurpose(queue: string, payload: Record<string, unknown>): 'auth' | 'transactional' {
+  const label = payload.label
+  if (queue === 'auth_emails') {
+    return 'auth'
+  }
+  if (typeof label === 'string' && AUTH_LABELS.has(label)) {
+    return 'auth'
+  }
+  if (!payload.unsubscribe_token) {
+    return 'auth'
+  }
+  return 'transactional'
 }
 
 Deno.serve(async (req) => {
@@ -178,6 +193,7 @@ Deno.serve(async (req) => {
       const emailMessageId = getEmailMessageId(queue, msg as { msg_id: number; message: Record<string, unknown> })
       const failedAttempts = failedAttemptsByMessageId.get(emailMessageId) ?? 0
       const emailText = getEmailText(payload as Record<string, unknown>)
+      const emailPurpose = getEmailPurpose(queue, payload as Record<string, unknown>)
 
       // Drop expired messages (TTL exceeded)
       if (payload.queued_at) {
@@ -267,10 +283,10 @@ Deno.serve(async (req) => {
             subject: payload.subject,
             html: payload.html,
             text: emailText,
-            purpose: payload.purpose,
+            purpose: emailPurpose,
             label: payload.label,
             idempotency_key: payload.idempotency_key,
-            unsubscribe_token: payload.unsubscribe_token,
+            unsubscribe_token: emailPurpose === 'transactional' ? payload.unsubscribe_token : undefined,
             message_id: emailMessageId,
           },
           // sendUrl is optional — when LOVABLE_SEND_URL is not set, the library

@@ -236,13 +236,14 @@ Deno.serve(async (req) => {
       subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
       html: emailHtml,
       text: emailText,
-      purpose: "transactional",
+      purpose: "auth",
+      label: "invite",
       idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
       message_id: messageId,
     };
 
     const { data: queueResult, error: queueError } = await supabaseAdmin.rpc("enqueue_email", {
-      queue_name: "transactional_emails",
+      queue_name: "auth_emails",
       payload: emailPayload,
     });
 
