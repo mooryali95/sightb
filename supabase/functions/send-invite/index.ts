@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, role, scope_type, scope_id } = await req.json();
+    const { email, role, scope_type, scope_id, resend, invite_id } = await req.json();
     console.log("[send-invite] Inviting:", email, "role:", role);
 
     if (!email || typeof email !== "string" || !email.includes("@") || email.length > 255) {
@@ -116,18 +116,43 @@ Deno.serve(async (req) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Save the invite record
-    const { data: inviteRecord, error: inviteError } = await supabaseAdmin
-      .from("user_invites")
-      .insert({
-        email: normalizedEmail,
-        role: safeRole,
-        scope_type: safeScopeType,
-        scope_id: safeScopeType === "system" ? null : scope_id || null,
-        invited_by: user.id,
-      })
-      .select("id")
-      .single();
+    // 1. Save or reuse the invite record
+    let inviteRecord: { id: string } | null = null;
+    let inviteError: { message?: string } | null = null;
+
+    if (resend && invite_id) {
+      const { data, error } = await supabaseAdmin
+        .from("user_invites")
+        .update({
+          email: normalizedEmail,
+          role: safeRole,
+          scope_type: safeScopeType,
+          scope_id: safeScopeType === "system" ? null : scope_id || null,
+          invited_by: user.id,
+          status: "pending",
+        })
+        .eq("id", invite_id)
+        .select("id")
+        .single();
+
+      inviteRecord = data;
+      inviteError = error;
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from("user_invites")
+        .insert({
+          email: normalizedEmail,
+          role: safeRole,
+          scope_type: safeScopeType,
+          scope_id: safeScopeType === "system" ? null : scope_id || null,
+          invited_by: user.id,
+        })
+        .select("id")
+        .single();
+
+      inviteRecord = data;
+      inviteError = error;
+    }
 
     if (inviteError) {
       console.error("[send-invite] Insert error:", JSON.stringify(inviteError));
@@ -170,11 +195,19 @@ Deno.serve(async (req) => {
         subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
         html: emailHtml,
         text: emailText,
-        purpose: "transactional",
+        purpose: "auth",
         label: "invite",
         idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
         message_id: messageId,
         queued_at: new Date().toISOString(),
+        invite_id: inviteRecord?.id ?? null,
+        metadata: {
+          type: "invite",
+          invite_id: inviteRecord?.id ?? null,
+          role: safeRole,
+          scope_type: safeScopeType,
+          scope_id: safeScopeType === "system" ? null : scope_id || null,
+        },
       };
 
       const { data: queueResult, error: queueError } = await supabaseAdmin.rpc("enqueue_email", {
@@ -191,13 +224,18 @@ Deno.serve(async (req) => {
         template_name: "invite",
         status: emailQueued ? "pending" : "failed",
         error_message: queueError?.message || null,
-        metadata: { role: safeRole, scope_type: safeScopeType },
+        metadata: {
+          invite_id: inviteRecord?.id ?? null,
+          role: safeRole,
+          scope_type: safeScopeType,
+          scope_id: safeScopeType === "system" ? null : scope_id || null,
+        },
       });
 
       if (inviteRecord?.id) {
         await supabaseAdmin
           .from("user_invites")
-          .update({ status: emailQueued ? "sent" : "failed" })
+          .update({ status: emailQueued ? "pending" : "failed" })
           .eq("id", inviteRecord.id);
       }
 
@@ -212,13 +250,17 @@ Deno.serve(async (req) => {
 
       const { data: existingRoles } = await supabaseAdmin
         .from("user_roles")
-        .select("id")
+        .select("id, scope_id")
         .eq("user_id", existingUser.id)
         .eq("role", safeRole)
         .eq("scope_type", safeScopeType);
 
-      const alreadyHasRole = existingRoles && existingRoles.length > 0 &&
-        (safeScopeType === "system" || existingRoles.some(() => true));
+      const targetScopeId = safeScopeType === "system" ? null : scope_id || null;
+      const alreadyHasRole = (existingRoles ?? []).some((existingRole) =>
+        safeScopeType === "system"
+          ? true
+          : (existingRole.scope_id ?? null) === targetScopeId
+      );
 
       if (!alreadyHasRole) {
         await supabaseAdmin.from("user_roles").insert({
@@ -242,7 +284,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           message: emailQueued
-            ? "المستخدم موجود بالفعل، تم منحه الصلاحيات وإرسال رابط الدخول"
+            ? "المستخدم موجود بالفعل، تم منحه الصلاحيات وتجهيز رابط الدخول للإرسال"
             : "المستخدم موجود بالفعل، تم منحه الصلاحيات لكن تعذر إرسال البريد",
           existingUser: true,
           emailSent: emailQueued,
@@ -281,7 +323,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         message: emailQueued
-          ? "تم إرسال الدعوة بنجاح"
+          ? "تم تجهيز الدعوة للإرسال بنجاح"
           : "تم إنشاء الحساب ولكن لم يتم إرسال البريد",
         emailSent: emailQueued,
         errorDetail: queueError?.message || null,

@@ -71,6 +71,55 @@ function getOptionalString(payload: Record<string, unknown>, key: string): strin
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined
 }
 
+function getOptionalObject(payload: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
+  const value = payload[key]
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined
+}
+
+function getInviteId(payload: Record<string, unknown>): string | undefined {
+  const directInviteId = getOptionalString(payload, 'invite_id')
+  if (directInviteId) {
+    return directInviteId
+  }
+
+  const metadata = getOptionalObject(payload, 'metadata')
+  return metadata ? getOptionalString(metadata, 'invite_id') : undefined
+}
+
+function getLogMetadata(payload: Record<string, unknown>): Record<string, unknown> | null {
+  const metadata = getOptionalObject(payload, 'metadata')
+  const inviteId = getInviteId(payload)
+
+  if (!metadata && !inviteId) {
+    return null
+  }
+
+  return {
+    ...(metadata ?? {}),
+    ...(inviteId ? { invite_id: inviteId } : {}),
+  }
+}
+
+async function syncInviteStatus(
+  supabase: ReturnType<typeof createClient>,
+  inviteId: string | undefined,
+  status: 'pending' | 'sent' | 'failed',
+) {
+  if (!inviteId) return
+
+  const { error } = await supabase
+    .from('user_invites')
+    .update({ status })
+    .eq('id', inviteId)
+    .neq('status', 'accepted')
+
+  if (error) {
+    console.error('Failed to sync invite status', { inviteId, status, error })
+  }
+}
+
 function getIdempotencyKey(
   payload: Record<string, unknown>,
   emailMessageId: string,
@@ -84,13 +133,17 @@ function resolveEmailPurpose(
   runId?: string,
   unsubscribeToken?: string,
 ): 'auth' | 'transactional' {
-  const explicitPurpose = getOptionalString(payload, 'purpose')
-
-  if (explicitPurpose === 'auth' || explicitPurpose === 'transactional') {
-    return explicitPurpose
+  if (queue === 'auth_emails') {
+    return 'auth'
   }
 
-  if (runId || unsubscribeToken) {
+  const explicitPurpose = getOptionalString(payload, 'purpose')
+
+  if (explicitPurpose === 'transactional') {
+    return 'transactional'
+  }
+
+  if (explicitPurpose === 'auth' || runId) {
     return 'auth'
   }
 
@@ -214,6 +267,8 @@ Deno.serve(async (req) => {
       const unsubscribeToken = getOptionalString(normalizedPayload, 'unsubscribe_token')
       const idempotencyKey = getIdempotencyKey(normalizedPayload, emailMessageId)
       const purpose = resolveEmailPurpose(queue, normalizedPayload, runId, unsubscribeToken)
+      const logMetadata = getLogMetadata(normalizedPayload)
+      const inviteId = getInviteId(normalizedPayload)
 
       // Drop expired messages (TTL exceeded)
       if (payload.queued_at) {
@@ -232,7 +287,9 @@ Deno.serve(async (req) => {
             recipient_email: payload.to,
             status: 'dlq',
             error_message: `TTL exceeded (${ttlMinutes[queue]} minutes)`,
+            metadata: logMetadata,
           })
+          await syncInviteStatus(supabase, inviteId, 'failed')
           const { error: ttlDlqError } = await supabase.rpc('move_to_dlq', {
             source_queue: queue,
             dlq_name: dlq,
@@ -254,7 +311,9 @@ Deno.serve(async (req) => {
           recipient_email: payload.to,
           status: 'dlq',
           error_message: `Max retries (${MAX_RETRIES}) exceeded (attempted ${failedAttempts} times)`,
+          metadata: logMetadata,
         })
+        await syncInviteStatus(supabase, inviteId, 'failed')
         const { error: retryDlqError } = await supabase.rpc('move_to_dlq', {
           source_queue: queue,
           dlq_name: dlq,
@@ -282,6 +341,7 @@ Deno.serve(async (req) => {
             msg_id: msg.msg_id,
               message_id: emailMessageId,
           })
+          await syncInviteStatus(supabase, inviteId, 'sent')
           const { error: dupDelError } = await supabase.rpc('delete_email', {
             queue_name: queue,
             message_id: msg.msg_id,
@@ -329,7 +389,9 @@ Deno.serve(async (req) => {
           template_name: payload.label || queue,
           recipient_email: payload.to,
           status: 'sent',
+          metadata: logMetadata,
         })
+        await syncInviteStatus(supabase, inviteId, 'sent')
 
         // Delete from queue
         const { error: delError } = await supabase.rpc('delete_email', {
@@ -357,6 +419,7 @@ Deno.serve(async (req) => {
             recipient_email: payload.to,
             status: 'rate_limited',
             error_message: errorMsg.slice(0, 1000),
+            metadata: logMetadata,
           })
 
           const retryAfterSecs = getRetryAfterSeconds(error)
@@ -384,6 +447,7 @@ Deno.serve(async (req) => {
           recipient_email: payload.to,
           status: 'failed',
           error_message: errorMsg.slice(0, 1000),
+          metadata: logMetadata,
         })
         failedAttemptsByMessageId.set(emailMessageId, failedAttempts + 1)
 

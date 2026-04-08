@@ -177,11 +177,12 @@ Deno.serve(async (req) => {
           subject: "رمز التحقق لتسجيل الدخول - SightB",
           html: emailHtml,
           text: emailText,
-          purpose: "transactional",
+          purpose: "auth",
           label: "otp",
           idempotency_key: `otp-${user.id}-${Date.now()}`,
           message_id: messageId,
           queued_at: new Date().toISOString(),
+          metadata: { type: "otp", user_id: user.id },
         };
 
         const { error: queueError } = await supabase.rpc("enqueue_email", {
