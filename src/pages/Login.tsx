@@ -42,10 +42,10 @@ export default function Login() {
     }
   }, [resendCooldown]);
 
-  const checkAndSendOtp = async () => {
+  const checkAndSendOtp = async (): Promise<string> => {
     const fingerprint = getDeviceFingerprint();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return false;
+    if (!session) return 'error';
 
     const res = await supabase.functions.invoke('admin-otp', {
       body: { action: 'check', fingerprint },
@@ -53,7 +53,6 @@ export default function Login() {
 
     if (res.error) {
       console.error('[otp-check]', res.error);
-      // On error, sign out and block — don't allow bypass
       await supabase.auth.signOut();
       toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى.');
       return 'error';
@@ -65,7 +64,15 @@ export default function Login() {
       return 'error';
     }
 
-    return res.data?.requiresOtp === true;
+    if (res.data?.noRoles) {
+      return 'no-roles';
+    }
+
+    if (res.data?.requiresOtp === true) {
+      return res.data?.sent === true ? 'otp-sent' : 'otp-failed';
+    }
+
+    return 'ok';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,15 +91,25 @@ export default function Login() {
       if (error) throw error;
 
       // Check if OTP is required (admin on untrusted device)
-      const needsOtp = await checkAndSendOtp();
-      if (needsOtp === 'error') {
+      const otpResult = await checkAndSendOtp();
+      if (otpResult === 'error') {
         // Already signed out and error shown
         return;
       }
-      if (needsOtp) {
+      if (otpResult === 'no-roles') {
+        // User has no roles — sign out and show message
+        await supabase.auth.signOut();
+        toast.error('ليس لديك صلاحية للوصول. تواصل مع مدير النظام.');
+        return;
+      }
+      if (otpResult === 'otp-sent') {
         setOtpRequired(true);
         setResendCooldown(60);
         toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
+      } else if (otpResult === 'otp-failed') {
+        setOtpRequired(true);
+        setResendCooldown(60);
+        toast.warning('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
       } else {
         navigate('/', { replace: true });
       }
