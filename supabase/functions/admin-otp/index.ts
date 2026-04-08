@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
           subject: "رمز التحقق لتسجيل الدخول - SightB",
           html: emailHtml,
           text: emailText,
-          purpose: "transactional",
+          purpose: "auth",
           label: "otp",
           idempotency_key: `otp-${user.id}-${Date.now()}`,
           message_id: messageId,
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
         await supabase.from("email_send_log").insert({
           message_id: messageId,
           recipient_email: profile.email,
-          template_name: "auth_emails",
+          template_name: "otp",
           status: emailSent ? "pending" : "failed",
           error_message: queueError?.message || null,
           metadata: { type: "otp" },

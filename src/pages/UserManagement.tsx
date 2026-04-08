@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { UserPlus, Trash2, Users, Shield, Eye, Pencil, Mail, CheckCircle2, Clock, UserX, ChevronDown, ChevronUp, Filter, Search, Crown } from 'lucide-react';
+import { UserPlus, Trash2, Users, Shield, Eye, Pencil, Mail, CheckCircle2, Clock, UserX, ChevronDown, ChevronUp, Filter, Search, Crown, RefreshCw, AlertCircle } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -46,9 +46,10 @@ const roleIcons: Record<string, any> = { owner: Crown, admin: Shield, editor: Pe
 const scopeLabels: Record<string, string> = { system: 'النظام', company: 'شركة', project: 'مشروع' };
 
 const inviteStatusConfig: Record<string, { label: string; icon: any; className: string }> = {
-  pending: { label: 'في الانتظار', icon: Clock, className: 'bg-muted text-muted-foreground' },
+  pending: { label: 'قيد المعالجة', icon: Clock, className: 'bg-muted text-muted-foreground' },
   sent: { label: 'تم الإرسال', icon: Mail, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
   accepted: { label: 'مقبولة ومسجّل', icon: CheckCircle2, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  failed: { label: 'فشل الإرسال', icon: AlertCircle, className: 'bg-destructive/10 text-destructive' },
 };
 
 export default function UserManagement() {
@@ -68,6 +69,7 @@ export default function UserManagement() {
   const [invScopeType, setInvScopeType] = useState('system');
   const [invScopeId, setInvScopeId] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
 
   // Invites log state
   const [invitesOpen, setInvitesOpen] = useState(false);
@@ -167,6 +169,36 @@ export default function UserManagement() {
     const { error } = await (supabase as any).from('user_invites').delete().eq('id', id);
     if (error) toast.error('حدث خطأ');
     else loadData();
+  };
+
+  const resendInvite = async (invite: Invite) => {
+    setResendingInviteId(invite.id);
+    try {
+      const res = await supabase.functions.invoke('send-invite', {
+        body: {
+          email: invite.email,
+          role: invite.role,
+          scope_type: invite.scopeType,
+          scope_id: invite.scopeType === 'system' ? null : invite.scopeId,
+          resend: true,
+        },
+      });
+
+      if (res.error) throw res.error;
+
+      if (res.data?.emailSent) {
+        toast.success(`تمت إعادة إرسال الدعوة إلى ${invite.email}`);
+      } else {
+        toast.warning('تم حفظ محاولة إعادة الإرسال لكن البريد لم يُرسل بعد');
+      }
+
+      loadData();
+    } catch (error) {
+      console.error('[resend-invite]', error);
+      toast.error('تعذر إعادة إرسال الدعوة');
+    } finally {
+      setResendingInviteId(null);
+    }
   };
 
   const deleteRole = async (id: string) => {
@@ -438,13 +470,28 @@ export default function UserManagement() {
                                   {formatDate(invite.createdAt)}
                                 </span>
                               </div>
-                              {invite.status === 'pending' && (
-                                <ConfirmDeleteDialog
-                                  title="حذف الدعوة"
-                                  description={`هل تريد حذف الدعوة المرسلة إلى ${invite.email}؟`}
-                                  onConfirm={() => deleteInvite(invite.id)}
-                                />
-                              )}
+                              <div className="flex items-center gap-2">
+                                {invite.status !== 'accepted' && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 gap-1 text-xs"
+                                    disabled={resendingInviteId === invite.id}
+                                    onClick={() => resendInvite(invite)}
+                                  >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${resendingInviteId === invite.id ? 'animate-spin' : ''}`} />
+                                    إعادة إرسال
+                                  </Button>
+                                )}
+                                {invite.status !== 'accepted' && (
+                                  <ConfirmDeleteDialog
+                                    title="حذف الدعوة"
+                                    description={`هل تريد حذف الدعوة المرسلة إلى ${invite.email}؟`}
+                                    onConfirm={() => deleteInvite(invite.id)}
+                                  />
+                                )}
+                              </div>
                             </div>
                           );
                         })}
