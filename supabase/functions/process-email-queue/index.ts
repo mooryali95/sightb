@@ -7,7 +7,6 @@ const DEFAULT_BATCH_SIZE = 10
 const DEFAULT_SEND_DELAY_MS = 200
 const DEFAULT_AUTH_TTL_MINUTES = 15
 const DEFAULT_TRANSACTIONAL_TTL_MINUTES = 60
-const AUTH_LABELS = new Set(['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'reauthentication', 'otp'])
 
 // Check if an error is a rate-limit (429) response.
 // Uses EmailAPIError.status when available (email-js >=0.x with structured errors),
@@ -87,20 +86,15 @@ function resolveEmailPurpose(
 ): 'auth' | 'transactional' {
   const explicitPurpose = getOptionalString(payload, 'purpose')
 
-  if (queue === 'auth_emails' && !runId && !unsubscribeToken) {
-    return 'auth'
-  }
-
   if (explicitPurpose === 'auth' || explicitPurpose === 'transactional') {
     return explicitPurpose
   }
 
-  const label = getOptionalString(payload, 'label')
-  if (label && AUTH_LABELS.has(label)) {
+  if (runId || unsubscribeToken) {
     return 'auth'
   }
 
-  return queue === 'auth_emails' ? 'auth' : 'transactional'
+  return 'transactional'
 }
 
 Deno.serve(async (req) => {

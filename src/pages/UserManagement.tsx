@@ -72,7 +72,7 @@ export default function UserManagement() {
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
 
   // Invites log state
-  const [invitesOpen, setInvitesOpen] = useState(false);
+  const [invitesOpen, setInvitesOpen] = useState(true);
   const [inviteStatusFilter, setInviteStatusFilter] = useState<string>('all');
   const [inviteSearchQuery, setInviteSearchQuery] = useState('');
 
@@ -261,6 +261,8 @@ export default function UserManagement() {
   }, [invites, inviteStatusFilter, inviteSearchQuery]);
 
   const pendingInvitesCount = invites.filter(i => i.status === 'pending').length;
+  const sentInvitesCount = invites.filter(i => i.status === 'sent').length;
+  const failedInvitesCount = invites.filter(i => i.status === 'failed').length;
   const acceptedInvitesCount = invites.filter(i => i.status === 'accepted').length;
 
   // Filtered users
@@ -378,7 +380,7 @@ export default function UserManagement() {
         </motion.div>
 
         {/* Invites Log - Collapsible */}
-        {invites.length > 0 && (
+        {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -397,6 +399,21 @@ export default function UserManagement() {
                           {pendingInvitesCount} معلّقة
                         </Badge>
                       )}
+                      {sentInvitesCount > 0 && (
+                        <Badge variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px]">
+                          {sentInvitesCount} مرسلة
+                        </Badge>
+                      )}
+                      {failedInvitesCount > 0 && (
+                        <Badge variant="outline" className="bg-destructive/10 text-destructive text-[10px]">
+                          {failedInvitesCount} فاشلة
+                        </Badge>
+                      )}
+                      {acceptedInvitesCount > 0 && (
+                        <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px]">
+                          {acceptedInvitesCount} مقبولة
+                        </Badge>
+                      )}
                       <Badge variant="outline" className="text-[10px]">
                         {invites.length} إجمالي
                       </Badge>
@@ -406,6 +423,9 @@ export default function UserManagement() {
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
+                <p className="text-xs text-muted-foreground mt-4 mb-3">
+                  ستظهر هنا حالة كل دعوة بوضوح: قيد المعالجة، تم الإرسال، مقبولة، أو فشل الإرسال. يمكن إعادة إرسال أي دعوة غير مقبولة من الزر المخصص.
+                </p>
                 {/* Filters */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4 mb-3">
                   <div className="relative flex-1 min-w-0">
@@ -505,7 +525,7 @@ export default function UserManagement() {
               </CollapsibleContent>
             </Collapsible>
           </motion.div>
-        )}
+        }
 
         {/* Current Users */}
         <motion.div
