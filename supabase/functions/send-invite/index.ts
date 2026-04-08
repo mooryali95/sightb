@@ -18,29 +18,35 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-async function sendViaResend(to: string, subject: string, html: string) {
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) {
-    console.error("[send-invite] RESEND_API_KEY not set");
-    return { ok: false, error: "RESEND_API_KEY not configured" };
-  }
-  console.log("[send-invite] Sending via Resend to:", to);
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${resendKey}`,
-    },
-    body: JSON.stringify({
-      from: "SightB <noreply@notify.sight.basserh.com>",
-      to: [to],
-      subject,
-      html,
-    }),
-  });
-  const data = await res.json();
-  console.log("[send-invite] Resend response:", res.status, JSON.stringify(data));
-  return { ok: res.ok, data, error: res.ok ? null : JSON.stringify(data) };
+const SENDER_DOMAIN = "notify.sight.basserh.com";
+const FROM_ADDRESS = `SightB <noreply@${SENDER_DOMAIN}>`;
+
+function buildInviteEmailHtml(resetLink: string, roleLabel: string): string {
+  return `
+    <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; background: #ffffff;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2 style="color: #1a1a1a; margin: 0;">دعوة للانضمام إلى SightB</h2>
+        <p style="color: #888; margin-top: 8px;">نظام إدارة المشاريع المالية</p>
+      </div>
+      
+      <div style="background: #f8f9fc; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+        <p style="color: #333; margin: 0 0 8px;">مرحباً،</p>
+        <p style="color: #555; margin: 0;">تم دعوتك للانضمام إلى نظام <strong>SightB</strong> بصلاحية <strong>${roleLabel}</strong>.</p>
+      </div>
+
+      <p style="color: #555;">لتفعيل حسابك وتعيين كلمة المرور، اضغط على الزر أدناه:</p>
+      
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="${resetLink}" style="background: #2563eb; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">تفعيل الحساب</a>
+      </div>
+
+      <p style="color: #888; font-size: 13px;">أو انسخ الرابط التالي والصقه في متصفحك:</p>
+      <p style="color: #2563eb; font-size: 12px; word-break: break-all;">${resetLink}</p>
+
+      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+      <p style="color: #aaa; font-size: 11px; text-align: center;">إذا لم تكن تتوقع هذه الدعوة، يمكنك تجاهل هذا البريد.</p>
+    </div>
+  `;
 }
 
 Deno.serve(async (req) => {
@@ -132,7 +138,6 @@ Deno.serve(async (req) => {
     if (existingUser) {
       console.log("[send-invite] User exists:", existingUser.id);
 
-      // Check if user already has this exact role — avoid duplicates
       const { data: existingRoles } = await supabaseAdmin
         .from("user_roles")
         .select("id")
@@ -152,7 +157,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Ensure profile exists (might have been deleted)
       await supabaseAdmin.from("profiles").upsert({
         id: existingUser.id,
         email: normalizedEmail,
@@ -214,50 +218,45 @@ Deno.serve(async (req) => {
     }
     console.log("[send-invite] Reset link generated:", !!linkData, "error:", linkError?.message);
 
-    // 5. Send invitation email via Resend
+    // 5. Enqueue invitation email via Lovable Email queue
     const roleLabel = safeRole === "admin" ? "مدير النظام" : safeRole === "editor" ? "محرر" : "مشاهد";
-    const emailHtml = `
-      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; background: #ffffff;">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <h2 style="color: #1a1a1a; margin: 0;">دعوة للانضمام إلى SightB</h2>
-          <p style="color: #888; margin-top: 8px;">نظام إدارة المشاريع المالية</p>
-        </div>
-        
-        <div style="background: #f8f9fc; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-          <p style="color: #333; margin: 0 0 8px;">مرحباً،</p>
-          <p style="color: #555; margin: 0;">تم دعوتك للانضمام إلى نظام <strong>SightB</strong> بصلاحية <strong>${roleLabel}</strong>.</p>
-        </div>
+    const emailHtml = buildInviteEmailHtml(resetLink, roleLabel);
 
-        <p style="color: #555;">لتفعيل حسابك وتعيين كلمة المرور، اضغط على الزر أدناه:</p>
-        
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${resetLink}" style="background: #2563eb; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">تفعيل الحساب</a>
-        </div>
+    const emailPayload = {
+      to: normalizedEmail,
+      from: FROM_ADDRESS,
+      sender_domain: SENDER_DOMAIN,
+      subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
+      html: emailHtml,
+      purpose: "transactional",
+      idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
+    };
 
-        <p style="color: #888; font-size: 13px;">أو انسخ الرابط التالي والصقه في متصفحك:</p>
-        <p style="color: #2563eb; font-size: 12px; word-break: break-all;">${resetLink}</p>
+    const { data: queueResult, error: queueError } = await supabaseAdmin.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: emailPayload,
+    });
 
-        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-        <p style="color: #aaa; font-size: 11px; text-align: center;">إذا لم تكن تتوقع هذه الدعوة، يمكنك تجاهل هذا البريد.</p>
-      </div>
-    `;
+    const emailQueued = !queueError;
+    console.log("[send-invite] Email enqueued:", emailQueued, "error:", queueError?.message, "msgId:", queueResult);
 
-    const resendResult = await sendViaResend(
-      normalizedEmail,
-      "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
-      emailHtml
-    );
-
-    console.log("[send-invite] Final result - emailSent:", resendResult.ok);
+    // Log to email_send_log
+    await supabaseAdmin.from("email_send_log").insert({
+      recipient_email: normalizedEmail,
+      template_name: "invite",
+      status: emailQueued ? "pending" : "failed",
+      error_message: queueError?.message || null,
+      metadata: { role: safeRole, scope_type: safeScopeType },
+    });
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: resendResult.ok
+        message: emailQueued
           ? "تم إرسال الدعوة بنجاح"
           : "تم إنشاء الحساب ولكن لم يتم إرسال البريد",
-        emailSent: resendResult.ok,
-        errorDetail: resendResult.error,
+        emailSent: emailQueued,
+        errorDetail: queueError?.message || null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
