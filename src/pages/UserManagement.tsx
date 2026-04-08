@@ -33,6 +33,14 @@ interface Invite {
   createdAt: string;
 }
 
+interface InviteDeliveryStatus {
+  inviteId: string | null;
+  email: string;
+  status: string;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
 interface RoleEntry {
   id: string;
   userId: string;
@@ -52,6 +60,13 @@ const inviteStatusConfig: Record<string, { label: string; icon: any; className: 
   failed: { label: 'فشل الإرسال', icon: AlertCircle, className: 'bg-destructive/10 text-destructive' },
 };
 
+const deliveryStatusConfig: Record<string, { label: string; icon: any; className: string }> = {
+  pending: { label: 'البريد بانتظار الإرسال', icon: Clock, className: 'bg-muted text-muted-foreground' },
+  sent: { label: 'البريد أُرسل', icon: Mail, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  failed: { label: 'البريد فشل', icon: AlertCircle, className: 'bg-destructive/10 text-destructive' },
+  dlq: { label: 'البريد فشل نهائياً', icon: AlertCircle, className: 'bg-destructive/10 text-destructive' },
+};
+
 export default function UserManagement() {
   const { user } = useAuth();
   const { isAdmin, isOwner, loading: roleLoading } = useRole();
@@ -60,6 +75,7 @@ export default function UserManagement() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [allRoles, setAllRoles] = useState<RoleEntry[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
+  const [inviteDeliveryStatus, setInviteDeliveryStatus] = useState<Record<string, InviteDeliveryStatus>>({});
   const [loading, setLoading] = useState(true);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
 
@@ -109,8 +125,7 @@ export default function UserManagement() {
         scopeId: r.scope_id,
       }))
     );
-    setInvites(
-      (invitesRes.data || []).map((i: any) => ({
+    const mappedInvites = (invitesRes.data || []).map((i: any) => ({
         id: i.id,
         email: i.email,
         role: i.role,
@@ -118,8 +133,47 @@ export default function UserManagement() {
         scopeId: i.scope_id,
         status: i.status,
         createdAt: i.created_at,
-      }))
-    );
+      }));
+    setInvites(mappedInvites);
+
+    if (mappedInvites.length > 0) {
+      try {
+        const emails = Array.from(new Set(mappedInvites.map((invite) => invite.email.toLowerCase())));
+        const { data, error } = await supabase.functions.invoke('admin-email-status', {
+          body: { emails },
+        });
+
+        if (error) throw error;
+
+        const deliveryMap: Record<string, InviteDeliveryStatus> = {};
+        for (const item of data?.items || []) {
+          const normalizedEmail = String(item.email || '').toLowerCase();
+          const statusItem: InviteDeliveryStatus = {
+            inviteId: item.inviteId ?? null,
+            email: normalizedEmail,
+            status: item.status,
+            errorMessage: item.errorMessage ?? null,
+            createdAt: item.createdAt,
+          };
+
+          if (statusItem.inviteId) {
+            deliveryMap[`invite:${statusItem.inviteId}`] = statusItem;
+          }
+
+          if (normalizedEmail && !deliveryMap[`email:${normalizedEmail}`]) {
+            deliveryMap[`email:${normalizedEmail}`] = statusItem;
+          }
+        }
+
+        setInviteDeliveryStatus(deliveryMap);
+      } catch (error) {
+        console.error('[admin-email-status]', error);
+        setInviteDeliveryStatus({});
+      }
+    } else {
+      setInviteDeliveryStatus({});
+    }
+
     setLoading(false);
   };
 
@@ -181,6 +235,7 @@ export default function UserManagement() {
           scope_type: invite.scopeType,
           scope_id: invite.scopeType === 'system' ? null : invite.scopeId,
           resend: true,
+          invite_id: invite.id,
         },
       });
 
@@ -475,20 +530,36 @@ export default function UserManagement() {
                         {emailInvites.map((invite) => {
                           const statusConf = inviteStatusConfig[invite.status] || inviteStatusConfig.pending;
                           const StatusIcon = statusConf.icon;
+                          const delivery = inviteDeliveryStatus[`invite:${invite.id}`] || inviteDeliveryStatus[`email:${invite.email.toLowerCase()}`];
+                          const deliveryConf = delivery ? (deliveryStatusConfig[delivery.status] || deliveryStatusConfig.failed) : null;
+                          const DeliveryIcon = deliveryConf?.icon;
                           return (
                             <div key={invite.id} className="flex items-center justify-between px-3 py-2">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="outline" className="text-[10px]">{roleLabels[invite.role]}</Badge>
-                                <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${statusConf.className}`}>
-                                  <StatusIcon className="w-3 h-3" />
-                                  {statusConf.label}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {scopeLabels[invite.scopeType]}: {getScopeName(invite.scopeType, invite.scopeId)}
-                                </span>
-                                <span className="text-[10px] text-muted-foreground">
-                                  {formatDate(invite.createdAt)}
-                                </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="outline" className="text-[10px]">{roleLabels[invite.role]}</Badge>
+                                  <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${statusConf.className}`}>
+                                    <StatusIcon className="w-3 h-3" />
+                                    {statusConf.label}
+                                  </span>
+                                  {deliveryConf && DeliveryIcon && (
+                                    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${deliveryConf.className}`}>
+                                      <DeliveryIcon className="w-3 h-3" />
+                                      {deliveryConf.label}
+                                    </span>
+                                  )}
+                                  <span className="text-xs text-muted-foreground">
+                                    {scopeLabels[invite.scopeType]}: {getScopeName(invite.scopeType, invite.scopeId)}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {formatDate(invite.createdAt)}
+                                  </span>
+                                </div>
+                                {delivery?.errorMessage && (
+                                  <p className="text-[11px] text-destructive mt-1 truncate">
+                                    سبب الفشل: {delivery.errorMessage}
+                                  </p>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
                                 {invite.status !== 'accepted' && (
