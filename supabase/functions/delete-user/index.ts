@@ -103,10 +103,23 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Get user email before deletion for invite cleanup
+    const { data: targetProfile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", targetUserId)
+      .single();
+
     // Delete roles, invites, profile, then auth user
     await supabase.from("user_roles").delete().eq("user_id", targetUserId);
     await supabase.from("trusted_devices").delete().eq("user_id", targetUserId);
     await supabase.from("admin_otp_codes").delete().eq("user_id", targetUserId);
+
+    // Clean up invites for this email so re-invite works cleanly
+    if (targetProfile?.email) {
+      await supabase.from("user_invites").delete().eq("email", targetProfile.email);
+    }
+
     await supabase.from("profiles").delete().eq("id", targetUserId);
 
     // Delete from auth
