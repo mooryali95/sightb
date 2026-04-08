@@ -42,10 +42,10 @@ export default function Login() {
     }
   }, [resendCooldown]);
 
-  const checkAndSendOtp = async () => {
+  const checkAndSendOtp = async (): Promise<string> => {
     const fingerprint = getDeviceFingerprint();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return false;
+    if (!session) return 'error';
 
     const res = await supabase.functions.invoke('admin-otp', {
       body: { action: 'check', fingerprint },
@@ -53,7 +53,6 @@ export default function Login() {
 
     if (res.error) {
       console.error('[otp-check]', res.error);
-      // On error, sign out and block — don't allow bypass
       await supabase.auth.signOut();
       toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى.');
       return 'error';
@@ -65,7 +64,15 @@ export default function Login() {
       return 'error';
     }
 
-    return res.data?.requiresOtp === true;
+    if (res.data?.noRoles) {
+      return 'no-roles';
+    }
+
+    if (res.data?.requiresOtp === true) {
+      return res.data?.sent === true ? 'otp-sent' : 'otp-failed';
+    }
+
+    return 'ok';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
