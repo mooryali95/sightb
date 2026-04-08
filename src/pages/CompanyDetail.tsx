@@ -177,11 +177,25 @@ export default function CompanyDetail() {
                     <p className="text-sm text-muted-foreground mt-0.5">{company.description}</p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {compPortfolios.length} محفظة · {companyProjects.length} مشروع
+                    {compPortfolios.length} محفظة · {visibleCompanyProjects.length} مشروع
+                    {inactiveCount > 0 && !showInactive && (
+                      <span className="text-muted-foreground/60"> ({inactiveCount} منتهي)</span>
+                    )}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {inactiveCount > 0 && (
+                  <Button
+                    variant={showInactive ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setShowInactive(!showInactive)}
+                    className="gap-1.5 text-xs"
+                  >
+                    {showInactive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    {showInactive ? 'إخفاء المنتهية' : 'عرض المنتهية'}
+                  </Button>
+                )}
                 {(isAdmin || canEdit('company', id!)) && (
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
                     <Pencil className="w-3.5 h-3.5" />تعديل
