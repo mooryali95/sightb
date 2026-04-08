@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Check if user already exists
+    // 2. Check if user already exists in auth
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(
       (u) => u.email?.toLowerCase() === normalizedEmail
@@ -131,12 +131,34 @@ Deno.serve(async (req) => {
 
     if (existingUser) {
       console.log("[send-invite] User exists:", existingUser.id);
-      await supabaseAdmin.from("user_roles").insert({
-        user_id: existingUser.id,
-        role: safeRole,
-        scope_type: safeScopeType,
-        scope_id: safeScopeType === "system" ? null : scope_id || null,
-      });
+
+      // Check if user already has this exact role — avoid duplicates
+      const { data: existingRoles } = await supabaseAdmin
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", existingUser.id)
+        .eq("role", safeRole)
+        .eq("scope_type", safeScopeType);
+
+      const alreadyHasRole = existingRoles && existingRoles.length > 0 &&
+        (safeScopeType === "system" || existingRoles.some(() => true));
+
+      if (!alreadyHasRole) {
+        await supabaseAdmin.from("user_roles").insert({
+          user_id: existingUser.id,
+          role: safeRole,
+          scope_type: safeScopeType,
+          scope_id: safeScopeType === "system" ? null : scope_id || null,
+        });
+      }
+
+      // Ensure profile exists (might have been deleted)
+      await supabaseAdmin.from("profiles").upsert({
+        id: existingUser.id,
+        email: normalizedEmail,
+        full_name: existingUser.user_metadata?.full_name || "",
+        status: "active",
+      }, { onConflict: "id" });
 
       await supabaseAdmin
         .from("user_invites")
