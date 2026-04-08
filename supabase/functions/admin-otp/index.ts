@@ -76,15 +76,25 @@ Deno.serve(async (req) => {
 
     const { action, code, fingerprint } = await req.json();
 
-    // Check if user has any edit-capable role (owner, admin, editor)
-    const { data: editRoles } = await supabase
+    // Check if user has ANY role at all
+    const { data: allRoles } = await supabase
       .from("user_roles")
-      .select("id")
-      .eq("user_id", user.id)
-      .in("role", ["owner", "admin", "editor"])
-      .limit(1);
+      .select("id, role")
+      .eq("user_id", user.id);
 
-    const canEditAnything = editRoles && editRoles.length > 0;
+    const hasAnyRole = allRoles && allRoles.length > 0;
+
+    if (!hasAnyRole) {
+      // No roles at all — user is not authorized to use the system
+      return new Response(JSON.stringify({ requiresOtp: false, noRoles: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check if user has any edit-capable role (owner, admin, editor)
+    const canEditAnything = allRoles.some((r: any) =>
+      ["owner", "admin", "editor"].includes(r.role)
+    );
 
     if (!canEditAnything) {
       // Viewer — no OTP required

@@ -84,15 +84,25 @@ export default function Login() {
       if (error) throw error;
 
       // Check if OTP is required (admin on untrusted device)
-      const needsOtp = await checkAndSendOtp();
-      if (needsOtp === 'error') {
+      const otpResult = await checkAndSendOtp();
+      if (otpResult === 'error') {
         // Already signed out and error shown
         return;
       }
-      if (needsOtp) {
+      if (otpResult === 'no-roles') {
+        // User has no roles — sign out and show message
+        await supabase.auth.signOut();
+        toast.error('ليس لديك صلاحية للوصول. تواصل مع مدير النظام.');
+        return;
+      }
+      if (otpResult === 'otp-sent') {
         setOtpRequired(true);
         setResendCooldown(60);
         toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
+      } else if (otpResult === 'otp-failed') {
+        setOtpRequired(true);
+        setResendCooldown(60);
+        toast.warning('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
       } else {
         navigate('/', { replace: true });
       }
