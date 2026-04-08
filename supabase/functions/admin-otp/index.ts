@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { htmlToPlainText } from "../_shared/email-text.ts";
+import { getOrCreateUnsubscribeToken } from "../_shared/email-unsubscribe.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sightb.lovable.app",
@@ -169,6 +170,7 @@ Deno.serve(async (req) => {
 
         const messageId = crypto.randomUUID();
         const emailText = htmlToPlainText(emailHtml);
+        const unsubscribeToken = await getOrCreateUnsubscribeToken(supabase, profile.email);
 
         const emailPayload = {
           to: profile.email,
@@ -177,10 +179,11 @@ Deno.serve(async (req) => {
           subject: "رمز التحقق لتسجيل الدخول - SightB",
           html: emailHtml,
           text: emailText,
-          purpose: "auth",
+          purpose: "transactional",
           label: "otp",
           idempotency_key: `otp-${user.id}-${Date.now()}`,
           message_id: messageId,
+          unsubscribe_token: unsubscribeToken,
           queued_at: new Date().toISOString(),
           metadata: { type: "otp", user_id: user.id },
         };

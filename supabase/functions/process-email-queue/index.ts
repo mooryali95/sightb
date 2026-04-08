@@ -133,17 +133,21 @@ function resolveEmailPurpose(
   runId?: string,
   unsubscribeToken?: string,
 ): 'auth' | 'transactional' {
-  if (queue === 'auth_emails') {
+  const explicitPurpose = getOptionalString(payload, 'purpose')
+
+  if (runId) {
     return 'auth'
   }
 
-  const explicitPurpose = getOptionalString(payload, 'purpose')
+  if (unsubscribeToken) {
+    return 'transactional'
+  }
 
   if (explicitPurpose === 'transactional') {
     return 'transactional'
   }
 
-  if (explicitPurpose === 'auth' || runId) {
+  if (queue === 'auth_emails' || explicitPurpose === 'auth') {
     return 'auth'
   }
 
