@@ -34,14 +34,15 @@ const queryClient = new QueryClient();
 function AppBootstrap({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const loadAll = useStore((state) => state.loadAll);
+  const userId = user?.id;
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading || !userId) return;
 
     loadAll().catch((error) => {
       console.error("[AppBootstrap.loadAll]", error);
     });
-  }, [authLoading, user?.id, loadAll]);
+  }, [authLoading, userId, loadAll]);
 
   return <>{children}</>;
 }

@@ -26,7 +26,7 @@ const EMAIL_SUBJECTS: Record<string, string> = {
 }
 
 // Template mapping
-const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
+const EMAIL_TEMPLATES: Record<string, React.ComponentType<Record<string, unknown>>> = {
   signup: SignupEmail,
   invite: InviteEmail,
   magiclink: MagicLinkEmail,
@@ -142,7 +142,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   }
 
   // Verify signature + timestamp, then parse payload.
-  let payload: any
+  let payload: Record<string, unknown>
   let run_id = ''
   try {
     const verified = await verifyWebhookRequest({
@@ -205,8 +205,9 @@ async function handleWebhook(req: Request): Promise<Response> {
 
   // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
   // payload.type is the hook event type ("auth")
-  const emailType = payload.data.action_type
-  console.log('Received auth event', { emailType, email: payload.data.email, run_id })
+  const hookData = payload.data as Record<string, unknown>
+  const emailType = typeof hookData.action_type === 'string' ? hookData.action_type : ''
+  console.log('Received auth event', { emailType, email: hookData.email, run_id })
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
   if (!EmailTemplate) {
@@ -246,7 +247,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: emailType,
-    recipient_email: payload.data.email,
+    recipient_email: hookData.email,
     status: 'pending',
   })
 
@@ -255,7 +256,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     payload: {
       run_id,
       message_id: messageId,
-      to: payload.data.email,
+      to: hookData.email,
       from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
       subject: EMAIL_SUBJECTS[emailType] || 'Notification',
@@ -273,7 +274,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     await supabase.from('email_send_log').insert({
       message_id: messageId,
       template_name: emailType,
-      recipient_email: payload.data.email,
+      recipient_email: hookData.email,
       status: 'failed',
       error_message: 'Failed to enqueue email',
     })
@@ -283,7 +284,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     })
   }
 
-  console.log('Auth email enqueued', { emailType, email: payload.data.email, run_id })
+  console.log('Auth email enqueued', { emailType, email: hookData.email, run_id })
 
   return new Response(
     JSON.stringify({ success: true, queued: true }),
