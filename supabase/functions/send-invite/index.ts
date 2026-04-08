@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { htmlToPlainText } from "../_shared/email-text.ts";
+import { getOrCreateUnsubscribeToken } from "../_shared/email-unsubscribe.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sightb.lovable.app",
@@ -187,6 +188,7 @@ Deno.serve(async (req) => {
       const emailHtml = buildInviteEmailHtml(resetLink, roleLabel);
       const emailText = htmlToPlainText(emailHtml);
       const messageId = crypto.randomUUID();
+      const unsubscribeToken = await getOrCreateUnsubscribeToken(supabaseAdmin, normalizedEmail);
 
       const emailPayload = {
         to: normalizedEmail,
@@ -195,10 +197,11 @@ Deno.serve(async (req) => {
         subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
         html: emailHtml,
         text: emailText,
-        purpose: "auth",
+        purpose: "transactional",
         label: "invite",
         idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
         message_id: messageId,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
         invite_id: inviteRecord?.id ?? null,
         metadata: {

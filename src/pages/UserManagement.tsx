@@ -211,6 +211,9 @@ export default function UserManagement() {
       setInvScopeType('system');
       setInvScopeId('');
       loadData();
+      window.setTimeout(() => {
+        void loadData();
+      }, 6000);
     } catch (err: any) {
       console.error('[invite]', err);
       toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
@@ -248,6 +251,9 @@ export default function UserManagement() {
       }
 
       loadData();
+      window.setTimeout(() => {
+        void loadData();
+      }, 6000);
     } catch (error) {
       console.error('[resend-invite]', error);
       toast.error('تعذر إعادة إرسال الدعوة');
@@ -443,40 +449,57 @@ export default function UserManagement() {
             className="stat-card"
           >
             <Collapsible open={invitesOpen} onOpenChange={setInvitesOpen}>
-              <CollapsibleTrigger asChild>
-                <button className="w-full flex items-center justify-between text-right">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-primary" />
-                    <h2 className="text-lg font-semibold">سجل الدعوات</h2>
-                    <div className="flex items-center gap-1.5">
-                      {pendingInvitesCount > 0 && (
-                        <Badge variant="outline" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">
-                          {pendingInvitesCount} معلّقة
+              <div className="flex items-start gap-3">
+                <CollapsibleTrigger asChild>
+                  <button className="flex-1 flex items-center justify-between text-right">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-primary" />
+                      <h2 className="text-lg font-semibold">سجل الدعوات</h2>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {pendingInvitesCount > 0 && (
+                          <Badge variant="outline" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">
+                            {pendingInvitesCount} معلّقة
+                          </Badge>
+                        )}
+                        {sentInvitesCount > 0 && (
+                          <Badge variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px]">
+                            {sentInvitesCount} مرسلة
+                          </Badge>
+                        )}
+                        {failedInvitesCount > 0 && (
+                          <Badge variant="outline" className="bg-destructive/10 text-destructive text-[10px]">
+                            {failedInvitesCount} فاشلة
+                          </Badge>
+                        )}
+                        {acceptedInvitesCount > 0 && (
+                          <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px]">
+                            {acceptedInvitesCount} مقبولة
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-[10px]">
+                          {invites.length} إجمالي
                         </Badge>
-                      )}
-                      {sentInvitesCount > 0 && (
-                        <Badge variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px]">
-                          {sentInvitesCount} مرسلة
-                        </Badge>
-                      )}
-                      {failedInvitesCount > 0 && (
-                        <Badge variant="outline" className="bg-destructive/10 text-destructive text-[10px]">
-                          {failedInvitesCount} فاشلة
-                        </Badge>
-                      )}
-                      {acceptedInvitesCount > 0 && (
-                        <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px]">
-                          {acceptedInvitesCount} مقبولة
-                        </Badge>
-                      )}
-                      <Badge variant="outline" className="text-[10px]">
-                        {invites.length} إجمالي
-                      </Badge>
+                      </div>
                     </div>
-                  </div>
-                  {invitesOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                </button>
-              </CollapsibleTrigger>
+                    {invitesOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                  </button>
+                </CollapsibleTrigger>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1 text-xs shrink-0"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void loadData();
+                  }}
+                  disabled={loading}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  تحديث
+                </Button>
+              </div>
               <CollapsibleContent>
                 <p className="text-xs text-muted-foreground mt-4 mb-3">
                   ستظهر هنا حالة كل دعوة بوضوح: قيد المعالجة، تم الإرسال، مقبولة، أو فشل الإرسال. يمكن إعادة إرسال أي دعوة غير مقبولة من الزر المخصص.
@@ -505,6 +528,18 @@ export default function UserManagement() {
                       className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'pending' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:opacity-80'}`}
                     >
                       معلّقة ({pendingInvitesCount})
+                    </button>
+                    <button
+                      onClick={() => setInviteStatusFilter('sent')}
+                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'sent' ? 'bg-primary text-primary-foreground' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:opacity-80'}`}
+                    >
+                      مرسلة ({sentInvitesCount})
+                    </button>
+                    <button
+                      onClick={() => setInviteStatusFilter('failed')}
+                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'failed' ? 'bg-destructive text-destructive-foreground' : 'bg-destructive/10 text-destructive hover:bg-destructive/20'}`}
+                    >
+                      فاشلة ({failedInvitesCount})
                     </button>
                     <button
                       onClick={() => setInviteStatusFilter('accepted')}
