@@ -1,14 +1,16 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "next-themes";
 import { SessionTimeoutWarning } from "@/components/SessionTimeoutWarning";
+import { useStore } from "@/store/useStore";
 
 // Eagerly load landing/login (initial pages users see)
 import Landing from "./pages/Landing";
@@ -29,6 +31,22 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
+function AppBootstrap({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
+  const loadAll = useStore((state) => state.loadAll);
+  const userId = user?.id;
+
+  useEffect(() => {
+    if (authLoading || !userId) return;
+
+    loadAll().catch((error) => {
+      console.error("[AppBootstrap.loadAll]", error);
+    });
+  }, [authLoading, userId, loadAll]);
+
+  return <>{children}</>;
+}
+
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
     <div className="text-center space-y-3">
@@ -47,25 +65,27 @@ const App = () => (
           <Sonner />
           <SessionTimeoutWarning />
           <BrowserRouter>
-            <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/welcome" element={<Landing />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/companies/new" element={<ProtectedRoute><NewCompany /></ProtectedRoute>} />
-                  <Route path="/company/:id" element={<ProtectedRoute><ErrorBoundary><CompanyDetail /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/portfolio/new" element={<ProtectedRoute><NewPortfolio /></ProtectedRoute>} />
-                  <Route path="/portfolio/:id" element={<ProtectedRoute><ErrorBoundary><PortfolioDetail /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/project/new" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
-                  <Route path="/project/:id" element={<ProtectedRoute><ErrorBoundary><ProjectDetail /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-                  <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </ErrorBoundary>
+            <AppBootstrap>
+              <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/welcome" element={<Landing />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
+                    <Route path="/companies/new" element={<ProtectedRoute><NewCompany /></ProtectedRoute>} />
+                    <Route path="/company/:id" element={<ProtectedRoute><ErrorBoundary><CompanyDetail /></ErrorBoundary></ProtectedRoute>} />
+                    <Route path="/portfolio/new" element={<ProtectedRoute><NewPortfolio /></ProtectedRoute>} />
+                    <Route path="/portfolio/:id" element={<ProtectedRoute><ErrorBoundary><PortfolioDetail /></ErrorBoundary></ProtectedRoute>} />
+                    <Route path="/project/new" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
+                    <Route path="/project/:id" element={<ProtectedRoute><ErrorBoundary><ProjectDetail /></ErrorBoundary></ProtectedRoute>} />
+                    <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                    <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
+            </AppBootstrap>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>

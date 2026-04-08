@@ -24,7 +24,8 @@ function getCorsHeaders(req: Request) {
 }
 
 const SENDER_DOMAIN = "notify.sight.basserh.com";
-const FROM_ADDRESS = `SightB <noreply@${SENDER_DOMAIN}>`;
+const FROM_DOMAIN = "sight.basserh.com";
+const FROM_ADDRESS = `SightB <noreply@${FROM_DOMAIN}>`;
 
 function buildInviteEmailHtml(resetLink: string, roleLabel: string): string {
   return `
@@ -236,10 +237,11 @@ Deno.serve(async (req) => {
       subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
       html: emailHtml,
       text: emailText,
-      purpose: "auth",
+      purpose: "transactional",
       label: "invite",
       idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
       message_id: messageId,
+      queued_at: new Date().toISOString(),
     };
 
     const { data: queueResult, error: queueError } = await supabaseAdmin.rpc("enqueue_email", {

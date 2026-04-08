@@ -22,7 +22,13 @@ function getCorsHeaders(req: Request) {
 const MAX_OTP_ATTEMPTS = 5;
 const RATE_LIMIT_WINDOW_MINUTES = 10;
 const SENDER_DOMAIN = "notify.sight.basserh.com";
-const FROM_ADDRESS = `SightB <noreply@${SENDER_DOMAIN}>`;
+const FROM_DOMAIN = "sight.basserh.com";
+const FROM_ADDRESS = `SightB <noreply@${FROM_DOMAIN}>`;
+
+interface UserRoleRow {
+  id: string;
+  role: string;
+}
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -61,7 +67,8 @@ Deno.serve(async (req) => {
       .select("id, role")
       .eq("user_id", user.id);
 
-    const hasAnyRole = allRoles && allRoles.length > 0;
+    const roles = (allRoles ?? []) as UserRoleRow[];
+    const hasAnyRole = roles.length > 0;
 
     if (!hasAnyRole) {
       return new Response(JSON.stringify({ requiresOtp: false, noRoles: true }), {
@@ -70,7 +77,7 @@ Deno.serve(async (req) => {
     }
 
     // Check if user has any edit-capable role (owner, admin, editor)
-    const canEditAnything = allRoles.some((r: any) =>
+    const canEditAnything = roles.some((r) =>
       ["owner", "admin", "editor"].includes(r.role)
     );
 
@@ -170,10 +177,11 @@ Deno.serve(async (req) => {
           subject: "رمز التحقق لتسجيل الدخول - SightB",
           html: emailHtml,
           text: emailText,
-          purpose: "auth",
+          purpose: "transactional",
           label: "otp",
           idempotency_key: `otp-${user.id}-${Date.now()}`,
           message_id: messageId,
+          queued_at: new Date().toISOString(),
         };
 
         const { error: queueError } = await supabase.rpc("enqueue_email", {
