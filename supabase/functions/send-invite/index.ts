@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
     const normalizedEmail = email.toLowerCase().trim();
 
     // 1. Save the invite record
-    const { error: inviteError } = await supabaseAdmin
+    const { data: inviteRecord, error: inviteError } = await supabaseAdmin
       .from("user_invites")
       .insert({
         email: normalizedEmail,
@@ -125,7 +125,9 @@ Deno.serve(async (req) => {
         scope_type: safeScopeType,
         scope_id: safeScopeType === "system" ? null : scope_id || null,
         invited_by: user.id,
-      });
+      })
+      .select("id")
+      .single();
 
     if (inviteError) {
       console.error("[send-invite] Insert error:", JSON.stringify(inviteError));
@@ -140,6 +142,70 @@ Deno.serve(async (req) => {
     const existingUser = existingUsers?.users?.find(
       (u) => u.email?.toLowerCase() === normalizedEmail
     );
+
+    const sendInviteEmail = async () => {
+      const redirectUrl = `${getAllowedOrigin(req)}/reset-password`;
+
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email: normalizedEmail,
+        options: { redirectTo: redirectUrl },
+      });
+
+      let resetLink = redirectUrl;
+      if (linkData?.properties?.action_link) {
+        resetLink = linkData.properties.action_link;
+      }
+      console.log("[send-invite] Reset link generated:", !!linkData, "error:", linkError?.message);
+
+      const roleLabel = safeRole === "admin" ? "مدير النظام" : safeRole === "editor" ? "محرر" : "مشاهد";
+      const emailHtml = buildInviteEmailHtml(resetLink, roleLabel);
+      const emailText = htmlToPlainText(emailHtml);
+      const messageId = crypto.randomUUID();
+
+      const emailPayload = {
+        to: normalizedEmail,
+        from: FROM_ADDRESS,
+        sender_domain: SENDER_DOMAIN,
+        subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
+        html: emailHtml,
+        text: emailText,
+        purpose: "auth",
+        label: "invite",
+        idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
+        message_id: messageId,
+        queued_at: new Date().toISOString(),
+      };
+
+      const { data: queueResult, error: queueError } = await supabaseAdmin.rpc("enqueue_email", {
+        queue_name: "auth_emails",
+        payload: emailPayload,
+      });
+
+      const emailQueued = !queueError;
+      console.log("[send-invite] Email enqueued:", emailQueued, "error:", queueError?.message, "msgId:", queueResult);
+
+      await supabaseAdmin.from("email_send_log").insert({
+        message_id: messageId,
+        recipient_email: normalizedEmail,
+        template_name: "invite",
+        status: emailQueued ? "pending" : "failed",
+        error_message: queueError?.message || null,
+        metadata: { role: safeRole, scope_type: safeScopeType },
+      });
+
+      if (inviteRecord?.id) {
+        await supabaseAdmin
+          .from("user_invites")
+          .update({ status: emailQueued ? "sent" : "failed" })
+          .eq("id", inviteRecord.id);
+      }
+
+      return {
+        emailQueued,
+        queueError,
+      };
+    };
 
     if (existingUser) {
       console.log("[send-invite] User exists:", existingUser.id);
@@ -170,17 +236,17 @@ Deno.serve(async (req) => {
         status: "active",
       }, { onConflict: "id" });
 
-      await supabaseAdmin
-        .from("user_invites")
-        .update({ status: "accepted" })
-        .eq("email", normalizedEmail)
-        .eq("status", "pending");
+      const { emailQueued, queueError } = await sendInviteEmail();
 
       return new Response(
         JSON.stringify({
           success: true,
-          message: "المستخدم موجود بالفعل، تم منحه الصلاحيات مباشرة",
+          message: emailQueued
+            ? "المستخدم موجود بالفعل، تم منحه الصلاحيات وإرسال رابط الدخول"
+            : "المستخدم موجود بالفعل، تم منحه الصلاحيات لكن تعذر إرسال البريد",
           existingUser: true,
+          emailSent: emailQueued,
+          errorDetail: queueError?.message || null,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -209,58 +275,7 @@ Deno.serve(async (req) => {
 
     console.log("[send-invite] User created:", newUser.user?.id);
 
-    // 4. Generate a password reset link
-    const redirectUrl = `${getAllowedOrigin(req)}/reset-password`;
-
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "recovery",
-      email: normalizedEmail,
-      options: { redirectTo: redirectUrl },
-    });
-
-    let resetLink = redirectUrl;
-    if (linkData?.properties?.action_link) {
-      resetLink = linkData.properties.action_link;
-    }
-    console.log("[send-invite] Reset link generated:", !!linkData, "error:", linkError?.message);
-
-    // 5. Enqueue invitation email via Lovable Email queue
-    const roleLabel = safeRole === "admin" ? "مدير النظام" : safeRole === "editor" ? "محرر" : "مشاهد";
-    const emailHtml = buildInviteEmailHtml(resetLink, roleLabel);
-    const emailText = htmlToPlainText(emailHtml);
-    const messageId = crypto.randomUUID();
-
-    const emailPayload = {
-      to: normalizedEmail,
-      from: FROM_ADDRESS,
-      sender_domain: SENDER_DOMAIN,
-      subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
-      html: emailHtml,
-      text: emailText,
-      purpose: "transactional",
-      label: "invite",
-      idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
-      message_id: messageId,
-      queued_at: new Date().toISOString(),
-    };
-
-    const { data: queueResult, error: queueError } = await supabaseAdmin.rpc("enqueue_email", {
-      queue_name: "auth_emails",
-      payload: emailPayload,
-    });
-
-    const emailQueued = !queueError;
-    console.log("[send-invite] Email enqueued:", emailQueued, "error:", queueError?.message, "msgId:", queueResult);
-
-    // Log to email_send_log
-    await supabaseAdmin.from("email_send_log").insert({
-      message_id: messageId,
-      recipient_email: normalizedEmail,
-      template_name: "invite",
-      status: emailQueued ? "pending" : "failed",
-      error_message: queueError?.message || null,
-      metadata: { role: safeRole, scope_type: safeScopeType },
-    });
+    const { emailQueued, queueError } = await sendInviteEmail();
 
     return new Response(
       JSON.stringify({

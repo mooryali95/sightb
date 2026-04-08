@@ -42,6 +42,18 @@ export default function Login() {
     }
   }, [resendCooldown]);
 
+  const finalizeSuccessfulAccess = async () => {
+    try {
+      await supabase.functions.invoke('accept-invite', {
+        body: {},
+      });
+    } catch (error) {
+      console.error('[accept-invite]', error);
+    }
+
+    navigate('/', { replace: true });
+  };
+
   const checkAndSendOtp = async (): Promise<string> => {
     const fingerprint = getDeviceFingerprint();
     const { data: { session } } = await supabase.auth.getSession();
@@ -111,7 +123,7 @@ export default function Login() {
         setResendCooldown(60);
         toast.warning('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
       } else {
-        navigate('/', { replace: true });
+        await finalizeSuccessfulAccess();
       }
     } catch (error: any) {
       console.error('[login]', error);
@@ -145,7 +157,7 @@ export default function Login() {
       }
 
       toast.success('تم التحقق بنجاح');
-      navigate('/', { replace: true });
+      await finalizeSuccessfulAccess();
     } catch (error: any) {
       console.error('[otp-verify]', error);
       toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
@@ -159,9 +171,19 @@ export default function Login() {
     setOtpLoading(true);
     try {
       const fingerprint = getDeviceFingerprint();
-      await supabase.functions.invoke('admin-otp', {
+      const res = await supabase.functions.invoke('admin-otp', {
         body: { action: 'check', fingerprint },
       });
+
+      if (res.error) {
+        throw res.error;
+      }
+
+      if (res.data?.sent !== true) {
+        toast.warning('تعذر إرسال الرمز حالياً');
+        return;
+      }
+
       setResendCooldown(60);
       setOtpCode('');
       toast.success('تم إرسال رمز جديد');

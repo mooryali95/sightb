@@ -79,6 +79,30 @@ function getIdempotencyKey(
   return getOptionalString(payload, 'idempotency_key') ?? emailMessageId
 }
 
+function resolveEmailPurpose(
+  queue: string,
+  payload: Record<string, unknown>,
+  runId?: string,
+  unsubscribeToken?: string,
+): 'auth' | 'transactional' {
+  const explicitPurpose = getOptionalString(payload, 'purpose')
+
+  if (queue === 'auth_emails' && !runId && !unsubscribeToken) {
+    return 'auth'
+  }
+
+  if (explicitPurpose === 'auth' || explicitPurpose === 'transactional') {
+    return explicitPurpose
+  }
+
+  const label = getOptionalString(payload, 'label')
+  if (label && AUTH_LABELS.has(label)) {
+    return 'auth'
+  }
+
+  return queue === 'auth_emails' ? 'auth' : 'transactional'
+}
+
 Deno.serve(async (req) => {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -195,6 +219,7 @@ Deno.serve(async (req) => {
       const runId = getOptionalString(normalizedPayload, 'run_id')
       const unsubscribeToken = getOptionalString(normalizedPayload, 'unsubscribe_token')
       const idempotencyKey = getIdempotencyKey(normalizedPayload, emailMessageId)
+      const purpose = resolveEmailPurpose(queue, normalizedPayload, runId, unsubscribeToken)
 
       // Drop expired messages (TTL exceeded)
       if (payload.queued_at) {
@@ -282,7 +307,7 @@ Deno.serve(async (req) => {
           subject: payload.subject,
           html: payload.html,
           text: emailText,
-          purpose: 'transactional',
+          purpose,
           label: payload.label,
           idempotency_key: idempotencyKey,
           message_id: emailMessageId,
