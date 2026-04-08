@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { htmlToPlainText } from "../_shared/email-text.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sightb.lovable.app",
@@ -159,14 +160,19 @@ Deno.serve(async (req) => {
           </div>
         `;
 
+        const messageId = crypto.randomUUID();
+        const emailText = htmlToPlainText(emailHtml);
+
         const emailPayload = {
           to: profile.email,
           from: FROM_ADDRESS,
           sender_domain: SENDER_DOMAIN,
           subject: "رمز التحقق لتسجيل الدخول - SightB",
           html: emailHtml,
+          text: emailText,
           purpose: "transactional",
           idempotency_key: `otp-${user.id}-${Date.now()}`,
+          message_id: messageId,
         };
 
         const { error: queueError } = await supabase.rpc("enqueue_email", {
@@ -179,6 +185,7 @@ Deno.serve(async (req) => {
 
         // Log to email_send_log
         await supabase.from("email_send_log").insert({
+          message_id: messageId,
           recipient_email: profile.email,
           template_name: "auth_emails",
           status: emailSent ? "pending" : "failed",

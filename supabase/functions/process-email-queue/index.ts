@@ -1,5 +1,6 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { htmlToPlainText } from '../_shared/email-text.ts'
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -41,6 +42,28 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
   } catch {
     return null
   }
+}
+
+function getEmailMessageId(queue: string, msg: { msg_id: number; message: Record<string, unknown> }): string {
+  const messageId = msg?.message?.message_id
+  return typeof messageId === 'string' && messageId.trim().length > 0
+    ? messageId
+    : `${queue}-${msg.msg_id}`
+}
+
+function getEmailText(payload: Record<string, unknown>): string {
+  const text = payload.text
+  if (typeof text === 'string' && text.trim().length > 0) {
+    return text.trim()
+  }
+
+  const html = payload.html
+  if (typeof html === 'string' && html.trim().length > 0) {
+    return htmlToPlainText(html)
+  }
+
+  const subject = payload.subject
+  return typeof subject === 'string' && subject.trim().length > 0 ? subject.trim() : 'Notification'
 }
 
 Deno.serve(async (req) => {
@@ -121,13 +144,7 @@ Deno.serve(async (req) => {
     // messages not attempted when a 429 stops processing early.
     const messageIds = Array.from(
       new Set(
-        messages
-          .map((msg) =>
-            msg?.message?.message_id && typeof msg.message.message_id === 'string'
-              ? msg.message.message_id
-              : null
-          )
-          .filter((id): id is string => Boolean(id))
+        messages.map((msg) => getEmailMessageId(queue, msg as { msg_id: number; message: Record<string, unknown> }))
       )
     )
     const failedAttemptsByMessageId = new Map<string, number>()
@@ -158,10 +175,9 @@ Deno.serve(async (req) => {
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i]
       const payload = msg.message
-      const failedAttempts =
-        payload?.message_id && typeof payload.message_id === 'string'
-          ? (failedAttemptsByMessageId.get(payload.message_id) ?? 0)
-          : 0
+      const emailMessageId = getEmailMessageId(queue, msg as { msg_id: number; message: Record<string, unknown> })
+      const failedAttempts = failedAttemptsByMessageId.get(emailMessageId) ?? 0
+      const emailText = getEmailText(payload as Record<string, unknown>)
 
       // Drop expired messages (TTL exceeded)
       if (payload.queued_at) {
@@ -175,7 +191,7 @@ Deno.serve(async (req) => {
             ttl_minutes: ttlMinutes[queue],
           })
           await supabase.from('email_send_log').insert({
-            message_id: payload.message_id,
+            message_id: emailMessageId,
             template_name: payload.label || queue,
             recipient_email: payload.to,
             status: 'dlq',
@@ -197,7 +213,7 @@ Deno.serve(async (req) => {
       // Move to DLQ if max failed send attempts reached.
       if (failedAttempts >= MAX_RETRIES) {
         await supabase.from('email_send_log').insert({
-          message_id: payload.message_id,
+          message_id: emailMessageId,
           template_name: payload.label || queue,
           recipient_email: payload.to,
           status: 'dlq',
@@ -216,11 +232,11 @@ Deno.serve(async (req) => {
       }
 
       // Guard: skip if another worker already sent this message (VT expired race)
-      if (payload.message_id) {
+        if (emailMessageId) {
         const { data: alreadySent } = await supabase
           .from('email_send_log')
           .select('id')
-          .eq('message_id', payload.message_id)
+            .eq('message_id', emailMessageId)
           .eq('status', 'sent')
           .maybeSingle()
 
@@ -228,7 +244,7 @@ Deno.serve(async (req) => {
           console.warn('Skipping duplicate send (already sent)', {
             queue,
             msg_id: msg.msg_id,
-            message_id: payload.message_id,
+              message_id: emailMessageId,
           })
           const { error: dupDelError } = await supabase.rpc('delete_email', {
             queue_name: queue,
@@ -250,12 +266,12 @@ Deno.serve(async (req) => {
             sender_domain: payload.sender_domain,
             subject: payload.subject,
             html: payload.html,
-            text: payload.text,
+            text: emailText,
             purpose: payload.purpose,
             label: payload.label,
             idempotency_key: payload.idempotency_key,
             unsubscribe_token: payload.unsubscribe_token,
-            message_id: payload.message_id,
+            message_id: emailMessageId,
           },
           // sendUrl is optional — when LOVABLE_SEND_URL is not set, the library
           // falls back to the default Lovable API endpoint (https://api.lovable.dev).
@@ -265,7 +281,7 @@ Deno.serve(async (req) => {
 
         // Log success
         await supabase.from('email_send_log').insert({
-          message_id: payload.message_id,
+          message_id: emailMessageId,
           template_name: payload.label || queue,
           recipient_email: payload.to,
           status: 'sent',
@@ -292,7 +308,7 @@ Deno.serve(async (req) => {
 
         if (isRateLimited(error)) {
           await supabase.from('email_send_log').insert({
-            message_id: payload.message_id,
+            message_id: emailMessageId,
             template_name: payload.label || queue,
             recipient_email: payload.to,
             status: 'rate_limited',
@@ -319,15 +335,13 @@ Deno.serve(async (req) => {
 
         // Log non-429 failures to track real retry attempts.
         await supabase.from('email_send_log').insert({
-          message_id: payload.message_id,
+          message_id: emailMessageId,
           template_name: payload.label || queue,
           recipient_email: payload.to,
           status: 'failed',
           error_message: errorMsg.slice(0, 1000),
         })
-        if (payload?.message_id && typeof payload.message_id === 'string') {
-          failedAttemptsByMessageId.set(payload.message_id, failedAttempts + 1)
-        }
+        failedAttemptsByMessageId.set(emailMessageId, failedAttempts + 1)
 
         // Non-429 errors: message stays invisible until VT expires, then retried
       }

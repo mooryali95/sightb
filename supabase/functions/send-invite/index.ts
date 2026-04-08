@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { htmlToPlainText } from "../_shared/email-text.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sightb.lovable.app",
@@ -7,10 +8,14 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8080",
 ];
 
-function getCorsHeaders(req: Request) {
+function getAllowedOrigin(req: Request) {
   const origin = req.headers.get("origin") || "";
   const isAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".lovable.app") || origin.endsWith(".lovableproject.com");
-  const allowedOrigin = isAllowed ? origin : ALLOWED_ORIGINS[0];
+  return isAllowed ? origin : ALLOWED_ORIGINS[0];
+}
+
+function getCorsHeaders(req: Request) {
+  const allowedOrigin = getAllowedOrigin(req);
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers":
@@ -204,7 +209,7 @@ Deno.serve(async (req) => {
     console.log("[send-invite] User created:", newUser.user?.id);
 
     // 4. Generate a password reset link
-    const redirectUrl = "https://sight.basserh.com/reset-password";
+    const redirectUrl = `${getAllowedOrigin(req)}/reset-password`;
 
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
@@ -221,6 +226,8 @@ Deno.serve(async (req) => {
     // 5. Enqueue invitation email via Lovable Email queue
     const roleLabel = safeRole === "admin" ? "مدير النظام" : safeRole === "editor" ? "محرر" : "مشاهد";
     const emailHtml = buildInviteEmailHtml(resetLink, roleLabel);
+    const emailText = htmlToPlainText(emailHtml);
+    const messageId = crypto.randomUUID();
 
     const emailPayload = {
       to: normalizedEmail,
@@ -228,8 +235,10 @@ Deno.serve(async (req) => {
       sender_domain: SENDER_DOMAIN,
       subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
       html: emailHtml,
+      text: emailText,
       purpose: "transactional",
       idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
+      message_id: messageId,
     };
 
     const { data: queueResult, error: queueError } = await supabaseAdmin.rpc("enqueue_email", {
@@ -242,6 +251,7 @@ Deno.serve(async (req) => {
 
     // Log to email_send_log
     await supabaseAdmin.from("email_send_log").insert({
+      message_id: messageId,
       recipient_email: normalizedEmail,
       template_name: "invite",
       status: emailQueued ? "pending" : "failed",
