@@ -358,7 +358,7 @@ export default function CompanyDetail() {
               <h3 className="text-sm font-semibold">المحافظ ({compPortfolios.length})</h3>
             </div>
             {summary?.portfolioSummaries.map(ps => {
-              const portfolioProjects = companyProjects.filter(p => p.portfolioId === ps.portfolioId);
+              const portfolioProjects = visibleCompanyProjects.filter(p => p.portfolioId === ps.portfolioId);
               return (
                 <div key={ps.portfolioId} className="rounded-xl border border-border bg-card overflow-hidden">
                   {/* Portfolio header */}
