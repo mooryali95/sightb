@@ -20,30 +20,8 @@ function getCorsHeaders(req: Request) {
 
 const MAX_OTP_ATTEMPTS = 5;
 const RATE_LIMIT_WINDOW_MINUTES = 10;
-
-async function sendViaResend(to: string, subject: string, html: string) {
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) {
-    console.error("[admin-otp] RESEND_API_KEY not set");
-    return false;
-  }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${resendKey}`,
-    },
-    body: JSON.stringify({
-      from: "SightB <noreply@notify.sight.basserh.com>",
-      to: [to],
-      subject,
-      html,
-    }),
-  });
-  const data = await res.json();
-  console.log("[admin-otp] Resend response:", JSON.stringify(data));
-  return res.ok;
-}
+const SENDER_DOMAIN = "notify.sight.basserh.com";
+const FROM_ADDRESS = `SightB <noreply@${SENDER_DOMAIN}>`;
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -85,7 +63,6 @@ Deno.serve(async (req) => {
     const hasAnyRole = allRoles && allRoles.length > 0;
 
     if (!hasAnyRole) {
-      // No roles at all — user is not authorized to use the system
       return new Response(JSON.stringify({ requiresOtp: false, noRoles: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -97,7 +74,6 @@ Deno.serve(async (req) => {
     );
 
     if (!canEditAnything) {
-      // Viewer — no OTP required
       return new Response(JSON.stringify({ requiresOtp: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -105,7 +81,6 @@ Deno.serve(async (req) => {
 
     if (action === "check") {
       if (fingerprint) {
-        // Clean up expired devices for this user
         await supabase
           .from("trusted_devices")
           .delete()
@@ -127,7 +102,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Rate limiting: check recent OTP codes in the last N minutes
+      // Rate limiting
       const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
       const { count } = await supabase
         .from("admin_otp_codes")
@@ -136,7 +111,6 @@ Deno.serve(async (req) => {
         .gte("created_at", windowStart);
 
       if ((count ?? 0) >= MAX_OTP_ATTEMPTS) {
-        // Sign out the user to prevent session abuse
         await supabase.auth.admin.signOut(user.id);
         return new Response(
           JSON.stringify({ error: "تم تجاوز الحد الأقصى للمحاولات. يرجى المحاولة بعد 10 دقائق.", rateLimited: true }),
@@ -184,8 +158,33 @@ Deno.serve(async (req) => {
             <p style="color: #aaa; font-size: 11px; text-align: center;">SightB - نظام إدارة المشاريع المالية</p>
           </div>
         `;
-        emailSent = await sendViaResend(profile.email, 'رمز التحقق لتسجيل الدخول - SightB', emailHtml);
-        console.log("[admin-otp] Email sent:", emailSent, "to:", profile.email);
+
+        const emailPayload = {
+          to: profile.email,
+          from: FROM_ADDRESS,
+          sender_domain: SENDER_DOMAIN,
+          subject: "رمز التحقق لتسجيل الدخول - SightB",
+          html: emailHtml,
+          purpose: "transactional",
+          idempotency_key: `otp-${user.id}-${Date.now()}`,
+        };
+
+        const { error: queueError } = await supabase.rpc("enqueue_email", {
+          queue_name: "auth_emails",
+          payload: emailPayload,
+        });
+
+        emailSent = !queueError;
+        console.log("[admin-otp] Email enqueued:", emailSent, "to:", profile.email, "error:", queueError?.message);
+
+        // Log to email_send_log
+        await supabase.from("email_send_log").insert({
+          recipient_email: profile.email,
+          template_name: "auth_emails",
+          status: emailSent ? "pending" : "failed",
+          error_message: queueError?.message || null,
+          metadata: { type: "otp" },
+        });
       }
 
       return new Response(
@@ -202,7 +201,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Rate limiting on verify attempts too
       const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
       const { count } = await supabase
         .from("admin_otp_codes")
@@ -218,7 +216,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Find the latest unused, unexpired OTP for this user (regardless of code match)
       const { data: latestOtp } = await supabase
         .from("admin_otp_codes")
         .select("*")
@@ -238,7 +235,6 @@ Deno.serve(async (req) => {
 
       const MAX_FAILED_ATTEMPTS = 5;
 
-      // Check if too many failed attempts on this code
       if (latestOtp.failed_attempts >= MAX_FAILED_ATTEMPTS) {
         await supabase
           .from("admin_otp_codes")
@@ -250,7 +246,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Check if code matches
       if (latestOtp.code !== code) {
         await supabase
           .from("admin_otp_codes")
@@ -262,7 +257,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Code matches — mark as used
       await supabase
         .from("admin_otp_codes")
         .update({ used: true })
