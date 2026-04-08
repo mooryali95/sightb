@@ -22,7 +22,8 @@ function getCorsHeaders(req: Request) {
 const MAX_OTP_ATTEMPTS = 5;
 const RATE_LIMIT_WINDOW_MINUTES = 10;
 const SENDER_DOMAIN = "notify.sight.basserh.com";
-const FROM_ADDRESS = `SightB <noreply@${SENDER_DOMAIN}>`;
+const FROM_DOMAIN = "sight.basserh.com";
+const FROM_ADDRESS = `SightB <noreply@${FROM_DOMAIN}>`;
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -170,10 +171,11 @@ Deno.serve(async (req) => {
           subject: "رمز التحقق لتسجيل الدخول - SightB",
           html: emailHtml,
           text: emailText,
-          purpose: "auth",
+          purpose: "transactional",
           label: "otp",
           idempotency_key: `otp-${user.id}-${Date.now()}`,
           message_id: messageId,
+          queued_at: new Date().toISOString(),
         };
 
         const { error: queueError } = await supabase.rpc("enqueue_email", {

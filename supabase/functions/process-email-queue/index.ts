@@ -67,18 +67,16 @@ function getEmailText(payload: Record<string, unknown>): string {
   return typeof subject === 'string' && subject.trim().length > 0 ? subject.trim() : 'Notification'
 }
 
-function getEmailPurpose(queue: string, payload: Record<string, unknown>): 'auth' | 'transactional' {
-  const label = payload.label
-  if (queue === 'auth_emails') {
-    return 'auth'
-  }
-  if (typeof label === 'string' && AUTH_LABELS.has(label)) {
-    return 'auth'
-  }
-  if (!payload.unsubscribe_token) {
-    return 'auth'
-  }
-  return 'transactional'
+function getOptionalString(payload: Record<string, unknown>, key: string): string | undefined {
+  const value = payload[key]
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined
+}
+
+function getIdempotencyKey(
+  payload: Record<string, unknown>,
+  emailMessageId: string,
+): string {
+  return getOptionalString(payload, 'idempotency_key') ?? emailMessageId
 }
 
 Deno.serve(async (req) => {
@@ -192,8 +190,11 @@ Deno.serve(async (req) => {
       const payload = msg.message
       const emailMessageId = getEmailMessageId(queue, msg as { msg_id: number; message: Record<string, unknown> })
       const failedAttempts = failedAttemptsByMessageId.get(emailMessageId) ?? 0
-      const emailText = getEmailText(payload as Record<string, unknown>)
-      const emailPurpose = getEmailPurpose(queue, payload as Record<string, unknown>)
+      const normalizedPayload = payload as Record<string, unknown>
+      const emailText = getEmailText(normalizedPayload)
+      const runId = getOptionalString(normalizedPayload, 'run_id')
+      const unsubscribeToken = getOptionalString(normalizedPayload, 'unsubscribe_token')
+      const idempotencyKey = getIdempotencyKey(normalizedPayload, emailMessageId)
 
       // Drop expired messages (TTL exceeded)
       if (payload.queued_at) {
@@ -274,21 +275,29 @@ Deno.serve(async (req) => {
       }
 
       try {
+        const sendPayload: Record<string, unknown> = {
+          to: payload.to,
+          from: payload.from,
+          sender_domain: payload.sender_domain,
+          subject: payload.subject,
+          html: payload.html,
+          text: emailText,
+          purpose: 'transactional',
+          label: payload.label,
+          idempotency_key: idempotencyKey,
+          message_id: emailMessageId,
+        }
+
+        if (runId) {
+          sendPayload.run_id = runId
+        }
+
+        if (unsubscribeToken) {
+          sendPayload.unsubscribe_token = unsubscribeToken
+        }
+
         await sendLovableEmail(
-          {
-            run_id: payload.run_id,
-            to: payload.to,
-            from: payload.from,
-            sender_domain: payload.sender_domain,
-            subject: payload.subject,
-            html: payload.html,
-            text: emailText,
-            purpose: emailPurpose,
-            label: payload.label,
-            idempotency_key: payload.idempotency_key,
-            unsubscribe_token: emailPurpose === 'transactional' ? payload.unsubscribe_token : undefined,
-            message_id: emailMessageId,
-          },
+          sendPayload,
           // sendUrl is optional — when LOVABLE_SEND_URL is not set, the library
           // falls back to the default Lovable API endpoint (https://api.lovable.dev).
           // Set LOVABLE_SEND_URL as a Supabase secret to override (e.g. for local dev).

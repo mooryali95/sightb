@@ -261,8 +261,9 @@ async function handleWebhook(req: Request): Promise<Response> {
       subject: EMAIL_SUBJECTS[emailType] || 'Notification',
       html,
       text,
-      purpose: 'auth',
+      purpose: 'transactional',
       label: emailType,
+      idempotency_key: `${emailType}-${run_id}`,
       queued_at: new Date().toISOString(),
     },
   })
