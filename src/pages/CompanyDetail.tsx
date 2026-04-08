@@ -24,7 +24,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, DollarSign, TrendingUp, AlertTriangle, Plus,
   FolderKanban, ArrowLeft, Briefcase, FileSpreadsheet, Pencil, Trash2,
-  Archive, ChevronDown,
+  Archive, ChevronDown, Eye, EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -84,6 +84,19 @@ export default function CompanyDetail() {
   const [icDate, setIcDate] = useState(new Date().toISOString().split('T')[0]);
 
   const [expandedPortfolios, setExpandedPortfolios] = useState<Record<string, boolean>>({});
+  const [showInactive, setShowInactive] = useState(false);
+
+  const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
+  const visibleCompanyProjects = useMemo(() => {
+    if (showInactive) return companyProjects;
+    return companyProjects.filter(p => !INACTIVE_STATUSES.includes(p.status));
+  }, [companyProjects, showInactive]);
+  const visibleStandaloneProjects = useMemo(() => {
+    if (showInactive) return standaloneProjects;
+    return standaloneProjects.filter(p => !INACTIVE_STATUSES.includes(p.status));
+  }, [standaloneProjects, showInactive]);
+
+  const inactiveCount = companyProjects.filter(p => INACTIVE_STATUSES.includes(p.status)).length;
 
   const togglePortfolio = (portfolioId: string) => {
     setExpandedPortfolios(prev => ({ ...prev, [portfolioId]: !prev[portfolioId] }));
