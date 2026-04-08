@@ -557,14 +557,14 @@ export default function CompanyDetail() {
         </div>
 
         {/* Standalone projects */}
-        {standaloneProjects.length > 0 && (
+        {visibleStandaloneProjects.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Briefcase className="w-4 h-4 text-muted-foreground" />
-              <h3 className="text-sm font-semibold">مشاريع مستقلة ({standaloneProjects.length})</h3>
+              <h3 className="text-sm font-semibold">مشاريع مستقلة ({visibleStandaloneProjects.length})</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {standaloneProjects.map(project => {
+              {visibleStandaloneProjects.map(project => {
                 const projExpenses = expenses.filter(e => e.projectId === project.id);
                 const totalSpent = projExpenses.reduce((s, e) => s + e.amount, 0);
                 const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
