@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Filter, Search, X, ChevronDown } from 'lucide-react';
+import { Filter, Search, X, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,6 +10,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 
 interface Company { id: string; name: string; }
+
+const ACTIVE_STATUSES = ['planning', 'pending_approval', 'approved', 'active', 'on-hold'] as const;
+const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'] as const;
 
 interface DashboardFiltersProps {
   companies: Company[];
@@ -28,6 +31,8 @@ interface DashboardFiltersProps {
   isMobile: boolean;
   filtersOpen: boolean;
   setFiltersOpen: (v: boolean) => void;
+  showInactive: boolean;
+  setShowInactive: (v: boolean) => void;
 }
 
 export function DashboardFilters({
@@ -35,6 +40,7 @@ export function DashboardFilters({
   searchQuery, setSearchQuery, timePeriod, setTimePeriod,
   hasActiveFilters, clearFilters, filteredCount, totalCount,
   isMobile, filtersOpen, setFiltersOpen,
+  showInactive, setShowInactive,
 }: DashboardFiltersProps) {
   return (
     <motion.div
@@ -50,7 +56,7 @@ export function DashboardFilters({
             <span className="text-xs font-semibold">تصفية</span>
             {hasActiveFilters && (
               <span className="text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">
-                {[filterCompany !== 'all', filterStatus !== 'all', searchQuery !== '', timePeriod !== 'all'].filter(Boolean).length}
+                {[filterCompany !== 'all', filterStatus !== 'all', searchQuery !== '', timePeriod !== 'all', showInactive].filter(Boolean).length}
               </span>
             )}
           </div>
@@ -85,14 +91,24 @@ export function DashboardFilters({
               </SelectContent>
             </Select>
 
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <Select value={filterStatus} onValueChange={(v) => {
+              setFilterStatus(v);
+              if (INACTIVE_STATUSES.includes(v as any)) {
+                setShowInactive(true);
+              }
+            }}>
               <SelectTrigger className="w-full sm:w-[150px] h-9 text-sm">
                 <SelectValue placeholder="جميع الحالات" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">جميع الحالات</SelectItem>
-                {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground">نشطة</div>
+                {ACTIVE_STATUSES.map((key) => (
+                  <SelectItem key={key} value={key}>{PROJECT_STATUS_LABELS[key]}</SelectItem>
+                ))}
+                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground border-t border-border mt-1 pt-1">منتهية</div>
+                {INACTIVE_STATUSES.map((key) => (
+                  <SelectItem key={key} value={key}>{PROJECT_STATUS_LABELS[key]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -108,6 +124,17 @@ export function DashboardFilters({
                 <SelectItem value="year">هذه السنة</SelectItem>
               </SelectContent>
             </Select>
+
+            <Button
+              variant={showInactive ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowInactive(!showInactive)}
+              className={cn("gap-1.5 text-xs shrink-0 h-9", showInactive && "bg-muted-foreground/20 text-foreground hover:bg-muted-foreground/30")}
+              title={showInactive ? 'إخفاء المشاريع المنتهية' : 'عرض المشاريع المنتهية والمؤرشفة'}
+            >
+              {showInactive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              {showInactive ? 'إخفاء المنتهية' : 'عرض المنتهية'}
+            </Button>
 
             <AnimatePresence>
               {hasActiveFilters && (
@@ -134,6 +161,9 @@ export function DashboardFilters({
           className="text-xs text-muted-foreground mt-2"
         >
           عرض {filteredCount} من {totalCount} مشروع
+          {!showInactive && filterStatus === 'all' && (
+            <span className="text-muted-foreground/70"> (المشاريع النشطة فقط)</span>
+          )}
         </motion.p>
       )}
     </motion.div>

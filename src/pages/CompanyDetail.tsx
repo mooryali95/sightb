@@ -24,7 +24,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, DollarSign, TrendingUp, AlertTriangle, Plus,
   FolderKanban, ArrowLeft, Briefcase, FileSpreadsheet, Pencil, Trash2,
-  Archive, ChevronDown,
+  Archive, ChevronDown, Eye, EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -84,6 +84,19 @@ export default function CompanyDetail() {
   const [icDate, setIcDate] = useState(new Date().toISOString().split('T')[0]);
 
   const [expandedPortfolios, setExpandedPortfolios] = useState<Record<string, boolean>>({});
+  const [showInactive, setShowInactive] = useState(false);
+
+  const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
+  const visibleCompanyProjects = useMemo(() => {
+    if (showInactive) return companyProjects;
+    return companyProjects.filter(p => !INACTIVE_STATUSES.includes(p.status));
+  }, [companyProjects, showInactive]);
+  const visibleStandaloneProjects = useMemo(() => {
+    if (showInactive) return standaloneProjects;
+    return standaloneProjects.filter(p => !INACTIVE_STATUSES.includes(p.status));
+  }, [standaloneProjects, showInactive]);
+
+  const inactiveCount = companyProjects.filter(p => INACTIVE_STATUSES.includes(p.status)).length;
 
   const togglePortfolio = (portfolioId: string) => {
     setExpandedPortfolios(prev => ({ ...prev, [portfolioId]: !prev[portfolioId] }));
@@ -164,11 +177,25 @@ export default function CompanyDetail() {
                     <p className="text-sm text-muted-foreground mt-0.5">{company.description}</p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {compPortfolios.length} محفظة · {companyProjects.length} مشروع
+                    {compPortfolios.length} محفظة · {visibleCompanyProjects.length} مشروع
+                    {inactiveCount > 0 && !showInactive && (
+                      <span className="text-muted-foreground/60"> ({inactiveCount} منتهي)</span>
+                    )}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {inactiveCount > 0 && (
+                  <Button
+                    variant={showInactive ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setShowInactive(!showInactive)}
+                    className="gap-1.5 text-xs"
+                  >
+                    {showInactive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    {showInactive ? 'إخفاء المنتهية' : 'عرض المنتهية'}
+                  </Button>
+                )}
                 {(isAdmin || canEdit('company', id!)) && (
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
                     <Pencil className="w-3.5 h-3.5" />تعديل
@@ -331,7 +358,7 @@ export default function CompanyDetail() {
               <h3 className="text-sm font-semibold">المحافظ ({compPortfolios.length})</h3>
             </div>
             {summary?.portfolioSummaries.map(ps => {
-              const portfolioProjects = companyProjects.filter(p => p.portfolioId === ps.portfolioId);
+              const portfolioProjects = visibleCompanyProjects.filter(p => p.portfolioId === ps.portfolioId);
               return (
                 <div key={ps.portfolioId} className="rounded-xl border border-border bg-card overflow-hidden">
                   {/* Portfolio header */}
@@ -530,14 +557,14 @@ export default function CompanyDetail() {
         </div>
 
         {/* Standalone projects */}
-        {standaloneProjects.length > 0 && (
+        {visibleStandaloneProjects.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Briefcase className="w-4 h-4 text-muted-foreground" />
-              <h3 className="text-sm font-semibold">مشاريع مستقلة ({standaloneProjects.length})</h3>
+              <h3 className="text-sm font-semibold">مشاريع مستقلة ({visibleStandaloneProjects.length})</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {standaloneProjects.map(project => {
+              {visibleStandaloneProjects.map(project => {
                 const projExpenses = expenses.filter(e => e.projectId === project.id);
                 const totalSpent = projExpenses.reduce((s, e) => s + e.amount, 0);
                 const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
