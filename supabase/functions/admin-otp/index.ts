@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
           subject: "رمز التحقق لتسجيل الدخول - SightB",
           html: emailHtml,
           text: emailText,
-          purpose: "auth",
+          purpose: "transactional",
           label: "otp",
           idempotency_key: `otp-${user.id}-${Date.now()}`,
           message_id: messageId,
