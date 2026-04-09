@@ -141,13 +141,19 @@ export default function CompanyDetail() {
     } catch { toast.error('حدث خطأ'); }
   };
 
-  if (!company) {
+  if (loading || !company) {
     return (
       <AppLayout>
-        <div className="text-center py-20">
-          <p className="text-muted-foreground">الشركة غير موجودة</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>العودة</Button>
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <p className="text-muted-foreground">الشركة غير موجودة</p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>العودة</Button>
+          </div>
+        )}
       </AppLayout>
     );
   }
