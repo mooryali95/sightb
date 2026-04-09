@@ -228,6 +228,10 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (error) throw error;
     const mapped = mapResource(data);
     set((s) => ({ resources: [mapped, ...s.resources] }));
+    // Update resource_count on project
+    const newCount = get().resources.filter(res => res.projectId === r.projectId).length;
+    await supabase.from('projects').update({ resource_count: newCount }).eq('id', r.projectId);
+    set((s) => ({ projects: s.projects.map(p => p.id === r.projectId ? { ...p, resourceCount: newCount } : p) }));
     return mapped.id;
   },
 
@@ -242,9 +246,16 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   },
 
   deleteResource: async (id) => {
+    const resource = get().resources.find(r => r.id === id);
     const { error } = await supabase.from('resources').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ resources: s.resources.filter((x) => x.id !== id) }));
+    // Update resource_count on project
+    if (resource) {
+      const newCount = get().resources.filter(res => res.projectId === resource.projectId).length;
+      await supabase.from('projects').update({ resource_count: newCount }).eq('id', resource.projectId);
+      set((s) => ({ projects: s.projects.map(p => p.id === resource.projectId ? { ...p, resourceCount: newCount } : p) }));
+    }
   },
 
   // ---- Custody ----

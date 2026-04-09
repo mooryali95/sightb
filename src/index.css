@@ -121,6 +121,8 @@
     @apply bg-card rounded-xl p-3 md:p-5 border border-border;
     box-shadow: var(--shadow-card);
     transition: all 0.2s ease;
+    direction: rtl;
+    text-align: right;
   }
   .stat-card:hover {
     box-shadow: var(--shadow-elevated);
@@ -197,11 +199,13 @@
   }
 
   .data-table th {
-    @apply bg-muted/50 px-4 py-3 text-right font-semibold text-muted-foreground border-b;
+    @apply bg-muted/50 px-4 py-3 font-semibold text-muted-foreground border-b;
+    text-align: right !important;
   }
 
   .data-table td {
-    @apply px-4 py-3 border-b border-border/50 text-right;
+    @apply px-4 py-3 border-b border-border/50;
+    text-align: right !important;
   }
 
   .data-table tr:hover td {
