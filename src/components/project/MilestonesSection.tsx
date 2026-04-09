@@ -163,6 +163,16 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     checkRevenuePrompt(m.id, newPct, updates.status);
   };
 
+  // Sort milestones by planned start date, then planned end date
+  const sortedMilestones = [...milestones].sort((a, b) => {
+    const dateA = a.plannedStart || a.plannedEnd || '';
+    const dateB = b.plannedStart || b.plannedEnd || '';
+    if (dateA && dateB) return dateA.localeCompare(dateB);
+    if (dateA) return -1;
+    if (dateB) return 1;
+    return a.sortOrder - b.sortOrder;
+  });
+
   const totalWeight = milestones.reduce((s, m) => s + m.weight, 0);
   const weightedComplete = totalWeight > 0
     ? Math.round(milestones.reduce((s, m) => s + (m.weight * m.percentComplete), 0) / totalWeight)
@@ -285,7 +295,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
 
           <TabsContent value="list">
           <div className="space-y-3">
-          {milestones.map((m) => (
+          {sortedMilestones.map((m) => (
             <div key={m.id} className="p-3 rounded-lg border border-border bg-muted/10">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
