@@ -157,13 +157,19 @@ export default function PortfolioDetail() {
     );
   }, [portfolio, portfolioProjects, risks]);
 
-  if (!portfolio) {
+  if (loading || !portfolio) {
     return (
       <AppLayout>
-        <div className="text-center py-20">
-          <p className="text-muted-foreground">المحفظة غير موجودة</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>العودة</Button>
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <p className="text-muted-foreground">المحفظة غير موجودة</p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>العودة</Button>
+          </div>
+        )}
       </AppLayout>
     );
   }
