@@ -18,6 +18,7 @@ interface BaselineSectionProps {
   expenses: any[];
   budgetItems: any[];
   project: Project;
+  readOnly?: boolean;
 }
 
 function buildSCurveData(baseline: CostBaseline, expenses: any[], durationMonths: number) {
@@ -32,7 +33,7 @@ function buildSCurveData(baseline: CostBaseline, expenses: any[], durationMonths
   });
 }
 
-export function BaselineSection({ projectId, durationMonths, expenses, budgetItems, project }: BaselineSectionProps) {
+export function BaselineSection({ projectId, durationMonths, expenses, budgetItems, project, readOnly = false }: BaselineSectionProps) {
   const { baselines, createBaseline, deleteBaseline, setActiveBaseline, loadBaselines } = useStore();
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -99,7 +100,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
               {` · الشهر الحالي: ${currentMonth}`}
             </p>
           </div>
-          <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+          {!readOnly && <Dialog open={openDialog} onOpenChange={setOpenDialog}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5" disabled={budgetItems.length === 0}>
                 <Plus className="w-3.5 h-3.5" />خط أساس جديد
@@ -120,7 +121,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
                 </Button>
               </div>
             </DialogContent>
-          </Dialog>
+          </Dialog>}
         </div>
 
         {projectBaselines.length === 0 ? (
@@ -141,12 +142,12 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                {!readOnly && <div className="flex items-center gap-2">
                   {!bl.isActive && (
                     <Button size="sm" variant="outline" onClick={() => setActiveBaseline(bl.id, projectId)}>تفعيل</Button>
                   )}
                   <ConfirmDeleteDialog title="حذف خط الأساس" description="هل أنت متأكد من حذف خط الأساس هذا؟" onConfirm={() => deleteBaseline(bl.id)} />
-                </div>
+                </div>}
               </div>
             ))}
           </div>
