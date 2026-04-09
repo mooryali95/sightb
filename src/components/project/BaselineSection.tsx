@@ -18,6 +18,7 @@ interface BaselineSectionProps {
   expenses: any[];
   budgetItems: any[];
   project: Project;
+  readOnly?: boolean;
 }
 
 function buildSCurveData(baseline: CostBaseline, expenses: any[], durationMonths: number) {
@@ -32,7 +33,7 @@ function buildSCurveData(baseline: CostBaseline, expenses: any[], durationMonths
   });
 }
 
-export function BaselineSection({ projectId, durationMonths, expenses, budgetItems, project }: BaselineSectionProps) {
+export function BaselineSection({ projectId, durationMonths, expenses, budgetItems, project, readOnly = false }: BaselineSectionProps) {
   const { baselines, createBaseline, deleteBaseline, setActiveBaseline, loadBaselines } = useStore();
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -99,7 +100,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
               {` · الشهر الحالي: ${currentMonth}`}
             </p>
           </div>
-          <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+          {!readOnly && <Dialog open={openDialog} onOpenChange={setOpenDialog}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5" disabled={budgetItems.length === 0}>
                 <Plus className="w-3.5 h-3.5" />خط أساس جديد
