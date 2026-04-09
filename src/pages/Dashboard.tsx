@@ -96,24 +96,42 @@ export default function Dashboard() {
     });
   }, [projects, companies, filterCompany, filterStatus, searchQuery, showInactive]);
 
+  const visibleProjectIds = useMemo(() => new Set(filteredProjects.map((project) => project.id)), [filteredProjects]);
+  const filteredBudgetItems = useMemo(() => budgetItems.filter((b) => visibleProjectIds.has(b.projectId)), [budgetItems, visibleProjectIds]);
+  const filteredExpenses = useMemo(() => expenses.filter((e) => visibleProjectIds.has(e.projectId) && isInRange(e.date, currentRange)), [expenses, visibleProjectIds, isInRange, currentRange]);
+  const filteredAllExpenses = useMemo(() => expenses.filter((e) => visibleProjectIds.has(e.projectId)), [expenses, visibleProjectIds]);
+  const filteredRevenues = useMemo(() => revenues.filter((r) => visibleProjectIds.has(r.projectId) && isInRange(r.date, currentRange)), [revenues, visibleProjectIds, isInRange, currentRange]);
+  const filteredAllRevenues = useMemo(() => revenues.filter((r) => visibleProjectIds.has(r.projectId)), [revenues, visibleProjectIds]);
+  const filteredChangeOrders = useMemo(() => changeOrders.filter((co) => visibleProjectIds.has(co.projectId)), [changeOrders, visibleProjectIds]);
+  const filteredMilestones = useMemo(() => milestones.filter((m) => visibleProjectIds.has(m.projectId)), [milestones, visibleProjectIds]);
+  const filteredRisks = useMemo(() => risks.filter((r) => !r.projectId || visibleProjectIds.has(r.projectId)), [risks, visibleProjectIds]);
+  const filteredPortfolios = useMemo(() => portfolios.filter((portfolio) => filteredProjects.some((project) => project.portfolioId === portfolio.id)), [portfolios, filteredProjects]);
+  const defaultVisibleProjectsCount = useMemo(() => {
+    if (filterStatus !== 'all' || showInactive) return projects.length;
+    return projects.filter((project) => {
+      if (filterCompany === 'all') {
+        const company = companies.find((c) => c.id === project.companyId);
+        if (company?.status === 'archived') return false;
+      }
+      if (filterCompany !== 'all' && project.companyId !== filterCompany) return false;
+      return !INACTIVE_STATUSES.includes(project.status as any);
+    }).length;
+  }, [projects, companies, filterCompany, filterStatus, showInactive]);
+
   const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '' || timePeriod !== 'all' || showInactive;
   const clearFilters = () => { setFilterCompany('all'); setFilterStatus('all'); setSearchQuery(''); setTimePeriod('all'); setShowInactive(false); };
 
   // Stats
   const totalContractValue = filteredProjects.reduce((s, p) => s + p.contractValue, 0);
-  const filteredExpenses = expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId) && isInRange(e.date, currentRange));
   const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
-  const filteredBudgetItems = budgetItems.filter((b) => filteredProjects.some((p) => p.id === b.projectId));
   const totalPlanned = getTotalPlanned(filteredBudgetItems);
-  const filteredChangeOrders = changeOrders.filter((co) => filteredProjects.some((p) => p.id === co.projectId));
   const approvedChangeImpact = filteredChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
   const effectiveTotalContract = totalContractValue + approvedChangeImpact;
   const plannedProfit = effectiveTotalContract - totalPlanned;
   const plannedProfitMargin = effectiveTotalContract > 0 ? (plannedProfit / effectiveTotalContract) * 100 : 0;
-  const filteredRevenues = revenues.filter((r) => filteredProjects.some((p) => p.id === r.projectId) && isInRange(r.date, currentRange));
   const collectedRevenue = filteredRevenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
-  const prevExpenses = previousRange ? expenses.filter((e) => filteredProjects.some((p) => p.id === e.projectId) && isInRange(e.date, previousRange)).reduce((s, e) => s + e.amount, 0) : 0;
-  const prevRevenue = previousRange ? revenues.filter((r) => filteredProjects.some((p) => p.id === r.projectId) && r.status === 'collected' && isInRange(r.date, previousRange)).reduce((s, r) => s + r.amount, 0) : 0;
+  const prevExpenses = previousRange ? filteredAllExpenses.filter((e) => isInRange(e.date, previousRange)).reduce((s, e) => s + e.amount, 0) : 0;
+  const prevRevenue = previousRange ? filteredAllRevenues.filter((r) => r.status === 'collected' && isInRange(r.date, previousRange)).reduce((s, r) => s + r.amount, 0) : 0;
   const expenseChange = prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : null;
   const revenueChange = prevRevenue > 0 ? ((collectedRevenue - prevRevenue) / prevRevenue) * 100 : null;
 
@@ -167,7 +185,7 @@ export default function Dashboard() {
               searchQuery={searchQuery} setSearchQuery={setSearchQuery}
               timePeriod={timePeriod} setTimePeriod={setTimePeriod}
               hasActiveFilters={hasActiveFilters} clearFilters={clearFilters}
-              filteredCount={filteredProjects.length} totalCount={projects.length}
+              filteredCount={filteredProjects.length} totalCount={defaultVisibleProjectsCount}
               isMobile={isMobile} filtersOpen={filtersOpen} setFiltersOpen={setFiltersOpen}
               showInactive={showInactive} setShowInactive={setShowInactive}
             />
@@ -187,9 +205,9 @@ export default function Dashboard() {
             <DashboardCharts companyData={companyData} statusData={statusData} />
 
             <PortfolioPerformance
-              portfolios={portfolios} companies={companies} projects={projects}
-              budgetItems={budgetItems} expenses={expenses} revenues={revenues}
-              changeOrders={changeOrders} milestones={milestones} risks={risks}
+              portfolios={filteredPortfolios} companies={companies} projects={filteredProjects}
+              budgetItems={filteredBudgetItems} expenses={filteredAllExpenses} revenues={filteredAllRevenues}
+              changeOrders={filteredChangeOrders} milestones={filteredMilestones} risks={filteredRisks}
             />
 
             <HealthMatrix

@@ -23,7 +23,8 @@ export function PortfolioPerformance({
   const navigate = useNavigate();
   const activePortfolios = portfolios.filter(p => {
     const comp = companies.find((c: any) => c.id === p.companyId);
-    return comp && comp.status !== 'archived';
+    const hasVisibleProjects = projects.some((project: any) => project.portfolioId === p.id);
+    return comp && comp.status !== 'archived' && hasVisibleProjects;
   });
 
   if (activePortfolios.length === 0) return null;
