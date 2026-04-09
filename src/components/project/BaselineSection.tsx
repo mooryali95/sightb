@@ -121,7 +121,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
                 </Button>
               </div>
             </DialogContent>
-          </Dialog>
+          </Dialog>}
         </div>
 
         {projectBaselines.length === 0 ? (
