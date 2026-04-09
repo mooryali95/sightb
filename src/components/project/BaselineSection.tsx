@@ -142,12 +142,12 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                {!readOnly && <div className="flex items-center gap-2">
                   {!bl.isActive && (
                     <Button size="sm" variant="outline" onClick={() => setActiveBaseline(bl.id, projectId)}>تفعيل</Button>
                   )}
                   <ConfirmDeleteDialog title="حذف خط الأساس" description="هل أنت متأكد من حذف خط الأساس هذا؟" onConfirm={() => deleteBaseline(bl.id)} />
-                </div>
+                </div>}
               </div>
             ))}
           </div>
