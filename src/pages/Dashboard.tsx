@@ -162,7 +162,7 @@ export default function Dashboard() {
         ) : (
           <>
             <DashboardFilters
-              companies={companies} filterCompany={filterCompany} setFilterCompany={setFilterCompany}
+              companies={activeCompanies} filterCompany={filterCompany} setFilterCompany={setFilterCompany}
               filterStatus={filterStatus} setFilterStatus={setFilterStatus}
               searchQuery={searchQuery} setSearchQuery={setSearchQuery}
               timePeriod={timePeriod} setTimePeriod={setTimePeriod}
