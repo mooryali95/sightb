@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -13,16 +13,34 @@ interface UserRole {
 }
 
 export function useRole() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const prevUserId = useRef<string | null>(null);
 
   useEffect(() => {
+    // Still waiting for auth — keep loading true
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+
     if (!user) {
       setRoles([]);
       setLoading(false);
+      prevUserId.current = null;
       return;
     }
+
+    // User hasn't changed and we already have roles — skip
+    if (prevUserId.current === user.id && roles.length > 0) {
+      setLoading(false);
+      return;
+    }
+
+    // Set loading before fetch to prevent flash
+    setLoading(true);
+    prevUserId.current = user.id;
 
     const fetchRoles = async () => {
       const { data } = await (supabase as any)
@@ -42,7 +60,7 @@ export function useRole() {
     };
 
     fetchRoles();
-  }, [user]);
+  }, [user, authLoading]);
 
   const isOwner = roles.some((r) => r.role === 'owner' && r.scopeType === 'system');
   const isAdmin = isOwner || roles.some((r) => r.role === 'admin' && r.scopeType === 'system');
