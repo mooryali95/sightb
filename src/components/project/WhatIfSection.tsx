@@ -89,7 +89,7 @@ export function WhatIfSection({
               </Badge>
             </div>
             <Slider value={[contractDelta]} onValueChange={([v]) => setContractDelta(v)} min={-50} max={50} step={1} />
-            <p className="text-xs text-muted-foreground text-left" dir="ltr">{formatCurrency(scenario.newContract, currency)}</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(scenario.newContract, currency)}</p>
           </CardContent>
         </Card>
 
@@ -102,7 +102,7 @@ export function WhatIfSection({
               </Badge>
             </div>
             <Slider value={[expenseDelta]} onValueChange={([v]) => setExpenseDelta(v)} min={-50} max={50} step={1} />
-            <p className="text-xs text-muted-foreground text-left" dir="ltr">{formatCurrency(scenario.projectedTotal, currency)}</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(scenario.projectedTotal, currency)}</p>
           </CardContent>
         </Card>
 
@@ -128,7 +128,7 @@ export function WhatIfSection({
               </Badge>
             </div>
             <Slider value={[revenueDelta]} onValueChange={([v]) => setRevenueDelta(v)} min={-50} max={50} step={1} />
-            <p className="text-xs text-muted-foreground text-left" dir="ltr">{formatCurrency(scenario.newRevenue, currency)}</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(scenario.newRevenue, currency)}</p>
           </CardContent>
         </Card>
       </div>
