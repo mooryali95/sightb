@@ -23,6 +23,7 @@ import { ProjectCards } from '@/components/dashboard/ProjectCards';
 import { ProjectsTable } from '@/components/dashboard/ProjectsTable';
 import { CompanyManagement } from '@/components/dashboard/CompanyManagement';
 import { SnapshotControls } from '@/components/dashboard/SnapshotControls';
+import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
