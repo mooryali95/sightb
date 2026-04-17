@@ -257,7 +257,7 @@ export default function Login() {
                 </div>
 
                 <div className="flex justify-center" dir="ltr">
-                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode} autoFocus>
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
                       <InputOTPSlot index={1} />
@@ -301,8 +301,8 @@ export default function Login() {
               >
                 <h2 className="text-lg font-semibold text-center">استعادة كلمة المرور</h2>
                 <div className="space-y-2">
-                  <Label>البريد الإلكتروني</Label>
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
+                  <Label htmlFor="forgot-email">البريد الإلكتروني</Label>
+                  <Input id="forgot-email" name="email" type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'جاري الإرسال...' : 'إرسال رابط الاستعادة'}
@@ -322,14 +322,17 @@ export default function Login() {
               >
                 <h2 className="text-lg font-semibold text-center">تسجيل الدخول</h2>
                 <div className="space-y-2">
-                  <Label>البريد الإلكتروني</Label>
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
+                  <Label htmlFor="login-email">البريد الإلكتروني</Label>
+                  <Input id="login-email" name="email" type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
                 </div>
                 <div className="space-y-2">
-                  <Label>كلمة المرور</Label>
+                  <Label htmlFor="login-password">كلمة المرور</Label>
                   <div className="relative">
                     <Input
+                      id="login-password"
+                      name="password"
                       type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
@@ -340,6 +343,7 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

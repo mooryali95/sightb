@@ -7,6 +7,7 @@ import {
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
 import basserhLogo from '@/assets/basserh-logo.jpg';
@@ -112,43 +113,34 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-1">
         {/* Dashboard */}
-        <button
+        <NavItem
+          collapsed={collapsed}
+          label="لوحة التحكم"
+          icon={<LayoutDashboard className="w-4 h-4 shrink-0" />}
+          active={isActive('/')}
           onClick={() => navigate('/')}
-          className={cn(
-            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-            isActive('/') ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
-          )}
-        >
-          <LayoutDashboard className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>لوحة التحكم</span>}
-        </button>
+        />
 
         {/* User Management - Admin only */}
         {isAdmin && (
-          <button
+          <NavItem
+            collapsed={collapsed}
+            label="إدارة المستخدمين"
+            icon={<Users className="w-4 h-4 shrink-0" />}
+            active={isActive('/users')}
             onClick={() => navigate('/users')}
-            className={cn(
-              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-              isActive('/users') ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
-            )}
-          >
-            <Users className="w-4 h-4 shrink-0" />
-            {!collapsed && <span>إدارة المستخدمين</span>}
-          </button>
+          />
         )}
 
         {/* System Audit Log - Owner only */}
         {isOwner && (
-          <button
+          <NavItem
+            collapsed={collapsed}
+            label="السجل الرئيسي"
+            icon={<ScrollText className="w-4 h-4 shrink-0" />}
+            active={isActive('/audit')}
             onClick={() => navigate('/audit')}
-            className={cn(
-              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-              isActive('/audit') ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
-            )}
-          >
-            <ScrollText className="w-4 h-4 shrink-0" />
-            {!collapsed && <span>السجل الرئيسي</span>}
-          </button>
+          />
         )}
 
         {/* Companies Section */}
@@ -334,6 +326,32 @@ function UserInfo() {
   );
 }
 
+function NavItem({
+  collapsed, label, icon, active, onClick,
+}: { collapsed: boolean; label: string; icon: React.ReactNode; active: boolean; onClick: () => void }) {
+  const btn = (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className={cn(
+        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+        collapsed && 'justify-center px-2',
+        active ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
+      )}
+    >
+      {icon}
+      {!collapsed && <span>{label}</span>}
+    </button>
+  );
+  if (!collapsed) return btn;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{btn}</TooltipTrigger>
+      <TooltipContent side="left"><p>{label}</p></TooltipContent>
+    </Tooltip>
+  );
+}
+
 function SignOutButton({ collapsed }: { collapsed?: boolean }) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
@@ -343,9 +361,10 @@ function SignOutButton({ collapsed }: { collapsed?: boolean }) {
     navigate('/login', { replace: true });
   };
 
-  return (
+  const btn = (
     <button
       onClick={handleSignOut}
+      aria-label="تسجيل الخروج"
       className={cn(
         'flex items-center gap-2 rounded-lg text-sm transition-colors text-sidebar-foreground/60 hover:text-destructive hover:bg-sidebar-accent',
         collapsed ? 'w-full justify-center p-2' : 'w-full px-3 py-2'
@@ -354,5 +373,13 @@ function SignOutButton({ collapsed }: { collapsed?: boolean }) {
       <LogOut className="w-4 h-4 shrink-0" />
       {!collapsed && <span className="text-xs">تسجيل الخروج</span>}
     </button>
+  );
+
+  if (!collapsed) return btn;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{btn}</TooltipTrigger>
+      <TooltipContent side="left"><p>تسجيل الخروج</p></TooltipContent>
+    </Tooltip>
   );
 }
