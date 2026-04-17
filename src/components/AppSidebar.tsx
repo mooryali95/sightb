@@ -326,6 +326,32 @@ function UserInfo() {
   );
 }
 
+function NavItem({
+  collapsed, label, icon, active, onClick,
+}: { collapsed: boolean; label: string; icon: React.ReactNode; active: boolean; onClick: () => void }) {
+  const btn = (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className={cn(
+        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+        collapsed && 'justify-center px-2',
+        active ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
+      )}
+    >
+      {icon}
+      {!collapsed && <span>{label}</span>}
+    </button>
+  );
+  if (!collapsed) return btn;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{btn}</TooltipTrigger>
+      <TooltipContent side="left"><p>{label}</p></TooltipContent>
+    </Tooltip>
+  );
+}
+
 function SignOutButton({ collapsed }: { collapsed?: boolean }) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
@@ -335,9 +361,10 @@ function SignOutButton({ collapsed }: { collapsed?: boolean }) {
     navigate('/login', { replace: true });
   };
 
-  return (
+  const btn = (
     <button
       onClick={handleSignOut}
+      aria-label="تسجيل الخروج"
       className={cn(
         'flex items-center gap-2 rounded-lg text-sm transition-colors text-sidebar-foreground/60 hover:text-destructive hover:bg-sidebar-accent',
         collapsed ? 'w-full justify-center p-2' : 'w-full px-3 py-2'
@@ -346,5 +373,13 @@ function SignOutButton({ collapsed }: { collapsed?: boolean }) {
       <LogOut className="w-4 h-4 shrink-0" />
       {!collapsed && <span className="text-xs">تسجيل الخروج</span>}
     </button>
+  );
+
+  if (!collapsed) return btn;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{btn}</TooltipTrigger>
+      <TooltipContent side="left"><p>تسجيل الخروج</p></TooltipContent>
+    </Tooltip>
   );
 }
