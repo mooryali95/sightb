@@ -35,14 +35,14 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 };
 
 export const PROJECT_STATUS_COLORS: Record<ProjectStatus, string> = {
-  planning: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  pending_approval: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  active: 'bg-primary/10 text-primary',
-  'on-hold': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  archived: 'bg-muted text-muted-foreground',
-  cancelled: 'bg-destructive/10 text-destructive',
+  planning:         'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  pending_approval: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  approved:         'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  active:           'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+  'on-hold':        'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+  completed:        'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  archived:         'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500',
+  cancelled:        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 export type ContractType = 'lump_sum' | 'cost_plus' | 'time_material' | 'unit_price';
