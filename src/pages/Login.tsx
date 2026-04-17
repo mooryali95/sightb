@@ -257,7 +257,7 @@ export default function Login() {
                 </div>
 
                 <div className="flex justify-center" dir="ltr">
-                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode} autoFocus>
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
                       <InputOTPSlot index={1} />
