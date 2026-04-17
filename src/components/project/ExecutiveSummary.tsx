@@ -137,21 +137,21 @@ export function ExecutiveSummary({
         </SectionTitle>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="text-center p-3 rounded-lg bg-muted/40">
-            <p className="text-[10px] text-muted-foreground">المخطط</p>
+            <p className="text-xs text-muted-foreground">المخطط</p>
             <p className="text-sm font-mono font-bold mt-1">{formatCurrency(monthPerformance.planned)}</p>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/40">
-            <p className="text-[10px] text-muted-foreground">المصروف</p>
+            <p className="text-xs text-muted-foreground">المصروف</p>
             <p className="text-sm font-mono font-bold mt-1">{formatCurrency(monthPerformance.actual)}</p>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/40">
-            <p className="text-[10px] text-muted-foreground">{monthPerformance.diff >= 0 ? 'وفر' : 'تجاوز'}</p>
+            <p className="text-xs text-muted-foreground">{monthPerformance.diff >= 0 ? 'وفر' : 'تجاوز'}</p>
             <p className={`text-sm font-mono font-bold mt-1 ${monthPerformance.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
               {formatCurrency(Math.abs(monthPerformance.diff))}
             </p>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/40">
-            <p className="text-[10px] text-muted-foreground">الحكم</p>
+            <p className="text-xs text-muted-foreground">الحكم</p>
             <p className={`text-sm font-bold mt-1 ${monthPerformance.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
               {monthPerformance.actual === 0 ? 'لا صرف بعد' : monthPerformance.diff > 0 ? 'وفر 👍' : monthPerformance.diff < 0 ? 'تجاوز ⚠️' : 'مطابق ✓'}
             </p>
@@ -160,7 +160,7 @@ export function ExecutiveSummary({
         {/* Spending progress bar */}
         {monthPerformance.planned > 0 && (
           <div className="mt-3">
-            <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>نسبة الصرف</span>
               <span>{((monthPerformance.actual / monthPerformance.planned) * 100).toFixed(0)}%</span>
             </div>
@@ -175,26 +175,26 @@ export function ExecutiveSummary({
           <SectionTitle icon={BarChart3}>مؤشرات الأداء (EVM)</SectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="text-center p-3 rounded-lg bg-muted/40">
-              <p className="text-[10px] text-muted-foreground">أداء التكلفة (CPI)</p>
+              <p className="text-xs text-muted-foreground">أداء التكلفة (CPI)</p>
               <p className={`text-lg font-mono font-bold ${evm.cpi >= 1 ? 'text-emerald-600' : evm.cpi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.cpi.toFixed(2)}</p>
-              <p className="text-[10px] text-muted-foreground">{evm.cpi >= 1 ? 'ضمن الميزانية' : 'تجاوز'}</p>
+              <p className="text-xs text-muted-foreground">{evm.cpi >= 1 ? 'ضمن الميزانية' : 'تجاوز'}</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/40">
-              <p className="text-[10px] text-muted-foreground">أداء الجدول (SPI)</p>
+              <p className="text-xs text-muted-foreground">أداء الجدول (SPI)</p>
               <p className={`text-lg font-mono font-bold ${evm.spi >= 1 ? 'text-emerald-600' : evm.spi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.spi.toFixed(2)}</p>
-              <p className="text-[10px] text-muted-foreground">{evm.spi >= 1 ? 'في الموعد' : 'متأخر'}</p>
+              <p className="text-xs text-muted-foreground">{evm.spi >= 1 ? 'في الموعد' : 'متأخر'}</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/40">
-              <p className="text-[10px] text-muted-foreground">التكلفة المتوقعة (EAC)</p>
+              <p className="text-xs text-muted-foreground">التكلفة المتوقعة (EAC)</p>
               <p className="text-sm font-mono font-bold">{formatCurrency(evm.eac)}</p>
-              <p className={`text-[10px] ${evm.vac >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+              <p className={`text-xs ${evm.vac >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
                 {evm.vac >= 0 ? `وفر: ${formatCurrency(evm.vac)}` : `تجاوز: ${formatCurrency(Math.abs(evm.vac))}`}
               </p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/40">
-              <p className="text-[10px] text-muted-foreground">الأداء المطلوب (TCPI)</p>
+              <p className="text-xs text-muted-foreground">الأداء المطلوب (TCPI)</p>
               <p className="text-lg font-mono font-bold">{evm.tcpiBAC.toFixed(2)}</p>
-              <p className="text-[10px] text-muted-foreground">{evm.tcpiBAC <= 1.0 ? 'مريح' : evm.tcpiBAC <= 1.2 ? 'يحتاج تحسين' : 'راجع الخطة'}</p>
+              <p className="text-xs text-muted-foreground">{evm.tcpiBAC <= 1.0 ? 'مريح' : evm.tcpiBAC <= 1.2 ? 'يحتاج تحسين' : 'راجع الخطة'}</p>
             </div>
           </div>
         </SectionCard>
@@ -242,19 +242,19 @@ export function ExecutiveSummary({
         <SectionTitle icon={Receipt}>التحصيل</SectionTitle>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
           <div className="text-center">
-            <p className="text-[10px] text-muted-foreground">العقد</p>
+            <p className="text-xs text-muted-foreground">العقد</p>
             <p className="text-sm font-mono font-bold">{formatCurrency(summary.effectiveContractValue)}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-muted-foreground">محصّل</p>
+            <p className="text-xs text-muted-foreground">محصّل</p>
             <p className="text-sm font-mono font-bold text-emerald-600">{formatCurrency(summary.collectedRevenue)}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-muted-foreground">مفوتر</p>
+            <p className="text-xs text-muted-foreground">مفوتر</p>
             <p className="text-sm font-mono font-bold text-amber-600">{formatCurrency(summary.accountsReceivable)}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-muted-foreground">لم يُفوتر</p>
+            <p className="text-xs text-muted-foreground">لم يُفوتر</p>
             <p className="text-sm font-mono font-bold">{formatCurrency(Math.max(0, summary.effectiveContractValue - summary.collectedRevenue - summary.accountsReceivable))}</p>
           </div>
         </div>
@@ -262,7 +262,7 @@ export function ExecutiveSummary({
           <Progress value={collectedPct} className="h-2" />
           {summary.accountsReceivable > 0 && <Progress value={(summary.collectedRevenue + summary.accountsReceivable) / summary.effectiveContractValue * 100} className="h-1 opacity-40" />}
         </div>
-        <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
           <span>■ محصّل {collectedPct.toFixed(0)}%</span>
           <span>□ مفوتر</span>
           <span>○ لم يُفوتر</span>
@@ -275,15 +275,15 @@ export function ExecutiveSummary({
         <div className="grid grid-cols-3 gap-3 mb-3">
           <div className="text-center p-2 rounded-lg bg-muted/40">
             <p className="text-lg font-bold">{openRisks.length}</p>
-            <p className="text-[10px] text-muted-foreground">مفتوحة</p>
+            <p className="text-xs text-muted-foreground">مفتوحة</p>
           </div>
           <div className="text-center p-2 rounded-lg bg-muted/40">
             <p className="text-lg font-bold text-destructive">{highRisks.length}</p>
-            <p className="text-[10px] text-muted-foreground">عالية</p>
+            <p className="text-xs text-muted-foreground">عالية</p>
           </div>
           <div className="text-center p-2 rounded-lg bg-muted/40">
             <p className="text-sm font-mono font-bold">{formatCurrency(riskExposure)}</p>
-            <p className="text-[10px] text-muted-foreground">التعرض</p>
+            <p className="text-xs text-muted-foreground">التعرض</p>
           </div>
         </div>
         {highRisks.slice(0, 3).map(r => (

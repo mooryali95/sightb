@@ -72,7 +72,7 @@ export function GlobalSearch() {
         >
           <Search className="w-3.5 h-3.5" />
           <span>بحث...</span>
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
             <span className="text-xs">⌘</span>K
           </kbd>
         </Button>
@@ -218,7 +218,7 @@ export function GlobalSearch() {
                         <CommandItem key={p.id} value={p.name} onSelect={() => go(`/portfolio/${p.id}`)}>
                           <FolderKanban className="ml-2 h-4 w-4 text-primary/70" />
                           <span>{p.name}</span>
-                          {comp && <span className="text-[10px] text-muted-foreground mr-2">{comp.name}</span>}
+                          {comp && <span className="text-xs text-muted-foreground mr-2">{comp.name}</span>}
                         </CommandItem>
                       );
                     })}
@@ -236,7 +236,7 @@ export function GlobalSearch() {
                         <CommandItem key={p.id} value={p.name} onSelect={() => go(`/project/${p.id}`)}>
                           <Briefcase className="ml-2 h-4 w-4 text-muted-foreground" />
                           <span>{p.name}</span>
-                          {comp && <span className="text-[10px] text-muted-foreground mr-2">{comp.name}</span>}
+                          {comp && <span className="text-xs text-muted-foreground mr-2">{comp.name}</span>}
                         </CommandItem>
                       );
                     })}

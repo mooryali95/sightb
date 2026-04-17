@@ -45,36 +45,36 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
                 <h4 className="text-sm font-semibold">{project.name}</h4>
                 <p className="text-xs text-muted-foreground">{company?.name}</p>
               </div>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
                 {PROJECT_STATUS_LABELS[project.status]}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div className="text-center p-2 rounded-lg bg-muted/30">
-                <p className="text-[10px] text-muted-foreground">قيمة العقد</p>
-                <p className="text-xs font-mono font-bold">{formatCurrency(summary.effectiveContractValue)}</p>
+                <p className="text-xs text-muted-foreground">قيمة العقد</p>
+                <p className="text-xs font-mono font-semibold">{formatCurrency(summary.effectiveContractValue)}</p>
               </div>
               <div className="text-center p-2 rounded-lg bg-muted/30">
-                <p className="text-[10px] text-muted-foreground">المصروفات</p>
-                <p className="text-xs font-mono font-bold">{formatCurrency(summary.totalActual)}</p>
+                <p className="text-xs text-muted-foreground">المصروفات</p>
+                <p className="text-xs font-mono font-semibold">{formatCurrency(summary.totalActual)}</p>
               </div>
               <div className="text-center p-2 rounded-lg bg-muted/30">
-                <p className="text-[10px] text-muted-foreground">الربح المخطط</p>
-                <p className={`text-xs font-mono font-bold ${summary.plannedProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                <p className="text-xs text-muted-foreground">الربح المخطط</p>
+                <p className={`text-xs font-mono font-semibold ${summary.plannedProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
                   {formatCurrency(summary.plannedProfit)}
                 </p>
               </div>
               <div className="text-center p-2 rounded-lg bg-muted/30">
-                <p className="text-[10px] text-muted-foreground">متبقي الموازنة</p>
-                <p className={`text-xs font-mono font-bold ${summary.budgetRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                <p className="text-xs text-muted-foreground">متبقي الموازنة</p>
+                <p className={`text-xs font-mono font-semibold ${summary.budgetRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
                   {formatCurrency(summary.budgetRemaining)}
                 </p>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex justify-between text-[10px] text-muted-foreground">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>نسبة الصرف من العقد</span>
                 <span>{spendRate.toFixed(1)}%</span>
               </div>
@@ -89,7 +89,7 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
               </div>
               {budgetUtilization > 0 && (
                 <>
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <div className="flex justify-between text-xs text-muted-foreground">
                     <span>تخصيص الموازنة</span>
                     <span>{budgetUtilization.toFixed(1)}%</span>
                   </div>

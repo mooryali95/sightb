@@ -101,7 +101,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
           </DialogContent>
         </Dialog>
         )}
-        <p className="text-[10px] text-muted-foreground mt-2">العهدة مرتبطة بالمصروفات — عند إضافة مصروف يمكن ربطه بعهدة ليُخصم منها تلقائياً</p>
+        <p className="text-xs text-muted-foreground mt-2">العهدة مرتبطة بالمصروفات — عند إضافة مصروف يمكن ربطه بعهدة ليُخصم منها تلقائياً</p>
       </div>
 
       {enrichedCustodies.length === 0 ? (
@@ -133,10 +133,10 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     <td>
                       <span className={c.remaining >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(c.remaining)}</span>
                       {c.remaining <= 0 && (
-                        <span className="text-[9px] text-destructive mr-1">⚠️ مستنفدة</span>
+                        <span className="text-xs text-destructive mr-1">⚠️ مستنفدة</span>
                       )}
                       {c.remaining > 0 && c.remaining < c.amount * 0.1 && (
-                        <span className="text-[9px] text-amber-600 mr-1">⚠️ أقل من 10%</span>
+                        <span className="text-xs text-amber-600 mr-1">⚠️ أقل من 10%</span>
                       )}
                     </td>
                     <td className="hidden sm:table-cell">
@@ -150,9 +150,9 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     <td className="text-xs text-muted-foreground">{c.receivedDate || '—'}</td>
                     <td>
                       {c.remaining <= 0 ? (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">مُغلقة</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">مُغلقة</span>
                       ) : (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">نشطة</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">نشطة</span>
                       )}
                     </td>
                     <td className="text-muted-foreground text-xs hidden md:table-cell">{c.notes || '—'}</td>

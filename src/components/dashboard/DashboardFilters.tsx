@@ -47,7 +47,7 @@ export function DashboardFilters({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 }}
-      className="stat-card mb-6"
+      className="filter-bar"
     >
       <Collapsible open={!isMobile || filtersOpen} onOpenChange={setFiltersOpen}>
         {/* Header */}
@@ -56,7 +56,7 @@ export function DashboardFilters({
             <Filter className="w-4 h-4" />
             <span className="text-xs font-semibold">تصفية</span>
             {hasActiveFilters && (
-              <span className="text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">
+              <span className="text-xs bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">
                 {[filterCompany !== 'all', filterStatus !== 'all', searchQuery !== '', timePeriod !== 'all', showInactive].filter(Boolean).length}
               </span>
             )}
@@ -134,11 +134,11 @@ export function DashboardFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">جميع الحالات</SelectItem>
-                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground">نشطة</div>
+                <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">نشطة</div>
                 {ACTIVE_STATUSES.map((key) => (
                   <SelectItem key={key} value={key}>{PROJECT_STATUS_LABELS[key]}</SelectItem>
                 ))}
-                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground border-t border-border mt-1 pt-1">منتهية</div>
+                <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-t border-border mt-1 pt-1">منتهية</div>
                 {INACTIVE_STATUSES.map((key) => (
                   <SelectItem key={key} value={key}>{PROJECT_STATUS_LABELS[key]}</SelectItem>
                 ))}

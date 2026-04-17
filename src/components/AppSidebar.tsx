@@ -64,19 +64,22 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
 
   const ProjectButton = ({ project }: { project: typeof projects[0] }) => {
     const inactive = INACTIVE_STATUSES.includes(project.status as ProjectStatus);
+    const active = isActive(`/project/${project.id}`);
     return (
       <button
         onClick={() => navigate(`/project/${project.id}`)}
         className={cn(
-          'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors',
-          isActive(`/project/${project.id}`) ? 'bg-primary/15 text-primary' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent',
+          'relative w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-normal transition-colors',
+          active
+            ? 'bg-primary/20 text-primary border-r-2 border-primary'
+            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground/85',
           inactive && 'opacity-60'
         )}
       >
         {statusIcon(project.status)}
         <span className={cn('truncate', inactive && 'line-through decoration-1')}>{project.name}</span>
         {inactive && (
-          <span className="text-[9px] text-muted-foreground mr-auto shrink-0">
+          <span className="text-xs text-muted-foreground mr-auto shrink-0">
             {PROJECT_STATUS_LABELS[project.status as ProjectStatus]}
           </span>
         )}
@@ -98,7 +101,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
             <img src={basserhLogo} alt="بصيرة" className="w-9 h-9 rounded-lg object-cover" />
             <div>
               <span className="font-bold text-sidebar-foreground text-sm block">رؤية</span>
-              <span className="text-[10px] text-sidebar-foreground/40">نظام إدارة المحافظ والمشاريع</span>
+              <span className="text-xs text-sidebar-foreground/40">نظام إدارة المحافظ والمشاريع</span>
             </div>
           </div>
         )}
@@ -163,22 +166,23 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
 
               return (
                 <div key={company.id}>
+                  {/* Level 1: Company */}
                   <div className={cn(
-                    'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                    'text-sidebar-foreground hover:bg-sidebar-accent'
+                    'relative w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors',
+                    isActive(`/company/${company.id}`)
+                      ? 'bg-primary/15 text-primary border-r-2 border-primary'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent'
                   )}>
                     <Building2 className="w-4 h-4 shrink-0 text-primary" />
                     <button
                       onClick={() => navigate(`/company/${company.id}`)}
-                      className={cn(
-                        'flex-1 text-right truncate hover:text-primary transition-colors',
-                        isActive(`/company/${company.id}`) && 'text-primary font-semibold'
-                      )}
+                      className="flex-1 text-right truncate hover:text-primary transition-colors"
                     >
                       {company.name}
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleCompany(company.id); }}
+                      aria-label={expandedCompanies.has(company.id) ? 'طي' : 'توسيع'}
                       className="p-0.5 rounded hover:bg-sidebar-accent"
                     >
                       <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', expandedCompanies.has(company.id) && 'rotate-180')} />
@@ -186,35 +190,36 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                   </div>
 
                   {expandedCompanies.has(company.id) && (
-                    <div className="mr-4 border-r border-primary/20 pr-2 space-y-0.5">
+                    <div className="mr-3 border-r border-primary/30 pr-2 space-y-0.5 mt-1">
                       {/* Active direct projects (no portfolio) */}
                       {activeProjects.filter(p => !p.portfolioId).map((project) => (
                         <ProjectButton key={project.id} project={project} />
                       ))}
 
-                      {/* Portfolios */}
+                      {/* Level 2: Portfolios */}
                       {portfolios.filter((p) => p.companyId === company.id).map((portfolio) => {
                         const portfolioActiveProjects = activeProjects.filter(p => p.portfolioId === portfolio.id);
                         const portfolioInactiveProjects = inactiveProjects.filter(p => p.portfolioId === portfolio.id);
+                        const portfolioActive = isActive(`/portfolio/${portfolio.id}`);
 
                         return (
                           <div key={portfolio.id}>
                             <div className={cn(
-                              'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors',
-                              'text-sidebar-foreground/80 hover:bg-sidebar-accent'
+                              'relative w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                              portfolioActive
+                                ? 'bg-primary/15 text-primary border-r-2 border-primary'
+                                : 'text-sidebar-foreground/80 hover:bg-sidebar-accent'
                             )}>
                               <FolderKanban className="w-3.5 h-3.5 shrink-0 text-primary/70" />
                               <button
                                 onClick={() => navigate(`/portfolio/${portfolio.id}`)}
-                                className={cn(
-                                  'flex-1 text-right truncate hover:text-primary transition-colors',
-                                  isActive(`/portfolio/${portfolio.id}`) && 'text-primary font-semibold'
-                                )}
+                                className="flex-1 text-right truncate hover:text-primary transition-colors"
                               >
                                 {portfolio.name}
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); togglePortfolio(portfolio.id); }}
+                                aria-label={expandedPortfolios.has(portfolio.id) ? 'طي' : 'توسيع'}
                                 className="p-0.5 rounded hover:bg-sidebar-accent"
                               >
                                 <ChevronDown className={cn('w-3 h-3 transition-transform', expandedPortfolios.has(portfolio.id) && 'rotate-180')} />
@@ -222,12 +227,12 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                             </div>
 
                             {expandedPortfolios.has(portfolio.id) && (
-                              <div className="mr-3 space-y-0.5">
+                              <div className="mr-3 border-r border-primary/15 pr-2 space-y-0.5 mt-0.5">
+                                {/* Level 3: Projects */}
                                 {portfolioActiveProjects.map((project) => (
                                   <ProjectButton key={project.id} project={project} />
                                 ))}
 
-                                {/* Inactive projects in portfolio */}
                                 {isShowingInactive && portfolioInactiveProjects.map((project) => (
                                   <ProjectButton key={project.id} project={project} />
                                 ))}
@@ -273,7 +278,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                       {inactiveProjects.length > 0 && (
                         <button
                           onClick={() => toggleShowInactive(company.id)}
-                          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] text-sidebar-foreground/30 hover:text-sidebar-foreground/60 hover:bg-sidebar-accent transition-colors"
+                          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-sidebar-foreground/60 hover:bg-sidebar-accent transition-colors"
                         >
                           <Archive className="w-3 h-3" />
                           <span>
@@ -299,7 +304,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           <UserInfo />
           <SignOutButton />
           <div className="flex items-center justify-center gap-1.5 py-1">
-            <span className="text-[10px] text-sidebar-foreground/30">Powered by</span>
+            <span className="text-xs text-sidebar-foreground/30">Powered by</span>
             <span className="text-[11px] font-bold text-primary tracking-wider">BASSERH</span>
           </div>
         </div>
@@ -319,7 +324,7 @@ function UserInfo() {
   return (
     <div className="px-3 py-1.5">
       <p className="text-xs font-medium text-sidebar-foreground truncate" dir="ltr">{user?.email}</p>
-      <p className="text-[10px] text-sidebar-foreground/40">
+      <p className="text-xs text-sidebar-foreground/40">
         {isAdmin ? 'مدير النظام' : 'مستخدم'}
       </p>
     </div>
@@ -334,9 +339,11 @@ function NavItem({
       onClick={onClick}
       aria-label={label}
       className={cn(
-        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+        'relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
         collapsed && 'justify-center px-2',
-        active ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
+        active
+          ? 'bg-primary/20 text-primary font-semibold border-r-2 border-primary'
+          : 'text-sidebar-foreground hover:bg-sidebar-accent'
       )}
     >
       {icon}

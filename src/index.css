@@ -6,6 +6,37 @@
 
 @layer base {
   :root {
+    /* ============= Type Scale ============= */
+    --text-xs:   0.75rem;   /* 12px — minimum (labels, badges, meta) */
+    --text-sm:   0.875rem;  /* 14px — body, descriptions */
+    --text-base: 1rem;      /* 16px — standard reading */
+    --text-lg:   1.125rem;  /* 18px — section headers */
+    --text-xl:   1.25rem;   /* 20px — page sub-titles */
+    --text-2xl:  1.5rem;    /* 24px — page titles */
+    --text-3xl:  1.875rem;  /* 30px — hero numbers only */
+
+    /* ============= Spacing System ============= */
+    --space-1:  0.25rem;   /* 4px  */
+    --space-2:  0.5rem;    /* 8px  */
+    --space-3:  0.75rem;   /* 12px */
+    --space-4:  1rem;      /* 16px — inside components */
+    --space-6:  1.5rem;    /* 24px — between components */
+    --space-8:  2rem;      /* 32px — between sections */
+    --space-12: 3rem;      /* 48px — page sections */
+
+    /* ============= Neutral Scale ============= */
+    --gray-50:  220 20% 97%;
+    --gray-100: 220 18% 93%;
+    --gray-200: 220 15% 87%;
+    --gray-300: 220 12% 76%;
+    --gray-400: 220 10% 58%;
+    --gray-500: 220 9%  46%;
+    --gray-600: 220 10% 34%;
+    --gray-700: 220 12% 24%;
+    --gray-800: 220 18% 16%;
+    --gray-900: 222 30% 10%;
+
+    /* ============= Brand & Semantic ============= */
     --background: 220 25% 96%;
     --foreground: 222 30% 12%;
 
@@ -15,17 +46,19 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 30% 12%;
 
-    --primary: 40 55% 55%;
-    --primary-foreground: 222 30% 10%;
+    /* Primary = Navy (used for CTAs, important links). Gold reserved for accents. */
+    --primary: 222 30% 14%;
+    --primary-foreground: 40 60% 70%;
+
+    /* Accent = Gold (sidebar active states, focus rings, highlights) */
+    --accent: 40 55% 55%;
+    --accent-foreground: 222 30% 10%;
 
     --secondary: 220 18% 92%;
     --secondary-foreground: 222 25% 20%;
 
     --muted: 220 15% 94%;
-    --muted-foreground: 220 12% 48%;
-
-    --accent: 40 55% 55%;
-    --accent-foreground: 222 30% 10%;
+    --muted-foreground: 220 12% 42%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -36,21 +69,27 @@
 
     --radius: 0.75rem;
 
-    --success: 160 60% 42%;
+    --success: 160 60% 38%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 38 92% 45%;
     --warning-foreground: 0 0% 100%;
     --info: 215 80% 50%;
     --info-foreground: 0 0% 100%;
 
-    --profit: 160 60% 42%;
-    --loss: 0 72% 51%;
+    --profit: 160 60% 36%;
+    --loss: 0 72% 48%;
 
-    --gold: 40 55% 55%;
+    --gold: 40 55% 50%;
     --gold-light: 40 60% 70%;
+    --gold-soft: 40 55% 55% / 0.08;
     --navy: 222 30% 12%;
     --navy-light: 222 25% 18%;
 
+    /* CTA aliases (Navy bg + Gold-light text for premium feel) */
+    --cta-bg: var(--navy);
+    --cta-fg: 40 60% 70%;
+
+    /* Sidebar tokens */
     --sidebar-background: 222 30% 12%;
     --sidebar-foreground: 40 30% 85%;
     --sidebar-primary: 40 55% 55%;
@@ -62,6 +101,7 @@
 
     --gradient-primary: linear-gradient(135deg, hsl(40, 55%, 50%), hsl(40, 60%, 65%));
     --gradient-gold: linear-gradient(135deg, hsl(40, 55%, 48%), hsl(40, 65%, 62%));
+    --gradient-gold-soft: linear-gradient(135deg, hsl(40, 55%, 55% / 0.10), hsl(40, 65%, 65% / 0.04));
     --gradient-success: linear-gradient(135deg, hsl(160, 60%, 42%), hsl(160, 60%, 52%));
     --gradient-sidebar: linear-gradient(180deg, hsl(222, 32%, 10%), hsl(222, 28%, 16%));
 
@@ -80,19 +120,26 @@
     --card-foreground: 40 20% 92%;
     --popover: 222 30% 12%;
     --popover-foreground: 40 20% 92%;
-    --primary: 40 55% 55%;
-    --primary-foreground: 222 30% 10%;
+
+    /* In dark mode, Primary becomes Gold for CTA visibility on dark surfaces */
+    --primary: 40 55% 60%;
+    --primary-foreground: 222 30% 8%;
+
+    --accent: 40 55% 60%;
+    --accent-foreground: 222 30% 8%;
+
     --secondary: 222 25% 16%;
     --secondary-foreground: 40 20% 85%;
     --muted: 222 25% 14%;
-    --muted-foreground: 220 12% 55%;
-    --accent: 40 55% 55%;
-    --accent-foreground: 222 30% 10%;
-    --destructive: 0 62% 50%;
+    --muted-foreground: 220 12% 62%;
+    --destructive: 0 62% 55%;
     --destructive-foreground: 0 0% 100%;
     --border: 222 25% 18%;
     --input: 222 25% 18%;
-    --ring: 40 55% 55%;
+    --ring: 40 55% 60%;
+
+    --gold-soft: 40 55% 55% / 0.12;
+    --gradient-gold-soft: linear-gradient(135deg, hsl(40, 55%, 55% / 0.16), hsl(40, 65%, 65% / 0.04));
   }
 }
 
@@ -110,15 +157,16 @@
     @apply bg-background text-foreground antialiased;
   }
 
-  /* Force English numerals */
+  /* Force English numerals for tabular data */
   .font-mono, .stat-value, td, input[type="number"] {
     font-variant-numeric: tabular-nums;
   }
 }
 
 @layer components {
+  /* ============= Cards ============= */
   .stat-card {
-    @apply bg-card rounded-xl p-3 md:p-5 border border-border;
+    @apply bg-card rounded-xl p-4 border border-border;
     box-shadow: var(--shadow-card);
     transition: all 0.2s ease;
     direction: rtl;
@@ -128,10 +176,29 @@
     box-shadow: var(--shadow-elevated);
     transform: translateY(-1px);
   }
+  .stat-card-hero {
+    background: var(--gradient-gold-soft);
+    border-color: hsl(var(--gold) / 0.25);
+  }
+  .stat-card-hero:hover {
+    box-shadow: var(--shadow-gold);
+  }
 
   .stat-value {
     font-family: var(--font-mono);
-    @apply text-lg md:text-2xl font-medium tracking-tight;
+    @apply text-xl md:text-2xl font-semibold tracking-tight;
+  }
+  .stat-value-hero {
+    font-family: var(--font-mono);
+    @apply text-2xl md:text-3xl font-bold tracking-tight;
+    color: hsl(var(--gold));
+  }
+
+  /* Filter bar — slightly different surface than data cards */
+  .filter-bar {
+    @apply bg-muted/40 rounded-xl p-4 border border-border/60 mb-6;
+    direction: rtl;
+    text-align: right;
   }
 
   /* Scrollbar hide utility */
@@ -143,7 +210,7 @@
     display: none;
   }
 
-  /* Mobile table improvements */
+  /* ============= Tables ============= */
   .data-table-wrapper {
     @apply relative overflow-x-auto;
     -webkit-overflow-scrolling: touch;
@@ -154,64 +221,32 @@
     background: linear-gradient(to left, hsl(var(--background) / 0.8), transparent);
   }
 
-  @media (max-width: 767px) {
-    .data-table td,
-    .data-table th {
-      @apply px-2 py-2 text-xs;
-    }
-  }
-
-  .profit-text {
-    color: hsl(var(--profit));
-  }
-
-  .loss-text {
-    color: hsl(var(--loss));
-  }
-
-  .gradient-primary {
-    background: var(--gradient-primary);
-  }
-
-  .gradient-gold {
-    background: var(--gradient-gold);
-  }
-
-  .gradient-success {
-    background: var(--gradient-success);
-  }
-
-  .sidebar-gradient {
-    background: var(--gradient-sidebar);
-  }
-
-  .gold-text {
-    color: hsl(var(--gold));
-  }
-
-  .gold-border {
-    border-color: hsl(var(--gold) / 0.3);
-  }
-
   .data-table {
     @apply w-full text-sm;
     direction: rtl;
   }
 
   .data-table th {
-    @apply bg-muted/50 px-4 py-3 font-semibold text-muted-foreground border-b;
+    @apply bg-muted px-4 py-3 text-xs font-semibold text-muted-foreground border-b-2 border-border;
     text-align: right !important;
+    letter-spacing: 0.04em;
   }
 
   .data-table td {
-    @apply px-4 py-3 border-b border-border/50;
+    @apply px-4 py-3 border-b border-border/50 text-sm;
     text-align: right !important;
   }
 
-  .data-table tr:hover td {
-    @apply bg-muted/30;
+  /* Row striping for long tables */
+  .data-table tbody tr:nth-child(even) td {
+    @apply bg-muted/20;
   }
 
+  .data-table tbody tr:hover td {
+    @apply bg-muted/40;
+  }
+
+  /* ============= Page header ============= */
   .page-header {
     @apply mb-8;
   }
@@ -221,30 +256,43 @@
   }
 
   .page-subtitle {
-    @apply text-muted-foreground mt-1;
+    @apply text-sm text-muted-foreground mt-1;
   }
 
+  /* ============= Status badges ============= */
   .badge-profit {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-    background: hsl(var(--profit) / 0.1);
+    background: hsl(var(--profit) / 0.12);
     color: hsl(var(--profit));
   }
 
   .badge-loss {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-    background: hsl(var(--loss) / 0.1);
+    background: hsl(var(--loss) / 0.12);
     color: hsl(var(--loss));
   }
 
   .badge-warning {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-    background: hsl(var(--warning) / 0.1);
+    background: hsl(var(--warning) / 0.15);
     color: hsl(var(--warning));
   }
 
   .badge-gold {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-    background: hsl(var(--gold) / 0.12);
+    background: hsl(var(--gold) / 0.14);
     color: hsl(var(--gold));
   }
+
+  /* ============= Color helpers ============= */
+  .profit-text { color: hsl(var(--profit)); }
+  .loss-text { color: hsl(var(--loss)); }
+  .gold-text { color: hsl(var(--gold)); }
+  .gold-border { border-color: hsl(var(--gold) / 0.3); }
+
+  .gradient-primary { background: var(--gradient-primary); }
+  .gradient-gold { background: var(--gradient-gold); }
+  .gradient-gold-soft { background: var(--gradient-gold-soft); }
+  .gradient-success { background: var(--gradient-success); }
+  .sidebar-gradient { background: var(--gradient-sidebar); }
 }

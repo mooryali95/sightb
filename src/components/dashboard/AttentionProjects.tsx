@@ -64,7 +64,7 @@ export function AttentionProjects({
                 <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/project/${p.id}`)}>
                   <div>
                     <span className="text-sm font-medium">{p.name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full mr-2 ${PROJECT_STATUS_COLORS[p.status]}`}>{PROJECT_STATUS_LABELS[p.status]}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full mr-2 ${PROJECT_STATUS_COLORS[p.status]}`}>{PROJECT_STATUS_LABELS[p.status]}</span>
                   </div>
                   <span className="text-xs font-mono text-destructive">{s.spendRate.toFixed(0)}% صرف</span>
                 </div>
@@ -104,7 +104,7 @@ export function AttentionProjects({
                       <td className="font-medium text-sm">{risk.title}</td>
                       <td className="text-xs text-muted-foreground">{project?.name || portfolio?.name || '-'}</td>
                       <td>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${RISK_PROBABILITY_COLORS[risk.probability]}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${RISK_PROBABILITY_COLORS[risk.probability]}`}>
                           {RISK_PROBABILITY_LABELS[risk.probability]}
                         </span>
                       </td>

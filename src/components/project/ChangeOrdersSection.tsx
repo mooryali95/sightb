@@ -253,7 +253,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
                     ) : '—'}
                   </td>
                   <td>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${CHANGE_ORDER_STATUS_COLORS[co.status]}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${CHANGE_ORDER_STATUS_COLORS[co.status]}`}>
                       {CHANGE_ORDER_STATUS_LABELS[co.status]}
                     </span>
                   </td>

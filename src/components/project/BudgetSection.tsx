@@ -248,7 +248,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
             {baselineLocked && !readOnly && (
               <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-2 flex-wrap">
                 <span>🔒 الموازنة مقفلة — لإضافة بنود، أنشئ أمر تغيير</span>
-                <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={() => {
+                <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => {
                   const tab = document.querySelector('[value="changeorders"]') as HTMLElement;
                   tab?.click();
                 }}>أمر تغيير جديد</Button>
@@ -423,7 +423,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                       <td>
                         {item.description.startsWith('[أمر تغيير]') ? (
                           <span className="flex items-center gap-1">
-                            <span className="text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-bold shrink-0">CO</span>
+                            <span className="text-xs px-1 py-0.5 rounded bg-primary/10 text-primary font-bold shrink-0">CO</span>
                             <span>{item.description.replace('[أمر تغيير] ', '')}</span>
                           </span>
                         ) : item.description}
@@ -434,7 +434,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                       <td className="font-mono text-sm">
                         {formatCurrency(item.plannedAmount)}
                         {item.costType === 'recurring' && item.startMonth && item.endMonth && item.endMonth > item.startMonth && (
-                          <span className="block text-[10px] text-muted-foreground">إجمالي: {formatCurrency(itemTotalPlanned)}</span>
+                          <span className="block text-xs text-muted-foreground">إجمالي: {formatCurrency(itemTotalPlanned)}</span>
                         )}
                       </td>
                       <td className="font-mono text-sm">{formatCurrency(actual)}</td>
@@ -501,7 +501,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
                 <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
                   <p className="text-xs text-muted-foreground">الاحتياطي الإداري</p>
                   <p className="text-sm font-mono font-bold mt-1">{formatCurrency(managementReserve)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">محجوز لا يُصرف إلا بموافقة خاصة</p>
+                  <p className="text-xs text-muted-foreground mt-1">محجوز لا يُصرف إلا بموافقة خاصة</p>
                 </div>
               </div>
             );

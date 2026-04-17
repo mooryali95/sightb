@@ -209,17 +209,17 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
               <div className="p-3 rounded-lg border border-border bg-muted/30">
                 <p className="text-xs text-muted-foreground mb-1">EAC — الأداء يستمر (Typical)</p>
                 <p className="text-sm font-mono font-bold">{formatCurrency(evm.eac)}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">BAC / CPI</p>
+                <p className="text-xs text-muted-foreground mt-1">BAC / CPI</p>
               </div>
               <div className="p-3 rounded-lg border border-border bg-muted/30">
                 <p className="text-xs text-muted-foreground mb-1">EAC — الأداء يتحسن (Atypical)</p>
                 <p className="text-sm font-mono font-bold">{formatCurrency(evm.eacAtypical)}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">AC + (BAC - EV)</p>
+                <p className="text-xs text-muted-foreground mt-1">AC + (BAC - EV)</p>
               </div>
               <div className="p-3 rounded-lg border border-border bg-muted/30">
                 <p className="text-xs text-muted-foreground mb-1">EAC — مرجّح (Combined)</p>
                 <p className="text-sm font-mono font-bold">{formatCurrency(evm.eacCombined)}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">AC + (BAC - EV) / (CPI × SPI)</p>
+                <p className="text-xs text-muted-foreground mt-1">AC + (BAC - EV) / (CPI × SPI)</p>
               </div>
             </div>
           </div>

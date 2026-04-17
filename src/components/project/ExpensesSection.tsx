@@ -493,11 +493,11 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                       <td>
                         <div>
                           {exp.description}
-                          {exp.vendor && <span className="block text-[10px] text-muted-foreground">{exp.vendor}</span>}
+                          {exp.vendor && <span className="block text-xs text-muted-foreground">{exp.vendor}</span>}
                         </div>
                       </td>
                       <td className="font-mono text-sm">{formatCurrency(exp.amount)}</td>
-                      <td className="text-[10px]">
+                      <td className="text-xs">
                         {exp.isVatExempt ? (
                           <span className="text-muted-foreground">معفى</span>
                         ) : taxPercent > 0 ? (
@@ -509,7 +509,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         )}
                       </td>
                       <td>
-                        <Badge className={`text-[10px] ${APPROVAL_STATUS_COLORS[status as ApprovalStatus] || ''}`}>
+                        <Badge className={`text-xs ${APPROVAL_STATUS_COLORS[status as ApprovalStatus] || ''}`}>
                           {APPROVAL_STATUS_LABELS[status as ApprovalStatus] || status}
                         </Badge>
                       </td>

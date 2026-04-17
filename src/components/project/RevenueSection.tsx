@@ -229,19 +229,19 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
       {revenues.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
-            <p className="text-[10px] text-muted-foreground">مخطط</p>
+            <p className="text-xs text-muted-foreground">مخطط</p>
             <p className="text-xs font-mono font-bold">{formatCurrency(plannedTotal)}</p>
           </div>
           <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
-            <p className="text-[10px] text-muted-foreground">مُفوتر</p>
+            <p className="text-xs text-muted-foreground">مُفوتر</p>
             <p className="text-xs font-mono font-bold">{formatCurrency(invoicedTotal)}</p>
           </div>
           <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
-            <p className="text-[10px] text-muted-foreground">محصّل</p>
+            <p className="text-xs text-muted-foreground">محصّل</p>
             <p className="text-xs font-mono font-bold">{formatCurrency(collectedTotal)}</p>
           </div>
           <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
-            <p className="text-[10px] text-muted-foreground">ذمم مدينة</p>
+            <p className="text-xs text-muted-foreground">ذمم مدينة</p>
             <p className="text-xs font-mono font-bold">{formatCurrency(invoicedTotal)}</p>
           </div>
         </div>
@@ -304,7 +304,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   {showVAT && <td className="font-mono text-xs text-emerald-600">{formatCurrency(calcVAT(r.amount, taxPercent))}</td>}
                   {showVAT && <td className="font-mono text-xs">{formatCurrency(addVAT(r.amount, taxPercent))}</td>}
                   <td>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${REVENUE_STATUS_COLORS[r.status as RevenueStatus] || ''}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${REVENUE_STATUS_COLORS[r.status as RevenueStatus] || ''}`}>
                       {REVENUE_STATUS_LABELS[r.status as RevenueStatus] || r.status}
                     </span>
                   </td>
@@ -315,7 +315,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                         const m = milestones.find((ms: any) => ms.id === r.milestoneId);
                         if (!m) return '—';
                         return (
-                          <Badge className={`text-[9px] ${MILESTONE_STATUS_COLORS[m.status as MilestoneStatus] || ''}`}>
+                          <Badge className={`text-xs ${MILESTONE_STATUS_COLORS[m.status as MilestoneStatus] || ''}`}>
                             {m.name}
                           </Badge>
                         );
