@@ -53,21 +53,21 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div className="text-center p-2 rounded-lg bg-muted/30">
                 <p className="text-xs text-muted-foreground">قيمة العقد</p>
-                <p className="text-xs font-mono font-bold">{formatCurrency(summary.effectiveContractValue)}</p>
+                <p className="text-xs font-mono font-semibold">{formatCurrency(summary.effectiveContractValue)}</p>
               </div>
               <div className="text-center p-2 rounded-lg bg-muted/30">
                 <p className="text-xs text-muted-foreground">المصروفات</p>
-                <p className="text-xs font-mono font-bold">{formatCurrency(summary.totalActual)}</p>
+                <p className="text-xs font-mono font-semibold">{formatCurrency(summary.totalActual)}</p>
               </div>
               <div className="text-center p-2 rounded-lg bg-muted/30">
                 <p className="text-xs text-muted-foreground">الربح المخطط</p>
-                <p className={`text-xs font-mono font-bold ${summary.plannedProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                <p className={`text-xs font-mono font-semibold ${summary.plannedProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
                   {formatCurrency(summary.plannedProfit)}
                 </p>
               </div>
               <div className="text-center p-2 rounded-lg bg-muted/30">
                 <p className="text-xs text-muted-foreground">متبقي الموازنة</p>
-                <p className={`text-xs font-mono font-bold ${summary.budgetRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                <p className={`text-xs font-mono font-semibold ${summary.budgetRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
                   {formatCurrency(summary.budgetRemaining)}
                 </p>
               </div>
