@@ -113,43 +113,34 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-1">
         {/* Dashboard */}
-        <button
+        <NavItem
+          collapsed={collapsed}
+          label="لوحة التحكم"
+          icon={<LayoutDashboard className="w-4 h-4 shrink-0" />}
+          active={isActive('/')}
           onClick={() => navigate('/')}
-          className={cn(
-            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-            isActive('/') ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
-          )}
-        >
-          <LayoutDashboard className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>لوحة التحكم</span>}
-        </button>
+        />
 
         {/* User Management - Admin only */}
         {isAdmin && (
-          <button
+          <NavItem
+            collapsed={collapsed}
+            label="إدارة المستخدمين"
+            icon={<Users className="w-4 h-4 shrink-0" />}
+            active={isActive('/users')}
             onClick={() => navigate('/users')}
-            className={cn(
-              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-              isActive('/users') ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
-            )}
-          >
-            <Users className="w-4 h-4 shrink-0" />
-            {!collapsed && <span>إدارة المستخدمين</span>}
-          </button>
+          />
         )}
 
         {/* System Audit Log - Owner only */}
         {isOwner && (
-          <button
+          <NavItem
+            collapsed={collapsed}
+            label="السجل الرئيسي"
+            icon={<ScrollText className="w-4 h-4 shrink-0" />}
+            active={isActive('/audit')}
             onClick={() => navigate('/audit')}
-            className={cn(
-              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-              isActive('/audit') ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
-            )}
-          >
-            <ScrollText className="w-4 h-4 shrink-0" />
-            {!collapsed && <span>السجل الرئيسي</span>}
-          </button>
+          />
         )}
 
         {/* Companies Section */}
