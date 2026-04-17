@@ -37,12 +37,11 @@ export function ProjectsTable({
           <thead>
             <tr>
               <th>المشروع</th>
-              <th className="hidden sm:table-cell">الشركة</th>
+              <th>الحالة</th>
               <th>قيمة العقد</th>
               <th className="hidden md:table-cell">المصروفات</th>
               <th className="hidden md:table-cell">نسبة الصرف</th>
               <th>الربح المخطط</th>
-              <th className="hidden sm:table-cell">الحالة</th>
               <th></th>
             </tr>
           </thead>
@@ -67,8 +66,19 @@ export function ProjectsTable({
                     className="cursor-pointer"
                     onClick={() => navigate(`/project/${project.id}`)}
                   >
-                    <td className="font-medium">{project.name}</td>
-                    <td className="text-muted-foreground hidden sm:table-cell">{company?.name}</td>
+                    <td>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{project.name}</span>
+                        {company && (
+                          <span className="text-[11px] text-muted-foreground mt-0.5">{company.name}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
+                        {PROJECT_STATUS_LABELS[project.status]}
+                      </span>
+                    </td>
                     <td className="font-mono text-sm">{formatCurrency(summary.effectiveContractValue)}</td>
                     <td className="font-mono text-sm hidden md:table-cell">{formatCurrency(summary.totalActual)}</td>
                     <td className="hidden md:table-cell">
@@ -88,11 +98,6 @@ export function ProjectsTable({
                     <td>
                       <span className={summary.plannedProfit >= 0 ? 'badge-profit' : 'badge-loss'}>
                         {formatCurrency(summary.plannedProfit)}
-                      </span>
-                    </td>
-                    <td className="hidden sm:table-cell">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
-                        {PROJECT_STATUS_LABELS[project.status]}
                       </span>
                     </td>
                     <td>

@@ -50,6 +50,7 @@ export function DashboardFilters({
       className="stat-card mb-6"
     >
       <Collapsible open={!isMobile || filtersOpen} onOpenChange={setFiltersOpen}>
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-muted-foreground shrink-0">
             <Filter className="w-4 h-4" />
@@ -61,14 +62,15 @@ export function DashboardFilters({
             )}
           </div>
           <CollapsibleTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-              <ChevronDown className={cn("w-4 h-4 transition-transform", filtersOpen && "rotate-180")} />
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="تبديل التصفية">
+              <ChevronDown className={cn('w-4 h-4 transition-transform', filtersOpen && 'rotate-180')} />
             </Button>
           </CollapsibleTrigger>
         </div>
 
-        <CollapsibleContent className="mt-3 md:!block">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
+        <CollapsibleContent className="mt-3 md:!block space-y-3">
+          {/* Row 1: Search + Show inactive + Clear */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
             <div className="relative flex-1 min-w-0">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -76,11 +78,41 @@ export function DashboardFilters({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pr-9 h-9 text-sm"
+                aria-label="بحث عن المشاريع"
               />
             </div>
 
+            <Button
+              variant={showInactive ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowInactive(!showInactive)}
+              className={cn('gap-1.5 text-xs shrink-0 h-9 w-full sm:w-auto justify-center', showInactive && 'bg-muted-foreground/20 text-foreground hover:bg-muted-foreground/30')}
+              title={showInactive ? 'إخفاء المشاريع المنتهية' : 'عرض المشاريع المنتهية والمؤرشفة'}
+            >
+              {showInactive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              {showInactive ? 'إخفاء المنتهية' : 'عرض المنتهية'}
+            </Button>
+
+            <AnimatePresence>
+              {hasActiveFilters && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                >
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-xs shrink-0 h-9 w-full sm:w-auto justify-center">
+                    <X className="w-3.5 h-3.5" />
+                    مسح
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Row 2: Company + Status + Time period */}
+          <div className="flex flex-col sm:flex-row items-stretch gap-2 w-full">
             <Select value={filterCompany} onValueChange={setFilterCompany}>
-              <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
+              <SelectTrigger className="w-full sm:flex-1 h-9 text-sm">
                 <SelectValue placeholder="جميع الشركات" />
               </SelectTrigger>
               <SelectContent>
@@ -97,7 +129,7 @@ export function DashboardFilters({
                 setShowInactive(true);
               }
             }}>
-              <SelectTrigger className="w-full sm:w-[150px] h-9 text-sm">
+              <SelectTrigger className="w-full sm:flex-1 h-9 text-sm">
                 <SelectValue placeholder="جميع الحالات" />
               </SelectTrigger>
               <SelectContent>
@@ -114,7 +146,7 @@ export function DashboardFilters({
             </Select>
 
             <Select value={timePeriod} onValueChange={setTimePeriod}>
-              <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+              <SelectTrigger className="w-full sm:flex-1 h-9 text-sm">
                 <SelectValue placeholder="كل الفترات" />
               </SelectTrigger>
               <SelectContent>
@@ -124,32 +156,6 @@ export function DashboardFilters({
                 <SelectItem value="year">هذه السنة</SelectItem>
               </SelectContent>
             </Select>
-
-            <Button
-              variant={showInactive ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setShowInactive(!showInactive)}
-              className={cn("gap-1.5 text-xs shrink-0 h-9", showInactive && "bg-muted-foreground/20 text-foreground hover:bg-muted-foreground/30")}
-              title={showInactive ? 'إخفاء المشاريع المنتهية' : 'عرض المشاريع المنتهية والمؤرشفة'}
-            >
-              {showInactive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              {showInactive ? 'إخفاء المنتهية' : 'عرض المنتهية'}
-            </Button>
-
-            <AnimatePresence>
-              {hasActiveFilters && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                >
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-xs shrink-0">
-                    <X className="w-3.5 h-3.5" />
-                    مسح
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </CollapsibleContent>
       </Collapsible>
