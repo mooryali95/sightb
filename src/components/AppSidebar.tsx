@@ -339,9 +339,11 @@ function NavItem({
       onClick={onClick}
       aria-label={label}
       className={cn(
-        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+        'relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
         collapsed && 'justify-center px-2',
-        active ? 'bg-primary/20 text-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent'
+        active
+          ? 'bg-primary/20 text-primary font-semibold border-r-2 border-primary'
+          : 'text-sidebar-foreground hover:bg-sidebar-accent'
       )}
     >
       {icon}
