@@ -1,6 +1,6 @@
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
-import { DollarSign, TrendingUp, Briefcase, Wallet } from 'lucide-react';
+import { DollarSign, TrendingDown, TrendingUp, Briefcase, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -46,46 +46,55 @@ export function DashboardStats(props: DashboardStatsProps) {
         showRevenueCard ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
       )}
     >
+      {/* Hero card — Total contract value */}
       <motion.div variants={stagger.item}>
         <StatCard
+          variant="hero"
           title="إجمالي قيمة العقود"
           value={formatCurrency(effectiveTotalContract)}
-          icon={<DollarSign className="w-4 h-4" />}
-          subtitle={approvedChangeImpact !== 0 ? `الأصلية: ${formatCurrency(totalContractValue)}` : undefined}
+          icon={<DollarSign className="w-5 h-5" />}
+          subtitle={approvedChangeImpact !== 0
+            ? `الأصلية: ${formatCurrency(totalContractValue)}`
+            : 'القيمة الفعّالة بعد أوامر التغيير'}
         />
       </motion.div>
 
+      {/* Expenses — TrendingDown semantics (more spend = bad) */}
       <motion.div variants={stagger.item}>
         <StatCard
           title="إجمالي المصروفات"
           value={formatCurrency(totalExpenses)}
-          icon={<TrendingUp className="w-4 h-4" />}
-          trend={expenseChange !== null ? (expenseChange > 0 ? 'up' : 'down') : undefined}
-          subtitle={expenseChange !== null ? `${expenseChange > 0 ? '↑' : '↓'} ${Math.abs(expenseChange).toFixed(1)}% عن الفترة السابقة` : undefined}
+          icon={<TrendingDown className="w-4 h-4" />}
+          trend={expenseChange !== null ? (expenseChange > 0 ? 'down' : 'up') : undefined}
+          subtitle={expenseChange !== null
+            ? `${expenseChange > 0 ? '↑' : '↓'} ${Math.abs(expenseChange).toFixed(1)}% عن الفترة السابقة`
+            : undefined}
         />
       </motion.div>
 
+      {/* Planned Profit — TrendingUp for positive, TrendingDown for negative */}
       <motion.div variants={stagger.item}>
         <StatCard
           title="الربح المخطط"
           value={formatCurrency(plannedProfit)}
-          icon={<TrendingUp className="w-4 h-4" />}
+          icon={plannedProfit >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           trend={plannedProfit >= 0 ? 'up' : 'down'}
           subtitle={`هامش: ${plannedProfitMargin.toFixed(1)}%`}
         />
       </motion.div>
 
-      {/* Always-visible: Total projects card */}
+      {/* Total projects (always visible, neutral) */}
       <motion.div variants={stagger.item}>
         <StatCard
           title="إجمالي المشاريع"
           value={filteredProjectsCount.toString()}
           icon={<Briefcase className="w-4 h-4" />}
+          trend="neutral"
           subtitle={`${activeCompaniesCount} شركة${archivedCompaniesCount > 0 ? ` · ${archivedCompaniesCount} مؤرشفة` : ''} · ${portfoliosCount} محفظة`}
         />
       </motion.div>
 
-      {/* Conditional: Collected Revenue card (only when a time period is selected) */}
+      {/* Conditional 5th card: Collected Revenue */}
       <AnimatePresence>
         {showRevenueCard && (
           <motion.div
