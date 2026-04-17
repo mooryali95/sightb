@@ -51,21 +51,21 @@ export function PortfolioPerformance({
                   <FolderKanban className="w-4 h-4 text-primary" />
                   <span className="text-sm font-semibold">{portfolio.name}</span>
                 </div>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${HEALTH_STATUS_COLORS[ps.healthStatus]}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${HEALTH_STATUS_COLORS[ps.healthStatus]}`}>
                   {HEALTH_STATUS_LABELS[ps.healthStatus]}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-1.5 rounded bg-muted/30">
-                  <p className="text-[10px] text-muted-foreground">المشاريع</p>
+                  <p className="text-xs text-muted-foreground">المشاريع</p>
                   <p className="text-sm font-bold">{ps.projectCount}</p>
                 </div>
                 <div className="p-1.5 rounded bg-muted/30">
-                  <p className="text-[10px] text-muted-foreground">العقود</p>
-                  <p className="text-[10px] font-mono font-bold">{formatCurrency(ps.totalEffectiveValue)}</p>
+                  <p className="text-xs text-muted-foreground">العقود</p>
+                  <p className="text-xs font-mono font-bold">{formatCurrency(ps.totalEffectiveValue)}</p>
                 </div>
                 <div className="p-1.5 rounded bg-muted/30">
-                  <p className="text-[10px] text-muted-foreground">الإنجاز</p>
+                  <p className="text-xs text-muted-foreground">الإنجاز</p>
                   <p className="text-sm font-bold">{ps.weightedPercentComplete.toFixed(0)}%</p>
                 </div>
               </div>

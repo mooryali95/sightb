@@ -300,12 +300,12 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="text-sm font-medium">{m.name}</h4>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${MILESTONE_STATUS_COLORS[m.status]}`}>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${MILESTONE_STATUS_COLORS[m.status]}`}>
                     {MILESTONE_STATUS_LABELS[m.status]}
                   </span>
-                  {m.weight > 0 && <span className="text-[10px] text-muted-foreground">وزن: {m.weight}</span>}
+                  {m.weight > 0 && <span className="text-xs text-muted-foreground">وزن: {m.weight}</span>}
                   {m.linkedRevenueId && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">مربوط بإيراد</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">مربوط بإيراد</span>
                   )}
                 </div>
                 {!readOnly && (
@@ -335,7 +335,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
                 </div>
               </div>
               {(m.plannedStart || m.plannedEnd) && (
-                <p className="text-[10px] text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {m.plannedStart && `بداية: ${m.plannedStart}`}
                   {m.plannedStart && m.plannedEnd && ' · '}
                   {m.plannedEnd && `نهاية: ${m.plannedEnd}`}

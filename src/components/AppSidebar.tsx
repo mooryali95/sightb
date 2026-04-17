@@ -76,7 +76,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
         {statusIcon(project.status)}
         <span className={cn('truncate', inactive && 'line-through decoration-1')}>{project.name}</span>
         {inactive && (
-          <span className="text-[9px] text-muted-foreground mr-auto shrink-0">
+          <span className="text-xs text-muted-foreground mr-auto shrink-0">
             {PROJECT_STATUS_LABELS[project.status as ProjectStatus]}
           </span>
         )}
@@ -98,7 +98,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
             <img src={basserhLogo} alt="بصيرة" className="w-9 h-9 rounded-lg object-cover" />
             <div>
               <span className="font-bold text-sidebar-foreground text-sm block">رؤية</span>
-              <span className="text-[10px] text-sidebar-foreground/40">نظام إدارة المحافظ والمشاريع</span>
+              <span className="text-xs text-sidebar-foreground/40">نظام إدارة المحافظ والمشاريع</span>
             </div>
           </div>
         )}
@@ -273,7 +273,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                       {inactiveProjects.length > 0 && (
                         <button
                           onClick={() => toggleShowInactive(company.id)}
-                          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] text-sidebar-foreground/30 hover:text-sidebar-foreground/60 hover:bg-sidebar-accent transition-colors"
+                          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-sidebar-foreground/60 hover:bg-sidebar-accent transition-colors"
                         >
                           <Archive className="w-3 h-3" />
                           <span>
@@ -299,7 +299,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           <UserInfo />
           <SignOutButton />
           <div className="flex items-center justify-center gap-1.5 py-1">
-            <span className="text-[10px] text-sidebar-foreground/30">Powered by</span>
+            <span className="text-xs text-sidebar-foreground/30">Powered by</span>
             <span className="text-[11px] font-bold text-primary tracking-wider">BASSERH</span>
           </div>
         </div>
@@ -319,7 +319,7 @@ function UserInfo() {
   return (
     <div className="px-3 py-1.5">
       <p className="text-xs font-medium text-sidebar-foreground truncate" dir="ltr">{user?.email}</p>
-      <p className="text-[10px] text-sidebar-foreground/40">
+      <p className="text-xs text-sidebar-foreground/40">
         {isAdmin ? 'مدير النظام' : 'مستخدم'}
       </p>
     </div>

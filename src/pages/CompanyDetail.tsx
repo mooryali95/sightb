@@ -175,7 +175,7 @@ export default function CompanyDetail() {
                 <div>
                   <div className="flex items-center gap-3">
                     <h1 className="text-xl font-bold">{company.name}</h1>
-                    <Badge variant={company.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
+                    <Badge variant={company.status === 'active' ? 'default' : 'secondary'} className="text-xs">
                       {company.status === 'active' ? 'نشطة' : 'مؤرشفة'}
                     </Badge>
                   </div>
@@ -383,7 +383,7 @@ export default function CompanyDetail() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${HEALTH_STATUS_COLORS[ps.healthStatus]}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${HEALTH_STATUS_COLORS[ps.healthStatus]}`}>
                           {HEALTH_STATUS_LABELS[ps.healthStatus]}
                         </span>
                         {portfolioProjects.length > 0 && (
@@ -398,19 +398,19 @@ export default function CompanyDetail() {
                     </div>
                     <div className="grid grid-cols-4 gap-3">
                       <div className="text-center p-2 rounded-lg bg-muted/40">
-                        <p className="text-[10px] text-muted-foreground mb-0.5">العقود</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">العقود</p>
                         <p className="text-xs font-mono font-bold">{formatCurrency(ps.totalEffectiveValue)}</p>
                       </div>
                       <div className="text-center p-2 rounded-lg bg-muted/40">
-                        <p className="text-[10px] text-muted-foreground mb-0.5">المصروفات</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">المصروفات</p>
                         <p className="text-xs font-mono font-bold">{formatCurrency(ps.totalActual)}</p>
                       </div>
                       <div className="text-center p-2 rounded-lg bg-muted/40">
-                        <p className="text-[10px] text-muted-foreground mb-0.5">الإنجاز</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">الإنجاز</p>
                         <p className="text-sm font-bold">{ps.weightedPercentComplete.toFixed(0)}%</p>
                       </div>
                       <div className="text-center p-2 rounded-lg bg-muted/40">
-                        <p className="text-[10px] text-muted-foreground mb-0.5">الربح</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">الربح</p>
                         <p className={`text-xs font-mono font-bold ${ps.aggregatePlannedProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
                           {formatCurrency(ps.aggregatePlannedProfit)}
                         </p>
@@ -442,7 +442,7 @@ export default function CompanyDetail() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="text-sm font-medium truncate">{project.name}</span>
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ${PROJECT_STATUS_COLORS[project.status]}`}>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${PROJECT_STATUS_COLORS[project.status]}`}>
                                   {PROJECT_STATUS_LABELS[project.status]}
                                 </span>
                               </div>
@@ -587,17 +587,17 @@ export default function CompanyDetail() {
                         </div>
                         <span className="text-sm font-semibold truncate">{project.name}</span>
                       </div>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
                         {PROJECT_STATUS_LABELS[project.status]}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-center mb-3">
                       <div className="p-1.5 rounded bg-muted/40">
-                        <p className="text-[10px] text-muted-foreground">العقد</p>
+                        <p className="text-xs text-muted-foreground">العقد</p>
                         <p className="text-xs font-mono font-bold">{formatCurrency(project.contractValue)}</p>
                       </div>
                       <div className="p-1.5 rounded bg-muted/40">
-                        <p className="text-[10px] text-muted-foreground">المصروف</p>
+                        <p className="text-xs text-muted-foreground">المصروف</p>
                         <p className="text-xs font-mono font-bold">{formatCurrency(totalSpent)}</p>
                       </div>
                     </div>

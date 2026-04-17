@@ -223,11 +223,11 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
               {risks.map(risk => (
                 <tr key={risk.id}>
                   <td className="font-medium">{risk.title}</td>
-                  <td><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${RISK_PROBABILITY_COLORS[risk.probability]}`}>{RISK_PROBABILITY_LABELS[risk.probability]}</span></td>
-                  <td><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${RISK_IMPACT_COLORS[risk.impact]}`}>{RISK_IMPACT_LABELS[risk.impact]}</span></td>
+                  <td><span className={`text-xs px-1.5 py-0.5 rounded-full ${RISK_PROBABILITY_COLORS[risk.probability]}`}>{RISK_PROBABILITY_LABELS[risk.probability]}</span></td>
+                  <td><span className={`text-xs px-1.5 py-0.5 rounded-full ${RISK_IMPACT_COLORS[risk.impact]}`}>{RISK_IMPACT_LABELS[risk.impact]}</span></td>
                   <td className="font-mono text-sm">{formatCurrency(risk.financialImpact)}</td>
                   <td className="text-xs text-muted-foreground">{RISK_CATEGORY_LABELS[risk.category]}</td>
-                  <td><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${RISK_STATUS_COLORS[risk.status]}`}>{RISK_STATUS_LABELS[risk.status]}</span></td>
+                  <td><span className={`text-xs px-1.5 py-0.5 rounded-full ${RISK_STATUS_COLORS[risk.status]}`}>{RISK_STATUS_LABELS[risk.status]}</span></td>
                   <td className="hidden sm:table-cell text-xs text-muted-foreground">{risk.owner || '-'}</td>
                   {!readOnly && (
                   <td>

@@ -145,7 +145,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                       {plannedForResource > 0 ? (
                         <span className="flex items-center gap-1">
                           {formatCurrency(plannedForResource)}
-                          {isEstimated && <span className="text-amber-500 text-[10px]">*</span>}
+                          {isEstimated && <span className="text-amber-500 text-xs">*</span>}
                         </span>
                       ) : '—'}
                     </td>
@@ -180,7 +180,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
             </tbody>
           </table>
           {hasEstimated && (
-            <p className="text-[10px] text-muted-foreground mt-2">* تقديري = التكلفة الشهرية × مدة المشروع — لم يُربط ببند موازنة بعد</p>
+            <p className="text-xs text-muted-foreground mt-2">* تقديري = التكلفة الشهرية × مدة المشروع — لم يُربط ببند موازنة بعد</p>
           )}
         </div>
       )}

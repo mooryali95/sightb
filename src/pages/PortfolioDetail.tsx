@@ -195,7 +195,7 @@ export default function PortfolioDetail() {
                 <div>
                   <div className="flex items-center gap-3">
                     <h1 className="text-xl font-bold">{portfolio.name}</h1>
-                    <Badge className={`text-[10px] ${HEALTH_STATUS_COLORS[summary.healthStatus]}`}>
+                    <Badge className={`text-xs ${HEALTH_STATUS_COLORS[summary.healthStatus]}`}>
                       {HEALTH_STATUS_LABELS[summary.healthStatus]}
                     </Badge>
                   </div>
@@ -360,7 +360,7 @@ export default function PortfolioDetail() {
                       <td><span className={ps.plannedProfit >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(ps.plannedProfit)}</span></td>
                       <td className="text-sm">{project.percentComplete}%</td>
                       <td>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${HEALTH_STATUS_COLORS[health as keyof typeof HEALTH_STATUS_COLORS]}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${HEALTH_STATUS_COLORS[health as keyof typeof HEALTH_STATUS_COLORS]}`}>
                           {HEALTH_STATUS_LABELS[health as keyof typeof HEALTH_STATUS_LABELS]}
                         </span>
                       </td>

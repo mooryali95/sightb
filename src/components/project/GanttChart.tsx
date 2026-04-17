@@ -156,14 +156,14 @@ export function GanttChart({ milestones, onMilestoneClick }: GanttChartProps) {
       <div className="border border-border rounded-lg overflow-hidden bg-card">
         {/* Header */}
         <div className="flex border-b border-border bg-muted/30">
-          <div className="w-36 shrink-0 px-3 py-2 text-[10px] font-medium text-muted-foreground border-l border-border">
+          <div className="w-36 shrink-0 px-3 py-2 text-xs font-medium text-muted-foreground border-l border-border">
             المرحلة
           </div>
           <div className="flex-1 flex min-w-0">
             {columns.map((col, i) => (
               <div
                 key={i}
-                className="text-[10px] text-center text-muted-foreground py-2 border-l border-border/50 truncate"
+                className="text-xs text-center text-muted-foreground py-2 border-l border-border/50 truncate"
                 style={{ flex: col.days }}
               >
                 {col.label}
@@ -211,7 +211,7 @@ export function GanttChart({ milestones, onMilestoneClick }: GanttChartProps) {
                     <span className={cn('w-2 h-2 rounded-full shrink-0', STATUS_BAR_COLORS[m.status])} />
                     <span className="text-xs truncate font-medium">{m.name}</span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{m.percentComplete}%</span>
+                  <span className="text-xs text-muted-foreground">{m.percentComplete}%</span>
                 </div>
 
                 {/* Timeline area */}
@@ -268,7 +268,7 @@ export function GanttChart({ milestones, onMilestoneClick }: GanttChartProps) {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap items-center gap-3 px-3 py-2 border-t border-border bg-muted/20 text-[10px]">
+        <div className="flex flex-wrap items-center gap-3 px-3 py-2 border-t border-border bg-muted/20 text-xs">
           {Object.entries(MILESTONE_STATUS_LABELS).map(([key, label]) => (
             <div key={key} className="flex items-center gap-1">
               <span className={cn('w-2.5 h-2.5 rounded-sm', STATUS_BAR_COLORS[key])} />

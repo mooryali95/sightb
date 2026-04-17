@@ -134,7 +134,7 @@ export function SmartNotifications() {
           <Bell className="w-4 h-4" />
           {active.length > 0 && (
             <span className={cn(
-              'absolute -top-0.5 -left-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white',
+              'absolute -top-0.5 -left-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-xs font-bold text-white',
               critCount > 0 ? 'bg-destructive' : 'bg-amber-500'
             )}>{active.length}</span>
           )}
@@ -146,7 +146,7 @@ export function SmartNotifications() {
             الإشعارات {active.length > 0 && <span className="text-muted-foreground">· {active.length}</span>}
           </h4>
           {active.length > 0 && (
-            <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2" onClick={handleDismissAll}>
+            <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={handleDismissAll}>
               قراءة الكل
             </Button>
           )}
@@ -183,7 +183,7 @@ export function SmartNotifications() {
                           <div key={n.id} className={cn('flex items-start gap-2 p-2 rounded-md border', COLORS[n.severity])}>
                             <button onClick={() => { setOpen(false); navigate(n.link); }} className="flex-1 text-right">
                               <p className="text-xs font-medium">{n.title}</p>
-                              <p className="text-[10px] opacity-70">{n.description}</p>
+                              <p className="text-xs opacity-70">{n.description}</p>
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDismiss(n.id); }}

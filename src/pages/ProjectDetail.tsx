@@ -259,11 +259,11 @@ export default function ProjectDetail() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h1 className="text-base md:text-xl font-bold truncate">{project.name}</h1>
-                      <Badge className={`text-[10px] shrink-0 ${PROJECT_STATUS_COLORS[project.status]}`}>
+                      <Badge className={`text-xs shrink-0 ${PROJECT_STATUS_COLORS[project.status]}`}>
                         {PROJECT_STATUS_LABELS[project.status]}
                       </Badge>
                     </div>
-                    <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">
+                    <p className="text-xs md:text-xs text-muted-foreground mt-0.5 truncate">
                       {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
                       {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
                     </p>
@@ -362,7 +362,7 @@ export default function ProjectDetail() {
         <div className={`flex flex-wrap items-center gap-2 text-xs p-2.5 rounded-lg border mb-4 ${healthScore.bg}`}>
           <span className={`font-bold ${healthScore.color}`}>{healthScore.label}</span>
           <span className="text-muted-foreground">|</span>
-          <Badge className={`text-[10px] ${PROJECT_STATUS_COLORS[project.status]}`}>{PROJECT_STATUS_LABELS[project.status]}</Badge>
+          <Badge className={`text-xs ${PROJECT_STATUS_COLORS[project.status]}`}>{PROJECT_STATUS_LABELS[project.status]}</Badge>
           <span className="text-muted-foreground">|</span>
           <span>الإنجاز {project.percentComplete}%</span>
           <span className="text-muted-foreground">|</span>
@@ -411,7 +411,7 @@ export default function ProjectDetail() {
             <div className="mt-2">
               <Progress value={Math.min(summary.spendRate, 100)} className="h-1.5" />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">{summary.spendRate.toFixed(1)}% من الموازنة</p>
+            <p className="text-xs text-muted-foreground mt-1">{summary.spendRate.toFixed(1)}% من الموازنة</p>
           </div>
           <StatCard title="الربح المخطط" value={formatCurrency(summary.plannedProfit)} icon={<TrendingUp className="w-4 h-4" />}
             trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`}
@@ -441,7 +441,7 @@ export default function ProjectDetail() {
             <div className="stat-card text-center">
               <p className="text-xs text-muted-foreground">أداء التكلفة (CPI)</p>
               <p className={`text-xl font-mono font-bold ${evm.cpi >= 1 ? 'text-emerald-600' : evm.cpi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.cpi.toFixed(2)}</p>
-              <p className="text-[10px] text-muted-foreground">{evm.cpi >= 1 ? 'ضمن الميزانية ✓' : evm.cpi >= 0.9 ? 'قريب من الحد' : 'تجاوز ✗'}</p>
+              <p className="text-xs text-muted-foreground">{evm.cpi >= 1 ? 'ضمن الميزانية ✓' : evm.cpi >= 0.9 ? 'قريب من الحد' : 'تجاوز ✗'}</p>
             </div>
           ) : (
             <div className="stat-card text-center">
@@ -453,7 +453,7 @@ export default function ProjectDetail() {
             <div className="stat-card text-center">
               <p className="text-xs text-muted-foreground">أداء الجدول (SPI)</p>
               <p className={`text-xl font-mono font-bold ${evm.spi >= 1 ? 'text-emerald-600' : evm.spi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.spi.toFixed(2)}</p>
-              <p className="text-[10px] text-muted-foreground">{evm.spi >= 1 ? 'في الموعد ✓' : evm.spi >= 0.9 ? 'تأخر طفيف' : 'متأخر ✗'}</p>
+              <p className="text-xs text-muted-foreground">{evm.spi >= 1 ? 'في الموعد ✓' : evm.spi >= 0.9 ? 'تأخر طفيف' : 'متأخر ✗'}</p>
             </div>
           ) : (
             <div className="stat-card text-center">
@@ -483,7 +483,7 @@ export default function ProjectDetail() {
               <div className="stat-card text-center">
                 <p className="text-xs text-muted-foreground">الأداء المطلوب (TCPI)</p>
                 <p className="text-xl font-mono font-bold">{evm.tcpiBAC.toFixed(2)}</p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {evm.tcpiBAC <= 1.0 ? 'مريح — الأداء كافٍ' : evm.tcpiBAC <= 1.1 ? 'ممكن — تحسين طفيف' : evm.tcpiBAC <= 1.2 ? 'صعب — يحتاج تدخل' : 'شبه مستحيل — راجع الخطة'}
                 </p>
               </div>
@@ -570,7 +570,7 @@ export default function ProjectDetail() {
                   <Icon className="w-3.5 h-3.5" />
                   <span>{group.label}</span>
                   {group.badge > 0 && (
-                    <span className="absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    <span className="absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-xs font-bold flex items-center justify-center px-1">
                       {group.badge}
                     </span>
                   )}

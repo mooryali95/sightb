@@ -217,7 +217,7 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
                     <td className="font-mono text-sm">{formatCurrency(c.spentAmount)}</td>
                     <td><span className={remaining >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(remaining)}</span></td>
                     <td>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${COMMITMENT_STATUS_COLORS[c.status]}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${COMMITMENT_STATUS_COLORS[c.status]}`}>
                         {COMMITMENT_STATUS_LABELS[c.status]}
                       </span>
                     </td>

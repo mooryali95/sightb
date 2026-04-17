@@ -206,9 +206,9 @@ function ResultCard({ title, value, subtitle, trend, diff, currency }: {
           )}
           <span className="text-lg font-bold">{value}</span>
         </div>
-        <p className="text-[10px] text-muted-foreground">{subtitle}</p>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
         {diff !== undefined && diff !== 0 && (
-          <p className={`text-[10px] font-medium ${diff > 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+          <p className={`text-xs font-medium ${diff > 0 ? 'text-emerald-600' : 'text-destructive'}`}>
             {diff > 0 ? '+' : ''}{formatCurrency(diff, currency)} عن الأصلي
           </p>
         )}

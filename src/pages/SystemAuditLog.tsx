@@ -249,7 +249,7 @@ export default function SystemAuditLog() {
           </div>
 
           <div className="flex items-center justify-between">
-            <Badge variant="outline" className="text-[10px]">
+            <Badge variant="outline" className="text-xs">
               {filtered.length} سجل
             </Badge>
           </div>
@@ -307,7 +307,7 @@ export default function SystemAuditLog() {
                                   <ActIcon className="w-3 h-3" />
                                   {actConf.label}
                                 </span>
-                                <Badge variant="outline" className={`text-[10px] ${entityConf.color}`}>
+                                <Badge variant="outline" className={`text-xs ${entityConf.color}`}>
                                   {entityConf.label}
                                 </Badge>
                                 {entry.entityName && (
@@ -315,7 +315,7 @@ export default function SystemAuditLog() {
                                 )}
                               </div>
                               {renderDetails(entry)}
-                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <span dir="ltr">{entry.userEmail || 'نظام'}</span>
                                 <span>•</span>
                                 <span>{formatTime(entry.createdAt)}</span>
