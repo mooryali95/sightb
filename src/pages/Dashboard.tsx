@@ -148,6 +148,11 @@ export default function Dashboard() {
 
   const hasData = companies.length > 0;
 
+  // Show skeleton while initial data is loading and we have no data yet
+  if (loading && companies.length === 0) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
