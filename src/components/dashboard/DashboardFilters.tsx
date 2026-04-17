@@ -47,7 +47,7 @@ export function DashboardFilters({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 }}
-      className="stat-card mb-6"
+      className="filter-bar"
     >
       <Collapsible open={!isMobile || filtersOpen} onOpenChange={setFiltersOpen}>
         {/* Header */}
