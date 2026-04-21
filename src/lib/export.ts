@@ -116,7 +116,49 @@ export function exportToExcel(data: ExportBudgetData) {
     }));
     const wsCF = XLSX.utils.json_to_sheet(cfRows);
     XLSX.utils.book_append_sheet(wb, wsCF, 'التدفق النقدي');
+
+    // Monthly Budget Plan sheet
+    const plan = getMonthlyBudgetPlan(
+      data.budgetItems as any,
+      data.expenses as any,
+      data.revenues as any,
+      data.durationMonths,
+    );
+    const planRows = plan.map(r => ({
+      'الشهر': `شهر ${r.month}`,
+      'الحالة': statusLabel(r.status),
+      'المخطط': r.planned,
+      'الفعلي': r.actual,
+      'الانحراف': r.variance,
+      'النسبة %': r.planned > 0 ? Number(r.utilizationPct.toFixed(1)) : 0,
+      'إيراد محصّل': r.actualRevenue,
+      'صافي التدفق': r.netCashFlow,
+      'تراكمي مخطط': r.cumulativePlanned,
+      'تراكمي فعلي': r.cumulativeActual,
+      'عدد البنود': r.items.length,
+    }));
+    const wsPlan = XLSX.utils.json_to_sheet(planRows);
+    XLSX.utils.book_append_sheet(wb, wsPlan, 'الخطة الشهرية');
+
+    // Monthly items detail sheet — every item in every month it appears in
+    const itemRows: any[] = [];
+    plan.forEach(r => {
+      r.items.forEach(it => {
+        itemRows.push({
+          'الشهر': `شهر ${r.month}`,
+          'الفئة': EXPENSE_CATEGORY_LABELS[it.category as ExpenseCategory] || it.category,
+          'الوصف': it.description,
+          'نوع التكلفة': COST_TYPE_LABELS[it.costType as CostType] || it.costType,
+          'المبلغ المخصص للشهر': it.amount,
+        });
+      });
+    });
+    if (itemRows.length > 0) {
+      const wsItems = XLSX.utils.json_to_sheet(itemRows);
+      XLSX.utils.book_append_sheet(wb, wsItems, 'تفاصيل البنود شهرياً');
+    }
   }
+
 
   // Summary sheet
   const collectedRevenue = data.revenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
