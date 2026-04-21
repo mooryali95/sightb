@@ -1,8 +1,8 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { formatCurrency, getCashFlowForecast, addVAT } from './finance';
-import { EXPENSE_CATEGORY_LABELS, CHANGE_ORDER_TYPE_LABELS, CHANGE_ORDER_STATUS_LABELS, type ExpenseCategory, type ChangeOrder, type BudgetItem, type Revenue } from '@/types/project';
+import { formatCurrency, getCashFlowForecast, addVAT, getMonthlyBudgetPlan } from './finance';
+import { EXPENSE_CATEGORY_LABELS, CHANGE_ORDER_TYPE_LABELS, CHANGE_ORDER_STATUS_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type ChangeOrder, type BudgetItem, type Revenue, type CostType } from '@/types/project';
 
 // Extend jsPDF type for autotable
 declare module 'jspdf' {
@@ -29,6 +29,16 @@ interface ExportBudgetData {
   totalVATOnExpenses?: number;
   totalVATOnRevenues?: number;
   netVATPayable?: number;
+}
+
+function statusLabel(s: string): string {
+  switch (s) {
+    case 'on_track': return 'ضمن الخطة';
+    case 'near_limit': return 'قرب الحد';
+    case 'over': return 'تجاوز';
+    case 'future': return 'مستقبل';
+    default: return 'بدون نشاط';
+  }
 }
 
 export function exportToExcel(data: ExportBudgetData) {
@@ -116,7 +126,49 @@ export function exportToExcel(data: ExportBudgetData) {
     }));
     const wsCF = XLSX.utils.json_to_sheet(cfRows);
     XLSX.utils.book_append_sheet(wb, wsCF, 'التدفق النقدي');
+
+    // Monthly Budget Plan sheet
+    const plan = getMonthlyBudgetPlan(
+      data.budgetItems as any,
+      data.expenses as any,
+      data.revenues as any,
+      data.durationMonths,
+    );
+    const planRows = plan.map(r => ({
+      'الشهر': `شهر ${r.month}`,
+      'الحالة': statusLabel(r.status),
+      'المخطط': r.planned,
+      'الفعلي': r.actual,
+      'الانحراف': r.variance,
+      'النسبة %': r.planned > 0 ? Number(r.utilizationPct.toFixed(1)) : 0,
+      'إيراد محصّل': r.actualRevenue,
+      'صافي التدفق': r.netCashFlow,
+      'تراكمي مخطط': r.cumulativePlanned,
+      'تراكمي فعلي': r.cumulativeActual,
+      'عدد البنود': r.items.length,
+    }));
+    const wsPlan = XLSX.utils.json_to_sheet(planRows);
+    XLSX.utils.book_append_sheet(wb, wsPlan, 'الخطة الشهرية');
+
+    // Monthly items detail sheet — every item in every month it appears in
+    const itemRows: any[] = [];
+    plan.forEach(r => {
+      r.items.forEach(it => {
+        itemRows.push({
+          'الشهر': `شهر ${r.month}`,
+          'الفئة': EXPENSE_CATEGORY_LABELS[it.category as ExpenseCategory] || it.category,
+          'الوصف': it.description,
+          'نوع التكلفة': COST_TYPE_LABELS[it.costType as CostType] || it.costType,
+          'المبلغ المخصص للشهر': it.amount,
+        });
+      });
+    });
+    if (itemRows.length > 0) {
+      const wsItems = XLSX.utils.json_to_sheet(itemRows);
+      XLSX.utils.book_append_sheet(wb, wsItems, 'تفاصيل البنود شهرياً');
+    }
   }
+
 
   // Summary sheet
   const collectedRevenue = data.revenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);

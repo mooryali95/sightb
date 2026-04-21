@@ -4,7 +4,7 @@ import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown, calculateEVM, getCurrentMonth, addVAT } from '@/lib/finance';
+import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown, calculateEVM, getCurrentMonth, addVAT, getMonthlyBudgetPlan } from '@/lib/finance';
 import { cn } from '@/lib/utils';
 import { EXPENSE_CATEGORY_LABELS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ExpenseCategory, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ import { ChangeOrdersSection } from '@/components/project/ChangeOrdersSection';
 import { RisksSection } from '@/components/project/RisksSection';
 import { WhatIfSection } from '@/components/project/WhatIfSection';
 import { CommitmentsSection } from '@/components/project/CommitmentsSection';
+import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { Progress } from '@/components/ui/progress';
 
@@ -602,7 +603,31 @@ export default function ProjectDetail() {
           </TabsContent>
           <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} revenues={pRevenues} /></TabsContent>
           <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} durationMonths={project.durationMonths} /></TabsContent>
-          <TabsContent value="budget"><BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} taxPercent={project.taxPercent} /></TabsContent>
+          <TabsContent value="budget">
+            <div className="space-y-4">
+              <SmartBudgetAlerts
+                summary={summary}
+                evm={evm}
+                monthlyPlan={getMonthlyBudgetPlan(pBudget, pExpenses, pRevenues, project.durationMonths, project.startDate)}
+                durationMonths={project.durationMonths}
+                currentMonth={currentMonth}
+                pendingChangeOrders={pendingChangeOrders}
+                openHighRisks={openHighRisks}
+                onNavigate={(tab) => {
+                  // find which group owns the tab
+                  for (const [grp, tabs] of Object.entries(subTabs)) {
+                    if (tabs.some(t => t.value === tab)) {
+                      setActiveGroup(grp as TabGroup);
+                      setActiveTab(tab);
+                      return;
+                    }
+                  }
+                  setActiveTab(tab);
+                }}
+              />
+              <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} revenues={pRevenues} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} taxPercent={project.taxPercent} startDate={project.startDate} />
+            </div>
+          </TabsContent>
           <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} projectStatus={project.status} /></TabsContent>
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>

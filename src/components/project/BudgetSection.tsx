@@ -13,11 +13,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, BarChart3, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { MonthlyBudgetPlan } from './MonthlyBudgetPlan';
 
 interface BudgetSectionProps {
   projectId: string;
   budgetItems: any[];
   expenses: any[];
+  revenues?: any[];
   durationMonths: number;
   resources: Resource[];
   contractValue: number;
@@ -26,9 +28,10 @@ interface BudgetSectionProps {
   readOnly?: boolean;
   baselineLocked?: boolean;
   taxPercent?: number;
+  startDate?: string;
 }
 
-export function BudgetSection({ projectId, budgetItems, expenses, durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false, taxPercent = 15 }: BudgetSectionProps) {
+export function BudgetSection({ projectId, budgetItems, expenses, revenues = [], durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false, taxPercent = 15, startDate }: BudgetSectionProps) {
   const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense } = useStore();
   const isLocked = readOnly || baselineLocked;
   const [open, setOpen] = useState(false);
@@ -239,6 +242,17 @@ export function BudgetSection({ projectId, budgetItems, expenses, durationMonths
             </div>
           )}
         </div>
+      )}
+
+      {budgetItems.length > 0 && (
+        <MonthlyBudgetPlan
+          budgetItems={budgetItems}
+          expenses={expenses}
+          revenues={revenues}
+          durationMonths={durationMonths}
+          startDate={startDate}
+          currency={currency}
+        />
       )}
 
       <div className="stat-card">
