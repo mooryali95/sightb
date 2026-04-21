@@ -244,6 +244,17 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
         </div>
       )}
 
+      {budgetItems.length > 0 && (
+        <MonthlyBudgetPlan
+          budgetItems={budgetItems}
+          expenses={expenses}
+          revenues={revenues}
+          durationMonths={durationMonths}
+          startDate={startDate}
+          currency={currency}
+        />
+      )}
+
       <div className="stat-card">
         <div className="flex items-center justify-between mb-4">
           <div>
