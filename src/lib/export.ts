@@ -31,6 +31,16 @@ interface ExportBudgetData {
   netVATPayable?: number;
 }
 
+function statusLabel(s: string): string {
+  switch (s) {
+    case 'on_track': return 'ضمن الخطة';
+    case 'near_limit': return 'قرب الحد';
+    case 'over': return 'تجاوز';
+    case 'future': return 'مستقبل';
+    default: return 'بدون نشاط';
+  }
+}
+
 export function exportToExcel(data: ExportBudgetData) {
   const wb = XLSX.utils.book_new();
 
