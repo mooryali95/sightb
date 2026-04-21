@@ -4,7 +4,7 @@ import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown, calculateEVM, getCurrentMonth, addVAT } from '@/lib/finance';
+import { formatCurrency, getProjectSummary, getExpensesByCategory, getMonthlyBreakdown, calculateEVM, getCurrentMonth, addVAT, getMonthlyBudgetPlan } from '@/lib/finance';
 import { cn } from '@/lib/utils';
 import { EXPENSE_CATEGORY_LABELS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ExpenseCategory, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ import { ChangeOrdersSection } from '@/components/project/ChangeOrdersSection';
 import { RisksSection } from '@/components/project/RisksSection';
 import { WhatIfSection } from '@/components/project/WhatIfSection';
 import { CommitmentsSection } from '@/components/project/CommitmentsSection';
+import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { Progress } from '@/components/ui/progress';
 
