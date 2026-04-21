@@ -1,6 +1,6 @@
 import {
   BudgetItem, Expense, Revenue, ProjectSummary, Project,
-  BaselineItem, EVMMetrics, ChangeOrder, MonthlyCashFlow, CostType,
+  BaselineItem, EVMMetrics, ChangeOrder, MonthlyCashFlow, CostType, ExpenseCategory,
 } from '@/types/project';
 
 export function formatCurrency(amount: number, currency = 'ر.س'): string {
