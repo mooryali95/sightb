@@ -84,6 +84,7 @@ export function mapExpense(d: any): Expense {
     vendor: d.vendor || undefined,
     invoiceRef: d.invoice_ref || undefined,
     isVatExempt: d.is_vat_exempt ?? false,
+    fundId: d.fund_id || undefined,
   };
 }
 
