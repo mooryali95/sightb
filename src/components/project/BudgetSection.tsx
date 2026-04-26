@@ -148,6 +148,13 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
 
   return (
     <div className="space-y-4">
+      <BudgetAmendmentManager
+        projectId={projectId}
+        baselineLocked={baselineLocked}
+        readOnly={readOnly}
+        onAmendmentChange={setActiveDraft}
+      />
+
       {budgetItems.length > 0 && (
         <div className="stat-card">
           <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
