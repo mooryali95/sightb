@@ -3,17 +3,18 @@ import { useStore } from '@/store/useStore';
 import { formatCurrency, getTotalPlanned } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type Resource,
-  type CostType, type CostClass,
+  type CostType, type CostClass, type BudgetAmendment,
 } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, BarChart3, Pencil } from 'lucide-react';
+import { Plus, BarChart3, Pencil, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { MonthlyBudgetPlan } from './MonthlyBudgetPlan';
+import { BudgetAmendmentManager } from './BudgetAmendmentManager';
 
 interface BudgetSectionProps {
   projectId: string;
