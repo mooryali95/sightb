@@ -75,6 +75,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
       vendor: e.vendor || null,
       invoice_ref: e.invoiceRef || null,
       is_vat_exempt: e.isVatExempt ?? false,
+      fund_id: e.fundId || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapExpense(data);
@@ -97,6 +98,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (e.vendor !== undefined) updates.vendor = e.vendor;
     if (e.invoiceRef !== undefined) updates.invoice_ref = e.invoiceRef;
     if (e.isVatExempt !== undefined) updates.is_vat_exempt = e.isVatExempt;
+    if (e.fundId !== undefined) updates.fund_id = e.fundId || null;
     const { error } = await (supabase as any).from('expenses').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...e } : x)) }));
