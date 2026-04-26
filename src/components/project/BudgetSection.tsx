@@ -268,14 +268,21 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
       <div className="stat-card">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold">بنود الموازنة</h3>
-            {baselineLocked && !readOnly && (
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              بنود الموازنة
+              {activeDraft && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 flex items-center gap-1">
+                  <Unlock className="w-3 h-3" /> وضع التعديل نشط
+                </span>
+              )}
+            </h3>
+            {baselineLocked && !readOnly && !activeDraft && (
               <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-2 flex-wrap">
-                <span>🔒 الموازنة مقفلة — لإضافة بنود، أنشئ أمر تغيير</span>
+                <span>🔒 الموازنة مقفلة — استخدم "فتح الموازنة للتعديل" أعلاه أو أنشئ أمر تغيير</span>
                 <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => {
                   const tab = document.querySelector('[value="changeorders"]') as HTMLElement;
                   tab?.click();
-                }}>أمر تغيير جديد</Button>
+                }}>أمر تغيير</Button>
               </div>
             )}
             <p className="text-xs text-muted-foreground">
