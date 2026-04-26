@@ -491,3 +491,88 @@ export interface BudgetAmendment {
   updatedAt: string;
 }
 
+// ─── Revolving Fund Management (إدارة صرفيات المشروع) ───
+export type FundStatus = 'transferred' | 'acknowledged' | 'settled' | 'pending_next';
+export type SettlementStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
+
+export const FUND_STATUS_LABELS: Record<FundStatus, string> = {
+  transferred: 'محوّلة',
+  acknowledged: 'مُقَرّ بالاستلام',
+  settled: 'مسوّاة',
+  pending_next: 'بانتظار الدفعة التالية',
+};
+
+export const FUND_STATUS_COLORS: Record<FundStatus, string> = {
+  transferred:  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  acknowledged: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  settled:      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  pending_next: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+};
+
+export const SETTLEMENT_STATUS_LABELS: Record<SettlementStatus, string> = {
+  draft: 'مسودة',
+  submitted: 'مُرسلة للاعتماد',
+  approved: 'معتمدة',
+  rejected: 'مرفوضة',
+};
+
+export const SETTLEMENT_STATUS_COLORS: Record<SettlementStatus, string> = {
+  draft:     'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  submitted: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  approved:  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  rejected:  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
+
+export interface ProjectFund {
+  id: string;
+  projectId: string;
+  fundNumber: number;
+  amount: number;
+  transferDate: string;
+  status: FundStatus;
+  notes?: string;
+  createdBy: string;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FundSettlementAttachment {
+  name: string;
+  url?: string;
+  uploadedAt?: string;
+}
+
+export interface FundSettlement {
+  id: string;
+  fundId: string;
+  projectId: string;
+  totalReceived: number;
+  totalSpent: number;
+  remainingCash: number;
+  difference: number;
+  settledBy?: string;
+  approvedBy?: string;
+  settlementDate?: string;
+  approvalDate?: string;
+  status: SettlementStatus;
+  rejectionReason?: string;
+  differenceReason?: string;
+  attachments: FundSettlementAttachment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FundAlert {
+  id: string;
+  type: 'unsettled_long' | 'low_balance' | 'unsettled_block' | 'expense_unlinked' | 'unexplained_diff';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  message: string;
+  projectId: string;
+  fundId?: string;
+  settlementId?: string;
+  actionLabel?: string;
+}
+
