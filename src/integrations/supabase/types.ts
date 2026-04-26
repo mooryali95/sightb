@@ -132,6 +132,54 @@ export type Database = {
           },
         ]
       }
+      budget_amendments: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          project_id: string
+          reason: string
+          snapshot_after: Json | null
+          snapshot_before: Json
+          status: string
+          total_after: number | null
+          total_before: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          project_id: string
+          reason: string
+          snapshot_after?: Json | null
+          snapshot_before?: Json
+          status?: string
+          total_after?: number | null
+          total_before?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string
+          reason?: string
+          snapshot_after?: Json | null
+          snapshot_before?: Json
+          status?: string
+          total_after?: number | null
+          total_before?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       budget_items: {
         Row: {
           category: string
