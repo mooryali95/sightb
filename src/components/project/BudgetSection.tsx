@@ -3,17 +3,18 @@ import { useStore } from '@/store/useStore';
 import { formatCurrency, getTotalPlanned } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type Resource,
-  type CostType, type CostClass,
+  type CostType, type CostClass, type BudgetAmendment,
 } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, BarChart3, Pencil } from 'lucide-react';
+import { Plus, BarChart3, Pencil, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { MonthlyBudgetPlan } from './MonthlyBudgetPlan';
+import { BudgetAmendmentManager } from './BudgetAmendmentManager';
 
 interface BudgetSectionProps {
   projectId: string;
@@ -33,7 +34,9 @@ interface BudgetSectionProps {
 
 export function BudgetSection({ projectId, budgetItems, expenses, revenues = [], durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false, taxPercent = 15, startDate }: BudgetSectionProps) {
   const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense } = useStore();
-  const isLocked = readOnly || baselineLocked;
+  const [activeDraft, setActiveDraft] = useState<BudgetAmendment | null>(null);
+  // الموازنة مفتوحة للتعديل عند: عدم القفل، أو وجود مسودة تعديل نشطة
+  const isLocked = readOnly || (baselineLocked && !activeDraft);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
@@ -145,6 +148,13 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
 
   return (
     <div className="space-y-4">
+      <BudgetAmendmentManager
+        projectId={projectId}
+        baselineLocked={baselineLocked}
+        readOnly={readOnly}
+        onAmendmentChange={setActiveDraft}
+      />
+
       {budgetItems.length > 0 && (
         <div className="stat-card">
           <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
@@ -258,14 +268,21 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
       <div className="stat-card">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold">بنود الموازنة</h3>
-            {baselineLocked && !readOnly && (
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              بنود الموازنة
+              {activeDraft && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 flex items-center gap-1">
+                  <Unlock className="w-3 h-3" /> وضع التعديل نشط
+                </span>
+              )}
+            </h3>
+            {baselineLocked && !readOnly && !activeDraft && (
               <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-2 flex-wrap">
-                <span>🔒 الموازنة مقفلة — لإضافة بنود، أنشئ أمر تغيير</span>
+                <span>🔒 الموازنة مقفلة — استخدم "فتح الموازنة للتعديل" أعلاه أو أنشئ أمر تغيير</span>
                 <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => {
                   const tab = document.querySelector('[value="changeorders"]') as HTMLElement;
                   tab?.click();
-                }}>أمر تغيير جديد</Button>
+                }}>أمر تغيير</Button>
               </div>
             )}
             <p className="text-xs text-muted-foreground">

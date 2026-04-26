@@ -447,3 +447,47 @@ export interface MonthlyCashFlow {
   netPlanned: number; netActual: number;
   cumulativePlanned: number; cumulativeActual: number;
 }
+
+// ─── Budget Amendments (تعديلات الموازنة بعد قفل خط الأساس) ───
+export type BudgetAmendmentStatus = 'draft' | 'approved' | 'cancelled';
+
+export const BUDGET_AMENDMENT_STATUS_LABELS: Record<BudgetAmendmentStatus, string> = {
+  draft: 'قيد التعديل',
+  approved: 'معتمد',
+  cancelled: 'ملغي',
+};
+
+export const BUDGET_AMENDMENT_STATUS_COLORS: Record<BudgetAmendmentStatus, string> = {
+  draft:     'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  approved:  'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+  cancelled: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+};
+
+export interface BudgetAmendmentSnapshotItem {
+  id?: string;
+  category: string;
+  description: string;
+  plannedAmount: number;
+  startMonth?: number;
+  endMonth?: number;
+  month?: number;
+  costType?: string;
+  costClass?: string;
+  resourceId?: string;
+}
+
+export interface BudgetAmendment {
+  id: string;
+  projectId: string;
+  reason: string;
+  snapshotBefore: BudgetAmendmentSnapshotItem[];
+  snapshotAfter?: BudgetAmendmentSnapshotItem[];
+  totalBefore: number;
+  totalAfter?: number;
+  status: BudgetAmendmentStatus;
+  approvedBy?: string;
+  approvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
