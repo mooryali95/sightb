@@ -594,6 +594,7 @@ export type Database = {
           custody_id: string | null
           date: string
           description: string
+          fund_id: string | null
           id: string
           invoice_ref: string | null
           is_vat_exempt: boolean | null
@@ -615,6 +616,7 @@ export type Database = {
           custody_id?: string | null
           date: string
           description: string
+          fund_id?: string | null
           id?: string
           invoice_ref?: string | null
           is_vat_exempt?: boolean | null
@@ -636,6 +638,7 @@ export type Database = {
           custody_id?: string | null
           date?: string
           description?: string
+          fund_id?: string | null
           id?: string
           invoice_ref?: string | null
           is_vat_exempt?: boolean | null
@@ -674,6 +677,74 @@ export type Database = {
             columns: ["resource_id"]
             isOneToOne: false
             referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fund_settlements: {
+        Row: {
+          approval_date: string | null
+          approved_by: string | null
+          attachments: Json
+          created_at: string
+          difference: number | null
+          difference_reason: string | null
+          fund_id: string
+          id: string
+          project_id: string
+          rejection_reason: string | null
+          remaining_cash: number
+          settled_by: string | null
+          settlement_date: string | null
+          status: Database["public"]["Enums"]["settlement_status"]
+          total_received: number
+          total_spent: number
+          updated_at: string
+        }
+        Insert: {
+          approval_date?: string | null
+          approved_by?: string | null
+          attachments?: Json
+          created_at?: string
+          difference?: number | null
+          difference_reason?: string | null
+          fund_id: string
+          id?: string
+          project_id: string
+          rejection_reason?: string | null
+          remaining_cash?: number
+          settled_by?: string | null
+          settlement_date?: string | null
+          status?: Database["public"]["Enums"]["settlement_status"]
+          total_received?: number
+          total_spent?: number
+          updated_at?: string
+        }
+        Update: {
+          approval_date?: string | null
+          approved_by?: string | null
+          attachments?: Json
+          created_at?: string
+          difference?: number | null
+          difference_reason?: string | null
+          fund_id?: string
+          id?: string
+          project_id?: string
+          rejection_reason?: string | null
+          remaining_cash?: number
+          settled_by?: string | null
+          settlement_date?: string | null
+          status?: Database["public"]["Enums"]["settlement_status"]
+          total_received?: number
+          total_spent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fund_settlements_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: true
+            referencedRelation: "project_funds"
             referencedColumns: ["id"]
           },
         ]
@@ -895,6 +966,51 @@ export type Database = {
           full_name?: string | null
           id?: string
           status?: string
+        }
+        Relationships: []
+      }
+      project_funds: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          amount: number
+          created_at: string
+          created_by: string
+          fund_number: number
+          id: string
+          notes: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["fund_status"]
+          transfer_date: string
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          amount?: number
+          created_at?: string
+          created_by: string
+          fund_number: number
+          id?: string
+          notes?: string | null
+          project_id: string
+          status?: Database["public"]["Enums"]["fund_status"]
+          transfer_date?: string
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          amount?: number
+          created_at?: string
+          created_by?: string
+          fund_number?: number
+          id?: string
+          notes?: string | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["fund_status"]
+          transfer_date?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1361,7 +1477,9 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer" | "owner"
+      fund_status: "transferred" | "acknowledged" | "settled" | "pending_next"
       scope_type: "system" | "company" | "project"
+      settlement_status: "draft" | "submitted" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1490,7 +1608,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "editor", "viewer", "owner"],
+      fund_status: ["transferred", "acknowledged", "settled", "pending_next"],
       scope_type: ["system", "company", "project"],
+      settlement_status: ["draft", "submitted", "approved", "rejected"],
     },
   },
 } as const
