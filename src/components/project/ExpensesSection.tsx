@@ -106,6 +106,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setResourceId(exp.resourceId || '');
     setCustodyId(exp.custodyId || '');
     setBudgetItemId(exp.budgetItemId || '');
+    setFundId(exp.fundId || '');
     setApprovalStatus(exp.approvalStatus || 'approved');
     setVendor(exp.vendor || '');
     setInvoiceRef(exp.invoiceRef || '');
