@@ -120,6 +120,13 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     const rawAmount = parseFloat(amount);
     const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
 
+    // التحقق: ربط بدفعة إلزامي عند وجود دفعة نشطة
+    const effectiveFundId = fundId && fundId !== 'none' ? fundId : undefined;
+    if (fundIsRequired && !editingId && !effectiveFundId) {
+      toast.error('يجب ربط المصروف بالدفعة النشطة');
+      return;
+    }
+
     if (editingId) {
       await updateExpense(editingId, {
         category,
@@ -132,6 +139,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         vendor: vendor.trim() || undefined,
         invoiceRef: invoiceRef.trim() || undefined,
         isVatExempt,
+        fundId: effectiveFundId,
       });
       toast.success('تم تعديل المصروف');
     } else {
@@ -150,6 +158,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         vendor: vendor.trim() || undefined,
         invoiceRef: invoiceRef.trim() || undefined,
         isVatExempt,
+        fundId: effectiveFundId,
       });
       toast.success('تمت إضافة المصروف');
 
