@@ -42,6 +42,7 @@ import { RisksSection } from '@/components/project/RisksSection';
 import { WhatIfSection } from '@/components/project/WhatIfSection';
 import { CommitmentsSection } from '@/components/project/CommitmentsSection';
 import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
+import { FundsSection } from '@/components/project/FundsSection';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { Progress } from '@/components/ui/progress';
 
