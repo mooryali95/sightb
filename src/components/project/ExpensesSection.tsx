@@ -87,6 +87,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setResourceId('');
     setCustodyId('');
     setBudgetItemId('');
+    setFundId('');
     setApprovalStatus('approved');
     setVendor('');
     setInvoiceRef('');
