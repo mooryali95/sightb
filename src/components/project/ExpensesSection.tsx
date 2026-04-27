@@ -43,11 +43,21 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const [resourceId, setResourceId] = useState<string>('');
   const [custodyId, setCustodyId] = useState<string>('');
   const [budgetItemId, setBudgetItemId] = useState<string>('');
+  const [fundId, setFundId] = useState<string>('');
   const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>('approved');
   const [vendor, setVendor] = useState('');
   const [invoiceRef, setInvoiceRef] = useState('');
   const [isVatExempt, setIsVatExempt] = useState(false);
   const [inputInclusive, setInputInclusive] = useState(false);
+
+  const activeFund = useMemo(
+    () => getActiveFund(projectId, projectFunds),
+    [projectId, projectFunds],
+  );
+  const fundIsRequired = !!activeFund;
+  const activeFundRemaining = activeFund
+    ? getFundRemaining(activeFund, expenses)
+    : 0;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
