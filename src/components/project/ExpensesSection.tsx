@@ -1,17 +1,18 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency, calcVAT, addVAT, removeVAT } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS,
   type ExpenseCategory, type ApprovalStatus, type Resource, type Custody, type BudgetItem,
 } from '@/types/project';
+import { getActiveFund, getFundRemaining } from '@/lib/funds';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Pencil, Check, X, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Check, X, AlertCircle, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 
@@ -30,7 +31,7 @@ interface ExpensesSectionProps {
 }
 
 export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15, projectStatus }: ExpensesSectionProps) {
-  const { addExpense, deleteExpense, updateExpense } = useStore();
+  const { addExpense, deleteExpense, updateExpense, projectFunds } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
@@ -42,11 +43,21 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const [resourceId, setResourceId] = useState<string>('');
   const [custodyId, setCustodyId] = useState<string>('');
   const [budgetItemId, setBudgetItemId] = useState<string>('');
+  const [fundId, setFundId] = useState<string>('');
   const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>('approved');
   const [vendor, setVendor] = useState('');
   const [invoiceRef, setInvoiceRef] = useState('');
   const [isVatExempt, setIsVatExempt] = useState(false);
   const [inputInclusive, setInputInclusive] = useState(false);
+
+  const activeFund = useMemo(
+    () => getActiveFund(projectId, projectFunds),
+    [projectId, projectFunds],
+  );
+  const fundIsRequired = !!activeFund;
+  const activeFundRemaining = activeFund
+    ? getFundRemaining(activeFund, expenses)
+    : 0;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -76,6 +87,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setResourceId('');
     setCustodyId('');
     setBudgetItemId('');
+    setFundId('');
     setApprovalStatus('approved');
     setVendor('');
     setInvoiceRef('');
@@ -94,6 +106,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setResourceId(exp.resourceId || '');
     setCustodyId(exp.custodyId || '');
     setBudgetItemId(exp.budgetItemId || '');
+    setFundId(exp.fundId || '');
     setApprovalStatus(exp.approvalStatus || 'approved');
     setVendor(exp.vendor || '');
     setInvoiceRef(exp.invoiceRef || '');
@@ -107,6 +120,13 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     const rawAmount = parseFloat(amount);
     const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
 
+    // التحقق: ربط بدفعة إلزامي عند وجود دفعة نشطة
+    const effectiveFundId = fundId && fundId !== 'none' ? fundId : undefined;
+    if (fundIsRequired && !editingId && !effectiveFundId) {
+      toast.error('يجب ربط المصروف بالدفعة النشطة');
+      return;
+    }
+
     if (editingId) {
       await updateExpense(editingId, {
         category,
@@ -119,6 +139,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         vendor: vendor.trim() || undefined,
         invoiceRef: invoiceRef.trim() || undefined,
         isVatExempt,
+        fundId: effectiveFundId,
       });
       toast.success('تم تعديل المصروف');
     } else {
@@ -137,6 +158,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         vendor: vendor.trim() || undefined,
         invoiceRef: invoiceRef.trim() || undefined,
         isVatExempt,
+        fundId: effectiveFundId,
       });
       toast.success('تمت إضافة المصروف');
 
@@ -286,6 +308,29 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         })}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+                {/* Fund linking */}
+                {fundIsRequired && activeFund && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5" />
+                      ربط بدفعة الصرفيات
+                      <span className="text-destructive text-xs">*</span>
+                    </Label>
+                    <Select value={fundId || activeFund.id} onValueChange={setFundId}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={activeFund.id}>
+                          الدفعة #{activeFund.fundNumber} — متبقي: {formatCurrency(activeFundRemaining)}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {parseFloat(amount) > 0 && parseFloat(amount) > activeFundRemaining && (
+                      <p className="text-xs text-destructive">
+                        ⚠️ المبلغ يتجاوز رصيد الدفعة المتبقي
+                      </p>
+                    )}
                   </div>
                 )}
                 <div className="space-y-2">

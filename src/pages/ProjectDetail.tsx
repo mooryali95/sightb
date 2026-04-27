@@ -20,7 +20,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
-  Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield,
+  Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
@@ -42,6 +42,7 @@ import { RisksSection } from '@/components/project/RisksSection';
 import { WhatIfSection } from '@/components/project/WhatIfSection';
 import { CommitmentsSection } from '@/components/project/CommitmentsSection';
 import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
+import { FundsSection } from '@/components/project/FundsSection';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { Progress } from '@/components/ui/progress';
 
@@ -219,6 +220,7 @@ export default function ProjectDetail() {
       { value: 'budget', label: 'الموازنة', icon: PiggyBank },
       { value: 'baseline', label: 'خط الأساس', icon: Baseline },
       { value: 'expenses', label: 'المصروفات', icon: Receipt },
+      { value: 'funds', label: 'الصرفيات', icon: Banknote },
       { value: 'commitments', label: 'الالتزامات', icon: Briefcase },
       { value: 'custody', label: 'العهد', icon: Wallet },
       { value: 'revenue', label: 'الإيرادات', icon: DollarSign },
@@ -630,6 +632,7 @@ export default function ProjectDetail() {
           </TabsContent>
           <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} projectStatus={project.status} /></TabsContent>
+          <TabsContent value="funds"><FundsSection projectId={project.id} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="commitments"><CommitmentsSection projectId={project.id} commitments={pCommitments} totalPlanned={summary.totalPlanned} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} milestones={pMilestones} /></TabsContent>

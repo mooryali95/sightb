@@ -138,6 +138,13 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         fetchAll('risks', 'created_at', false, { project_id: projectId }),
       ]);
 
+      // Load funds & settlements (non-blocking — failure shouldn't block project load)
+      try {
+        await get().loadFundsForProject(projectId);
+      } catch (err) {
+        console.warn('[Store.loadFundsForProject]', err);
+      }
+
       const mappedExpenses = expensesData.map(mapExpense);
       const loaded = new Set(get().projectDataLoaded);
       loaded.add(projectId);
