@@ -310,6 +310,29 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     </Select>
                   </div>
                 )}
+                {/* Fund linking */}
+                {fundIsRequired && activeFund && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5" />
+                      ربط بدفعة الصرفيات
+                      <span className="text-destructive text-xs">*</span>
+                    </Label>
+                    <Select value={fundId || activeFund.id} onValueChange={setFundId}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={activeFund.id}>
+                          الدفعة #{activeFund.fundNumber} — متبقي: {formatCurrency(activeFundRemaining)}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {parseFloat(amount) > 0 && parseFloat(amount) > activeFundRemaining && (
+                      <p className="text-xs text-destructive">
+                        ⚠️ المبلغ يتجاوز رصيد الدفعة المتبقي
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>الوصف</Label>
                   <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب شهر يناير — أحمد" />
