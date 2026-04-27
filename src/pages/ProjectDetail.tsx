@@ -220,6 +220,7 @@ export default function ProjectDetail() {
       { value: 'budget', label: 'الموازنة', icon: PiggyBank },
       { value: 'baseline', label: 'خط الأساس', icon: Baseline },
       { value: 'expenses', label: 'المصروفات', icon: Receipt },
+      { value: 'funds', label: 'الصرفيات', icon: Banknote },
       { value: 'commitments', label: 'الالتزامات', icon: Briefcase },
       { value: 'custody', label: 'العهد', icon: Wallet },
       { value: 'revenue', label: 'الإيرادات', icon: DollarSign },
