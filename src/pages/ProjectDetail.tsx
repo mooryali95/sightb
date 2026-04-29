@@ -184,13 +184,23 @@ export default function ProjectDetail() {
 
   const totalAllRevenue = pRevenues.reduce((s, r) => s + r.amount, 0);
 
+  const handleArchiveProject = async () => {
+    try {
+      await archiveProject(project.id);
+      toast.success('تم أرشفة المشروع');
+      navigate('/');
+    } catch (e: any) {
+      toast.error('فشل أرشفة المشروع');
+    }
+  };
+
   const handleDeleteProject = async () => {
     try {
       await deleteProject(project.id);
-      toast.success('تم حذف المشروع');
+      toast.success('تم حذف المشروع نهائياً');
       navigate('/');
     } catch (e: any) {
-      toast.error('فشل حذف المشروع');
+      toast.error(e?.message || 'فشل حذف المشروع — تأكد من أرشفته أولاً');
     }
   };
 
