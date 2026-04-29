@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
@@ -20,7 +20,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
-  Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote,
+  Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
@@ -44,6 +44,7 @@ import { CommitmentsSection } from '@/components/project/CommitmentsSection';
 import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
 import { FundsSection } from '@/components/project/FundsSection';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
+import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 import { Progress } from '@/components/ui/progress';
 
 export default function ProjectDetail() {
@@ -53,25 +54,47 @@ export default function ProjectDetail() {
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks, baselines, commitments,
-    loadAll, updateProject, deleteProject,
+    loadAll, updateProject, archiveProject, deleteProject,
   } = useStore();
 
   const { detailsLoaded, detailsLoading, loadProjectData, subscribeToProject } = useStore();
 
-  useEffect(() => { loadAll(); }, []);
-  useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded]);
-  // Realtime subscription for collaborative editing
+  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded, loadProjectData]);
+  // Realtime subscription for collaborative editing — cleanup on id change
   useEffect(() => {
     if (!id) return;
     const unsub = subscribeToProject(id);
     return unsub;
-  }, [id]);
+  }, [id, subscribeToProject]);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0, taxPercent: 15 });
   type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management';
-  const [activeGroup, setActiveGroup] = useState<TabGroup>('summary');
-  const [activeTab, setActiveTab] = useState('overview');
+  // Persist active tab in URL (?tab=...) so refresh keeps context
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab') || 'overview';
+  const urlGroup = (searchParams.get('group') as TabGroup) || 'summary';
+  const [activeGroup, setActiveGroupState] = useState<TabGroup>(urlGroup);
+  const [activeTab, setActiveTabState] = useState(urlTab);
+
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    }, { replace: true });
+  };
+
+  const setActiveGroup = (group: TabGroup) => {
+    setActiveGroupState(group);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('group', group);
+      return next;
+    }, { replace: true });
+  };
 
   const project = projects.find((p) => p.id === id);
   const isReadOnly = project ? !canEditRole('project', project.id) : true;
@@ -162,13 +185,23 @@ export default function ProjectDetail() {
 
   const totalAllRevenue = pRevenues.reduce((s, r) => s + r.amount, 0);
 
+  const handleArchiveProject = async () => {
+    try {
+      await archiveProject(project.id);
+      toast.success('تم أرشفة المشروع');
+      navigate('/');
+    } catch (e: any) {
+      toast.error('فشل أرشفة المشروع');
+    }
+  };
+
   const handleDeleteProject = async () => {
     try {
       await deleteProject(project.id);
-      toast.success('تم حذف المشروع');
+      toast.success('تم حذف المشروع نهائياً');
       navigate('/');
     } catch (e: any) {
-      toast.error('فشل حذف المشروع');
+      toast.error(e?.message || 'فشل حذف المشروع — تأكد من أرشفته أولاً');
     }
   };
 
@@ -343,13 +376,27 @@ export default function ProjectDetail() {
                     ))}
                   </SelectContent>
                 </Select>
-                {isAdmin && (
+                {isAdmin && project.status !== 'archived' && (
                   <ConfirmDeleteDialog
-                    title="حذف المشروع"
-                    description={`هل أنت متأكد من حذف مشروع "${project.name}"؟ سيتم حذف جميع البيانات المرتبطة.`}
+                    title="أرشفة المشروع"
+                    description={`سيتم نقل مشروع "${project.name}" إلى الأرشيف. يمكنك استعادته أو حذفه نهائياً لاحقاً.`}
+                    confirmLabel="أرشفة"
+                    onConfirm={handleArchiveProject}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-amber-600 h-8 w-8" title="أرشفة">
+                        <Archive className="w-4 h-4" />
+                      </Button>
+                    }
+                  />
+                )}
+                {isAdmin && project.status === 'archived' && (
+                  <ConfirmDeleteDialog
+                    title="حذف نهائي للمشروع"
+                    description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
+                    confirmLabel="حذف نهائي"
                     onConfirm={handleDeleteProject}
                     trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8">
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" title="حذف نهائي">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     }
@@ -595,6 +642,21 @@ export default function ProjectDetail() {
           </TabsList>
 
           <TabsContent value="overview">
+            <AIExecutiveInsights context={{
+              name: project.name, status: project.status, percentComplete: project.percentComplete,
+              currentMonth, durationMonths: project.durationMonths,
+              contractValue: summary.contractValue, effectiveContractValue: summary.effectiveContractValue,
+              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+              collectedRevenue: summary.collectedRevenue, invoicedRevenue: summary.invoicedRevenue,
+              spendRate: summary.spendRate, plannedProfit: summary.plannedProfit,
+              cpi: evm?.cpi ?? null, spi: evm?.spi ?? null,
+              openRisks: openRisksCount,
+              highRisks: pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length,
+              pendingExpenses: pendingExpensesCount, pendingChangeOrders,
+              delayedMilestones: pMilestones.filter(m => m.status === 'delayed').length,
+              unsettledFunds: 0, remainingInManagerHand: 0,
+              daysRemaining, currency: project.currency,
+            }} />
             <ExecutiveSummary
               project={project} summary={summary} milestones={pMilestones} risks={pRisks}
               changeOrders={pChangeOrders} expenses={pExpenses} revenues={pRevenues}

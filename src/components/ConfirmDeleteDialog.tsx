@@ -15,6 +15,7 @@ import { Trash2 } from 'lucide-react';
 interface ConfirmDeleteDialogProps {
   title?: string;
   description?: string;
+  confirmLabel?: string;
   onConfirm: () => void;
   trigger?: React.ReactNode;
   variant?: 'icon' | 'button' | 'inline';
@@ -23,6 +24,7 @@ interface ConfirmDeleteDialogProps {
 export function ConfirmDeleteDialog({
   title = 'تأكيد الحذف',
   description = 'هل أنت متأكد من الحذف؟ لا يمكن التراجع عن هذا الإجراء.',
+  confirmLabel = 'حذف',
   onConfirm,
   trigger,
   variant = 'icon',
@@ -53,7 +55,7 @@ export function ConfirmDeleteDialog({
         <AlertDialogFooter className="flex-row-reverse gap-2">
           <AlertDialogCancel>إلغاء</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            حذف
+            {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
