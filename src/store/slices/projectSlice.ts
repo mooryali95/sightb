@@ -12,6 +12,8 @@ export interface ProjectSlice {
   deletePortfolio: (id: string) => Promise<void>;
   addProject: (p: Omit<Project, 'id' | 'createdAt'>) => Promise<string>;
   updateProject: (id: string, p: Partial<Project>) => Promise<void>;
+  archiveProject: (id: string) => Promise<void>;
+  unarchiveProject: (id: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
 }
 
