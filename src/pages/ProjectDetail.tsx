@@ -375,13 +375,27 @@ export default function ProjectDetail() {
                     ))}
                   </SelectContent>
                 </Select>
-                {isAdmin && (
+                {isAdmin && project.status !== 'archived' && (
                   <ConfirmDeleteDialog
-                    title="حذف المشروع"
-                    description={`هل أنت متأكد من حذف مشروع "${project.name}"؟ سيتم حذف جميع البيانات المرتبطة.`}
+                    title="أرشفة المشروع"
+                    description={`سيتم نقل مشروع "${project.name}" إلى الأرشيف. يمكنك استعادته أو حذفه نهائياً لاحقاً.`}
+                    confirmLabel="أرشفة"
+                    onConfirm={handleArchiveProject}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-amber-600 h-8 w-8" title="أرشفة">
+                        <Archive className="w-4 h-4" />
+                      </Button>
+                    }
+                  />
+                )}
+                {isAdmin && project.status === 'archived' && (
+                  <ConfirmDeleteDialog
+                    title="حذف نهائي للمشروع"
+                    description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
+                    confirmLabel="حذف نهائي"
                     onConfirm={handleDeleteProject}
                     trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8">
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" title="حذف نهائي">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     }
