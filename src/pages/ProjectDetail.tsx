@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
