@@ -106,7 +106,24 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
   },
 
+  archiveProject: async (id) => {
+    const { error } = await (supabase as any).from('projects').update({ status: 'archived' }).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, status: 'archived' as const } : x)) }));
+  },
+
+  unarchiveProject: async (id) => {
+    const { error } = await (supabase as any).from('projects').update({ status: 'active' }).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, status: 'active' as const } : x)) }));
+  },
+
   deleteProject: async (id) => {
+    // Safety: project must be archived first (also enforced by DB trigger)
+    const project = get().projects.find((x) => x.id === id);
+    if (project && project.status !== 'archived') {
+      throw new Error('يجب أرشفة المشروع قبل حذفه نهائياً');
+    }
     const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies', 'commitments'] as const;
     for (const table of tables) {
       await (supabase as any).from(table).delete().eq('project_id', id);
@@ -124,6 +141,8 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       risks: s.risks.filter((x) => x.projectId !== id),
       resources: s.resources.filter((x) => x.projectId !== id),
       custodies: s.custodies.filter((x) => x.projectId !== id),
+      projectFunds: s.projectFunds.filter((x) => x.projectId !== id),
+      fundSettlements: s.fundSettlements.filter((x) => x.projectId !== id),
     }));
   },
 });
