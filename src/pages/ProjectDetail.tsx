@@ -73,7 +73,27 @@ export default function ProjectDetail() {
   // Persist active tab in URL (?tab=...) so refresh keeps context
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab') || 'overview';
-  const [activeTab, setActiveTab] = useState(urlTab);
+  const urlGroup = (searchParams.get('group') as TabGroup) || 'summary';
+  const [activeGroup, setActiveGroupState] = useState<TabGroup>(urlGroup);
+  const [activeTab, setActiveTabState] = useState(urlTab);
+
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    }, { replace: true });
+  };
+
+  const setActiveGroup = (group: TabGroup) => {
+    setActiveGroupState(group);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('group', group);
+      return next;
+    }, { replace: true });
+  };
 
   const project = projects.find((p) => p.id === id);
   const isReadOnly = project ? !canEditRole('project', project.id) : true;
