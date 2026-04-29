@@ -58,20 +58,22 @@ export default function ProjectDetail() {
 
   const { detailsLoaded, detailsLoading, loadProjectData, subscribeToProject } = useStore();
 
-  useEffect(() => { loadAll(); }, []);
-  useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded]);
-  // Realtime subscription for collaborative editing
+  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded, loadProjectData]);
+  // Realtime subscription for collaborative editing — cleanup on id change
   useEffect(() => {
     if (!id) return;
     const unsub = subscribeToProject(id);
     return unsub;
-  }, [id]);
+  }, [id, subscribeToProject]);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0, taxPercent: 15 });
   type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management';
-  const [activeGroup, setActiveGroup] = useState<TabGroup>('summary');
-  const [activeTab, setActiveTab] = useState('overview');
+  // Persist active tab in URL (?tab=...) so refresh keeps context
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab') || 'overview';
+  const [activeTab, setActiveTab] = useState(urlTab);
 
   const project = projects.find((p) => p.id === id);
   const isReadOnly = project ? !canEditRole('project', project.id) : true;
