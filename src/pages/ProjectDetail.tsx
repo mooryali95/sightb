@@ -641,6 +641,21 @@ export default function ProjectDetail() {
           </TabsList>
 
           <TabsContent value="overview">
+            <AIExecutiveInsights context={{
+              name: project.name, status: project.status, percentComplete: project.percentComplete,
+              currentMonth, durationMonths: project.durationMonths,
+              contractValue: summary.contractValue, effectiveContractValue: summary.effectiveContractValue,
+              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+              collectedRevenue: summary.collectedRevenue, invoicedRevenue: summary.invoicedRevenue,
+              spendRate: summary.spendRate, plannedProfit: summary.plannedProfit,
+              cpi: evm?.cpi ?? null, spi: evm?.spi ?? null,
+              openRisks: openRisksCount,
+              highRisks: pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length,
+              pendingExpenses: pendingExpensesCount, pendingChangeOrders,
+              delayedMilestones: pMilestones.filter(m => m.status === 'delayed').length,
+              unsettledFunds: 0, remainingInManagerHand: 0,
+              daysRemaining, currency: project.currency,
+            }} />
             <ExecutiveSummary
               project={project} summary={summary} milestones={pMilestones} risks={pRisks}
               changeOrders={pChangeOrders} expenses={pExpenses} revenues={pRevenues}
