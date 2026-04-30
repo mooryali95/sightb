@@ -865,6 +865,105 @@ export type Database = {
           },
         ]
       }
+      payment_requests: {
+        Row: {
+          amount: number
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          auto_created_expense_id: string | null
+          created_at: string
+          currency: string
+          description: string
+          id: string
+          justification: string | null
+          linked_fund_id: string | null
+          linked_reimbursement_ids: Json
+          paid_date: string | null
+          payment_attachments: Json
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference: string | null
+          priority: Database["public"]["Enums"]["payment_priority"]
+          project_id: string
+          rejection_reason: string | null
+          request_type: Database["public"]["Enums"]["payment_request_type"]
+          requested_at: string | null
+          requested_by: string
+          resource_id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scheduled_date: string | null
+          status: Database["public"]["Enums"]["payment_request_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_created_expense_id?: string | null
+          created_at?: string
+          currency?: string
+          description: string
+          id?: string
+          justification?: string | null
+          linked_fund_id?: string | null
+          linked_reimbursement_ids?: Json
+          paid_date?: string | null
+          payment_attachments?: Json
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference?: string | null
+          priority?: Database["public"]["Enums"]["payment_priority"]
+          project_id: string
+          rejection_reason?: string | null
+          request_type?: Database["public"]["Enums"]["payment_request_type"]
+          requested_at?: string | null
+          requested_by: string
+          resource_id: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scheduled_date?: string | null
+          status?: Database["public"]["Enums"]["payment_request_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_created_expense_id?: string | null
+          created_at?: string
+          currency?: string
+          description?: string
+          id?: string
+          justification?: string | null
+          linked_fund_id?: string | null
+          linked_reimbursement_ids?: Json
+          paid_date?: string | null
+          payment_attachments?: Json
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference?: string | null
+          priority?: Database["public"]["Enums"]["payment_priority"]
+          project_id?: string
+          rejection_reason?: string | null
+          request_type?: Database["public"]["Enums"]["payment_request_type"]
+          requested_at?: string | null
+          requested_by?: string
+          resource_id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scheduled_date?: string | null
+          status?: Database["public"]["Enums"]["payment_request_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       periodic_snapshots: {
         Row: {
           created_at: string
@@ -1100,6 +1199,138 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      resource_reimbursements: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          budget_item_id: string | null
+          category: string
+          created_at: string
+          description: string
+          expense_date: string
+          id: string
+          notes: string | null
+          payment_request_id: string | null
+          project_id: string
+          receipt_attachments: Json
+          rejection_reason: string | null
+          resource_id: string
+          status: Database["public"]["Enums"]["reimbursement_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_item_id?: string | null
+          category: string
+          created_at?: string
+          description: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_request_id?: string | null
+          project_id: string
+          receipt_attachments?: Json
+          rejection_reason?: string | null
+          resource_id: string
+          status?: Database["public"]["Enums"]["reimbursement_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_item_id?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_request_id?: string | null
+          project_id?: string
+          receipt_attachments?: Json
+          rejection_reason?: string | null
+          resource_id?: string
+          status?: Database["public"]["Enums"]["reimbursement_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      resource_settlements: {
+        Row: {
+          balance: number
+          created_at: string
+          created_by: string
+          id: string
+          linked_payment_ids: Json
+          linked_reimbursement_ids: Json
+          notes: string | null
+          period_from: string | null
+          period_to: string | null
+          project_id: string | null
+          resource_id: string
+          settlement_text_ar: string | null
+          signature_attachment: string | null
+          signed_at: string | null
+          signed_by_resource: boolean
+          status: Database["public"]["Enums"]["resource_settlement_status"]
+          total_owed: number
+          total_paid: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          created_by: string
+          id?: string
+          linked_payment_ids?: Json
+          linked_reimbursement_ids?: Json
+          notes?: string | null
+          period_from?: string | null
+          period_to?: string | null
+          project_id?: string | null
+          resource_id: string
+          settlement_text_ar?: string | null
+          signature_attachment?: string | null
+          signed_at?: string | null
+          signed_by_resource?: boolean
+          status?: Database["public"]["Enums"]["resource_settlement_status"]
+          total_owed?: number
+          total_paid?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          linked_payment_ids?: Json
+          linked_reimbursement_ids?: Json
+          notes?: string | null
+          period_from?: string | null
+          period_to?: string | null
+          project_id?: string | null
+          resource_id?: string
+          settlement_text_ar?: string | null
+          signature_attachment?: string | null
+          signed_at?: string | null
+          signed_by_resource?: boolean
+          status?: Database["public"]["Enums"]["resource_settlement_status"]
+          total_owed?: number
+          total_paid?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       resources: {
         Row: {
@@ -1478,6 +1709,30 @@ export type Database = {
     Enums: {
       app_role: "admin" | "editor" | "viewer" | "owner"
       fund_status: "transferred" | "acknowledged" | "settled" | "pending_next"
+      payment_method: "bank_transfer" | "cash" | "check" | "card"
+      payment_priority: "normal" | "urgent" | "critical"
+      payment_request_status:
+        | "draft"
+        | "submitted"
+        | "under_review"
+        | "approved"
+        | "rejected"
+        | "scheduled"
+        | "paid"
+        | "cancelled"
+      payment_request_type:
+        | "reimbursement"
+        | "salary"
+        | "bonus"
+        | "advance"
+        | "fund_top_up"
+        | "other"
+      reimbursement_status:
+        | "pending_review"
+        | "approved"
+        | "reimbursed"
+        | "rejected"
+      resource_settlement_status: "draft" | "signed" | "disputed" | "cancelled"
       scope_type: "system" | "company" | "project"
       settlement_status: "draft" | "submitted" | "approved" | "rejected"
     }
@@ -1609,6 +1864,33 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "editor", "viewer", "owner"],
       fund_status: ["transferred", "acknowledged", "settled", "pending_next"],
+      payment_method: ["bank_transfer", "cash", "check", "card"],
+      payment_priority: ["normal", "urgent", "critical"],
+      payment_request_status: [
+        "draft",
+        "submitted",
+        "under_review",
+        "approved",
+        "rejected",
+        "scheduled",
+        "paid",
+        "cancelled",
+      ],
+      payment_request_type: [
+        "reimbursement",
+        "salary",
+        "bonus",
+        "advance",
+        "fund_top_up",
+        "other",
+      ],
+      reimbursement_status: [
+        "pending_review",
+        "approved",
+        "reimbursed",
+        "rejected",
+      ],
+      resource_settlement_status: ["draft", "signed", "disputed", "cancelled"],
       scope_type: ["system", "company", "project"],
       settlement_status: ["draft", "submitted", "approved", "rejected"],
     },
