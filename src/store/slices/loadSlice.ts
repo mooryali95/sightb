@@ -144,6 +144,12 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
       } catch (err) {
         console.warn('[Store.loadFundsForProject]', err);
       }
+      // Load resource payables (reimbursements, payment requests, settlements)
+      try {
+        await get().loadResourcePayablesForProject(projectId);
+      } catch (err) {
+        console.warn('[Store.loadResourcePayablesForProject]', err);
+      }
 
       const mappedExpenses = expensesData.map(mapExpense);
       const loaded = new Set(get().projectDataLoaded);

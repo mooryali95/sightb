@@ -577,3 +577,176 @@ export interface FundAlert {
   actionLabel?: string;
 }
 
+// ─── Resource Payables (مستحقات الموارد البشرية) ───
+export type ReimbursementStatus = 'pending_review' | 'approved' | 'reimbursed' | 'rejected';
+
+export const REIMBURSEMENT_STATUS_LABELS: Record<ReimbursementStatus, string> = {
+  pending_review: 'قيد المراجعة',
+  approved: 'معتمد',
+  reimbursed: 'مدفوع',
+  rejected: 'مرفوض',
+};
+
+export const REIMBURSEMENT_STATUS_COLORS: Record<ReimbursementStatus, string> = {
+  pending_review: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  approved:       'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  reimbursed:     'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  rejected:       'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
+
+export interface ReceiptAttachment {
+  name: string;
+  url?: string;
+  uploadedAt?: string;
+}
+
+export interface ResourceReimbursement {
+  id: string;
+  projectId: string;
+  resourceId: string;
+  category: ExpenseCategory | string;
+  description: string;
+  amount: number;
+  expenseDate: string;
+  receiptAttachments: ReceiptAttachment[];
+  budgetItemId?: string;
+  status: ReimbursementStatus;
+  notes?: string;
+  rejectionReason?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  paymentRequestId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PaymentRequestType = 'reimbursement' | 'salary' | 'bonus' | 'advance' | 'fund_top_up' | 'other';
+
+export const PAYMENT_REQUEST_TYPE_LABELS: Record<PaymentRequestType, string> = {
+  reimbursement: 'استرداد مصاريف',
+  salary: 'راتب',
+  bonus: 'مكافأة',
+  advance: 'سلفة',
+  fund_top_up: 'تغذية عُهدة',
+  other: 'أخرى',
+};
+
+export type PaymentRequestStatus =
+  | 'draft' | 'submitted' | 'under_review' | 'approved'
+  | 'rejected' | 'scheduled' | 'paid' | 'cancelled';
+
+export const PAYMENT_REQUEST_STATUS_LABELS: Record<PaymentRequestStatus, string> = {
+  draft: 'مسودة',
+  submitted: 'مُرسل',
+  under_review: 'قيد المراجعة',
+  approved: 'معتمد',
+  rejected: 'مرفوض',
+  scheduled: 'مجدول',
+  paid: 'مدفوع',
+  cancelled: 'ملغي',
+};
+
+export const PAYMENT_REQUEST_STATUS_COLORS: Record<PaymentRequestStatus, string> = {
+  draft:        'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  submitted:    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  under_review: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  approved:     'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+  rejected:     'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  scheduled:    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  paid:         'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  cancelled:    'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500',
+};
+
+export type PaymentPriority = 'normal' | 'urgent' | 'critical';
+
+export const PAYMENT_PRIORITY_LABELS: Record<PaymentPriority, string> = {
+  normal: 'عادية',
+  urgent: 'عاجل',
+  critical: 'حرج',
+};
+
+export const PAYMENT_PRIORITY_COLORS: Record<PaymentPriority, string> = {
+  normal:   'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  urgent:   'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+};
+
+export type PaymentMethod = 'bank_transfer' | 'cash' | 'check' | 'card';
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  bank_transfer: 'تحويل بنكي',
+  cash: 'نقدي',
+  check: 'شيك',
+  card: 'بطاقة',
+};
+
+export interface PaymentRequest {
+  id: string;
+  projectId: string;
+  resourceId: string;
+  requestType: PaymentRequestType;
+  amount: number;
+  currency: string;
+  description: string;
+  justification?: string;
+  linkedReimbursementIds: string[];
+  linkedFundId?: string;
+  priority: PaymentPriority;
+  status: PaymentRequestStatus;
+  requestedBy: string;
+  requestedAt?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  approvalNotes?: string;
+  scheduledDate?: string;
+  paidDate?: string;
+  paymentMethod?: PaymentMethod;
+  paymentReference?: string;
+  paymentAttachments: ReceiptAttachment[];
+  rejectionReason?: string;
+  autoCreatedExpenseId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ResourceSettlementStatus = 'draft' | 'signed' | 'disputed' | 'cancelled';
+
+export const RESOURCE_SETTLEMENT_STATUS_LABELS: Record<ResourceSettlementStatus, string> = {
+  draft: 'مسودة',
+  signed: 'موقّعة',
+  disputed: 'متنازع عليها',
+  cancelled: 'ملغية',
+};
+
+export const RESOURCE_SETTLEMENT_STATUS_COLORS: Record<ResourceSettlementStatus, string> = {
+  draft:     'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  signed:    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  disputed:  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  cancelled: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500',
+};
+
+export interface ResourceSettlement {
+  id: string;
+  resourceId: string;
+  projectId?: string;
+  periodFrom?: string;
+  periodTo?: string;
+  totalOwed: number;
+  totalPaid: number;
+  balance: number;
+  linkedReimbursementIds: string[];
+  linkedPaymentIds: string[];
+  settlementTextAr?: string;
+  status: ResourceSettlementStatus;
+  signedByResource: boolean;
+  signatureAttachment?: string;
+  signedAt?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
