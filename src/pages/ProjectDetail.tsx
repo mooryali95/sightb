@@ -20,7 +20,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
-  Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, Sparkles,
+  Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, Sparkles, HandCoins,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
@@ -43,6 +43,7 @@ import { WhatIfSection } from '@/components/project/WhatIfSection';
 import { CommitmentsSection } from '@/components/project/CommitmentsSection';
 import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
 import { FundsSection } from '@/components/project/FundsSection';
+import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 import { Progress } from '@/components/ui/progress';
@@ -257,6 +258,7 @@ export default function ProjectDetail() {
       { value: 'commitments', label: 'الالتزامات', icon: Briefcase },
       { value: 'custody', label: 'العهد', icon: Wallet },
       { value: 'revenue', label: 'الإيرادات', icon: DollarSign },
+      { value: 'payables', label: 'مستحقات الموارد', icon: HandCoins },
     ],
     tracking: [
       { value: 'charts', label: 'التحليلات', icon: BarChart3 },
@@ -698,6 +700,7 @@ export default function ProjectDetail() {
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="commitments"><CommitmentsSection projectId={project.id} commitments={pCommitments} totalPlanned={summary.totalPlanned} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} milestones={pMilestones} /></TabsContent>
+          <TabsContent value="payables"><ResourcePayablesSection projectId={project.id} projectName={project.name} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} budgetItems={pBudget} /></TabsContent>
