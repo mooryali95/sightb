@@ -258,6 +258,7 @@ export default function ProjectDetail() {
       { value: 'commitments', label: 'الالتزامات', icon: Briefcase },
       { value: 'custody', label: 'العهد', icon: Wallet },
       { value: 'revenue', label: 'الإيرادات', icon: DollarSign },
+      { value: 'payables', label: 'مستحقات الموارد', icon: HandCoins },
     ],
     tracking: [
       { value: 'charts', label: 'التحليلات', icon: BarChart3 },
