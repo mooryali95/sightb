@@ -43,6 +43,7 @@ import { WhatIfSection } from '@/components/project/WhatIfSection';
 import { CommitmentsSection } from '@/components/project/CommitmentsSection';
 import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
 import { FundsSection } from '@/components/project/FundsSection';
+import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 import { Progress } from '@/components/ui/progress';
