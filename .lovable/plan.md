@@ -1,250 +1,202 @@
+# خطة التنفيذ الكاملة: إصلاح المنظومة المالية + OCR للفواتير
 
-# نظام مستحقات الموارد البشرية وطلبات الصرف (Resource Reimbursements & Payment Requests)
-
-## السيناريو المستهدف (واضح الآن)
-
-> "المورد البشري **عمر** (موجود في `resources`) اشترى لابتوب للمشروع من حسابه الخاص بمبلغ 4,500 ريال — لا يوجد رصيد مخصص له في الموازنة. أريد:
-> 1. تسجيل المصروف **باسمه كمستحقات على الشركة له**
-> 2. يظهر في كشف مستحقاته
-> 3. عند الدفع له، أعمل **مخالصة نهائية** ترتبط بالنظام
-> 4. أتتبع **طلب الصرف**: متى تقدم؟ متى اعتُمد؟ متى دُفع؟"
+سأنفّذ على **3 مراحل متتابعة في رسائل منفصلة** لضمان جودة المراجعة وعدم اكتظاظ التغييرات.
 
 ---
 
-## الفكرة الجوهرية
+## 🟥 المرحلة 1 — MUST HAVE (P0 الإصلاحات الحرجة)
 
-نضيف للمورد (Resource) الموجود مفهومين جديدين:
-- **Resource Reimbursement** (سلفة شخصية يستردها المورد) — مصروف تكبّده من جيبه
-- **Payment Request** (طلب صرف دفعة) — يغطي: استرداد، راتب، مكافأة، أو أي دفعة للمورد
+### M1 — فرض ربط المصروف بالدفعة على مستوى القاعدة
 
-ثم **Resource Settlement** = مخالصة نهائية تجمع كل المستحقات والمدفوعات وتقفلها.
+- **Trigger DB جديد** `enforce_expense_fund_link` على `expenses` (BEFORE INSERT/UPDATE):
+  - إذا توجد دفعة `acknowledged` للمشروع و`fund_id IS NULL` → يرفع استثناء.
+  - استثناء واحد: المصروفات المُنشأة من Trigger `auto_create_expense_on_payment` (نتعرّف عليها عبر `notes LIKE 'منشأ تلقائياً%'`).
+  - **legacy bypass**: المصروفات الأقدم من تاريخ تفعيل أول دفعة في المشروع لا يُطبَّق عليها.
 
-هذا يكمل البنية الموجودة: `resources` (الموارد) + `custodies` (العهد) + `funds` (الصرفيات) + **`reimbursements` + `payment_requests` (الجديد)**.
+### M2 — منع تجاوز رصيد الدفعة/العهدة
 
----
+- **Trigger DB** `check_fund_balance` على `expenses` (BEFORE INSERT/UPDATE):
+  - إذا `fund_id` محدد → يحسب `SUM(expenses.amount WHERE fund_id=NEW.fund_id) + NEW.amount` ويرفض إن تجاوز `project_funds.amount`.
+  - نفس المنطق لـ `custody_id` مقابل `custodies.amount`.
+  - رسالة بالعربية واضحة.
 
-## البنية المقترحة
+### M3 — إصلاح البيانات التاريخية (Data Migration)
 
-### 1. جداول قاعدة البيانات الجديدة
+- **Migration نصي مع تعليق واضح**:
+  ```sql
+  -- مصروفات قديمة لمشاريع لم يكن بها دفعات وقت إنشائها → تُترك بدون fund_id (Legacy).
+  -- إضافة عمود tag للوضوح:
+  ALTER TABLE expenses ADD COLUMN IF NOT EXISTS legacy_pre_fund boolean DEFAULT false;
+  UPDATE expenses e SET legacy_pre_fund = true
+  WHERE fund_id IS NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM project_funds pf
+      WHERE pf.project_id = e.project_id
+        AND pf.transfer_date <= e.date::date
+    );
+  ```
+- **لا أعدّل البيانات الفعلية**، فقط أسمها تاريخياً لاستثنائها من تنبيهات "غير مرتبطة".
 
-**(أ) `resource_reimbursements` — مصاريف صرفها المورد من حسابه**
-```
-id, project_id, resource_id, category (ExpenseCategory),
-description, amount, expense_date,
-receipt_attachments (jsonb [{name, url}]),
-budget_item_id (اختياري — للربط بالموازنة),
-status: pending_review | approved | reimbursed | rejected,
-notes, rejection_reason,
-approved_by, approved_at,
-payment_request_id (يُملأ عند ربطه بطلب صرف),
-created_at, user_id
-```
-**ملاحظة**: يبقى منفصلاً عن `expenses` حتى يُدفع → عند الدفع يُنشأ تلقائياً `expense` معتمد لتدخل في حسابات الموازنة الفعلية.
+### M4 — Trigger إغلاق تلقائي للعهد والدفعات
 
-**(ب) `payment_requests` — طلبات صرف الدفعات (دورة الحياة الكاملة)**
-```
-id, project_id, resource_id,
-request_type: reimbursement | salary | bonus | advance | fund_top_up | other,
-amount, currency, description, justification,
-linked_reimbursement_ids (jsonb — مصاريف الاسترداد المرتبطة),
-linked_fund_id (اختياري — إذا الطلب لتغذية عُهدة),
-priority: normal | urgent | critical,
-status: draft | submitted | under_review | approved
-       | rejected | scheduled | paid | cancelled,
-requested_by, requested_at,
-reviewed_by, reviewed_at, review_notes,
-approved_by, approved_at, approval_notes,
-scheduled_date,
-paid_date, payment_method (bank_transfer|cash|check|card),
-payment_reference, payment_attachments (jsonb),
-rejection_reason,
-auto_created_expense_id (للتتبع),
-created_at, updated_at, user_id
-```
+- **Trigger** `auto_close_custody_on_exhaustion` على `expenses` (AFTER INSERT/UPDATE/DELETE):
+  - يعيد حساب `SUM(expenses.amount WHERE custody_id=X)` ويُحدّث `custodies.status='closed'` و`closed_date` إذا وصل ≥ amount.
+- إزالة الـ `useEffect` من `CustodySection.tsx` (تنظيف).
 
-**(ج) `resource_settlements` — المخالصات النهائية**
-```
-id, resource_id, project_id (اختياري — قد تكون شاملة),
-period_from, period_to,
-total_owed (إجمالي المستحقات المعتمدة),
-total_paid (إجمالي المدفوعات الفعلية),
-balance (الفرق),
-linked_reimbursement_ids (jsonb),
-linked_payment_ids (jsonb),
-settlement_text_ar (نص المخالصة بالعربي — قابل للتحرير من قالب),
-status: draft | signed | disputed | cancelled,
-signed_by_resource (boolean),
-signature_attachment, signed_at,
-notes, created_by, created_at, user_id
-```
+### M5 — تحذير قوي على الفروقات في التسوية
 
-### 2. Triggers / Functions
+- في `FundsSection.tsx`: عند `Math.abs(difference) > 1` → بطاقة AlertDialog حمراء كبيرة بدل Badge هادئ.
+- إضافة عمود `الفرق` بألوان واضحة في جدول الدفعات.
 
-- **`auto_create_expense_on_payment`** — عند `payment_request.status = 'paid'` ونوعه `reimbursement` → إنشاء `expense` معتمد تلقائياً (vendor=اسم المورد، resource_id موجود، fund_id=null)، وتحديث `resource_reimbursements.status='reimbursed'`
-- **`recalc_resource_balance(resource_id)`** — دالة SECURITY DEFINER تحسب الرصيد المستحق
-- **`protect_signed_settlement`** — منع تعديل/حذف المخالصات الموقّعة
-- **system_audit triggers** — على الجداول الثلاثة الجديدة (تتبع كل تغيير)
+### M6 — قفل تعديل `fund_id` بعد الإنشاء (للأدمن فقط)
 
-### 3. RLS
-
-- `resource_reimbursements`: عرض = `has_access(project)` ، إنشاء/تعديل = `can_edit(project)`، اعتماد = `has_role(admin)` فقط
-- `payment_requests`: عرض = `has_access(project)`، إنشاء = `can_edit`، اعتماد/دفع = `admin` فقط
-- `resource_settlements`: عرض = `has_access(project)`، إنشاء = `can_edit`، توقيع/إقفال = `admin` فقط
+- **Trigger DB** `protect_expense_fund_link` على `expenses` (BEFORE UPDATE):
+  - إذا `OLD.fund_id IS NOT NULL` و`NEW.fund_id <> OLD.fund_id` و`NOT has_role(auth.uid(),'admin')` → يرفض.
+- في الواجهة: تعطيل حقل `fund_id` في وضع التعديل لغير الأدمن.
 
 ---
 
-## الواجهات (UI)
+## 🟧 المرحلة 2 — SHOULD HAVE (S1, S2, S3, S5, S6, S7, S8, S9)
 
-### (أ) تبويب جديد داخل المشروع: **"مستحقات الموارد"**
-- ضمن مجموعة Finance، بجانب "الصرفيات"
-- أيقونة: `HandCoins` من lucide-react
+> S4 (توحيد Fund + Custody) يحتاج هجرة كبيرة وقد يكسر سير عمل قائم — أؤجله ليُناقش لاحقاً.
 
-### (ب) `ResourcePayablesSection.tsx` — اللوحة الرئيسية
-- بطاقات إحصائية: إجمالي المستحقات | المعتمد | المدفوع | المتبقي
-- جدول الموارد النشطة + رصيد كل واحد + زر "كشف حساب"
-- 3 تبويبات داخلية:
-  1. **الاستردادات** (Reimbursements) — قائمة المصاريف
-  2. **طلبات الصرف** (Payment Requests) — مع Timeline
-  3. **المخالصات** (Settlements) — السجل التاريخي
+### S1 — حدود الاعتماد المتدرّجة (Approval Thresholds)
 
-### (ج) `ReimbursementDialog.tsx` — تسجيل مصروف للمورد
-- اختيار المورد من dropdown (resources الخاصة بالمشروع)
-- البند، الفئة، المبلغ، التاريخ
-- رفع إيصال (Storage bucket `resource-receipts`)
-- ربط اختياري بـ budget_item
-- إرسال للاعتماد
+- **جدول جديد** `approval_thresholds` (system-wide settings):
+  - `min_amount`, `max_amount`, `required_role` ('editor' | 'admin' | 'owner'), `requires_attachment` boolean.
+- **Defaults seeded**:
+  - 0–1,000: editor، بدون مرفق
+  - 1,000–10,000: editor + مرفق إلزامي
+  - 10,000–50,000: admin
+  - 50,000+: owner + مرفق إلزامي
+- **Trigger** يفحص الحد المطلوب ويعيّن `approval_status='pending'` تلقائياً للمبالغ التي تحتاج اعتماد أعلى.
+- **UI**: صفحة إعدادات في `/settings/approvals` (Admin فقط).
 
-### (د) `PaymentRequestWizard.tsx` — معالج طلب الصرف
-- خطوة 1: نوع الطلب + المورد
-- خطوة 2: إذا "استرداد" → اختيار الاستردادات المعتمدة غير المدفوعة (المجموع يُحسب تلقائياً). إذا غير ذلك → إدخال المبلغ يدوياً
-- خطوة 3: الأولوية، المبرر، مرفقات داعمة
-- خطوة 4: مراجعة + إرسال
+### S2 — Three-Way Match (Commitment ↔ Expense ↔ Receipt)
 
-### (هـ) `PaymentRequestTimeline.tsx` — عرض دورة الحياة
-شريط بصري للحالات مع التاريخ والمسؤول:
-```
-[منشأ] ─── [مرسل] ─── [قيد المراجعة] ─── [معتمد] ─── [مجدول] ─── [مدفوع]
-2026/04/01  04/02      04/03            04/05       04/08      04/10
-علي         علي        أحمد              أحمد        محمد       محمد
-```
-أزرار الإجراء حسب الصلاحية في كل مرحلة (إرسال، اعتماد، رفض، جدولة، تأكيد دفع).
+- إضافة `commitment_id` (FK اختياري) إلى `expenses`.
+- في حقل ربط "بند الموازنة" بالمصروف، إضافة قسم "ربط بالتزام/عقد" مع dropdown يعرض الالتزامات النشطة لنفس البند.
+- **Trigger** يُحدّث `commitments.spent_amount` تلقائياً من مجموع المصروفات المرتبطة (Single Source of Truth بدلاً من إدخال يدوي).
+- لوحة في `CommitmentsSection`: "إجمالي / مصروف / متبقي" مع شريط تقدّم.
 
-### (و) `ResourceSettlementDialog.tsx` — المخالصة النهائية
-- اختيار المورد + الفترة → يجلب تلقائياً كل الاستردادات والدفعات
-- جدول مفصّل:
-  - عمود يسار: المستحقات (الاستردادات المعتمدة)
-  - عمود يمين: المدفوعات (طلبات الصرف المدفوعة)
-  - أسفل: الفرق
-- نص المخالصة بالعربي (قالب جاهز قابل للتعديل):
-  > "أنا الموقّع أدناه/[الاسم] أُقرّ بأنني استلمت كامل مستحقاتي من شركة [الشركة] عن مشروع [المشروع] للفترة من [...] إلى [...] وقدرها [...] ريال، ولا يحق لي مطالبة الشركة بأي مبلغ آخر..."
-- حقل التوقيع (رفع صورة)
-- زر "توقيع المخالصة" → تجميد البنود
+### S3 — Encumbrance Accounting
 
-### (ز) `ResourceStatementDialog.tsx` — كشف حساب المورد
-- جدول زمني لكل الحركات (استردادات + رواتب من العهد + مخالصات)
-- إجمالي مستحق / مدفوع / رصيد
-- تصدير Excel & PDF (بأرقام إنجليزية حسب الذاكرة)
+- في `BudgetSection.tsx`: حساب جديد `committed_amount` لكل `budget_item` = SUM commitments المرتبطة.
+- `available = planned - spent - committed` (بدلاً من `planned - spent` فقط).
+- تنبيه عند `committed > planned`.
 
----
+### S5 — Cash Forecast (Burn Rate)
 
-## التكاملات مع النظام الحالي
+- في `FundsSection.tsx`: حساب معدّل الصرف اليومي لآخر 14 يوماً → التنبؤ بمتى ستنفد الدفعة.
+- بطاقة جديدة: "متوقع نفاد الدفعة في: ١٢ يوم — يُنصح بطلب دفعة جديدة الآن".
 
-| النظام | التكامل |
-|---|---|
-| **Resources** | استخدام نفس جدول الموارد، إضافة حقل محسوب `currentBalance` |
-| **Expenses** | إنشاء expense تلقائياً عند دفع استرداد |
-| **Funds** | طلب نوع `fund_top_up` يُنشئ `project_fund` تلقائياً عند الدفع |
-| **Custodies** | طلب نوع `salary` يمكن خصمه من عُهدة المورد إن وُجدت |
-| **Budget** | الاستردادات المعتمدة تظهر كـ "ملتزم به" قبل الدفع |
-| **Smart Alerts** | تنبيه عند: رصيد مستحق > حد معين / طلب معلق > 7 أيام / تجاوز موازنة الفئة |
-| **AI Insights** | قسم "الموارد الأكثر استحقاقاً" + "طلبات صرف معلقة طويلاً" |
-| **Audit Log** | تسجيل كل تغيير حالة في system_audit_log (Owner only) |
-| **Email** | إشعار Admin عند تقديم طلب جديد، إشعار المورد عند الاعتماد/الدفع |
+### S6 — مرفقات إلزامية (مرتبط بـ S1)
+
+- استخدام `resource-receipts` bucket الموجود + إنشاء `expense-receipts` bucket جديد.
+- حقل `receipt_attachments jsonb` في `expenses`.
+- في النموذج: زر رفع ملف (PDF/Image)، رفع لـ Storage، حفظ URL.
+- Trigger يرفض المصروف بدون مرفق إذا كانت `approval_thresholds.requires_attachment = true`.
+
+### S7 — Realtime Subscriptions
+
+- إضافة `ALTER PUBLICATION supabase_realtime ADD TABLE expenses, project_funds, fund_settlements;`
+- في `loadSlice.ts`: subscription على التغييرات لتحديث الـ store تلقائياً.
+
+### S8 — تقرير الإغلاق المالي للمشروع (PDF)
+
+- زر جديد في `ExecutiveSummary`: "تقرير الإغلاق المالي".
+- يُنتج PDF (jsPDF موجود) يحتوي:
+  - إجمالي محوّل / مصروف / مرتجع
+  - حالة كل دفعة وتسوياتها
+  - إجمالي مستحقات الموارد المتبقية
+  - تحليل الانحرافات حسب الفئة
+  - توقيع رقمي للأدمن.
+
+### S9 — AI Anomaly Detection للمصروفات
+
+- Edge Function جديد `expense-anomaly-detector`:
+  - يستقبل المشروع، يجلب آخر 90 يوم من المصروفات.
+  - يستخدم Lovable AI (`google/gemini-3-flash-preview`) مع tool calling لاستخراج JSON منظّم: `[{expense_id, anomaly_type, severity, reason}]`.
+  - أنواع الشذوذ: تكرار، مبلغ خارج النمط، فئة غير معتادة للمسؤول، تكرار قريب.
+- بطاقة في `ExecutiveSummary`: "تنبيهات ذكية للمصروفات".
 
 ---
 
-## الصلاحيات (RBAC)
+## 🟦 المرحلة 3 — Mobile-First Expense Entry + OCR (C1)
 
-| الإجراء | Owner | Admin | Editor | Viewer |
-|---|:---:|:---:|:---:|:---:|
-| تسجيل استرداد | ✓ | ✓ | ✓ | — |
-| اعتماد استرداد | ✓ | ✓ | — | — |
-| إنشاء طلب صرف | ✓ | ✓ | ✓ | — |
-| اعتماد طلب صرف | ✓ | ✓ | — | — |
-| تأكيد الدفع | ✓ | ✓ | — | — |
-| إنشاء مخالصة | ✓ | ✓ | ✓ | — |
-| توقيع/إقفال مخالصة | ✓ | ✓ | — | — |
-| المشاهدة | ✓ | ✓ | ✓ | ✓ |
+### C1.1 — تجربة موبايل مُحسّنة
 
----
+- صفحة جديدة `/m/expense/new` مُحسّنة للموبايل:
+  - زر كاميرا كبير يفتح camera input مباشرة (`<input type="file" accept="image/*" capture="environment">`).
+  - بعد الصورة: شاشة معاينة + زر "استخراج بالذكاء الاصطناعي".
+  - نموذج مبسّط: المبلغ، التاريخ، الفئة، المشروع، المرفق — بحقول كبيرة.
+  - زر "حفظ وإضافة آخر" + "حفظ وإغلاق".
 
-## ملفات التنفيذ
+### C1.2 — OCR للفواتير عبر Lovable AI Vision
 
-**جديد:**
-- `supabase/migrations/{ts}_resource_payables.sql` — الجداول + RLS + Triggers + Storage bucket
-- `src/types/project.ts` (إضافات) — `ResourceReimbursement`, `PaymentRequest`, `ResourceSettlement` + enums + labels/colors
-- `src/lib/resource-payables.ts` — حسابات الأرصدة، تجميع الحركات، إحصائيات
-- `src/lib/__tests__/resource-payables.test.ts` — Vitest (إلزامي حسب الذاكرة)
-- `src/store/slices/resourcePayableSlice.ts` — CRUD لكل الجداول الثلاثة
-- `src/components/project/ResourcePayablesSection.tsx` — اللوحة الرئيسية + 3 تبويبات
-- `src/components/project/ReimbursementDialog.tsx`
-- `src/components/project/PaymentRequestWizard.tsx`
-- `src/components/project/PaymentRequestTimeline.tsx`
-- `src/components/project/ResourceSettlementDialog.tsx`
-- `src/components/project/ResourceStatementDialog.tsx`
+- Edge Function جديد `extract-receipt-data`:
+  - يستقبل: `{ image_base64, project_id }`.
+  - يرفع الصورة لـ Storage (`expense-receipts/{user_id}/{timestamp}.jpg`).
+  - يستدعي `google/gemini-2.5-pro` (multimodal) مع tool calling لاستخراج:
+    ```json
+    {
+      "vendor_name": "string",
+      "invoice_number": "string|null",
+      "invoice_date": "YYYY-MM-DD|null",
+      "total_amount": "number",
+      "vat_amount": "number|null",
+      "is_vat_inclusive": "boolean",
+      "suggested_category": "ExpenseCategory enum",
+      "line_items": [{ "description": "string", "amount": "number" }],
+      "confidence": "0-1"
+    }
+    ```
+  - يُرجع البيانات + `receipt_url`.
+- الواجهة تملأ النموذج تلقائياً، ويراجع المستخدم ويعتمد.
 
-**تعديل:**
-- `src/store/useStore.ts` — تسجيل resourcePayableSlice
-- `src/store/slices/loadSlice.ts` — تحميل البيانات الجديدة
-- `src/pages/ProjectDetail.tsx` — تبويب جديد في Finance group
-- `src/components/project/ResourcesSection.tsx` — إضافة عمود "الرصيد المستحق" + زر "كشف الحساب"
-- `src/components/project/ExpensesSection.tsx` — شارة "من استرداد" للمصاريف المنشأة تلقائياً
-- `src/components/project/SmartBudgetAlerts.tsx` — تنبيهات الطلبات المعلقة
-- `mem://index.md` + ملف ذاكرة جديد لقواعد الوحدة
+### C1.3 — اختصار في الـ Sidebar
+
+- زر عائم (FAB) في الموبايل لـ "تسجيل مصروف سريع".
+- في الـ Desktop: زر في GlobalSearch (Ctrl+K) لـ "تسجيل مصروف بصورة".
 
 ---
 
-## مراحل التنفيذ المقترحة
+## 📋 ملخص الملفات المتأثرة
 
-**المرحلة 1: الأساس (Reimbursements)**
-- جدول `resource_reimbursements` + RLS + types + slice
-- `ReimbursementDialog` + قائمة في `ResourcePayablesSection`
-- إضافة عمود الرصيد في `ResourcesSection`
-- اختبارات حسابات الأرصدة
+### Migrations (3 ملفات)
 
-**المرحلة 2: طلبات الصرف (Payment Requests + Timeline)**
-- جدول `payment_requests` + trigger `auto_create_expense_on_payment`
-- `PaymentRequestWizard` + `PaymentRequestTimeline`
-- ربط الإشعارات (Admin عند طلب جديد)
-- اختبار الدورة الكاملة
+1. `must_have_financial_integrity.sql` — M1, M2, M3, M4, M6 + tags
+2. `should_have_governance.sql` — S1 (approval_thresholds), S2 (commitment_id+trigger), S3, S6 (storage bucket), S7 (realtime)
+3. `c1_mobile_ocr.sql` — expense-receipts bucket + receipt_attachments column
 
-**المرحلة 3: المخالصات + كشوفات الحساب**
-- جدول `resource_settlements` + قالب نص عربي
-- `ResourceSettlementDialog` + `ResourceStatementDialog`
-- تصدير PDF/Excel
-- حماية من التعديل بعد التوقيع
+### Edge Functions (2 جديد)
 
----
+- `expense-anomaly-detector/index.ts` (S9)
+- `extract-receipt-data/index.ts` (C1.2)
 
-## أسئلة قبل التنفيذ
+### Frontend
 
-1. **المرفقات**: هل أنشئ Storage bucket حقيقي للإيصالات (`resource-receipts`) أم نكتفي حالياً بحقول URL نصية؟
-   - الموصى به: bucket حقيقي مع RLS مرتبط بالمشروع
-2. **الإشعارات**: هل تريد إشعارات Email للأدمن عند طلب جديد، وللمورد عند الاعتماد/الدفع؟
-3. **التنفيذ**: هل تريد المراحل الثلاث **دفعة واحدة** أم **مرحلة-مرحلة** بمراجعة بينها؟
-4. **نطاق المخالصة**: هل المخالصة دائماً **لمشروع واحد** أم تريد دعم **مخالصة شاملة لعدة مشاريع** للمورد نفسه؟ (الأبسط: مشروع واحد ابتداءً)
+- **MUST**: تحديث `ExpensesSection.tsx`, `FundsSection.tsx`, `CustodySection.tsx`
+- **SHOULD**: صفحة `pages/ApprovalSettings.tsx`, تحديث `CommitmentsSection.tsx`, `BudgetSection.tsx`, `loadSlice.ts`, مكون `CashForecastCard.tsx`, `ProjectClosureReport.tsx`
+- **C1**: صفحة `pages/MobileExpenseCapture.tsx`, مكون `ReceiptScanner.tsx`, تحديث `AppLayout` للـ FAB
+
+### Tests
+
+- `funds-validation.test.ts` لاختبار قواعد الـ triggers (محاكاة)
+- `approval-thresholds.test.ts`
 
 ---
 
-## ملاحظات تقنية ملتزمة بالذاكرة
+## ⚠️ ملاحظات حوكمة مهمة
 
-- أرقام إنجليزية + تقويم ميلادي (تطبيع قبل الحفظ)
-- لا VAT في DB (سياسة الصافي)
-- ON DELETE CASCADE من المشروع
-- Soft delete للمخالصات (Archive فقط لو موقّعة)
-- Triggers بـ `SET search_path = public`
-- Validation Triggers (لا CHECK constraints مع `now()`)
-- Vitest unit tests للحسابات
-- AlertDialog للحذف
-- Realtime subscription على الجداول الجديدة عبر `subscribeToProject`
+1. **سأنفّذ المرحلة 1 (MUST HAVE) كاملة في الرد التالي**، ثم أتوقف لتؤكد قبل المتابعة للمرحلة 2.
+2. **لن أحذف أي بيانات** — كل التغييرات إضافية أو تحويل soft.
+3. **Triggers جديدة قابلة للتعطيل** عبر `ALTER TABLE ... DISABLE TRIGGER` لو حدث طارئ.
+4. **التوافق مع الأدوار**: Viewers لا يتأثرون (read-only)، Editors يحصلون على نفس الصلاحيات الحالية + قواعد أصرم، Admins فقط يستطيعون تعديل `fund_id` و حدود الاعتماد.
+5. **VAT**: لن ألمس Net Storage Policy — كل المبالغ تبقى صافية.
+6. **التكلفة**: OCR و Anomaly Detection سيستهلكان من رصيد Lovable AI (تنبيه واحد للمستخدم في أول استخدام).
 
+هل أبدأ بالمرحلة 1 (MUST HAVE) فوراً؟  
+نعم ثم اكمل Mobile-First Expense Entry + OCR (C1) فقط وتجاوز مرحلة الثانية الى ان نتناقش بها في رسالة جديدة
+
+&nbsp;
