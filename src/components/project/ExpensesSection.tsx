@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { useRole } from '@/hooks/useRole';
 import { formatCurrency, calcVAT, addVAT, removeVAT } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS,
@@ -32,6 +33,7 @@ interface ExpensesSectionProps {
 
 export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15, projectStatus }: ExpensesSectionProps) {
   const { addExpense, deleteExpense, updateExpense, projectFunds } = useStore();
+  const { isAdmin } = useRole();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
@@ -318,7 +320,11 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                       ربط بدفعة الصرفيات
                       <span className="text-destructive text-xs">*</span>
                     </Label>
-                    <Select value={fundId || activeFund.id} onValueChange={setFundId}>
+                    <Select
+                      value={fundId || activeFund.id}
+                      onValueChange={setFundId}
+                      disabled={!!editingId && !isAdmin}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value={activeFund.id}>
@@ -326,9 +332,14 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         </SelectItem>
                       </SelectContent>
                     </Select>
+                    {!!editingId && !isAdmin && (
+                      <p className="text-xs text-muted-foreground">
+                        🔒 لا يمكن تغيير ربط الدفعة بعد الإنشاء (للأدمن فقط)
+                      </p>
+                    )}
                     {parseFloat(amount) > 0 && parseFloat(amount) > activeFundRemaining && (
                       <p className="text-xs text-destructive">
-                        ⚠️ المبلغ يتجاوز رصيد الدفعة المتبقي
+                        ⚠️ المبلغ يتجاوز رصيد الدفعة المتبقي — سيُرفض من النظام
                       </p>
                     )}
                   </div>
