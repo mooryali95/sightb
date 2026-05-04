@@ -598,9 +598,12 @@ export type Database = {
           id: string
           invoice_ref: string | null
           is_vat_exempt: boolean | null
+          legacy_pre_fund: boolean
           month: number
           notes: string | null
+          ocr_extracted_data: Json | null
           project_id: string
+          receipt_attachments: Json
           resource_id: string | null
           responsible: string | null
           user_id: string
@@ -620,9 +623,12 @@ export type Database = {
           id?: string
           invoice_ref?: string | null
           is_vat_exempt?: boolean | null
+          legacy_pre_fund?: boolean
           month?: number
           notes?: string | null
+          ocr_extracted_data?: Json | null
           project_id: string
+          receipt_attachments?: Json
           resource_id?: string | null
           responsible?: string | null
           user_id: string
@@ -642,9 +648,12 @@ export type Database = {
           id?: string
           invoice_ref?: string | null
           is_vat_exempt?: boolean | null
+          legacy_pre_fund?: boolean
           month?: number
           notes?: string | null
+          ocr_extracted_data?: Json | null
           project_id?: string
+          receipt_attachments?: Json
           resource_id?: string | null
           responsible?: string | null
           user_id?: string

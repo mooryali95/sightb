@@ -480,20 +480,29 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                   <p className="font-mono font-semibold">{formatCurrency(settlementSpent)}</p>
                 </div>
                 <div className={cn(
-                  'p-3 rounded-lg',
+                  'p-3 rounded-lg border-2',
                   Math.abs(settlementDiff) <= 1
-                    ? 'bg-emerald-50 dark:bg-emerald-900/10'
-                    : 'bg-amber-50 dark:bg-amber-900/10',
+                    ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-300/40'
+                    : Math.abs(settlementDiff) > 1000
+                      ? 'bg-destructive/10 border-destructive/40 animate-pulse'
+                      : 'bg-amber-50 dark:bg-amber-900/10 border-amber-300/40',
                 )}>
                   <p className="text-xs text-muted-foreground">الفرق</p>
                   <p className={cn(
                     'font-mono font-semibold',
                     Math.abs(settlementDiff) <= 1
                       ? 'text-emerald-700 dark:text-emerald-400'
-                      : 'text-amber-700 dark:text-amber-400',
+                      : Math.abs(settlementDiff) > 1000
+                        ? 'text-destructive text-lg'
+                        : 'text-amber-700 dark:text-amber-400',
                   )}>
                     {formatCurrency(settlementDiff)}
                   </p>
+                  {Math.abs(settlementDiff) > 1000 && (
+                    <p className="text-xs text-destructive font-semibold mt-1">
+                      ⚠️ فرق كبير — يتطلب توضيحاً مفصّلاً
+                    </p>
+                  )}
                 </div>
               </div>
 
