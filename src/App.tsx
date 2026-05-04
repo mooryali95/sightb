@@ -28,6 +28,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const SystemAuditLog = lazy(() => import("./pages/SystemAuditLog"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const MobileExpenseCapture = lazy(() => import("./pages/MobileExpenseCapture"));
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,7 @@ const App = () => (
                     <Route path="/project/:id" element={<ProtectedRoute><ErrorBoundary><ProjectDetail /></ErrorBoundary></ProtectedRoute>} />
                     <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
                     <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
+                    <Route path="/m/expense/new" element={<ProtectedRoute><ErrorBoundary><MobileExpenseCapture /></ErrorBoundary></ProtectedRoute>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
