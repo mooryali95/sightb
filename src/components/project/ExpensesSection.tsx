@@ -147,50 +147,55 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       return;
     }
 
-    if (editingId) {
-      await updateExpense(editingId, {
-        category,
-        description: description.trim(),
-        amount: finalAmount,
-        date,
-        month: parseInt(month),
-        responsible: responsible.trim() || undefined,
-        approvalStatus,
-        vendor: vendor.trim() || undefined,
-        invoiceRef: invoiceRef.trim() || undefined,
-        isVatExempt,
-        fundId: effectiveFundId,
-      });
-      toast.success('تم تعديل المصروف');
-    } else {
-      await addExpense({
-        projectId,
-        category,
-        description: description.trim(),
-        amount: finalAmount,
-        date,
-        month: parseInt(month),
-        responsible: responsible.trim() || undefined,
-        resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
-        custodyId: custodyId && custodyId !== 'none' ? custodyId : undefined,
-        budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : undefined,
-        approvalStatus,
-        vendor: vendor.trim() || undefined,
-        invoiceRef: invoiceRef.trim() || undefined,
-        isVatExempt,
-        fundId: effectiveFundId,
-      });
-      toast.success('تمت إضافة المصروف');
+    try {
+      if (editingId) {
+        await updateExpense(editingId, {
+          category,
+          description: description.trim(),
+          amount: finalAmount,
+          date,
+          month: parseInt(month),
+          responsible: responsible.trim() || undefined,
+          approvalStatus,
+          vendor: vendor.trim() || undefined,
+          invoiceRef: invoiceRef.trim() || undefined,
+          isVatExempt,
+          fundId: effectiveFundId,
+        });
+        toast.success('تم تعديل المصروف');
+      } else {
+        await addExpense({
+          projectId,
+          category,
+          description: description.trim(),
+          amount: finalAmount,
+          date,
+          month: parseInt(month),
+          responsible: responsible.trim() || undefined,
+          resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
+          custodyId: custodyId && custodyId !== 'none' ? custodyId : undefined,
+          budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : undefined,
+          approvalStatus,
+          vendor: vendor.trim() || undefined,
+          invoiceRef: invoiceRef.trim() || undefined,
+          isVatExempt,
+          fundId: effectiveFundId,
+        });
+        toast.success('تمت إضافة المصروف');
 
-      // Auto-activate project on first expense
-      if (projectStatus && ['planning', 'approved', 'pending_approval'].includes(projectStatus)) {
-        const { updateProject } = useStore.getState();
-        await updateProject(projectId, { status: 'active' });
-        toast.info('المشروع تحوّل لحالة "نشط" تلقائياً');
+        // Auto-activate project on first expense
+        if (projectStatus && ['planning', 'approved', 'pending_approval'].includes(projectStatus)) {
+          const { updateProject } = useStore.getState();
+          await updateProject(projectId, { status: 'active' });
+          toast.info('المشروع تحوّل لحالة "نشط" تلقائياً');
+        }
       }
+      resetForm();
+      setOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || 'تعذّر حفظ المصروف');
+      return;
     }
-    resetForm();
-    setOpen(false);
   };
 
   const handleApprove = async (expId: string) => {
