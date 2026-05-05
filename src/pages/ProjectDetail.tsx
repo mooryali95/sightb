@@ -43,6 +43,7 @@ import { WhatIfSection } from '@/components/project/WhatIfSection';
 import { CommitmentsSection } from '@/components/project/CommitmentsSection';
 import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
 import { FundsSection } from '@/components/project/FundsSection';
+import { CashLedgerSection } from '@/components/project/CashLedgerSection';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
@@ -55,6 +56,7 @@ export default function ProjectDetail() {
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks, baselines, commitments,
+    projectFunds, fundSettlements,
     loadAll, updateProject, archiveProject, deleteProject,
   } = useStore();
 
@@ -696,7 +698,18 @@ export default function ProjectDetail() {
           </TabsContent>
           <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} projectStatus={project.status} /></TabsContent>
-          <TabsContent value="funds"><FundsSection projectId={project.id} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
+          <TabsContent value="funds">
+            <div className="space-y-4">
+              <CashLedgerSection
+                projectId={project.id}
+                funds={projectFunds}
+                settlements={fundSettlements}
+                expenses={pExpenses}
+                custodies={pCustodies}
+              />
+              <FundsSection projectId={project.id} expenses={pExpenses} readOnly={isReadOnly} />
+            </div>
+          </TabsContent>
           <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="commitments"><CommitmentsSection projectId={project.id} commitments={pCommitments} totalPlanned={summary.totalPlanned} readOnly={isReadOnly} /></TabsContent>
           <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} milestones={pMilestones} /></TabsContent>
