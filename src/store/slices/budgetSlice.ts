@@ -80,6 +80,10 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (error) throw error;
     const mapped = mapExpense(data);
     set((s) => ({ expenses: [mapped, ...s.expenses] }));
+    // Reload fund settlements so DB-trigger-updated totals reflect in UI
+    if (mapped.fundId) {
+      try { await (get() as any).loadFundsForProject?.(e.projectId); } catch {}
+    }
     return mapped.id;
   },
 
@@ -101,13 +105,22 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (e.fundId !== undefined) updates.fund_id = e.fundId || null;
     const { error } = await (supabase as any).from('expenses').update(updates).eq('id', id);
     if (error) throw error;
+    const existing = get().expenses.find((x) => x.id === id);
     set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...e } : x)) }));
+    const projectId = existing?.projectId;
+    if (projectId && (e.fundId !== undefined || e.amount !== undefined)) {
+      try { await (get() as any).loadFundsForProject?.(projectId); } catch {}
+    }
   },
 
   deleteExpense: async (id) => {
+    const existing = get().expenses.find((x) => x.id === id);
     const { error } = await supabase.from('expenses').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) }));
+    if (existing?.fundId && existing?.projectId) {
+      try { await (get() as any).loadFundsForProject?.(existing.projectId); } catch {}
+    }
   },
 
   addRevenue: async (r) => {

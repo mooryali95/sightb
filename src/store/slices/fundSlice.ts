@@ -330,6 +330,13 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
   },
 
   deleteFund: async (fundId) => {
+    // فك ربط المصروفات أولاً (لئلا تبقى fund_id يتيمة)
+    const { error: unlinkErr } = await (supabase as any)
+      .from('expenses')
+      .update({ fund_id: null })
+      .eq('fund_id', fundId);
+    if (unlinkErr) throw unlinkErr;
+
     const { error } = await (supabase as any)
       .from('project_funds')
       .delete()
@@ -339,6 +346,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     set((s) => ({
       projectFunds: s.projectFunds.filter((f) => f.id !== fundId),
       fundSettlements: s.fundSettlements.filter((st) => st.fundId !== fundId),
+      expenses: s.expenses.map((e) => (e.fundId === fundId ? { ...e, fundId: undefined } : e)),
     }));
   },
 });

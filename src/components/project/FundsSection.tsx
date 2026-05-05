@@ -45,7 +45,7 @@ interface FundsSectionProps {
 }
 
 export function FundsSection({ projectId, expenses, readOnly = false }: FundsSectionProps) {
-  const { isAdmin } = useRole();
+  const { isAdmin, isOwner } = useRole();
   const {
     projectFunds, fundSettlements,
     createFund, acknowledgeFund, submitSettlement, approveSettlement,
@@ -439,10 +439,15 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               عرض
                             </Button>
                           )}
-                          {isAdmin && f.status === 'transferred' && (
+                          {(isOwner || isAdmin) && f.status !== 'settled' && (
                             <ConfirmDeleteDialog
                               title="حذف الدفعة"
-                              description={`حذف الدفعة #${f.fundNumber}؟`}
+                              description={(() => {
+                                const linked = projectExpenses.filter((e) => e.fundId === f.id);
+                                const linkedTotal = linked.reduce((s, e) => s + e.amount, 0);
+                                if (linked.length === 0) return `حذف الدفعة #${f.fundNumber}؟`;
+                                return `حذف الدفعة #${f.fundNumber}؟ سيتم فك ربط ${linked.length} مصروف (إجمالي ${formatCurrency(linkedTotal)}) — المصروفات نفسها لن تُحذف.`;
+                              })()}
                               onConfirm={async () => {
                                 try { await deleteFund(f.id); toast.success('تم الحذف'); }
                                 catch (e: any) { toast.error(e.message); }

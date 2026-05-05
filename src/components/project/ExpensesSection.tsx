@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { formatCurrency, calcVAT, addVAT, removeVAT } from '@/lib/finance';
@@ -117,6 +117,24 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setOpen(true);
   };
 
+  // Auto-fill fundId with active fund whenever dialog opens for a NEW expense
+  useEffect(() => {
+    if (open && !editingId && activeFund && !fundId) {
+      setFundId(activeFund.id);
+    }
+  }, [open, editingId, activeFund, fundId]);
+
+  // Quick-link an existing legacy expense to the active fund
+  const handleQuickLinkFund = async (expId: string) => {
+    if (!activeFund) return;
+    try {
+      await updateExpense(expId, { fundId: activeFund.id });
+      toast.success('تم ربط المصروف بالدفعة النشطة');
+    } catch (err: any) {
+      toast.error(err?.message || 'تعذّر الربط');
+    }
+  };
+
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
     const rawAmount = parseFloat(amount);
@@ -129,50 +147,55 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       return;
     }
 
-    if (editingId) {
-      await updateExpense(editingId, {
-        category,
-        description: description.trim(),
-        amount: finalAmount,
-        date,
-        month: parseInt(month),
-        responsible: responsible.trim() || undefined,
-        approvalStatus,
-        vendor: vendor.trim() || undefined,
-        invoiceRef: invoiceRef.trim() || undefined,
-        isVatExempt,
-        fundId: effectiveFundId,
-      });
-      toast.success('تم تعديل المصروف');
-    } else {
-      await addExpense({
-        projectId,
-        category,
-        description: description.trim(),
-        amount: finalAmount,
-        date,
-        month: parseInt(month),
-        responsible: responsible.trim() || undefined,
-        resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
-        custodyId: custodyId && custodyId !== 'none' ? custodyId : undefined,
-        budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : undefined,
-        approvalStatus,
-        vendor: vendor.trim() || undefined,
-        invoiceRef: invoiceRef.trim() || undefined,
-        isVatExempt,
-        fundId: effectiveFundId,
-      });
-      toast.success('تمت إضافة المصروف');
+    try {
+      if (editingId) {
+        await updateExpense(editingId, {
+          category,
+          description: description.trim(),
+          amount: finalAmount,
+          date,
+          month: parseInt(month),
+          responsible: responsible.trim() || undefined,
+          approvalStatus,
+          vendor: vendor.trim() || undefined,
+          invoiceRef: invoiceRef.trim() || undefined,
+          isVatExempt,
+          fundId: effectiveFundId,
+        });
+        toast.success('تم تعديل المصروف');
+      } else {
+        await addExpense({
+          projectId,
+          category,
+          description: description.trim(),
+          amount: finalAmount,
+          date,
+          month: parseInt(month),
+          responsible: responsible.trim() || undefined,
+          resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
+          custodyId: custodyId && custodyId !== 'none' ? custodyId : undefined,
+          budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : undefined,
+          approvalStatus,
+          vendor: vendor.trim() || undefined,
+          invoiceRef: invoiceRef.trim() || undefined,
+          isVatExempt,
+          fundId: effectiveFundId,
+        });
+        toast.success('تمت إضافة المصروف');
 
-      // Auto-activate project on first expense
-      if (projectStatus && ['planning', 'approved', 'pending_approval'].includes(projectStatus)) {
-        const { updateProject } = useStore.getState();
-        await updateProject(projectId, { status: 'active' });
-        toast.info('المشروع تحوّل لحالة "نشط" تلقائياً');
+        // Auto-activate project on first expense
+        if (projectStatus && ['planning', 'approved', 'pending_approval'].includes(projectStatus)) {
+          const { updateProject } = useStore.getState();
+          await updateProject(projectId, { status: 'active' });
+          toast.info('المشروع تحوّل لحالة "نشط" تلقائياً');
+        }
       }
+      resetForm();
+      setOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || 'تعذّر حفظ المصروف');
+      return;
     }
-    resetForm();
-    setOpen(false);
   };
 
   const handleApprove = async (expId: string) => {
@@ -323,7 +346,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     <Select
                       value={fundId || activeFund.id}
                       onValueChange={setFundId}
-                      disabled={!!editingId && !isAdmin}
+                      disabled={!!editingId && !isAdmin && !!(expenses.find((x: any) => x.id === editingId)?.fundId)}
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -332,7 +355,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    {!!editingId && !isAdmin && (
+                    {!!editingId && !isAdmin && !!(expenses.find((x: any) => x.id === editingId)?.fundId) && (
                       <p className="text-xs text-muted-foreground">
                         🔒 لا يمكن تغيير ربط الدفعة بعد الإنشاء (للأدمن فقط)
                       </p>
@@ -586,6 +609,17 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                                 <X className="w-3.5 h-3.5 text-destructive" />
                               </Button>
                             </>
+                          )}
+                          {!exp.fundId && activeFund && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title={`ربط بالدفعة #${activeFund.fundNumber}`}
+                              onClick={() => handleQuickLinkFund(exp.id)}
+                            >
+                              <Wallet className="w-3.5 h-3.5 text-amber-600" />
+                            </Button>
                           )}
                           <Button variant="ghost" size="icon" onClick={() => openEdit(exp)}>
                             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
