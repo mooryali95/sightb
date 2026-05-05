@@ -346,7 +346,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     <Select
                       value={fundId || activeFund.id}
                       onValueChange={setFundId}
-                      disabled={!!editingId && !isAdmin}
+                      disabled={!!editingId && !isAdmin && !!(expenses.find((x: any) => x.id === editingId)?.fundId)}
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -355,7 +355,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    {!!editingId && !isAdmin && (
+                    {!!editingId && !isAdmin && !!(expenses.find((x: any) => x.id === editingId)?.fundId) && (
                       <p className="text-xs text-muted-foreground">
                         🔒 لا يمكن تغيير ربط الدفعة بعد الإنشاء (للأدمن فقط)
                       </p>
