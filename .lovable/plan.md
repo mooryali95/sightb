@@ -1,202 +1,100 @@
-# خطة التنفيذ الكاملة: إصلاح المنظومة المالية + OCR للفواتير
 
-سأنفّذ على **3 مراحل متتابعة في رسائل منفصلة** لضمان جودة المراجعة وعدم اكتظاظ التغييرات.
+# تحليل المشاكل والحل المقترح
 
----
+## 1) المشكلة الجذرية: لماذا لا تُحفظ المصروفات؟
 
-## 🟥 المرحلة 1 — MUST HAVE (P0 الإصلاحات الحرجة)
+في `ExpensesSection.tsx` (سطر 48 و126):
+- حقل `fundId` في النموذج يبدأ فارغاً `''`.
+- الـ Select يعرض القيمة الافتراضية بصرياً: `value={fundId || activeFund.id}` — لكنّه **لا يُحدِّث الـ state** ما لم يضغط المستخدم يدوياً.
+- عند الإرسال: `effectiveFundId = fundId && fundId !== 'none' ? fundId : undefined` → يُرسَل `undefined`.
+- في DB: trigger `enforce_expense_fund_link` يرفض أي مصروف بدون `fund_id` عند وجود دفعة نشطة → **الإدخال يفشل بصمت** (toast نجاح يظهر قبل الفشل في بعض المسارات، أو خطأ غير مفهوم).
 
-### M1 — فرض ربط المصروف بالدفعة على مستوى القاعدة
+**نفس السبب يمنع تعديل/ربط المصروفات السابقة بالدفعة**: لا يوجد مسار UI لربط مصروف legacy غير مربوط — حقل ربط الدفعة في وضع التعديل مقفول لغير الأدمن، وحتى للأدمن لا يظهر إلا إذا `fundIsRequired`.
 
-- **Trigger DB جديد** `enforce_expense_fund_link` على `expenses` (BEFORE INSERT/UPDATE):
-  - إذا توجد دفعة `acknowledged` للمشروع و`fund_id IS NULL` → يرفع استثناء.
-  - استثناء واحد: المصروفات المُنشأة من Trigger `auto_create_expense_on_payment` (نتعرّف عليها عبر `notes LIKE 'منشأ تلقائياً%'`).
-  - **legacy bypass**: المصروفات الأقدم من تاريخ تفعيل أول دفعة في المشروع لا يُطبَّق عليها.
+## 2) صلاحيات حذف الدفعة
 
-### M2 — منع تجاوز رصيد الدفعة/العهدة
+الحالي (`FundsSection.tsx` سطر 442):
+```
+isAdmin && f.status === 'transferred'
+```
+- يمنع الحذف بعد الإقرار/التسوية حتى لو طلبه المالك.
+- `isAdmin` يشمل أي admin على مستوى النظام — المطلوب: **Owner + Admin فقط**، ومنع باقي المسؤولين.
 
-- **Trigger DB** `check_fund_balance` على `expenses` (BEFORE INSERT/UPDATE):
-  - إذا `fund_id` محدد → يحسب `SUM(expenses.amount WHERE fund_id=NEW.fund_id) + NEW.amount` ويرفض إن تجاوز `project_funds.amount`.
-  - نفس المنطق لـ `custody_id` مقابل `custodies.amount`.
-  - رسالة بالعربية واضحة.
+## 3) انعكاس المصروف على الدفعة والعهدة
 
-### M3 — إصلاح البيانات التاريخية (Data Migration)
+- DB trigger `recalc_fund_settlement_spent` موجود ويعمل ✅.
+- لكن الـ store الأمامي لا يعيد تحميل `fund_settlements` بعد إضافة/تعديل/حذف مصروف → الواجهة تعرض رصيداً قديماً حتى refresh.
 
-- **Migration نصي مع تعليق واضح**:
-  ```sql
-  -- مصروفات قديمة لمشاريع لم يكن بها دفعات وقت إنشائها → تُترك بدون fund_id (Legacy).
-  -- إضافة عمود tag للوضوح:
-  ALTER TABLE expenses ADD COLUMN IF NOT EXISTS legacy_pre_fund boolean DEFAULT false;
-  UPDATE expenses e SET legacy_pre_fund = true
-  WHERE fund_id IS NULL
-    AND NOT EXISTS (
-      SELECT 1 FROM project_funds pf
-      WHERE pf.project_id = e.project_id
-        AND pf.transfer_date <= e.date::date
-    );
-  ```
-- **لا أعدّل البيانات الفعلية**، فقط أسمها تاريخياً لاستثنائها من تنبيهات "غير مرتبطة".
+## 4) وضوح العلاقة بين الدفعات والعهد
 
-### M4 — Trigger إغلاق تلقائي للعهد والدفعات
-
-- **Trigger** `auto_close_custody_on_exhaustion` على `expenses` (AFTER INSERT/UPDATE/DELETE):
-  - يعيد حساب `SUM(expenses.amount WHERE custody_id=X)` ويُحدّث `custodies.status='closed'` و`closed_date` إذا وصل ≥ amount.
-- إزالة الـ `useEffect` من `CustodySection.tsx` (تنظيف).
-
-### M5 — تحذير قوي على الفروقات في التسوية
-
-- في `FundsSection.tsx`: عند `Math.abs(difference) > 1` → بطاقة AlertDialog حمراء كبيرة بدل Badge هادئ.
-- إضافة عمود `الفرق` بألوان واضحة في جدول الدفعات.
-
-### M6 — قفل تعديل `fund_id` بعد الإنشاء (للأدمن فقط)
-
-- **Trigger DB** `protect_expense_fund_link` على `expenses` (BEFORE UPDATE):
-  - إذا `OLD.fund_id IS NOT NULL` و`NEW.fund_id <> OLD.fund_id` و`NOT has_role(auth.uid(),'admin')` → يرفض.
-- في الواجهة: تعطيل حقل `fund_id` في وضع التعديل لغير الأدمن.
+لا يوجد عرض موحّد يُظهر: "ما هو وضعي النقدي الكامل لهذا المشروع؟ كم دفعة + كم عهدة + ماذا صُرف من كل منها وعلى أي بنود؟"
 
 ---
 
-## 🟧 المرحلة 2 — SHOULD HAVE (S1, S2, S3, S5, S6, S7, S8, S9)
+# الحل المقترح
 
-> S4 (توحيد Fund + Custody) يحتاج هجرة كبيرة وقد يكسر سير عمل قائم — أؤجله ليُناقش لاحقاً.
+## A. إصلاح حفظ المصروفات وربطها بالدفعة
 
-### S1 — حدود الاعتماد المتدرّجة (Approval Thresholds)
+**`src/components/project/ExpensesSection.tsx`**
+1. عند فتح النموذج (إضافة جديدة)، إذا وُجدت دفعة نشطة: `setFundId(activeFund.id)` تلقائياً.
+2. في وضع التعديل، إذا كان المصروف غير مربوط بدفعة (`legacy_pre_fund` أو `fundId` فارغ) ووُجدت دفعة نشطة: **اسمح للمحرّر (وليس فقط الأدمن) بربطه بالدفعة الحالية** (هذه إضافة، ليس تغيير ربط موجود — لا يخرق `protect_expense_fund_link`).
+3. اعرض زر سريع "🔗 ربط بالدفعة النشطة" في صف كل مصروف لا يحوي `fundId` في الجدول — يستدعي `updateExpense(id, { fundId: activeFund.id })` بنقرة واحدة.
+4. أظهر toast واضح للخطأ القادم من DB trigger (رصيد، fund_id، إلخ) بدل رسالة نجاح خاطئة.
 
-- **جدول جديد** `approval_thresholds` (system-wide settings):
-  - `min_amount`, `max_amount`, `required_role` ('editor' | 'admin' | 'owner'), `requires_attachment` boolean.
-- **Defaults seeded**:
-  - 0–1,000: editor، بدون مرفق
-  - 1,000–10,000: editor + مرفق إلزامي
-  - 10,000–50,000: admin
-  - 50,000+: owner + مرفق إلزامي
-- **Trigger** يفحص الحد المطلوب ويعيّن `approval_status='pending'` تلقائياً للمبالغ التي تحتاج اعتماد أعلى.
-- **UI**: صفحة إعدادات في `/settings/approvals` (Admin فقط).
+## B. صلاحية حذف الدفعة (Owner + Admin فقط، في أي حالة)
 
-### S2 — Three-Way Match (Commitment ↔ Expense ↔ Receipt)
+**`src/hooks/useRole.tsx`**: نستخدم `isOwner` + `isAdmin` الموجودَين (system-level فقط).
 
-- إضافة `commitment_id` (FK اختياري) إلى `expenses`.
-- في حقل ربط "بند الموازنة" بالمصروف، إضافة قسم "ربط بالتزام/عقد" مع dropdown يعرض الالتزامات النشطة لنفس البند.
-- **Trigger** يُحدّث `commitments.spent_amount` تلقائياً من مجموع المصروفات المرتبطة (Single Source of Truth بدلاً من إدخال يدوي).
-- لوحة في `CommitmentsSection`: "إجمالي / مصروف / متبقي" مع شريط تقدّم.
+**`src/components/project/FundsSection.tsx`** (سطر 442):
+- استبدل الشرط بـ: `(isOwner || isAdmin) && f.status !== 'settled'` (السماح بالحذف حتى بعد الإقرار، لكن منع المسوّاة لحماية السجل المحاسبي).
+- في `ConfirmDeleteDialog`: إذا كان للدفعة مصروفات مرتبطة، اعرض تحذيراً صريحاً بعدد المصروفات والمبلغ وأن `fund_id` فيها سيصبح `null` (السلوك الحالي لـ ON DELETE في `expenses.fund_id`).
 
-### S3 — Encumbrance Accounting
+**migration** (للتأكد):
+- سياسة DELETE على `project_funds` حالياً: `has_role(auth.uid(), 'admin'::app_role)` — صحيحة (owner مشمول داخل `has_role`). لا حاجة لتغيير.
+- إضافة سياسة صريحة: لا تسمح بحذف دفعة `status='settled'` إلا للـ owner (اختياري — حماية إضافية).
 
-- في `BudgetSection.tsx`: حساب جديد `committed_amount` لكل `budget_item` = SUM commitments المرتبطة.
-- `available = planned - spent - committed` (بدلاً من `planned - spent` فقط).
-- تنبيه عند `committed > planned`.
+## C. الانعكاس التلقائي بعد كل عملية مصروف
 
-### S5 — Cash Forecast (Burn Rate)
+**`src/store/slices/`** (في addExpense / updateExpense / deleteExpense):
+- بعد نجاح العملية، إن كان للمصروف `fundId`، استدعِ `loadFundsForProject(projectId)` لإعادة جلب التسويات المُحدَّثة من DB (الـ trigger حدّثها بالفعل).
+- نفس الشيء للعهدة: استدعاء `loadProjectData` المختصر لإعادة `custodies` (لجلب status المُحدَّث من trigger `auto_close_custody_on_exhaustion`).
 
-- في `FundsSection.tsx`: حساب معدّل الصرف اليومي لآخر 14 يوماً → التنبؤ بمتى ستنفد الدفعة.
-- بطاقة جديدة: "متوقع نفاد الدفعة في: ١٢ يوم — يُنصح بطلب دفعة جديدة الآن".
+## D. سجل النقد الموحّد (Cash Ledger)
 
-### S6 — مرفقات إلزامية (مرتبط بـ S1)
+مكوّن جديد `src/components/project/CashLedgerSection.tsx` يُعرض داخل تبويب "المالية" بالمشروع:
 
-- استخدام `resource-receipts` bucket الموجود + إنشاء `expense-receipts` bucket جديد.
-- حقل `receipt_attachments jsonb` في `expenses`.
-- في النموذج: زر رفع ملف (PDF/Image)، رفع لـ Storage، حفظ URL.
-- Trigger يرفض المصروف بدون مرفق إذا كانت `approval_thresholds.requires_attachment = true`.
+```text
+┌─────────────────────────────────────────────────────────┐
+│  وضع المشروع النقدي                                      │
+│  المحوّل: 100,000  |  المصروف: 65,000  |  المتبقي: 35,000│
+└─────────────────────────────────────────────────────────┘
 
-### S7 — Realtime Subscriptions
+  الدفعات (Funds)              │  العهد (Custodies)
+  ──────────────                │  ──────────────────
+  ▸ #1  50,000  مسوّاة ✓        │  ▸ أحمد   10,000  نشطة
+      └─ 12 مصروف · 50,000      │      └─ 4 مصروفات · 7,500
+  ▸ #2  50,000  نشطة            │  ▸ سعيد    5,000  مغلقة
+      └─ 8 مصروفات · 15,000     │      └─ 3 مصروفات · 5,000
+      └─ متبقي: 35,000          │
+```
 
-- إضافة `ALTER PUBLICATION supabase_realtime ADD TABLE expenses, project_funds, fund_settlements;`
-- في `loadSlice.ts`: subscription على التغييرات لتحديث الـ store تلقائياً.
+- توسيع كل بند يُظهر جدول المصروفات المرتبطة (وصف + مبلغ + تاريخ + بند الموازنة).
+- يستخدم نفس البيانات الموجودة في الـ store (لا حاجة لاستعلام جديد).
+- خط زمني بسيط أعلى السجل: تحويل دفعة #1 → إقرار → مصروفات → تسوية → تحويل دفعة #2 …
 
-### S8 — تقرير الإغلاق المالي للمشروع (PDF)
+## E. ملاحظات تقنية
 
-- زر جديد في `ExecutiveSummary`: "تقرير الإغلاق المالي".
-- يُنتج PDF (jsPDF موجود) يحتوي:
-  - إجمالي محوّل / مصروف / مرتجع
-  - حالة كل دفعة وتسوياتها
-  - إجمالي مستحقات الموارد المتبقية
-  - تحليل الانحرافات حسب الفئة
-  - توقيع رقمي للأدمن.
+- لا تغييرات في schema الـ DB (الأعمدة والتريغرات الحالية كافية).
+- migration واحد اختياري: تحديد سياسة DELETE الأكثر صرامة على `project_funds.settled` (يمكن تأجيله).
+- اختبارات: تحديث `src/lib/__tests__/funds.test.ts` لتغطية حالة "ربط مصروف legacy".
 
-### S9 — AI Anomaly Detection للمصروفات
+# الملفات التي ستُعدَّل
 
-- Edge Function جديد `expense-anomaly-detector`:
-  - يستقبل المشروع، يجلب آخر 90 يوم من المصروفات.
-  - يستخدم Lovable AI (`google/gemini-3-flash-preview`) مع tool calling لاستخراج JSON منظّم: `[{expense_id, anomaly_type, severity, reason}]`.
-  - أنواع الشذوذ: تكرار، مبلغ خارج النمط، فئة غير معتادة للمسؤول، تكرار قريب.
-- بطاقة في `ExecutiveSummary`: "تنبيهات ذكية للمصروفات".
+- `src/components/project/ExpensesSection.tsx` — auto-fill fundId, زر ربط سريع، توضيح أخطاء
+- `src/components/project/FundsSection.tsx` — توسيع شرط الحذف للمالك/الأدمن في كل الحالات غير settled
+- `src/store/slices/projectSlice.ts` (أو مكان addExpense/updateExpense) — إعادة تحميل funds/custodies بعد العمليات
+- **جديد**: `src/components/project/CashLedgerSection.tsx`
+- `src/pages/ProjectDetail.tsx` — تضمين CashLedger في تبويب المالية
+- `src/lib/__tests__/funds.test.ts` — اختبار الربط المتأخر
 
----
-
-## 🟦 المرحلة 3 — Mobile-First Expense Entry + OCR (C1)
-
-### C1.1 — تجربة موبايل مُحسّنة
-
-- صفحة جديدة `/m/expense/new` مُحسّنة للموبايل:
-  - زر كاميرا كبير يفتح camera input مباشرة (`<input type="file" accept="image/*" capture="environment">`).
-  - بعد الصورة: شاشة معاينة + زر "استخراج بالذكاء الاصطناعي".
-  - نموذج مبسّط: المبلغ، التاريخ، الفئة، المشروع، المرفق — بحقول كبيرة.
-  - زر "حفظ وإضافة آخر" + "حفظ وإغلاق".
-
-### C1.2 — OCR للفواتير عبر Lovable AI Vision
-
-- Edge Function جديد `extract-receipt-data`:
-  - يستقبل: `{ image_base64, project_id }`.
-  - يرفع الصورة لـ Storage (`expense-receipts/{user_id}/{timestamp}.jpg`).
-  - يستدعي `google/gemini-2.5-pro` (multimodal) مع tool calling لاستخراج:
-    ```json
-    {
-      "vendor_name": "string",
-      "invoice_number": "string|null",
-      "invoice_date": "YYYY-MM-DD|null",
-      "total_amount": "number",
-      "vat_amount": "number|null",
-      "is_vat_inclusive": "boolean",
-      "suggested_category": "ExpenseCategory enum",
-      "line_items": [{ "description": "string", "amount": "number" }],
-      "confidence": "0-1"
-    }
-    ```
-  - يُرجع البيانات + `receipt_url`.
-- الواجهة تملأ النموذج تلقائياً، ويراجع المستخدم ويعتمد.
-
-### C1.3 — اختصار في الـ Sidebar
-
-- زر عائم (FAB) في الموبايل لـ "تسجيل مصروف سريع".
-- في الـ Desktop: زر في GlobalSearch (Ctrl+K) لـ "تسجيل مصروف بصورة".
-
----
-
-## 📋 ملخص الملفات المتأثرة
-
-### Migrations (3 ملفات)
-
-1. `must_have_financial_integrity.sql` — M1, M2, M3, M4, M6 + tags
-2. `should_have_governance.sql` — S1 (approval_thresholds), S2 (commitment_id+trigger), S3, S6 (storage bucket), S7 (realtime)
-3. `c1_mobile_ocr.sql` — expense-receipts bucket + receipt_attachments column
-
-### Edge Functions (2 جديد)
-
-- `expense-anomaly-detector/index.ts` (S9)
-- `extract-receipt-data/index.ts` (C1.2)
-
-### Frontend
-
-- **MUST**: تحديث `ExpensesSection.tsx`, `FundsSection.tsx`, `CustodySection.tsx`
-- **SHOULD**: صفحة `pages/ApprovalSettings.tsx`, تحديث `CommitmentsSection.tsx`, `BudgetSection.tsx`, `loadSlice.ts`, مكون `CashForecastCard.tsx`, `ProjectClosureReport.tsx`
-- **C1**: صفحة `pages/MobileExpenseCapture.tsx`, مكون `ReceiptScanner.tsx`, تحديث `AppLayout` للـ FAB
-
-### Tests
-
-- `funds-validation.test.ts` لاختبار قواعد الـ triggers (محاكاة)
-- `approval-thresholds.test.ts`
-
----
-
-## ⚠️ ملاحظات حوكمة مهمة
-
-1. **سأنفّذ المرحلة 1 (MUST HAVE) كاملة في الرد التالي**، ثم أتوقف لتؤكد قبل المتابعة للمرحلة 2.
-2. **لن أحذف أي بيانات** — كل التغييرات إضافية أو تحويل soft.
-3. **Triggers جديدة قابلة للتعطيل** عبر `ALTER TABLE ... DISABLE TRIGGER` لو حدث طارئ.
-4. **التوافق مع الأدوار**: Viewers لا يتأثرون (read-only)، Editors يحصلون على نفس الصلاحيات الحالية + قواعد أصرم، Admins فقط يستطيعون تعديل `fund_id` و حدود الاعتماد.
-5. **VAT**: لن ألمس Net Storage Policy — كل المبالغ تبقى صافية.
-6. **التكلفة**: OCR و Anomaly Detection سيستهلكان من رصيد Lovable AI (تنبيه واحد للمستخدم في أول استخدام).
-
-هل أبدأ بالمرحلة 1 (MUST HAVE) فوراً؟  
-نعم ثم اكمل Mobile-First Expense Entry + OCR (C1) فقط وتجاوز مرحلة الثانية الى ان نتناقش بها في رسالة جديدة
-
-&nbsp;
+هل أبدأ التنفيذ؟
