@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { formatCurrency, calcVAT, addVAT, removeVAT } from '@/lib/finance';
@@ -115,6 +115,24 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setIsVatExempt(exp.isVatExempt || false);
     setInputInclusive(false);
     setOpen(true);
+  };
+
+  // Auto-fill fundId with active fund whenever dialog opens for a NEW expense
+  useEffect(() => {
+    if (open && !editingId && activeFund && !fundId) {
+      setFundId(activeFund.id);
+    }
+  }, [open, editingId, activeFund, fundId]);
+
+  // Quick-link an existing legacy expense to the active fund
+  const handleQuickLinkFund = async (expId: string) => {
+    if (!activeFund) return;
+    try {
+      await updateExpense(expId, { fundId: activeFund.id });
+      toast.success('تم ربط المصروف بالدفعة النشطة');
+    } catch (err: any) {
+      toast.error(err?.message || 'تعذّر الربط');
+    }
   };
 
   const handleSubmit = async () => {
