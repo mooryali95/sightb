@@ -610,6 +610,17 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                               </Button>
                             </>
                           )}
+                          {!exp.fundId && activeFund && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title={`ربط بالدفعة #${activeFund.fundNumber}`}
+                              onClick={() => handleQuickLinkFund(exp.id)}
+                            >
+                              <Wallet className="w-3.5 h-3.5 text-amber-600" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => openEdit(exp)}>
                             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                           </Button>
