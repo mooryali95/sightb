@@ -111,6 +111,7 @@ export interface Custody {
   receivedDate?: string;
   closedDate?: string;
   status: 'active' | 'closed';
+  sourceFundId?: string;
 }
 
 export interface BudgetItem {
