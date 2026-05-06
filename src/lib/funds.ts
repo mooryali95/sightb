@@ -91,32 +91,6 @@ export function getActiveFund(
 /**
  * يحسب ملخصاً لجميع دفعات المشروع.
  */
-export function getProjectFundsSummary(
-  projectId: string,
-  funds: ProjectFund[],
-  settlements: FundSettlement[],
-  expenses: Expense[],
-): ProjectFundsSummary {
-  const projectFunds = funds.filter((f) => f.projectId === projectId);
-
-  const totalTransferred = projectFunds.reduce((s, f) => s + f.amount, 0);
-
-  // إجمالي ما صُرف فعلياً من جميع الدفعات (من المصروفات المرتبطة)
-  const totalDocumentedSpend = expenses
-    .filter((e) => e.projectId === projectId && e.fundId && e.approvalStatus !== 'rejected')
-    .reduce((s, e) => s + e.amount, 0);
-
-  const approvedSettlements = settlements.filter(
-    (st) => st.projectId === projectId && st.status === 'approved',
-  );
-  const totalSettled = approvedSettlements.reduce((s, st) => s + st.totalSpent, 0);
-
-  const remainingInManagerHand = totalTransferred - totalDocumentedSpend - totalSettled
-    // اطرح المتبقي المسوّى من الحساب (لأنه أُعيد فعلياً)
-    + approvedSettlements.reduce((s, st) => s + st.totalSpent, 0)
-    - approvedSettlements.reduce((s, st) => s + st.remainingCash, 0)
-    // إعادة بناء صحيحة:
-    ;
 
   // إعادة الحساب بمنطق أوضح:
   // remaining = totalTransferred - sum(spent_on_active_funds) - sum(approved_settlements_total_spent + approved_settlements_remaining_returned)
