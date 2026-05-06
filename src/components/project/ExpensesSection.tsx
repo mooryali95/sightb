@@ -32,7 +32,7 @@ interface ExpensesSectionProps {
 }
 
 export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15, projectStatus }: ExpensesSectionProps) {
-  const { addExpense, deleteExpense, updateExpense, projectFunds } = useStore();
+  const { addExpense, deleteExpense, updateExpense, projectFunds, acknowledgeFund } = useStore();
   const { isAdmin } = useRole();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -117,12 +117,12 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setOpen(true);
   };
 
-  // Auto-fill fundId with active fund whenever dialog opens for a NEW expense
+  // Auto-fill fundId synchronously when opening for a NEW expense
   useEffect(() => {
-    if (open && !editingId && activeFund && !fundId) {
-      setFundId(activeFund.id);
+    if (open && !editingId && activeFund) {
+      setFundId((prev) => prev || activeFund.id);
     }
-  }, [open, editingId, activeFund, fundId]);
+  }, [open, editingId, activeFund]);
 
   // Quick-link an existing legacy expense to the active fund
   const handleQuickLinkFund = async (expId: string) => {
@@ -131,7 +131,18 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       await updateExpense(expId, { fundId: activeFund.id });
       toast.success('تم ربط المصروف بالدفعة النشطة');
     } catch (err: any) {
-      toast.error(err?.message || 'تعذّر الربط');
+      toast.error(translateDbError(err?.message) || 'تعذّر الربط');
+    }
+  };
+
+  // Inline acknowledge: lets manager confirm a transferred fund without leaving the dialog
+  const handleInlineAcknowledge = async () => {
+    if (!activeFund || activeFund.status !== 'transferred') return;
+    try {
+      await acknowledgeFund(activeFund.id);
+      toast.success('تم إقرار استلام الدفعة');
+    } catch (err: any) {
+      toast.error(err?.message || 'تعذّر إقرار الاستلام');
     }
   };
 
@@ -140,8 +151,10 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     const rawAmount = parseFloat(amount);
     const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
 
-    // التحقق: ربط بدفعة إلزامي عند وجود دفعة نشطة
-    const effectiveFundId = fundId && fundId !== 'none' ? fundId : undefined;
+    // التحقق: ربط بدفعة إلزامي عند وجود دفعة نشطة (سواء transferred أو acknowledged)
+    const effectiveFundId = fundId && fundId !== 'none'
+      ? fundId
+      : (fundIsRequired && !editingId ? activeFund?.id : undefined);
     if (fundIsRequired && !editingId && !effectiveFundId) {
       toast.error('يجب ربط المصروف بالدفعة النشطة');
       return;
@@ -193,10 +206,20 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       resetForm();
       setOpen(false);
     } catch (err: any) {
-      toast.error(err?.message || 'تعذّر حفظ المصروف');
+      toast.error(translateDbError(err?.message) || 'تعذّر حفظ المصروف');
       return;
     }
   };
+
+  function translateDbError(msg?: string): string {
+    if (!msg) return '';
+    if (/يجب ربط المصروف/.test(msg)) return 'يجب ربط المصروف بدفعة نشطة. اضغط "إقرار الاستلام" أعلى النموذج إن كانت الدفعة قيد التحويل.';
+    if (/المصروف يتجاوز الرصيد المتبقي للدفعة/.test(msg)) return msg;
+    if (/المصروف يتجاوز رصيد العهدة/.test(msg)) return msg;
+    if (/لا يمكن تغيير ربط المصروف/.test(msg)) return msg;
+    if (/row-level security/i.test(msg)) return 'لا تملك صلاحية تنفيذ هذه العملية.';
+    return msg;
+  }
 
   const handleApprove = async (expId: string) => {
     await updateExpense(expId, { approvalStatus: 'approved' });
@@ -337,12 +360,27 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                 )}
                 {/* Fund linking */}
                 {fundIsRequired && activeFund && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 p-3 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700/30">
                     <Label className="flex items-center gap-1.5">
                       <Wallet className="w-3.5 h-3.5" />
                       ربط بدفعة الصرفيات
                       <span className="text-destructive text-xs">*</span>
                     </Label>
+                    {activeFund.status === 'transferred' && !editingId && (
+                      <div className="flex items-start justify-between gap-2 p-2 rounded bg-background border border-border">
+                        <div className="text-xs">
+                          <p className="font-semibold">الدفعة #{activeFund.fundNumber} — قيد التحويل</p>
+                          <p className="text-muted-foreground mt-0.5">
+                            يجب إقرار الاستلام قبل الصرف منها (سيتم الربط تلقائياً).
+                          </p>
+                        </div>
+                        {isAdmin && (
+                          <Button type="button" size="sm" variant="outline" onClick={handleInlineAcknowledge}>
+                            إقرار الاستلام
+                          </Button>
+                        )}
+                      </div>
+                    )}
                     <Select
                       value={fundId || activeFund.id}
                       onValueChange={setFundId}
