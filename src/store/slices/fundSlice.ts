@@ -128,34 +128,60 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
   createFund: async (projectId, amount, transferDate, notes) => {
     const userId = await getUserId();
 
-    // التحقق: هل توجد دفعة سابقة غير مسوّاة؟
+    // إعادة تحميل من DB لمنع state stale
+    try { await get().loadFundsForProject(projectId); } catch {}
+
     const projectFunds = get().projectFunds.filter((f) => f.projectId === projectId);
-    const unsettled = projectFunds.find(
-      (f) => f.status !== 'settled',
-    );
+    const unsettled = projectFunds.find((f) => f.status !== 'settled');
     if (unsettled) {
       throw new Error(
         `لا يمكن إنشاء دفعة جديدة قبل تسوية الدفعة رقم ${unsettled.fundNumber}`,
       );
     }
 
-    const lastNumber = projectFunds.reduce((max, f) => Math.max(max, f.fundNumber), 0);
-    const nextNumber = lastNumber + 1;
+    // احسب nextNumber من DB مباشرة (مصدر الحقيقة)
+    const computeNext = async (): Promise<number> => {
+      const { data, error } = await (supabase as any)
+        .from('project_funds')
+        .select('fund_number')
+        .eq('project_id', projectId)
+        .order('fund_number', { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const last = data && data.length > 0 ? Number(data[0].fund_number) : 0;
+      return last + 1;
+    };
 
-    const { data, error } = await (supabase as any)
-      .from('project_funds')
-      .insert({
-        project_id: projectId,
-        fund_number: nextNumber,
-        amount,
-        transfer_date: transferDate,
-        notes: notes?.trim() || null,
-        created_by: userId,
-        status: 'transferred',
-      })
-      .select()
-      .single();
-    if (error) throw error;
+    const tryInsert = async (n: number) => {
+      return await (supabase as any)
+        .from('project_funds')
+        .insert({
+          project_id: projectId,
+          fund_number: n,
+          amount,
+          transfer_date: transferDate,
+          notes: notes?.trim() || null,
+          created_by: userId,
+          status: 'transferred',
+        })
+        .select()
+        .single();
+    };
+
+    let nextNumber = await computeNext();
+    let { data, error } = await tryInsert(nextNumber);
+
+    // معالجة سباق التفرّد بإعادة المحاولة مرة واحدة
+    if (error && (error.code === '23505' || /duplicate key/i.test(error.message || ''))) {
+      nextNumber = await computeNext();
+      ({ data, error } = await tryInsert(nextNumber));
+    }
+    if (error) {
+      const msg = (error.code === '23505' || /duplicate key/i.test(error.message || ''))
+        ? 'تعذّر إنشاء الدفعة بسبب تعارض في الترقيم. حدّث الصفحة وأعد المحاولة.'
+        : (error.message || 'تعذّر إنشاء الدفعة');
+      throw new Error(msg);
+    }
 
     const mapped = mapFund(data);
     set((s) => ({ projectFunds: [...s.projectFunds, mapped] }));
