@@ -41,12 +41,16 @@ export function getActiveFund(
   projectId: string,
   funds: ProjectFund[],
 ): ProjectFund | null {
-  const acknowledged = funds.filter(
-    (f) => f.projectId === projectId && f.status === 'acknowledged',
+  // متطابق مع DB trigger enforce_expense_fund_link:
+  // الدفعة "نشطة" (تتطلب الربط بها) إذا كانت transferred أو acknowledged
+  const active = funds.filter(
+    (f) => f.projectId === projectId && (f.status === 'acknowledged' || f.status === 'transferred'),
   );
-  if (acknowledged.length === 0) return null;
-  // الأحدث (آخر رقم)
-  return acknowledged.reduce((latest, f) =>
+  if (active.length === 0) return null;
+  // فضّل acknowledged على transferred، ثم الأحدث
+  const acknowledged = active.filter((f) => f.status === 'acknowledged');
+  const pool = acknowledged.length > 0 ? acknowledged : active;
+  return pool.reduce((latest, f) =>
     f.fundNumber > latest.fundNumber ? f : latest,
   );
 }
