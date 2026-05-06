@@ -360,12 +360,27 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                 )}
                 {/* Fund linking */}
                 {fundIsRequired && activeFund && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 p-3 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700/30">
                     <Label className="flex items-center gap-1.5">
                       <Wallet className="w-3.5 h-3.5" />
                       ربط بدفعة الصرفيات
                       <span className="text-destructive text-xs">*</span>
                     </Label>
+                    {activeFund.status === 'transferred' && !editingId && (
+                      <div className="flex items-start justify-between gap-2 p-2 rounded bg-background border border-border">
+                        <div className="text-xs">
+                          <p className="font-semibold">الدفعة #{activeFund.fundNumber} — قيد التحويل</p>
+                          <p className="text-muted-foreground mt-0.5">
+                            يجب إقرار الاستلام قبل الصرف منها (سيتم الربط تلقائياً).
+                          </p>
+                        </div>
+                        {isAdmin && (
+                          <Button type="button" size="sm" variant="outline" onClick={handleInlineAcknowledge}>
+                            إقرار الاستلام
+                          </Button>
+                        )}
+                      </div>
+                    )}
                     <Select
                       value={fundId || activeFund.id}
                       onValueChange={setFundId}
