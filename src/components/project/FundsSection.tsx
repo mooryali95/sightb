@@ -47,7 +47,7 @@ interface FundsSectionProps {
 export function FundsSection({ projectId, expenses, readOnly = false }: FundsSectionProps) {
   const { isAdmin, isOwner } = useRole();
   const {
-    projectFunds, fundSettlements,
+    projectFunds, fundSettlements, custodies,
     createFund, acknowledgeFund, submitSettlement, approveSettlement,
     rejectSettlement, deleteFund, updateSettlementDraft,
   } = useStore();
@@ -58,8 +58,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   );
 
   const projectCustodies = useMemo(
-    () => (useStore.getState().custodies || []).filter((c: any) => c.projectId === projectId),
-    [projectId],
+    () => (custodies || []).filter((c) => c.projectId === projectId),
+    [custodies, projectId],
   );
 
   const summary = useMemo(
