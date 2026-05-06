@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
 import { type Custody } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { getFundSpent, getFundCustodyDraw } from '@/lib/funds';
 
 interface CustodySectionProps {
   projectId: string;
@@ -20,27 +23,46 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, deleteCustody } = useStore();
+  const { addCustody, deleteCustody, projectFunds } = useStore();
   const [open, setOpen] = useState(false);
   const [resourceName, setResourceName] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [sourceFundId, setSourceFundId] = useState<string>('none');
+
+  const availableFunds = useMemo(
+    () => projectFunds
+      .filter((f) => f.projectId === projectId && (f.status === 'transferred' || f.status === 'acknowledged'))
+      .map((f) => {
+        const spent = getFundSpent(f.id, expenses, custodies);
+        return { ...f, remaining: f.amount - spent };
+      })
+      .filter((f) => f.remaining > 0)
+      .sort((a, b) => b.fundNumber - a.fundNumber),
+    [projectFunds, projectId, expenses, custodies],
+  );
 
   const handleAdd = async () => {
     if (!resourceName.trim() || !amount) return;
-    await addCustody({
-      projectId,
-      resourceName: resourceName.trim(),
-      amount: parseFloat(amount),
-      notes: notes.trim() || undefined,
-      status: 'active',
-      receivedDate,
-    } as any);
-    setResourceName(''); setAmount(''); setNotes('');
-    setReceivedDate(new Date().toISOString().split('T')[0]);
-    setOpen(false);
-    toast.success('تمت إضافة العهدة');
+    try {
+      await addCustody({
+        projectId,
+        resourceName: resourceName.trim(),
+        amount: parseFloat(amount),
+        notes: notes.trim() || undefined,
+        status: 'active',
+        receivedDate,
+        sourceFundId: sourceFundId !== 'none' ? sourceFundId : undefined,
+      } as any);
+      setResourceName(''); setAmount(''); setNotes('');
+      setReceivedDate(new Date().toISOString().split('T')[0]);
+      setSourceFundId('none');
+      setOpen(false);
+      toast.success('تمت إضافة العهدة');
+    } catch (e: any) {
+      toast.error(e.message || 'تعذّر إضافة العهدة');
+    }
   };
 
   const enrichedCustodies = custodies.map(c => {
