@@ -450,6 +450,7 @@ export type Database = {
           project_id: string | null
           received_date: string | null
           resource_name: string
+          source_fund_id: string | null
           status: string
           user_id: string
         }
@@ -463,6 +464,7 @@ export type Database = {
           project_id?: string | null
           received_date?: string | null
           resource_name: string
+          source_fund_id?: string | null
           status?: string
           user_id: string
         }
@@ -476,6 +478,7 @@ export type Database = {
           project_id?: string | null
           received_date?: string | null
           resource_name?: string
+          source_fund_id?: string | null
           status?: string
           user_id?: string
         }
@@ -492,6 +495,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custodies_source_fund_id_fkey"
+            columns: ["source_fund_id"]
+            isOneToOne: false
+            referencedRelation: "project_funds"
             referencedColumns: ["id"]
           },
         ]

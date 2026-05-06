@@ -47,7 +47,7 @@ interface FundsSectionProps {
 export function FundsSection({ projectId, expenses, readOnly = false }: FundsSectionProps) {
   const { isAdmin, isOwner } = useRole();
   const {
-    projectFunds, fundSettlements,
+    projectFunds, fundSettlements, custodies,
     createFund, acknowledgeFund, submitSettlement, approveSettlement,
     rejectSettlement, deleteFund, updateSettlementDraft,
   } = useStore();
@@ -57,9 +57,14 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
     [expenses, projectId],
   );
 
+  const projectCustodies = useMemo(
+    () => (custodies || []).filter((c) => c.projectId === projectId),
+    [custodies, projectId],
+  );
+
   const summary = useMemo(
-    () => getProjectFundsSummary(projectId, projectFunds, fundSettlements, projectExpenses),
-    [projectId, projectFunds, fundSettlements, projectExpenses],
+    () => getProjectFundsSummary(projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies as any),
+    [projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies],
   );
 
   const projectFundsList = useMemo(
@@ -120,7 +125,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   };
 
   const settlementSpent = settleFor
-    ? getFundSpent(settleFor.id, projectExpenses)
+    ? getFundSpent(settleFor.id, projectExpenses, projectCustodies)
     : 0;
   const settlementDiff = settleFor
     ? calculateSettlementDifference(
@@ -347,8 +352,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
               </thead>
               <tbody>
                 {projectFundsList.map((f) => {
-                  const spent = getFundSpent(f.id, projectExpenses);
-                  const remaining = getFundRemaining(f, projectExpenses);
+                  const spent = getFundSpent(f.id, projectExpenses, projectCustodies);
+                  const remaining = getFundRemaining(f, projectExpenses, projectCustodies);
                   const settlement = getSettlementForFund(f.id, fundSettlements);
                   const days = daysBetween(f.acknowledgedAt || f.transferDate);
                   const overdue = (f.status === 'transferred' || f.status === 'acknowledged') && days >= 30;

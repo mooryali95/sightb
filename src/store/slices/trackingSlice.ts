@@ -267,8 +267,13 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
       amount: c.amount, notes: c.notes || null,
       received_date: (c as any).receivedDate || new Date().toISOString().split('T')[0],
       status: 'active',
+      source_fund_id: (c as any).sourceFundId || null,
     } as any).select().single();
-    if (error) throw error;
+    if (error) {
+      const msg = error.message || '';
+      if (msg.includes('مبلغ العهدة يتجاوز')) throw new Error(msg);
+      throw error;
+    }
     const mapped = mapCustody(data, get().expenses);
     set((s) => ({ custodies: [mapped, ...s.custodies] }));
     return mapped.id;

@@ -102,8 +102,13 @@ describe('getActiveFund', () => {
     expect(getActiveFund(PID, funds)?.id).toBe('f3');
   });
 
-  it('returns null when no acknowledged fund exists', () => {
+  it('returns transferred fund when no acknowledged fund exists', () => {
     const funds = [makeFund({ status: 'transferred' })];
+    expect(getActiveFund(PID, funds)?.id).toBe('f1');
+  });
+
+  it('returns null when no transferred or acknowledged fund exists', () => {
+    const funds = [makeFund({ status: 'settled' as any })];
     expect(getActiveFund(PID, funds)).toBeNull();
   });
 

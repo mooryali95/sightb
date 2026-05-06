@@ -106,6 +106,7 @@ export function mapCustody(d: any, expenses: Expense[]): Custody {
     receivedDate: d.received_date || undefined,
     closedDate: d.closed_date || undefined,
     status: (d.status || 'active') as Custody['status'],
+    sourceFundId: d.source_fund_id || undefined,
   };
 }
 

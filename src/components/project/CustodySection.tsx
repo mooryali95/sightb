@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
 import { type Custody } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { getFundSpent, getFundCustodyDraw } from '@/lib/funds';
 
 interface CustodySectionProps {
   projectId: string;
@@ -20,27 +23,46 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, deleteCustody } = useStore();
+  const { addCustody, deleteCustody, projectFunds } = useStore();
   const [open, setOpen] = useState(false);
   const [resourceName, setResourceName] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [sourceFundId, setSourceFundId] = useState<string>('none');
+
+  const availableFunds = useMemo(
+    () => projectFunds
+      .filter((f) => f.projectId === projectId && (f.status === 'transferred' || f.status === 'acknowledged'))
+      .map((f) => {
+        const spent = getFundSpent(f.id, expenses, custodies);
+        return { ...f, remaining: f.amount - spent };
+      })
+      .filter((f) => f.remaining > 0)
+      .sort((a, b) => b.fundNumber - a.fundNumber),
+    [projectFunds, projectId, expenses, custodies],
+  );
 
   const handleAdd = async () => {
     if (!resourceName.trim() || !amount) return;
-    await addCustody({
-      projectId,
-      resourceName: resourceName.trim(),
-      amount: parseFloat(amount),
-      notes: notes.trim() || undefined,
-      status: 'active',
-      receivedDate,
-    } as any);
-    setResourceName(''); setAmount(''); setNotes('');
-    setReceivedDate(new Date().toISOString().split('T')[0]);
-    setOpen(false);
-    toast.success('تمت إضافة العهدة');
+    try {
+      await addCustody({
+        projectId,
+        resourceName: resourceName.trim(),
+        amount: parseFloat(amount),
+        notes: notes.trim() || undefined,
+        status: 'active',
+        receivedDate,
+        sourceFundId: sourceFundId !== 'none' ? sourceFundId : undefined,
+      } as any);
+      setResourceName(''); setAmount(''); setNotes('');
+      setReceivedDate(new Date().toISOString().split('T')[0]);
+      setSourceFundId('none');
+      setOpen(false);
+      toast.success('تمت إضافة العهدة');
+    } catch (e: any) {
+      toast.error(e.message || 'تعذّر إضافة العهدة');
+    }
   };
 
   const enrichedCustodies = custodies.map(c => {
@@ -89,6 +111,23 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
               </div>
               <div className="space-y-2">
+                <Label>مصدر العهدة (الدفعة)</Label>
+                <Select value={sourceFundId} onValueChange={setSourceFundId}>
+                  <SelectTrigger><SelectValue placeholder="اختر الدفعة المصدر" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">بدون ربط بدفعة (تمويل مستقل)</SelectItem>
+                    {availableFunds.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  عند ربط العهدة بدفعة، يُخصم مبلغها فوراً من رصيد الدفعة بيد المدير.
+                </p>
+              </div>
+              <div className="space-y-2">
                 <Label>تاريخ استلام العهدة</Label>
                 <Input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
               </div>
@@ -127,7 +166,19 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 const pct = c.amount > 0 ? (c.spent / c.amount) * 100 : 0;
                 return (
                   <tr key={c.id} className={pct > 100 ? 'bg-destructive/5' : ''}>
-                    <td className="font-medium">{c.resourceName}</td>
+                    <td className="font-medium">
+                      <div className="flex flex-col gap-0.5">
+                        <span>{c.resourceName}</span>
+                        {c.sourceFundId && (() => {
+                          const sf = projectFunds.find(f => f.id === c.sourceFundId);
+                          return sf ? (
+                            <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 dark:text-amber-400 w-fit">
+                              من دفعة #{sf.fundNumber}
+                            </Badge>
+                          ) : null;
+                        })()}
+                      </div>
+                    </td>
                     <td className="font-mono text-sm">{formatCurrency(c.amount)}</td>
                     <td className="font-mono text-sm">{formatCurrency(c.spent)}</td>
                     <td>

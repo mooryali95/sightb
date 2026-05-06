@@ -32,8 +32,8 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
   );
 
   const summary = useMemo(
-    () => getProjectFundsSummary(projectId, funds, settlements, projectExpenses),
-    [projectId, funds, settlements, projectExpenses],
+    () => getProjectFundsSummary(projectId, funds, settlements, projectExpenses, custodies),
+    [projectId, funds, settlements, projectExpenses, custodies],
   );
 
   const projectFundsList = useMemo(
@@ -110,10 +110,20 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
           ) : (
             <div className="space-y-2">
               {projectFundsList.map((f) => {
-                const spent = getFundSpent(f.id, projectExpenses);
-                const remaining = getFundRemaining(f, projectExpenses);
+                const directSpent = projectExpenses
+                  .filter((e) => e.fundId === f.id)
+                  .filter((e) => {
+                    if (!e.custodyId) return true;
+                    const cu = projectCustodies.find((c) => c.id === e.custodyId);
+                    return cu?.sourceFundId !== f.id;
+                  })
+                  .reduce((s, e) => s + e.amount, 0);
+                const fundCustodies = projectCustodies.filter((c) => c.sourceFundId === f.id);
+                const custodyDraw = fundCustodies.reduce((s, c) => s + c.amount, 0);
+                const spent = directSpent + custodyDraw;
+                const remaining = f.amount - spent;
                 const settlement = getSettlementForFund(f.id, settlements);
-                const linked = projectExpenses.filter((e) => e.fundId === f.id);
+                const linked = projectExpenses.filter((e) => e.fundId === f.id && (!e.custodyId || projectCustodies.find(c => c.id === e.custodyId)?.sourceFundId !== f.id));
                 const isOpen = openFunds.has(f.id);
                 return (
                   <div key={f.id} className="border border-border rounded-lg overflow-hidden">
@@ -139,24 +149,43 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                             {formatCurrency(spent)} / {formatCurrency(f.amount)}
                           </span>
                         </div>
-                        <div className="mt-1.5 h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div className="mt-1.5 h-1.5 w-full bg-muted rounded-full overflow-hidden flex">
                           <div
-                            className={cn(
-                              'h-full rounded-full transition-all',
-                              remaining < 0 ? 'bg-destructive' : 'bg-primary',
-                            )}
-                            style={{ width: `${Math.min(100, (spent / Math.max(1, f.amount)) * 100)}%` }}
+                            className="h-full bg-primary"
+                            style={{ width: `${Math.min(100, (directSpent / Math.max(1, f.amount)) * 100)}%` }}
+                            title="مصروف مباشر"
+                          />
+                          <div
+                            className="h-full bg-amber-500"
+                            style={{ width: `${Math.min(100 - (directSpent / Math.max(1, f.amount)) * 100, (custodyDraw / Math.max(1, f.amount)) * 100)}%` }}
+                            title="عُهد مسحوبة"
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {linked.length} مصروف · متبقي: {formatCurrency(remaining)}
+                        <p className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                          <span>مباشر: {formatCurrency(directSpent)}</span>
+                          {custodyDraw > 0 && <span className="text-amber-600">عُهد: {formatCurrency(custodyDraw)}</span>}
+                          <span className={cn(remaining < 0 && 'text-destructive')}>متبقي بيد المدير: {formatCurrency(remaining)}</span>
                         </p>
                       </div>
                     </button>
                     {isOpen && (
-                      <div className="border-t border-border bg-muted/30 p-2">
+                      <div className="border-t border-border bg-muted/30 p-2 space-y-2">
+                        {fundCustodies.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">عُهد مسحوبة من هذه الدفعة:</p>
+                            {fundCustodies.map((cu) => {
+                              const cuSpent = projectExpenses.filter(e => e.custodyId === cu.id).reduce((s, e) => s + e.amount, 0);
+                              return (
+                                <div key={cu.id} className="flex items-center justify-between text-xs bg-amber-50 dark:bg-amber-900/10 px-2 py-1.5 rounded">
+                                  <span className="flex items-center gap-1.5"><HandCoins className="w-3 h-3" />{cu.resourceName}</span>
+                                  <span className="font-mono text-muted-foreground">{formatCurrency(cuSpent)} / {formatCurrency(cu.amount)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                         {linked.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-2">لا توجد مصروفات مرتبطة</p>
+                          <p className="text-xs text-muted-foreground text-center py-2">لا توجد مصروفات مباشرة على الدفعة</p>
                         ) : (
                           <table className="w-full text-xs">
                             <tbody>
@@ -202,7 +231,7 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                       {isOpen ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm">{c.resourceName}</span>
                             <Badge className={cn(
                               'text-xs',
@@ -212,6 +241,14 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                             )}>
                               {c.status === 'active' ? 'نشطة' : 'مغلقة'}
                             </Badge>
+                            {c.sourceFundId && (() => {
+                              const sf = projectFundsList.find(f => f.id === c.sourceFundId);
+                              return sf ? (
+                                <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 dark:text-amber-400">
+                                  من دفعة #{sf.fundNumber}
+                                </Badge>
+                              ) : null;
+                            })()}
                           </div>
                           <span className="font-mono text-xs text-muted-foreground">
                             {formatCurrency(spent)} / {formatCurrency(c.amount)}
