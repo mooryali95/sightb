@@ -117,12 +117,12 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setOpen(true);
   };
 
-  // Auto-fill fundId with active fund whenever dialog opens for a NEW expense
+  // Auto-fill fundId synchronously when opening for a NEW expense
   useEffect(() => {
-    if (open && !editingId && activeFund && !fundId) {
-      setFundId(activeFund.id);
+    if (open && !editingId && activeFund) {
+      setFundId((prev) => prev || activeFund.id);
     }
-  }, [open, editingId, activeFund, fundId]);
+  }, [open, editingId, activeFund]);
 
   // Quick-link an existing legacy expense to the active fund
   const handleQuickLinkFund = async (expId: string) => {
@@ -131,7 +131,18 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       await updateExpense(expId, { fundId: activeFund.id });
       toast.success('تم ربط المصروف بالدفعة النشطة');
     } catch (err: any) {
-      toast.error(err?.message || 'تعذّر الربط');
+      toast.error(translateDbError(err?.message) || 'تعذّر الربط');
+    }
+  };
+
+  // Inline acknowledge: lets manager confirm a transferred fund without leaving the dialog
+  const handleInlineAcknowledge = async () => {
+    if (!activeFund || activeFund.status !== 'transferred') return;
+    try {
+      await acknowledgeFund(activeFund.id);
+      toast.success('تم إقرار استلام الدفعة');
+    } catch (err: any) {
+      toast.error(err?.message || 'تعذّر إقرار الاستلام');
     }
   };
 
@@ -140,8 +151,10 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     const rawAmount = parseFloat(amount);
     const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
 
-    // التحقق: ربط بدفعة إلزامي عند وجود دفعة نشطة
-    const effectiveFundId = fundId && fundId !== 'none' ? fundId : undefined;
+    // التحقق: ربط بدفعة إلزامي عند وجود دفعة نشطة (سواء transferred أو acknowledged)
+    const effectiveFundId = fundId && fundId !== 'none'
+      ? fundId
+      : (fundIsRequired && !editingId ? activeFund?.id : undefined);
     if (fundIsRequired && !editingId && !effectiveFundId) {
       toast.error('يجب ربط المصروف بالدفعة النشطة');
       return;
