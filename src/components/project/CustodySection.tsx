@@ -111,6 +111,23 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
               </div>
               <div className="space-y-2">
+                <Label>مصدر العهدة (الدفعة)</Label>
+                <Select value={sourceFundId} onValueChange={setSourceFundId}>
+                  <SelectTrigger><SelectValue placeholder="اختر الدفعة المصدر" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">بدون ربط بدفعة (تمويل مستقل)</SelectItem>
+                    {availableFunds.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  عند ربط العهدة بدفعة، يُخصم مبلغها فوراً من رصيد الدفعة بيد المدير.
+                </p>
+              </div>
+              <div className="space-y-2">
                 <Label>تاريخ استلام العهدة</Label>
                 <Input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
               </div>
@@ -149,7 +166,19 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 const pct = c.amount > 0 ? (c.spent / c.amount) * 100 : 0;
                 return (
                   <tr key={c.id} className={pct > 100 ? 'bg-destructive/5' : ''}>
-                    <td className="font-medium">{c.resourceName}</td>
+                    <td className="font-medium">
+                      <div className="flex flex-col gap-0.5">
+                        <span>{c.resourceName}</span>
+                        {c.sourceFundId && (() => {
+                          const sf = projectFunds.find(f => f.id === c.sourceFundId);
+                          return sf ? (
+                            <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 dark:text-amber-400 w-fit">
+                              من دفعة #{sf.fundNumber}
+                            </Badge>
+                          ) : null;
+                        })()}
+                      </div>
+                    </td>
                     <td className="font-mono text-sm">{formatCurrency(c.amount)}</td>
                     <td className="font-mono text-sm">{formatCurrency(c.spent)}</td>
                     <td>
