@@ -206,10 +206,20 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       resetForm();
       setOpen(false);
     } catch (err: any) {
-      toast.error(err?.message || 'تعذّر حفظ المصروف');
+      toast.error(translateDbError(err?.message) || 'تعذّر حفظ المصروف');
       return;
     }
   };
+
+  function translateDbError(msg?: string): string {
+    if (!msg) return '';
+    if (/يجب ربط المصروف/.test(msg)) return 'يجب ربط المصروف بدفعة نشطة. اضغط "إقرار الاستلام" أعلى النموذج إن كانت الدفعة قيد التحويل.';
+    if (/المصروف يتجاوز الرصيد المتبقي للدفعة/.test(msg)) return msg;
+    if (/المصروف يتجاوز رصيد العهدة/.test(msg)) return msg;
+    if (/لا يمكن تغيير ربط المصروف/.test(msg)) return msg;
+    if (/row-level security/i.test(msg)) return 'لا تملك صلاحية تنفيذ هذه العملية.';
+    return msg;
+  }
 
   const handleApprove = async (expId: string) => {
     await updateExpense(expId, { approvalStatus: 'approved' });
