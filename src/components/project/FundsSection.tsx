@@ -57,9 +57,14 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
     [expenses, projectId],
   );
 
+  const projectCustodies = useMemo(
+    () => (useStore.getState().custodies || []).filter((c: any) => c.projectId === projectId),
+    [projectId],
+  );
+
   const summary = useMemo(
-    () => getProjectFundsSummary(projectId, projectFunds, fundSettlements, projectExpenses),
-    [projectId, projectFunds, fundSettlements, projectExpenses],
+    () => getProjectFundsSummary(projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies as any),
+    [projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies],
   );
 
   const projectFundsList = useMemo(
