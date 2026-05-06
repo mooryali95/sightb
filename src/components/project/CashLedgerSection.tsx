@@ -231,7 +231,7 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                       {isOpen ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm">{c.resourceName}</span>
                             <Badge className={cn(
                               'text-xs',
@@ -241,6 +241,14 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                             )}>
                               {c.status === 'active' ? 'نشطة' : 'مغلقة'}
                             </Badge>
+                            {c.sourceFundId && (() => {
+                              const sf = projectFundsList.find(f => f.id === c.sourceFundId);
+                              return sf ? (
+                                <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 dark:text-amber-400">
+                                  من دفعة #{sf.fundNumber}
+                                </Badge>
+                              ) : null;
+                            })()}
                           </div>
                           <span className="font-mono text-xs text-muted-foreground">
                             {formatCurrency(spent)} / {formatCurrency(c.amount)}
