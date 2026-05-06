@@ -32,7 +32,7 @@ interface ExpensesSectionProps {
 }
 
 export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15, projectStatus }: ExpensesSectionProps) {
-  const { addExpense, deleteExpense, updateExpense, projectFunds } = useStore();
+  const { addExpense, deleteExpense, updateExpense, projectFunds, acknowledgeFund } = useStore();
   const { isAdmin } = useRole();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
