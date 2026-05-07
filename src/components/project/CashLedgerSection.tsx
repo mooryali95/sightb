@@ -49,8 +49,18 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
   const custodySpent = (id: string) =>
     projectExpenses.filter((e) => e.custodyId === id).reduce((s, e) => s + e.amount, 0);
 
-  const totalCustodyAmount = projectCustodies.reduce((s, c) => s + c.amount, 0);
-  const totalCustodySpent = projectCustodies.reduce((s, c) => s + custodySpent(c.id), 0);
+  // عُهد نشطة فقط
+  const activeCustodies = projectCustodies.filter((c) => c.status === 'active');
+  const activeCustodyAmount = activeCustodies.reduce((s, c) => s + c.amount, 0);
+  const activeCustodySpent = activeCustodies.reduce((s, c) => s + custodySpent(c.id), 0);
+  const inHandsOfHolders = activeCustodyAmount - activeCustodySpent;
+
+  // إجمالي المصروف الموثّق (بدون double counting)
+  const directSpend = summary.totalDocumentedSpend;
+  const custodyTotalSpend = projectCustodies.reduce((s, c) => s + custodySpent(c.id), 0);
+  const totalDocumentedExpense = directSpend + custodyTotalSpend;
+
+  const openFundsCount = projectFundsList.filter((f) => f.status !== 'settled').length;
 
   const unlinkedExpenses = projectExpenses.filter((e) => !e.fundId && !e.custodyId);
   const unlinkedTotal = unlinkedExpenses.reduce((s, e) => s + e.amount, 0);
@@ -64,39 +74,73 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
     setter(n);
   };
 
+  const transferred = summary.totalTransferred;
+  const pct = (v: number) => (transferred > 0 ? (v / transferred) * 100 : 0);
+
   return (
     <div className="space-y-4" dir="rtl">
-      {/* Top summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* ─── البطاقات الأربع: مصدر الأموال ومآلها ─── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="p-4 rounded-xl">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <Wallet className="w-3.5 h-3.5" /> دفعات محوّلة
+            <Wallet className="w-3.5 h-3.5" /> إجمالي ما تحوّل من الإدارة
           </div>
           <p className="text-lg font-mono font-semibold">{formatCurrency(summary.totalTransferred)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{projectFundsList.length} دفعة</p>
-        </Card>
-        <Card className="p-4 rounded-xl">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <HandCoins className="w-3.5 h-3.5" /> عُهد نشطة
-          </div>
-          <p className="text-lg font-mono font-semibold">{formatCurrency(totalCustodyAmount)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{projectCustodies.length} عهدة</p>
-        </Card>
-        <Card className="p-4 rounded-xl">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <Receipt className="w-3.5 h-3.5" /> إجمالي المصروف
-          </div>
-          <p className="text-lg font-mono font-semibold">
-            {formatCurrency(summary.totalDocumentedSpend + totalCustodySpent)}
+          <p className="text-xs text-muted-foreground mt-1">
+            {projectFundsList.length} دفعة{openFundsCount > 0 ? ` · ${openFundsCount} مفتوحة` : ''}
           </p>
         </Card>
+
         <Card className="p-4 rounded-xl">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <Banknote className="w-3.5 h-3.5" /> المتبقي بيد المدير
+            <Banknote className="w-3.5 h-3.5" /> في يد مدير المشروع
           </div>
           <p className="text-lg font-mono font-semibold">{formatCurrency(summary.remainingInManagerHand)}</p>
+          <p className="text-xs text-muted-foreground mt-1">نقد لم يُصرف ولم يُسلَّم كعهدة</p>
+        </Card>
+
+        <Card className="p-4 rounded-xl">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+            <HandCoins className="w-3.5 h-3.5" /> في يد حاملي العُهد
+          </div>
+          <p className="text-lg font-mono font-semibold">{formatCurrency(inHandsOfHolders)}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {activeCustodies.length} عهدة نشطة من أصل {projectCustodies.length}
+          </p>
+        </Card>
+
+        <Card className="p-4 rounded-xl">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+            <Receipt className="w-3.5 h-3.5" /> مصروف موثّق
+          </div>
+          <p className="text-lg font-mono font-semibold">{formatCurrency(totalDocumentedExpense)}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            مباشر: {formatCurrency(directSpend)} · عبر عُهد: {formatCurrency(custodyTotalSpend)}
+          </p>
         </Card>
       </div>
+
+      {/* ─── شريط التدفّق المالي ─── */}
+      {transferred > 0 && (
+        <Card className="p-4 rounded-xl">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold">مسار توزيع الأموال</p>
+            <span className="text-[10px] text-muted-foreground">من إجمالي {formatCurrency(transferred)}</span>
+          </div>
+          <div className="flex h-3 w-full rounded-full overflow-hidden bg-muted">
+            <div className="bg-primary h-full" style={{ width: `${pct(directSpend)}%` }} title={`مصروف مباشر: ${formatCurrency(directSpend)}`} />
+            <div className="bg-amber-500 h-full" style={{ width: `${pct(custodyTotalSpend)}%` }} title={`مصروف عبر عُهد: ${formatCurrency(custodyTotalSpend)}`} />
+            <div className="bg-orange-300 h-full" style={{ width: `${pct(inHandsOfHolders)}%` }} title={`في يد حاملي العُهد: ${formatCurrency(inHandsOfHolders)}`} />
+            <div className="bg-emerald-500 h-full" style={{ width: `${pct(summary.remainingInManagerHand)}%` }} title={`في يد المدير: ${formatCurrency(summary.remainingInManagerHand)}`} />
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-primary" /> مصروف مباشر {formatCurrency(directSpend)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-500" /> صُرف من العُهد {formatCurrency(custodyTotalSpend)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-orange-300" /> بيد حاملي العُهد {formatCurrency(inHandsOfHolders)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> بيد المدير {formatCurrency(summary.remainingInManagerHand)}</span>
+          </div>
+        </Card>
+      )}
 
       {/* Two columns: Funds + Custodies */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
