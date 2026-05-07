@@ -444,107 +444,162 @@ export default function ProjectDetail() {
           )}
         </div>
 
-        {/* ══════ الصف الأول: المالية الأساسية (5 بطاقات) ══════ */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+        {/* ═══════════════════════════════════════════════════════════════
+            الصف 1 — العقد والربحية المخططة (4 بطاقات)
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <StatCard
-            title={summary.effectiveContractValue !== summary.contractValue ? 'القيمة المعدّلة' : 'قيمة العقد'}
+            title={summary.effectiveContractValue !== summary.contractValue ? 'قيمة العقد المعدّلة' : 'قيمة العقد'}
             value={formatCurrency(summary.effectiveContractValue)}
             icon={<DollarSign className="w-4 h-4" />}
-            tooltip="إجمالي قيمة العقد بعد أوامر التغيير المعتمدة — بدون ضريبة"
+            tooltip="إجمالي قيمة العقد قبل الضريبة، شاملاً أوامر التغيير المعتمدة. هذه هي قاعدة كل حسابات الربحية."
             subtitle={summary.effectiveContractValue !== summary.contractValue
               ? `الأصلية: ${formatCurrency(summary.contractValue)}`
-              : vatRate > 0 ? `شامل ض: ${formatCurrency(addVAT(summary.effectiveContractValue, vatRate))}` : undefined}
+              : vatRate > 0 ? `شامل الضريبة: ${formatCurrency(addVAT(summary.effectiveContractValue, vatRate))}` : undefined}
           />
+          <StatCard
+            title="الموازنة المعتمدة"
+            value={formatCurrency(summary.totalPlanned)}
+            icon={<PiggyBank className="w-4 h-4" />}
+            tooltip="إجمالي التكاليف المخططة لتنفيذ المشروع — تمثّل سقف الإنفاق المتوقع."
+            subtitle={summary.effectiveContractValue > 0 ? `${((summary.totalPlanned / summary.effectiveContractValue) * 100).toFixed(1)}% من العقد` : undefined}
+          />
+          <StatCard
+            title="الربح المخطط"
+            value={formatCurrency(summary.plannedProfit)}
+            icon={<TrendingUp className="w-4 h-4" />}
+            trend={summary.plannedProfit >= 0 ? 'up' : 'down'}
+            subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`}
+            tooltip="= قيمة العقد − الموازنة المعتمدة. الربح المتوقع إذا التزمت التنفيذ بالخطة."
+          />
+          <StatCard
+            title="المتبقي من العقد"
+            value={formatCurrency(summary.contractRemaining)}
+            icon={<Receipt className="w-4 h-4" />}
+            trend={summary.contractRemaining >= 0 ? 'neutral' : 'down'}
+            subtitle={summary.effectiveContractValue > 0 ? `${((summary.contractRemaining / summary.effectiveContractValue) * 100).toFixed(0)}% لم يُفوتر` : undefined}
+            tooltip="= قيمة العقد − (المحصّل + الذمم المدينة). الجزء الذي لم يُفوتر للعميل بعد."
+          />
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            الصف 2 — الأداء التشغيلي للموازنة (4 بطاقات)
+            ═══════════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <div className="stat-card">
-            <div className="flex items-start justify-between mb-3">
-              <span className="text-xs font-medium text-muted-foreground">الصرف من الموازنة</span>
+            <div className="flex items-start justify-between mb-2">
+              <span className="text-xs font-medium text-muted-foreground">المصروف الفعلي</span>
               <TrendingDown className="w-4 h-4 text-muted-foreground" />
             </div>
             <p className="stat-value">{formatCurrency(summary.totalActual)}</p>
-            <p className="text-xs text-muted-foreground mt-1">من {formatCurrency(summary.totalPlanned)}</p>
             <div className="mt-2">
               <Progress value={Math.min(summary.spendRate, 100)} className="h-1.5" />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">{summary.spendRate.toFixed(1)}% من الموازنة</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {summary.spendRate.toFixed(1)}% من الموازنة ({formatCurrency(summary.totalPlanned)})
+            </p>
           </div>
-          <StatCard title="الربح المخطط" value={formatCurrency(summary.plannedProfit)} icon={<TrendingUp className="w-4 h-4" />}
-            trend={summary.plannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.plannedProfitMargin.toFixed(1)}%`}
-            tooltip="قيمة العقد ناقص الموازنة المخططة — الربح المتوقع إذا سارت الأمور حسب الخطة" />
           <StatCard
-            title={totalCommitted > 0 ? 'المتاح الفعلي' : 'المتبقي من الموازنة'}
+            title={totalCommitted > 0 ? 'المتاح للصرف' : 'المتبقي من الموازنة'}
             value={formatCurrency(totalCommitted > 0 ? availableBudget : summary.budgetRemaining)}
             icon={<Target className="w-4 h-4" />}
             trend={(totalCommitted > 0 ? availableBudget : summary.budgetRemaining) >= 0 ? 'up' : 'down'}
-            subtitle={totalCommitted > 0 ? `ملتزم: ${formatCurrency(totalCommitted)}` : `من أصل ${formatCurrency(summary.totalPlanned)}`}
-            tooltip="الموازنة ناقص المصروفات. سالب = تجاوز"
+            subtitle={totalCommitted > 0 ? `ملتزم بعقود: ${formatCurrency(totalCommitted)}` : undefined}
+            tooltip={totalCommitted > 0
+              ? '= الموازنة − المصروف − الالتزامات المفتوحة. سالب = تجاوز محتمل.'
+              : '= الموازنة − المصروف. سالب = تجاوز.'}
+          />
+          <StatCard
+            title="معدل الحرق الشهري"
+            value={formatCurrency(summary.burnRate)}
+            icon={<TrendingDown className="w-4 h-4" />}
+            subtitle={monthsRemaining !== null && monthsRemaining > 0
+              ? `يكفي لـ ${monthsRemaining.toFixed(1)} شهر`
+              : summary.burnRate === 0 ? 'لم يبدأ الصرف' : 'الميزانية مستنفدة'}
+            tooltip="متوسط الصرف الشهري = إجمالي المصروف ÷ الأشهر المنقضية. يساعد على توقع موعد نفاد الموازنة."
           />
           {evm ? (
-            <StatCard title="التكلفة المتوقعة (EAC)" value={formatCurrency(evm.eac)} icon={<BarChart3 className="w-4 h-4" />}
+            <StatCard
+              title="التكلفة المتوقعة (EAC)"
+              value={formatCurrency(evm.eac)}
+              icon={<BarChart3 className="w-4 h-4" />}
               trend={evm.vac >= 0 ? 'up' : 'down'}
-              subtitle={evm.vac >= 0 ? `وفر متوقع: ${formatCurrency(evm.vac)}` : `تجاوز متوقع: ${formatCurrency(Math.abs(evm.vac))}`}
-              tooltip="التكلفة المتوقعة عند إكمال المشروع بناءً على الأداء الحالي" />
+              subtitle={evm.vac >= 0
+                ? `وفر متوقع: ${formatCurrency(evm.vac)}`
+                : `تجاوز متوقع: ${formatCurrency(Math.abs(evm.vac))}`}
+              tooltip="Estimate At Completion — التكلفة المتوقعة لإنهاء المشروع وفق وتيرة الأداء الحالية."
+            />
           ) : (
-            <StatCard title="الشهر الحالي" value={`${currentMonth} / ${project.durationMonths}`} icon={<Clock className="w-4 h-4" />}
-              subtitle={`شهر ${currentMonth} من ${project.durationMonths}`} />
+            <div className="stat-card flex flex-col items-center justify-center text-center bg-muted/30 border-dashed">
+              <BarChart3 className="w-5 h-5 text-muted-foreground mb-1.5" />
+              <p className="text-xs font-medium text-muted-foreground">EAC غير متاح</p>
+              <p className="text-[10px] text-muted-foreground mt-1">اعتمد خط الأساس لتفعيله</p>
+            </div>
           )}
         </div>
 
-        {/* ══════ الصف الثاني: الأداء والتحصيل ══════ */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          {evm ? (
-            <div className="stat-card text-center">
-              <p className="text-xs text-muted-foreground">أداء التكلفة (CPI)</p>
-              <p className={`text-xl font-mono font-bold ${evm.cpi >= 1 ? 'text-emerald-600' : evm.cpi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.cpi.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">{evm.cpi >= 1 ? 'ضمن الميزانية ✓' : evm.cpi >= 0.9 ? 'قريب من الحد' : 'تجاوز ✗'}</p>
-            </div>
-          ) : (
-            <div className="stat-card text-center">
-              <p className="text-xs text-muted-foreground">أداء التكلفة</p>
-              <p className="text-sm text-muted-foreground mt-2">لا يوجد خط أساس</p>
-            </div>
-          )}
-          {evm ? (
-            <div className="stat-card text-center">
-              <p className="text-xs text-muted-foreground">أداء الجدول (SPI)</p>
-              <p className={`text-xl font-mono font-bold ${evm.spi >= 1 ? 'text-emerald-600' : evm.spi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.spi.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">{evm.spi >= 1 ? 'في الموعد ✓' : evm.spi >= 0.9 ? 'تأخر طفيف' : 'متأخر ✗'}</p>
-            </div>
-          ) : (
-            <div className="stat-card text-center">
-              <p className="text-xs text-muted-foreground">أداء الجدول</p>
-              <p className="text-sm text-muted-foreground mt-2">لا يوجد خط أساس</p>
-            </div>
-          )}
-          <StatCard title="محصّل" value={formatCurrency(summary.collectedRevenue)} icon={<DollarSign className="w-4 h-4" />}
-            subtitle={summary.effectiveContractValue > 0 ? `${(summary.collectedRevenue / summary.effectiveContractValue * 100).toFixed(0)}% من العقد` : undefined}
-            tooltip="المبالغ المحصّلة فعلياً — بدون ضريبة" />
-          <StatCard title="ذمم مدينة" value={formatCurrency(summary.accountsReceivable)} icon={<Receipt className="w-4 h-4" />}
-            subtitle={summary.accountsReceivable > 0 ? `${pRevenues.filter(r => r.status === 'invoiced').length} فاتورة معلّقة` : 'لا فواتير معلّقة'}
-            tooltip="فواتير أُصدرت ولم تُحصّل" />
-        </div>
-
-        {/* ══════ الصف الثالث: الربح المحقق ومعدل الحرق ══════ */}
-        {(summary.collectedRevenue > 0 || summary.totalActual > 0) && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            <StatCard title="الربح المحقق" value={formatCurrency(summary.realizedProfit)} icon={<TrendingUp className="w-4 h-4" />}
+        {/* ═══════════════════════════════════════════════════════════════
+            الصف 3 — التحصيل والربحية الفعلية (يظهر فقط عند توفر بيانات)
+            ═══════════════════════════════════════════════════════════════ */}
+        {(summary.collectedRevenue > 0 || summary.accountsReceivable > 0 || summary.totalActual > 0) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <StatCard
+              title="المحصّل فعلياً"
+              value={formatCurrency(summary.collectedRevenue)}
+              icon={<DollarSign className="w-4 h-4" />}
+              trend="up"
+              subtitle={summary.effectiveContractValue > 0
+                ? `${(summary.collectedRevenue / summary.effectiveContractValue * 100).toFixed(0)}% من العقد`
+                : undefined}
+              tooltip="المبالغ النقدية المستلمة فعلياً من العميل — بدون الضريبة."
+            />
+            <StatCard
+              title="ذمم مدينة (مفوتر)"
+              value={formatCurrency(summary.accountsReceivable)}
+              icon={<Receipt className="w-4 h-4" />}
+              trend={summary.accountsReceivable > 0 ? 'neutral' : undefined}
+              subtitle={summary.accountsReceivable > 0
+                ? `${pRevenues.filter(r => r.status === 'invoiced').length} فاتورة قيد التحصيل`
+                : 'لا فواتير معلّقة'}
+              tooltip="فواتير أُصدرت للعميل ولم تُحصّل بعد."
+            />
+            <StatCard
+              title="الربح المحقق"
+              value={formatCurrency(summary.realizedProfit)}
+              icon={<TrendingUp className="w-4 h-4" />}
               trend={summary.realizedProfit >= 0 ? 'up' : 'down'}
               subtitle={summary.plannedProfit !== 0 ? `المخطط: ${formatCurrency(summary.plannedProfit)}` : undefined}
-              tooltip="المحصّل ناقص المصروفات — الربح الذي دخل حسابك فعلاً" />
-            <StatCard title="معدل الحرق الشهري" value={formatCurrency(summary.burnRate)} icon={<TrendingDown className="w-4 h-4" />}
-              subtitle={monthsRemaining !== null && monthsRemaining > 0 ? `يكفي لـ ${monthsRemaining.toFixed(1)} شهر` : summary.burnRate === 0 ? 'لم يبدأ الصرف' : 'الميزانية مستنفدة'}
-              tooltip="متوسط الصرف الشهري = المصروفات ÷ الأشهر المنقضية" />
+              tooltip="= المحصّل − المصروف الفعلي. الربح النقدي الذي دخل حسابك فعلاً حتى الآن."
+            />
             {evm ? (
-              <div className="stat-card text-center">
-                <p className="text-xs text-muted-foreground">الأداء المطلوب (TCPI)</p>
-                <p className="text-xl font-mono font-bold">{evm.tcpiBAC.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {evm.tcpiBAC <= 1.0 ? 'مريح — الأداء كافٍ' : evm.tcpiBAC <= 1.1 ? 'ممكن — تحسين طفيف' : evm.tcpiBAC <= 1.2 ? 'صعب — يحتاج تدخل' : 'شبه مستحيل — راجع الخطة'}
-                </p>
-              </div>
+              <StatCard
+                title="الأداء المطلوب (TCPI)"
+                value={evm.tcpiBAC.toFixed(2)}
+                icon={<Target className="w-4 h-4" />}
+                trend={evm.tcpiBAC <= 1 ? 'up' : evm.tcpiBAC <= 1.1 ? 'neutral' : 'down'}
+                subtitle={evm.tcpiBAC <= 1.0 ? 'مريح — الأداء كافٍ'
+                  : evm.tcpiBAC <= 1.1 ? 'ممكن — تحسين طفيف'
+                  : evm.tcpiBAC <= 1.2 ? 'صعب — يحتاج تدخل'
+                  : 'شبه مستحيل — راجع الخطة'}
+                tooltip="To-Complete Performance Index — الكفاءة المطلوبة في باقي العمل لإنجاز المشروع ضمن الموازنة."
+              />
             ) : (
-              <StatCard title="المتبقي من العقد" value={formatCurrency(summary.contractRemaining)} icon={<DollarSign className="w-4 h-4" />}
-                subtitle={`${formatCurrency(summary.contractRemaining)} متبقي`} />
+              <div className="stat-card flex flex-col items-center justify-center text-center bg-muted/30 border-dashed">
+                <Shield className="w-5 h-5 text-muted-foreground mb-1.5" />
+                <p className="text-xs font-medium text-muted-foreground">CPI / SPI / TCPI</p>
+                <p className="text-[10px] text-muted-foreground mt-1">اعتمد خط الأساس لعرض مؤشرات الأداء (EVM)</p>
+              </div>
             )}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            تنبيه EVM عند غياب خط الأساس (مرة واحدة فقط — مدمج)
+            ═══════════════════════════════════════════════════════════════ */}
+        {!evm && summary.totalActual === 0 && summary.collectedRevenue === 0 && (
+          <div className="mb-4 p-3 rounded-lg border border-dashed bg-muted/20 text-center text-xs text-muted-foreground">
+            <Shield className="w-4 h-4 inline-block ml-1" />
+            اعتمد خط الأساس من تبويب «خط الأساس» لتفعيل مؤشرات الأداء (CPI / SPI / EAC / TCPI).
           </div>
         )}
 
