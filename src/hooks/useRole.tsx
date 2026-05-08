@@ -64,6 +64,29 @@ export function useRole() {
 
   const isOwner = roles.some((r) => r.role === 'owner' && r.scopeType === 'system');
   const isAdmin = isOwner || roles.some((r) => r.role === 'admin' && r.scopeType === 'system');
+  // True for any admin/owner regardless of scope (system, company, or project)
+  const isScopedAdmin = isAdmin || roles.some((r) => r.role === 'admin' || r.role === 'owner');
+
+  /**
+   * Returns true when the user holds an admin/owner role applicable to the given scope.
+   * - System admins/owners → always true.
+   * - Company admins → true for that company AND for any project under it.
+   * - Project admins → true for that project (and read-only inferred for parent company elsewhere).
+   */
+  const isAdminFor = (scopeType: ScopeType, scopeId: string | null | undefined) => {
+    if (isAdmin) return true;
+    if (!scopeId) return false;
+    // Direct match
+    if (roles.some((r) => r.role === 'admin' && r.scopeType === scopeType && r.scopeId === scopeId)) {
+      return true;
+    }
+    // Project scope inherits from company-admin via canEdit cascading logic
+    if (scopeType === 'project') {
+      // Defer to canEdit which already handles the company→project cascade for admins
+      return canEdit('project', scopeId);
+    }
+    return false;
+  };
 
   const canEdit = (scopeType: ScopeType, scopeId: string) => {
     if (isAdmin) return true;
