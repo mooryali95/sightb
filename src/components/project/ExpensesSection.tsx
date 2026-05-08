@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { Plus, Pencil, Check, X, AlertCircle, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -322,15 +323,14 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold">سجل المصروفات</h3>
           {!readOnly && (
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مصروف</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingId ? 'تعديل المصروف' : 'إضافة مصروف جديد'}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
+          <ResponsiveFormDialog
+            open={open}
+            onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
+            title={editingId ? 'تعديل المصروف' : 'إضافة مصروف جديد'}
+            trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مصروف</Button>}
+            footer={<Button onClick={handleSubmit} className="w-full h-11">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>}
+          >
+            <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>الفئة</Label>
                   <Select value={category} onValueChange={(v) => { setCategory(v as ExpenseCategory); setBudgetItemId(''); }}>
@@ -410,10 +410,10 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                   <Label>الوصف</Label>
                   <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب شهر يناير — أحمد" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>المبلغ</Label>
-                    <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+                    <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
                   </div>
                   <div className="space-y-2">
                     <Label>الشهر</Label>
@@ -450,7 +450,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                   </p>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>التاريخ</Label>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -460,7 +460,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} placeholder="اختياري" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>المورّد</Label>
                     <Input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="اختياري" />
@@ -533,12 +533,11 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     })()}
                   </div>
                 )}
-                <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+            </div>
+          </ResponsiveFormDialog>
           )}
         </div>
+
 
         {/* Search & Filter Bar */}
         {expenses.length > 0 && (
