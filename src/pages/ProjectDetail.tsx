@@ -395,7 +395,7 @@ export default function ProjectDetail() {
                     }
                   />
                 )}
-                {isAdmin && project.status === 'archived' && (
+                {isSystemAdmin && project.status === 'archived' && (
                   <ConfirmDeleteDialog
                     title="حذف نهائي للمشروع"
                     description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
