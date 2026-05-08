@@ -53,6 +53,8 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin: isSystemAdmin, isAdminFor, canEdit: canEditRole } = useRole();
+  // Project-scoped admin (system, company, or project-level admin acts as admin within this project)
+  const isAdmin = id ? isAdminFor('project', id) : isSystemAdmin;
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks, baselines, commitments,
