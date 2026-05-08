@@ -52,7 +52,7 @@ import { Progress } from '@/components/ui/progress';
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin, canEdit: canEditRole } = useRole();
+  const { isAdmin: isSystemAdmin, isAdminFor, canEdit: canEditRole } = useRole();
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks, baselines, commitments,
