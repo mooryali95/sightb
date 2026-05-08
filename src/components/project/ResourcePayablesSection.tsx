@@ -54,7 +54,8 @@ interface Props {
 }
 
 export function ResourcePayablesSection({ projectId, companyName = '', projectName = '', readOnly = false }: Props) {
-  const { isAdmin, canEdit: canEditRole } = useRole();
+  const { isAdminFor, canEdit: canEditRole } = useRole();
+  const isAdmin = isAdminFor('project', projectId);
   const canEdit = !readOnly && canEditRole('project', projectId);
 
   const {

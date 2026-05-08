@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -52,7 +53,9 @@ import { Progress } from '@/components/ui/progress';
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin, canEdit: canEditRole } = useRole();
+  const { isAdmin: isSystemAdmin, isAdminFor, canEdit: canEditRole } = useRole();
+  // Project-scoped admin (system, company, or project-level admin acts as admin within this project)
+  const isAdmin = id ? isAdminFor('project', id) : isSystemAdmin;
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks, baselines, commitments,
@@ -393,7 +396,7 @@ export default function ProjectDetail() {
                     }
                   />
                 )}
-                {isAdmin && project.status === 'archived' && (
+                {isSystemAdmin && project.status === 'archived' && (
                   <ConfirmDeleteDialog
                     title="حذف نهائي للمشروع"
                     description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
@@ -657,135 +660,174 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {/* Group Selector */}
-          <div className="flex gap-1.5 p-1 bg-muted/50 rounded-lg mb-1 overflow-x-auto scrollbar-hide">
+        {/* 5 main tabs — sections inside each tab use Accordion */}
+        <Tabs value={activeGroup} onValueChange={(v) => handleGroupChange(v as TabGroup)} className="space-y-4">
+          <TabsList className="grid grid-cols-5 w-full h-auto p-1 gap-1 bg-muted/50 sticky top-[57px] z-10">
             {tabGroups.map((group) => {
               const Icon = group.icon;
-              const isActive = activeGroup === group.key;
               return (
-                <button
+                <TabsTrigger
                   key={group.key}
-                  type="button"
-                  onClick={() => handleGroupChange(group.key)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all shrink-0 relative',
-                    isActive
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                  )}
+                  value={group.key}
+                  className="relative flex flex-col md:flex-row items-center gap-1 md:gap-1.5 py-2.5 px-1 md:px-3 text-[11px] md:text-xs min-h-[48px]"
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{group.label}</span>
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="truncate leading-tight">{group.label}</span>
                   {group.badge > 0 && (
-                    <span className="absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-xs font-bold flex items-center justify-center px-1">
+                    <span className="absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
                       {group.badge}
                     </span>
                   )}
-                </button>
-              );
-            })}
-          </div>
-          {/* Sub-tabs */}
-          <TabsList className="flex w-full overflow-x-auto scrollbar-hide h-auto p-1">
-            {subTabs[activeGroup].map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <TabsTrigger key={tab.value} value={tab.value} className="gap-1 text-xs shrink-0">
-                  <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{tab.label}</span>
                 </TabsTrigger>
               );
             })}
           </TabsList>
 
-          <TabsContent value="overview">
-            <AIExecutiveInsights context={{
-              name: project.name, status: project.status, percentComplete: project.percentComplete,
-              currentMonth, durationMonths: project.durationMonths,
-              contractValue: summary.contractValue, effectiveContractValue: summary.effectiveContractValue,
-              totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-              collectedRevenue: summary.collectedRevenue, invoicedRevenue: summary.invoicedRevenue,
-              spendRate: summary.spendRate, plannedProfit: summary.plannedProfit,
-              cpi: evm?.cpi ?? null, spi: evm?.spi ?? null,
-              openRisks: openRisksCount,
-              highRisks: pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length,
-              pendingExpenses: pendingExpensesCount, pendingChangeOrders,
-              delayedMilestones: pMilestones.filter(m => m.status === 'delayed').length,
-              unsettledFunds: 0, remainingInManagerHand: 0,
-              daysRemaining, currency: project.currency,
-            }} />
-            <ExecutiveSummary
-              project={project} summary={summary} milestones={pMilestones} risks={pRisks}
-              changeOrders={pChangeOrders} expenses={pExpenses} revenues={pRevenues}
-              budgetItems={pBudget} commitments={pCommitments} baselines={projectBaselines}
-              evm={evm} currentMonth={currentMonth} daysRemaining={daysRemaining}
-              totalCommitted={totalCommitted} availableBudget={availableBudget} healthScore={healthScore}
-            />
-          </TabsContent>
-          <TabsContent value="milestones"><MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} revenues={pRevenues} /></TabsContent>
-          <TabsContent value="resources"><ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} durationMonths={project.durationMonths} /></TabsContent>
-          <TabsContent value="budget">
-            <div className="space-y-4">
-              <SmartBudgetAlerts
-                summary={summary}
-                evm={evm}
-                monthlyPlan={getMonthlyBudgetPlan(pBudget, pExpenses, pRevenues, project.durationMonths, project.startDate)}
-                durationMonths={project.durationMonths}
-                currentMonth={currentMonth}
-                pendingChangeOrders={pendingChangeOrders}
-                openHighRisks={openHighRisks}
-                onNavigate={(tab) => {
-                  // find which group owns the tab
-                  for (const [grp, tabs] of Object.entries(subTabs)) {
-                    if (tabs.some(t => t.value === tab)) {
-                      setActiveGroup(grp as TabGroup);
-                      setActiveTab(tab);
-                      return;
-                    }
-                  }
-                  setActiveTab(tab);
-                }}
-              />
-              <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} revenues={pRevenues} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} taxPercent={project.taxPercent} startDate={project.startDate} />
-            </div>
-          </TabsContent>
-          <TabsContent value="baseline"><BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="expenses"><ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} projectStatus={project.status} /></TabsContent>
-          <TabsContent value="funds">
-            <div className="space-y-4">
-              <CashLedgerSection
-                projectId={project.id}
-                funds={projectFunds}
-                settlements={fundSettlements}
-                expenses={pExpenses}
-                custodies={pCustodies}
-              />
-              <FundsSection projectId={project.id} expenses={pExpenses} readOnly={isReadOnly} />
-            </div>
-          </TabsContent>
-          <TabsContent value="custody"><CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="commitments"><CommitmentsSection projectId={project.id} commitments={pCommitments} totalPlanned={summary.totalPlanned} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="revenue"><RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} milestones={pMilestones} /></TabsContent>
-          <TabsContent value="payables"><ResourcePayablesSection projectId={project.id} projectName={project.name} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="changeorders"><ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="risks"><RisksSection projectId={project.id} risks={pRisks} readOnly={isReadOnly} /></TabsContent>
-          <TabsContent value="charts"><ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} budgetItems={pBudget} /></TabsContent>
-          <TabsContent value="whatif">
-            <WhatIfSection
-              contractValue={summary.effectiveContractValue}
-              totalPlanned={summary.totalPlanned}
-              totalActual={summary.totalActual}
-              totalRevenue={totalAllRevenue}
-              durationMonths={project.durationMonths}
-              percentComplete={project.percentComplete}
-              currency={project.currency}
-            />
-          </TabsContent>
-          {isAdmin && (
-            <TabsContent value="auditlog"><AuditLogSection projectId={project.id} /></TabsContent>
-          )}
+          {(() => {
+            const renderSection = (value: string) => {
+              switch (value) {
+                case 'overview':
+                  return (
+                    <>
+                      <AIExecutiveInsights context={{
+                        name: project.name, status: project.status, percentComplete: project.percentComplete,
+                        currentMonth, durationMonths: project.durationMonths,
+                        contractValue: summary.contractValue, effectiveContractValue: summary.effectiveContractValue,
+                        totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                        collectedRevenue: summary.collectedRevenue, invoicedRevenue: summary.invoicedRevenue,
+                        spendRate: summary.spendRate, plannedProfit: summary.plannedProfit,
+                        cpi: evm?.cpi ?? null, spi: evm?.spi ?? null,
+                        openRisks: openRisksCount,
+                        highRisks: pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length,
+                        pendingExpenses: pendingExpensesCount, pendingChangeOrders,
+                        delayedMilestones: pMilestones.filter(m => m.status === 'delayed').length,
+                        unsettledFunds: 0, remainingInManagerHand: 0,
+                        daysRemaining, currency: project.currency,
+                      }} />
+                      <ExecutiveSummary
+                        project={project} summary={summary} milestones={pMilestones} risks={pRisks}
+                        changeOrders={pChangeOrders} expenses={pExpenses} revenues={pRevenues}
+                        budgetItems={pBudget} commitments={pCommitments} baselines={projectBaselines}
+                        evm={evm} currentMonth={currentMonth} daysRemaining={daysRemaining}
+                        totalCommitted={totalCommitted} availableBudget={availableBudget} healthScore={healthScore}
+                      />
+                    </>
+                  );
+                case 'milestones':
+                  return <MilestonesSection projectId={project.id} milestones={pMilestones} project={project} readOnly={isReadOnly} revenues={pRevenues} />;
+                case 'resources':
+                  return <ResourcesSection projectId={project.id} resources={pResources} budgetItems={pBudget} expenses={pExpenses} readOnly={isReadOnly} durationMonths={project.durationMonths} />;
+                case 'budget':
+                  return (
+                    <div className="space-y-4">
+                      <SmartBudgetAlerts
+                        summary={summary}
+                        evm={evm}
+                        monthlyPlan={getMonthlyBudgetPlan(pBudget, pExpenses, pRevenues, project.durationMonths, project.startDate)}
+                        durationMonths={project.durationMonths}
+                        currentMonth={currentMonth}
+                        pendingChangeOrders={pendingChangeOrders}
+                        openHighRisks={openHighRisks}
+                        onNavigate={(tab) => {
+                          for (const [grp, tabs] of Object.entries(subTabs)) {
+                            if (tabs.some(t => t.value === tab)) {
+                              setActiveGroup(grp as TabGroup);
+                              setActiveTab(tab);
+                              return;
+                            }
+                          }
+                          setActiveTab(tab);
+                        }}
+                      />
+                      <BudgetSection projectId={project.id} budgetItems={pBudget} expenses={pExpenses} revenues={pRevenues} durationMonths={project.durationMonths} resources={pResources} contractValue={summary.effectiveContractValue} currency={project.currency} managementReserve={project.managementReserve} readOnly={isReadOnly} baselineLocked={baselines.some(b => b.isActive && b.projectId === project.id)} taxPercent={project.taxPercent} startDate={project.startDate} />
+                    </div>
+                  );
+                case 'baseline':
+                  return <BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} readOnly={isReadOnly} />;
+                case 'expenses':
+                  return <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} projectStatus={project.status} />;
+                case 'funds':
+                  return (
+                    <div className="space-y-4">
+                      <CashLedgerSection projectId={project.id} funds={projectFunds} settlements={fundSettlements} expenses={pExpenses} custodies={pCustodies} />
+                      <FundsSection projectId={project.id} expenses={pExpenses} readOnly={isReadOnly} />
+                    </div>
+                  );
+                case 'custody':
+                  return <CustodySection projectId={project.id} companyId={project.companyId} custodies={pCustodies} expenses={pExpenses} readOnly={isReadOnly} />;
+                case 'commitments':
+                  return <CommitmentsSection projectId={project.id} commitments={pCommitments} totalPlanned={summary.totalPlanned} readOnly={isReadOnly} />;
+                case 'revenue':
+                  return <RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} milestones={pMilestones} />;
+                case 'payables':
+                  return <ResourcePayablesSection projectId={project.id} projectName={project.name} readOnly={isReadOnly} />;
+                case 'changeorders':
+                  return <ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} />;
+                case 'risks':
+                  return <RisksSection projectId={project.id} risks={pRisks} readOnly={isReadOnly} />;
+                case 'charts':
+                  return <ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} budgetItems={pBudget} />;
+                case 'whatif':
+                  return (
+                    <WhatIfSection
+                      contractValue={summary.effectiveContractValue}
+                      totalPlanned={summary.totalPlanned}
+                      totalActual={summary.totalActual}
+                      totalRevenue={totalAllRevenue}
+                      durationMonths={project.durationMonths}
+                      percentComplete={project.percentComplete}
+                      currency={project.currency}
+                    />
+                  );
+                case 'auditlog':
+                  return isAdmin ? <AuditLogSection projectId={project.id} /> : null;
+                default:
+                  return null;
+              }
+            };
+
+            return tabGroups.map((group) => {
+              const sections = subTabs[group.key];
+              // For single-section groups (summary), skip Accordion wrapper
+              if (sections.length === 1) {
+                return (
+                  <TabsContent key={group.key} value={group.key} className="mt-2">
+                    {renderSection(sections[0].value)}
+                  </TabsContent>
+                );
+              }
+              const defaultOpen = activeTab && sections.some(s => s.value === activeTab)
+                ? [activeTab]
+                : [sections[0].value];
+              return (
+                <TabsContent key={group.key} value={group.key} className="mt-2">
+                  <Accordion
+                    type="multiple"
+                    defaultValue={defaultOpen}
+                    onValueChange={(vals) => { if (vals[0]) setActiveTab(vals[0]); }}
+                    className="space-y-2"
+                  >
+                    {sections.map((s) => {
+                      const Icon = s.icon;
+                      return (
+                        <AccordionItem key={s.value} value={s.value} className="border border-border rounded-lg bg-card px-3 md:px-4">
+                          <AccordionTrigger className="text-sm font-semibold py-3 hover:no-underline">
+                            <div className="flex items-center gap-2 text-foreground">
+                              <Icon className="w-4 h-4 text-primary" />
+                              <span>{s.label}</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pt-2 pb-4">
+                            {renderSection(s.value)}
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </TabsContent>
+              );
+            });
+          })()}
         </Tabs>
       </motion.div>
     </AppLayout>

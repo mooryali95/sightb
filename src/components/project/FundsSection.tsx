@@ -45,7 +45,8 @@ interface FundsSectionProps {
 }
 
 export function FundsSection({ projectId, expenses, readOnly = false }: FundsSectionProps) {
-  const { isAdmin, isOwner } = useRole();
+  const { isAdminFor, isOwner } = useRole();
+  const isAdmin = isAdminFor('project', projectId);
   const {
     projectFunds, fundSettlements, custodies,
     createFund, acknowledgeFund, submitSettlement, approveSettlement,

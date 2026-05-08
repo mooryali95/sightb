@@ -64,6 +64,7 @@ export function useRole() {
 
   const isOwner = roles.some((r) => r.role === 'owner' && r.scopeType === 'system');
   const isAdmin = isOwner || roles.some((r) => r.role === 'admin' && r.scopeType === 'system');
+  const isScopedAdmin = isAdmin || roles.some((r) => r.role === 'admin' || r.role === 'owner');
 
   const canEdit = (scopeType: ScopeType, scopeId: string) => {
     if (isAdmin) return true;
@@ -82,5 +83,23 @@ export function useRole() {
     );
   };
 
-  return { roles, isOwner, isAdmin, canEdit, hasAccess, loading };
+  /**
+   * True if the user is admin/owner for the given scope.
+   * - System admins → always true everywhere.
+   * - Direct admin on the scope → true.
+   * - Project scope inherits company-admin via canEdit cascade in RLS/UI.
+   */
+  const isAdminFor = (scopeType: ScopeType, scopeId: string | null | undefined) => {
+    if (isAdmin) return true;
+    if (!scopeId) return false;
+    if (roles.some((r) => r.role === 'admin' && r.scopeType === scopeType && r.scopeId === scopeId)) {
+      return true;
+    }
+    if (scopeType === 'project') {
+      return canEdit('project', scopeId);
+    }
+    return false;
+  };
+
+  return { roles, isOwner, isAdmin, isScopedAdmin, isAdminFor, canEdit, hasAccess, loading };
 }
