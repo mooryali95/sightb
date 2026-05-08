@@ -64,29 +64,7 @@ export function useRole() {
 
   const isOwner = roles.some((r) => r.role === 'owner' && r.scopeType === 'system');
   const isAdmin = isOwner || roles.some((r) => r.role === 'admin' && r.scopeType === 'system');
-  // True for any admin/owner regardless of scope (system, company, or project)
   const isScopedAdmin = isAdmin || roles.some((r) => r.role === 'admin' || r.role === 'owner');
-
-  /**
-   * Returns true when the user holds an admin/owner role applicable to the given scope.
-   * - System admins/owners → always true.
-   * - Company admins → true for that company AND for any project under it.
-   * - Project admins → true for that project (and read-only inferred for parent company elsewhere).
-   */
-  const isAdminFor = (scopeType: ScopeType, scopeId: string | null | undefined) => {
-    if (isAdmin) return true;
-    if (!scopeId) return false;
-    // Direct match
-    if (roles.some((r) => r.role === 'admin' && r.scopeType === scopeType && r.scopeId === scopeId)) {
-      return true;
-    }
-    // Project scope inherits from company-admin via canEdit cascading logic
-    if (scopeType === 'project') {
-      // Defer to canEdit which already handles the company→project cascade for admins
-      return canEdit('project', scopeId);
-    }
-    return false;
-  };
 
   const canEdit = (scopeType: ScopeType, scopeId: string) => {
     if (isAdmin) return true;
@@ -105,5 +83,23 @@ export function useRole() {
     );
   };
 
-  return { roles, isOwner, isAdmin, canEdit, hasAccess, loading };
+  /**
+   * True if the user is admin/owner for the given scope.
+   * - System admins → always true everywhere.
+   * - Direct admin on the scope → true.
+   * - Project scope inherits company-admin via canEdit cascade in RLS/UI.
+   */
+  const isAdminFor = (scopeType: ScopeType, scopeId: string | null | undefined) => {
+    if (isAdmin) return true;
+    if (!scopeId) return false;
+    if (roles.some((r) => r.role === 'admin' && r.scopeType === scopeType && r.scopeId === scopeId)) {
+      return true;
+    }
+    if (scopeType === 'project') {
+      return canEdit('project', scopeId);
+    }
+    return false;
+  };
+
+  return { roles, isOwner, isAdmin, isScopedAdmin, isAdminFor, canEdit, hasAccess, loading };
 }
