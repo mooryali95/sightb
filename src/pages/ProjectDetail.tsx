@@ -606,17 +606,17 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        {/* ══════ تنبيهات سريعة ══════ */}
+        {/* Quick alerts */}
         {(pendingExpensesCount > 0 || pendingChangeOrders > 0) && (
           <div className="flex flex-wrap gap-2 mb-4">
             {pendingExpensesCount > 0 && (
-              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <div className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-warning/12 text-warning border border-warning/20">
                 <Clock className="w-3 h-3" />
                 {pendingExpensesCount} مصروف بانتظار الاعتماد
               </div>
             )}
             {pendingChangeOrders > 0 && (
-              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <div className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-warning/12 text-warning border border-warning/20">
                 <FileEdit className="w-3 h-3" />
                 {pendingChangeOrders} أمر تغيير مقترح
               </div>
