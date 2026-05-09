@@ -109,6 +109,13 @@
     --shadow-elevated: 0 10px 25px -5px hsl(222 30% 12% / 0.1), 0 8px 10px -6px hsl(222 30% 12% / 0.06);
     --shadow-gold: 0 4px 14px 0 hsl(40 55% 55% / 0.15);
 
+    /* Motion system */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --duration-fast: 150ms;
+    --duration-base: 250ms;
+    --duration-slow: 400ms;
+
     --font-display: 'Noto Kufi Arabic', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
@@ -295,4 +302,34 @@
   .gradient-gold-soft { background: var(--gradient-gold-soft); }
   .gradient-success { background: var(--gradient-success); }
   .sidebar-gradient { background: var(--gradient-sidebar); }
+
+  /* ============= Health / Status semantic helpers (replace raw tailwind colors) ============= */
+  .health-good      { color: hsl(var(--success)); }
+  .health-warning   { color: hsl(var(--warning)); }
+  .health-critical  { color: hsl(var(--destructive)); }
+  .bg-health-good     { background: hsl(var(--success) / 0.10);    border-color: hsl(var(--success) / 0.25); }
+  .bg-health-warning  { background: hsl(var(--warning) / 0.10);    border-color: hsl(var(--warning) / 0.25); }
+  .bg-health-critical { background: hsl(var(--destructive) / 0.10); border-color: hsl(var(--destructive) / 0.25); }
+
+  /* ============= Display heading for hero numbers ============= */
+  .heading-display {
+    font-family: var(--font-mono);
+    @apply text-2xl md:text-3xl font-bold tracking-tight;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============= Accessible focus ring (WCAG) ============= */
+  .focus-ring {
+    @apply outline-none;
+  }
+  .focus-ring:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* Motion helpers — use these instead of inline durations */
+  .motion-fast    { transition-duration: var(--duration-fast); transition-timing-function: var(--ease-out); }
+  .motion-base    { transition-duration: var(--duration-base); transition-timing-function: var(--ease-out); }
+  .motion-slow    { transition-duration: var(--duration-slow); transition-timing-function: var(--ease-in-out); }
 }

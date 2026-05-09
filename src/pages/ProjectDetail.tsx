@@ -181,9 +181,9 @@ export default function ProjectDetail() {
     if (!evm || evm.spi >= 0.9) score++;
     if (pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length === 0) score++;
     if (summary.plannedProfit >= 0) score++;
-    if (score >= 4) return { label: 'سليم', color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' };
-    if (score >= 2) return { label: 'يحتاج انتباه', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' };
-    return { label: 'حرج', color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' };
+    if (score >= 4) return { label: 'سليم', color: 'health-good', bg: 'bg-success/10 border-success/25' };
+    if (score >= 2) return { label: 'يحتاج انتباه', color: 'health-warning', bg: 'bg-warning/10 border-warning/25' };
+    return { label: 'حرج', color: 'health-critical', bg: 'bg-destructive/10 border-destructive/25' };
   })();
 
   const openRisksCount = pRisks.filter(r => r.status === 'open' || r.status === 'mitigating').length;
@@ -285,28 +285,28 @@ export default function ProjectDetail() {
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header with Green Theme */}
-        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-to-l from-emerald-500/10 via-green-500/5 to-transparent">
-          <div className="p-6">
+        {/* Header — clean hierarchy: breadcrumb → title → meta → actions */}
+        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-gold-soft">
+          <div className="p-4 md:p-6">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-              <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
-              {company && (<><span>←</span><button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-primary transition-colors">{company.name}</button></>)}
-              {portfolio && (<><span>←</span><button onClick={() => navigate(`/portfolio/${portfolio.id}`)} className="hover:text-primary transition-colors">{portfolio.name}</button></>)}
+              <button onClick={() => navigate('/')} className="hover:text-primary motion-fast transition-colors">لوحة التحكم</button>
+              {company && (<><span>←</span><button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-primary motion-fast transition-colors">{company.name}</button></>)}
+              {portfolio && (<><span>←</span><button onClick={() => navigate(`/portfolio/${portfolio.id}`)} className="hover:text-primary motion-fast transition-colors">{portfolio.name}</button></>)}
             </div>
             <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                    <Briefcase className="w-5 h-5 md:w-6 md:h-6 text-emerald-600 dark:text-emerald-400" />
+                  <div className="w-11 h-11 md:w-14 md:h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                    <Briefcase className="w-5 h-5 md:w-7 md:h-7 text-primary" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h1 className="text-base md:text-xl font-bold truncate">{project.name}</h1>
+                      <h1 className="text-xl md:text-3xl font-bold tracking-tight truncate">{project.name}</h1>
                       <Badge className={`text-xs shrink-0 ${PROJECT_STATUS_COLORS[project.status]}`}>
                         {PROJECT_STATUS_LABELS[project.status]}
                       </Badge>
                     </div>
-                    <p className="text-xs md:text-xs text-muted-foreground mt-0.5 truncate">
+                    <p className="text-xs md:text-sm text-muted-foreground mt-1 truncate">
                       {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
                       {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
                     </p>
@@ -390,7 +390,7 @@ export default function ProjectDetail() {
                     confirmLabel="أرشفة"
                     onConfirm={handleArchiveProject}
                     trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-amber-600 h-8 w-8" title="أرشفة">
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-warning h-8 w-8" title="أرشفة">
                         <Archive className="w-4 h-4" />
                       </Button>
                     }
@@ -435,8 +435,8 @@ export default function ProjectDetail() {
           {evm && (
             <>
               <span className="text-muted-foreground">|</span>
-              <span className={evm.cpi >= 1 ? 'text-emerald-600' : 'text-destructive'}>CPI {evm.cpi.toFixed(2)}</span>
-              <span className={evm.spi >= 1 ? 'text-emerald-600' : 'text-destructive'}>SPI {evm.spi.toFixed(2)}</span>
+              <span className={evm.cpi >= 1 ? 'health-good' : 'health-critical'}>CPI {evm.cpi.toFixed(2)}</span>
+              <span className={evm.spi >= 1 ? 'health-good' : 'health-critical'}>SPI {evm.spi.toFixed(2)}</span>
             </>
           )}
           {openRisksCount > 0 && (
@@ -606,17 +606,17 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        {/* ══════ تنبيهات سريعة ══════ */}
+        {/* Quick alerts */}
         {(pendingExpensesCount > 0 || pendingChangeOrders > 0) && (
           <div className="flex flex-wrap gap-2 mb-4">
             {pendingExpensesCount > 0 && (
-              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <div className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20">
                 <Clock className="w-3 h-3" />
                 {pendingExpensesCount} مصروف بانتظار الاعتماد
               </div>
             )}
             {pendingChangeOrders > 0 && (
-              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <div className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20">
                 <FileEdit className="w-3 h-3" />
                 {pendingChangeOrders} أمر تغيير مقترح
               </div>
