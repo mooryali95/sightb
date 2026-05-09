@@ -23,6 +23,32 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set());
   const [showInactive, setShowInactive] = useState<Set<string>>(new Set()); // per company
+  const [search, setSearch] = useState('');
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const matchedCompanyIds = useMemo(() => {
+    if (!normalizedSearch) return null;
+    const ids = new Set<string>();
+    companies.forEach(c => { if (c.name.toLowerCase().includes(normalizedSearch)) ids.add(c.id); });
+    portfolios.forEach(p => { if (p.name.toLowerCase().includes(normalizedSearch)) ids.add(p.companyId); });
+    projects.forEach(p => { if (p.name.toLowerCase().includes(normalizedSearch)) ids.add(p.companyId); });
+    return ids;
+  }, [normalizedSearch, companies, portfolios, projects]);
+
+  const matchedPortfolioIds = useMemo(() => {
+    if (!normalizedSearch) return null;
+    const ids = new Set<string>();
+    portfolios.forEach(p => { if (p.name.toLowerCase().includes(normalizedSearch)) ids.add(p.id); });
+    projects.forEach(p => { if (p.portfolioId && p.name.toLowerCase().includes(normalizedSearch)) ids.add(p.portfolioId); });
+    return ids;
+  }, [normalizedSearch, portfolios, projects]);
+
+  const matchesSearch = (name: string) => !normalizedSearch || name.toLowerCase().includes(normalizedSearch);
+  const isCompanyMatched = (id: string, name: string) => !normalizedSearch || matchesSearch(name) || !!matchedCompanyIds?.has(id);
+  const isPortfolioMatched = (id: string, name: string) => !normalizedSearch || matchesSearch(name) || !!matchedPortfolioIds?.has(id);
+  const isProjectMatched = (name: string) => !normalizedSearch || matchesSearch(name);
+  const isCompanyExpanded = (id: string) => (normalizedSearch ? !!matchedCompanyIds?.has(id) : expandedCompanies.has(id));
+  const isPortfolioExpandedFn = (id: string) => (normalizedSearch ? !!matchedPortfolioIds?.has(id) : expandedPortfolios.has(id));
 
   const toggleCompany = (id: string) => {
     setExpandedCompanies((prev) => {
