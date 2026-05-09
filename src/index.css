@@ -109,6 +109,13 @@
     --shadow-elevated: 0 10px 25px -5px hsl(222 30% 12% / 0.1), 0 8px 10px -6px hsl(222 30% 12% / 0.06);
     --shadow-gold: 0 4px 14px 0 hsl(40 55% 55% / 0.15);
 
+    /* Motion system */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --duration-fast: 150ms;
+    --duration-base: 250ms;
+    --duration-slow: 400ms;
+
     --font-display: 'Noto Kufi Arabic', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
