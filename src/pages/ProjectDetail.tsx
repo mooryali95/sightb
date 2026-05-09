@@ -181,9 +181,9 @@ export default function ProjectDetail() {
     if (!evm || evm.spi >= 0.9) score++;
     if (pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length === 0) score++;
     if (summary.plannedProfit >= 0) score++;
-    if (score >= 4) return { label: 'سليم', tone: 'health-good', bg: 'bg-health-good' };
-    if (score >= 2) return { label: 'يحتاج انتباه', tone: 'health-warning', bg: 'bg-health-warning' };
-    return { label: 'حرج', tone: 'health-critical', bg: 'bg-health-critical' };
+    if (score >= 4) return { label: 'سليم', color: 'health-good', bg: 'bg-health-good' };
+    if (score >= 2) return { label: 'يحتاج انتباه', color: 'health-warning', bg: 'bg-health-warning' };
+    return { label: 'حرج', color: 'health-critical', bg: 'bg-health-critical' };
   })();
 
   const openRisksCount = pRisks.filter(r => r.status === 'open' || r.status === 'mitigating').length;
@@ -435,8 +435,8 @@ export default function ProjectDetail() {
           {evm && (
             <>
               <span className="text-muted-foreground">|</span>
-              <span className={evm.cpi >= 1 ? 'text-emerald-600' : 'text-destructive'}>CPI {evm.cpi.toFixed(2)}</span>
-              <span className={evm.spi >= 1 ? 'text-emerald-600' : 'text-destructive'}>SPI {evm.spi.toFixed(2)}</span>
+              <span className={evm.cpi >= 1 ? 'health-good' : 'health-critical'}>CPI {evm.cpi.toFixed(2)}</span>
+              <span className={evm.spi >= 1 ? 'health-good' : 'health-critical'}>SPI {evm.spi.toFixed(2)}</span>
             </>
           )}
           {openRisksCount > 0 && (
