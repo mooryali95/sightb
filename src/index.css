@@ -302,4 +302,34 @@
   .gradient-gold-soft { background: var(--gradient-gold-soft); }
   .gradient-success { background: var(--gradient-success); }
   .sidebar-gradient { background: var(--gradient-sidebar); }
+
+  /* ============= Health / Status semantic helpers (replace raw tailwind colors) ============= */
+  .health-good      { color: hsl(var(--success)); }
+  .health-warning   { color: hsl(var(--warning)); }
+  .health-critical  { color: hsl(var(--destructive)); }
+  .bg-health-good     { background: hsl(var(--success) / 0.10);    border-color: hsl(var(--success) / 0.25); }
+  .bg-health-warning  { background: hsl(var(--warning) / 0.10);    border-color: hsl(var(--warning) / 0.25); }
+  .bg-health-critical { background: hsl(var(--destructive) / 0.10); border-color: hsl(var(--destructive) / 0.25); }
+
+  /* ============= Display heading for hero numbers ============= */
+  .heading-display {
+    font-family: var(--font-mono);
+    @apply text-2xl md:text-3xl font-bold tracking-tight;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============= Accessible focus ring (WCAG) ============= */
+  .focus-ring {
+    @apply outline-none;
+  }
+  .focus-ring:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* Motion helpers — use these instead of inline durations */
+  .motion-fast    { transition-duration: var(--duration-fast); transition-timing-function: var(--ease-out); }
+  .motion-base    { transition-duration: var(--duration-base); transition-timing-function: var(--ease-out); }
+  .motion-slow    { transition-duration: var(--duration-slow); transition-timing-function: var(--ease-in-out); }
 }
