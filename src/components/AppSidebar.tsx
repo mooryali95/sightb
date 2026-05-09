@@ -218,11 +218,14 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
               const inactiveProjects = companyProjects.filter(p => INACTIVE_STATUSES.includes(p.status as ProjectStatus));
               const isShowingInactive = showInactive.has(company.id);
 
+              if (!isCompanyMatched(company.id, company.name)) return null;
+              const expanded = isCompanyExpanded(company.id);
+
               return (
                 <div key={company.id}>
                   {/* Level 1: Company */}
                   <div className={cn(
-                    'relative w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors',
+                    'relative w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold motion-fast transition-colors',
                     isActive(`/company/${company.id}`)
                       ? 'bg-primary/15 text-primary border-r-2 border-primary'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent'
@@ -236,17 +239,17 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleCompany(company.id); }}
-                      aria-label={expandedCompanies.has(company.id) ? 'طي' : 'توسيع'}
+                      aria-label={expanded ? 'طي' : 'توسيع'}
                       className="p-0.5 rounded hover:bg-sidebar-accent"
                     >
-                      <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', expandedCompanies.has(company.id) && 'rotate-180')} />
+                      <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', expanded && 'rotate-180')} />
                     </button>
                   </div>
 
-                  {expandedCompanies.has(company.id) && (
+                  {expanded && (
                     <div className="mr-3 border-r border-primary/30 pr-2 space-y-0.5 mt-1">
                       {/* Active direct projects (no portfolio) */}
-                      {activeProjects.filter(p => !p.portfolioId).map((project) => (
+                      {activeProjects.filter(p => !p.portfolioId && isProjectMatched(p.name)).map((project) => (
                         <ProjectButton key={project.id} project={project} />
                       ))}
 
@@ -256,10 +259,13 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                         const portfolioInactiveProjects = inactiveProjects.filter(p => p.portfolioId === portfolio.id);
                         const portfolioActive = isActive(`/portfolio/${portfolio.id}`);
 
+                        if (!isPortfolioMatched(portfolio.id, portfolio.name)) return null;
+                        const pExpanded = isPortfolioExpandedFn(portfolio.id);
+
                         return (
                           <div key={portfolio.id}>
                             <div className={cn(
-                              'relative w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                              'relative w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium motion-fast transition-colors',
                               portfolioActive
                                 ? 'bg-primary/15 text-primary border-r-2 border-primary'
                                 : 'text-sidebar-foreground/80 hover:bg-sidebar-accent'
@@ -273,25 +279,25 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); togglePortfolio(portfolio.id); }}
-                                aria-label={expandedPortfolios.has(portfolio.id) ? 'طي' : 'توسيع'}
+                                aria-label={pExpanded ? 'طي' : 'توسيع'}
                                 className="p-0.5 rounded hover:bg-sidebar-accent"
                               >
-                                <ChevronDown className={cn('w-3 h-3 transition-transform', expandedPortfolios.has(portfolio.id) && 'rotate-180')} />
+                                <ChevronDown className={cn('w-3 h-3 transition-transform', pExpanded && 'rotate-180')} />
                               </button>
                             </div>
 
-                            {expandedPortfolios.has(portfolio.id) && (
+                            {pExpanded && (
                               <div className="mr-3 border-r border-primary/15 pr-2 space-y-0.5 mt-0.5">
                                 {/* Level 3: Projects */}
-                                {portfolioActiveProjects.map((project) => (
+                                {portfolioActiveProjects.filter(p => isProjectMatched(p.name)).map((project) => (
                                   <ProjectButton key={project.id} project={project} />
                                 ))}
 
-                                {isShowingInactive && portfolioInactiveProjects.map((project) => (
+                                {isShowingInactive && portfolioInactiveProjects.filter(p => isProjectMatched(p.name)).map((project) => (
                                   <ProjectButton key={project.id} project={project} />
                                 ))}
 
-                                {canEdit('company', company.id) && (
+                                {!normalizedSearch && canEdit('company', company.id) && (
                                   <button
                                     onClick={() => navigate(`/project/new?portfolio=${portfolio.id}&company=${company.id}`)}
                                     className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-primary/70 hover:bg-sidebar-accent transition-colors"
@@ -306,12 +312,12 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                       })}
 
                       {/* Inactive direct projects (no portfolio) */}
-                      {isShowingInactive && inactiveProjects.filter(p => !p.portfolioId).map((project) => (
+                      {isShowingInactive && inactiveProjects.filter(p => !p.portfolioId && isProjectMatched(p.name)).map((project) => (
                         <ProjectButton key={project.id} project={project} />
                       ))}
 
-                      {/* Add project directly under company */}
-                      {canEdit('company', company.id) && (
+                      {/* Add project / portfolio (hidden during search) */}
+                      {!normalizedSearch && canEdit('company', company.id) && (
                         <>
                           <button
                             onClick={() => navigate(`/project/new?company=${company.id}`)}
@@ -329,7 +335,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                       )}
 
                       {/* Toggle inactive projects */}
-                      {inactiveProjects.length > 0 && (
+                      {!normalizedSearch && inactiveProjects.length > 0 && (
                         <button
                           onClick={() => toggleShowInactive(company.id)}
                           className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-sidebar-foreground/30 hover:text-sidebar-foreground/60 hover:bg-sidebar-accent transition-colors"
@@ -348,6 +354,12 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                 </div>
               );
             })}
+
+            {normalizedSearch && companies.filter(c => c.status !== 'archived' && isCompanyMatched(c.id, c.name)).length === 0 && (
+              <p className="text-xs text-sidebar-foreground/40 text-center py-4 px-3">
+                لا توجد نتائج مطابقة لـ "{search}"
+              </p>
+            )}
           </div>
         )}
       </nav>
