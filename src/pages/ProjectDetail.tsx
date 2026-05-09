@@ -390,7 +390,7 @@ export default function ProjectDetail() {
                     confirmLabel="أرشفة"
                     onConfirm={handleArchiveProject}
                     trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-amber-600 h-8 w-8" title="أرشفة">
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-warning h-8 w-8" title="أرشفة">
                         <Archive className="w-4 h-4" />
                       </Button>
                     }
