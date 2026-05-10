@@ -319,15 +319,106 @@ export default function ProjectDetail() {
                   </div>
                 </div>
               </div>
-              {/* Action buttons - separate row on mobile */}
+              {/* Unified action menu — quick status select + ⋯ for the rest */}
               {!isReadOnly && (
-              <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-                <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8">
-                      <Pencil className="w-4 h-4" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select
+                  value={project.status}
+                  onValueChange={(val) => {
+                    updateProject(project.id, { status: val as ProjectStatus });
+                    toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
+                  }}
+                >
+                  <SelectTrigger className="w-[140px] h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-9 w-9" title="إجراءات">
+                      <MoreHorizontal className="w-4 h-4" />
                     </Button>
-                  </DialogTrigger>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>إجراءات المشروع</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                      <Pencil className="w-4 h-4 ml-2" />تعديل البيانات
+                    </DropdownMenuItem>
+                    {(isAdmin || canEditRole('project', project.id)) && (
+                      <>
+                        <DropdownMenuItem onSelect={() => {
+                          exportToExcel({
+                            projectName: project.name, contractValue: summary.effectiveContractValue,
+                            budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                            expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                            totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                            totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                            vatRate: project.taxPercent,
+                            contractValueInclVAT: summary.contractValueInclVAT,
+                            totalVATOnExpenses: summary.totalVATOnExpenses,
+                            totalVATOnRevenues: summary.totalVATOnRevenues,
+                            netVATPayable: summary.netVATPayable,
+                          });
+                          toast.success('تم تصدير التقرير إلى Excel');
+                        }}>
+                          <FileSpreadsheet className="w-4 h-4 ml-2" />تصدير Excel
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => {
+                          exportToPDF({
+                            projectName: project.name, contractValue: summary.effectiveContractValue,
+                            budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                            expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                            totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                            totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                            plannedProfit: summary.plannedProfit,
+                          });
+                          toast.success('تم تصدير التقرير إلى PDF');
+                        }}>
+                          <FileText className="w-4 h-4 ml-2" />تصدير PDF
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {isAdmin && project.status !== 'archived' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <ConfirmDeleteDialog
+                          title="أرشفة المشروع"
+                          description={`سيتم نقل مشروع "${project.name}" إلى الأرشيف. يمكنك استعادته أو حذفه نهائياً لاحقاً.`}
+                          confirmLabel="أرشفة"
+                          onConfirm={handleArchiveProject}
+                          trigger={
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-warning focus:text-warning">
+                              <Archive className="w-4 h-4 ml-2" />أرشفة المشروع
+                            </DropdownMenuItem>
+                          }
+                        />
+                      </>
+                    )}
+                    {isSystemAdmin && project.status === 'archived' && (
+                      <ConfirmDeleteDialog
+                        title="حذف نهائي للمشروع"
+                        description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
+                        confirmLabel="حذف نهائي"
+                        onConfirm={handleDeleteProject}
+                        trigger={
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                            <Trash2 className="w-4 h-4 ml-2" />حذف نهائي
+                          </DropdownMenuItem>
+                        }
+                      />
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Edit dialog kept separately so the menu item can open it */}
+                <Dialog open={editOpen} onOpenChange={setEditOpen}>
                   <DialogContent className="max-w-md" dir="rtl">
                     <DialogHeader>
                       <DialogTitle>تعديل بيانات المشروع</DialogTitle>
@@ -373,48 +464,6 @@ export default function ProjectDetail() {
                     </div>
                   </DialogContent>
                 </Dialog>
-                <Select
-                  value={project.status}
-                  onValueChange={(val) => {
-                    updateProject(project.id, { status: val as ProjectStatus });
-                    toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
-                  }}
-                >
-                  <SelectTrigger className="w-[120px] md:w-[140px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isAdmin && project.status !== 'archived' && (
-                  <ConfirmDeleteDialog
-                    title="أرشفة المشروع"
-                    description={`سيتم نقل مشروع "${project.name}" إلى الأرشيف. يمكنك استعادته أو حذفه نهائياً لاحقاً.`}
-                    confirmLabel="أرشفة"
-                    onConfirm={handleArchiveProject}
-                    trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-warning h-8 w-8" title="أرشفة">
-                        <Archive className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-                )}
-                {isSystemAdmin && project.status === 'archived' && (
-                  <ConfirmDeleteDialog
-                    title="حذف نهائي للمشروع"
-                    description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
-                    confirmLabel="حذف نهائي"
-                    onConfirm={handleDeleteProject}
-                    trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" title="حذف نهائي">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-                )}
               </div>
               )}
             </div>
