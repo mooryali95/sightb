@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -95,50 +95,49 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
           </p>
         </div>
         {!readOnly && (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />عهدة جديدة</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>إضافة عهدة جديدة</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>اسم المستلم</Label>
-                <Input value={resourceName} onChange={(e) => setResourceName(e.target.value)} placeholder="مثال: عمر أحمد" />
-              </div>
-              <div className="space-y-2">
-                <Label>المبلغ</Label>
-                <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
-              </div>
-              <div className="space-y-2">
-                <Label>مصدر العهدة (الدفعة)</Label>
-                <Select value={sourceFundId} onValueChange={setSourceFundId}>
-                  <SelectTrigger><SelectValue placeholder="اختر الدفعة المصدر" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">بدون ربط بدفعة (تمويل مستقل)</SelectItem>
-                    {availableFunds.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  عند ربط العهدة بدفعة، يُخصم مبلغها فوراً من رصيد الدفعة بيد المدير.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label>تاريخ استلام العهدة</Label>
-                <Input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>ملاحظات (اختياري)</Label>
-                <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="مثال: عهدة مشتريات شهر مارس" />
-              </div>
-              <Button onClick={handleAdd} className="w-full">إضافة</Button>
+        <ResponsiveFormDialog
+          open={open}
+          onOpenChange={setOpen}
+          title="إضافة عهدة جديدة"
+          trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />عهدة جديدة</Button>}
+          footer={<Button onClick={handleAdd} className="w-full h-11">إضافة</Button>}
+        >
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>اسم المستلم</Label>
+              <Input value={resourceName} onChange={(e) => setResourceName(e.target.value)} placeholder="مثال: عمر أحمد" />
             </div>
-          </DialogContent>
-        </Dialog>
+            <div className="space-y-2">
+              <Label>المبلغ</Label>
+              <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+            </div>
+            <div className="space-y-2">
+              <Label>مصدر العهدة (الدفعة)</Label>
+              <Select value={sourceFundId} onValueChange={setSourceFundId}>
+                <SelectTrigger><SelectValue placeholder="اختر الدفعة المصدر" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">بدون ربط بدفعة (تمويل مستقل)</SelectItem>
+                  {availableFunds.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                عند ربط العهدة بدفعة، يُخصم مبلغها فوراً من رصيد الدفعة بيد المدير.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>تاريخ استلام العهدة</Label>
+              <Input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>ملاحظات (اختياري)</Label>
+              <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="مثال: عهدة مشتريات شهر مارس" />
+            </div>
+          </div>
+        </ResponsiveFormDialog>
         )}
         <p className="text-xs text-muted-foreground mt-2">العهدة مرتبطة بالمصروفات — عند إضافة مصروف يمكن ربطه بعهدة ليُخصم منها تلقائياً</p>
       </div>
@@ -172,7 +171,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                         {c.sourceFundId && (() => {
                           const sf = projectFunds.find(f => f.id === c.sourceFundId);
                           return sf ? (
-                            <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 dark:text-amber-400 w-fit">
+                            <Badge variant="outline" className="text-[10px] border-warning/40 text-warning w-fit">
                               من دفعة #{sf.fundNumber}
                             </Badge>
                           ) : null;
@@ -187,7 +186,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                         <span className="text-xs text-destructive mr-1">⚠️ مستنفدة</span>
                       )}
                       {c.remaining > 0 && c.remaining < c.amount * 0.1 && (
-                        <span className="text-xs text-amber-600 mr-1">⚠️ أقل من 10%</span>
+                        <span className="text-xs text-warning mr-1">⚠️ أقل من 10%</span>
                       )}
                     </td>
                     <td className="hidden sm:table-cell">
@@ -203,7 +202,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                       {c.remaining <= 0 ? (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">مُغلقة</span>
                       ) : (
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">نشطة</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-success/10 text-success border border-success/20">نشطة</span>
                       )}
                     </td>
                     <td className="text-muted-foreground text-xs hidden md:table-cell">{c.notes || '—'}</td>

@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,11 +24,14 @@ import {
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
   Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, Sparkles, HandCoins,
+  MoreHorizontal, Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
 import { exportToExcel, exportToPDF } from '@/lib/export';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { MobileFAB } from '@/components/MobileFAB';
+import { useTabBadges } from '@/hooks/useTabBadges';
 
 // Sub-components
 import { ResourcesSection } from '@/components/project/ResourcesSection';
@@ -239,12 +244,13 @@ export default function ProjectDetail() {
   const openHighRisks = pRisks.filter(r => r.status === 'open' && (r.impact === 'high' || r.probability === 'high')).length;
   const managementBadge = pendingChangeOrders + openHighRisks;
 
-  const tabGroups: { key: TabGroup; label: string; icon: typeof MilestoneIcon; defaultTab: string; badge: number }[] = [
-    { key: 'summary', label: 'الملخص', icon: LayoutDashboard, defaultTab: 'overview', badge: 0 },
-    { key: 'planning', label: 'التخطيط', icon: MilestoneIcon, defaultTab: 'milestones', badge: 0 },
-    { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'budget', badge: 0 },
-    { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: 0 },
-    { key: 'management', label: 'الإدارة', icon: FileEdit, defaultTab: 'changeorders', badge: managementBadge },
+  const badges = useTabBadges(project.id);
+  const tabGroups: { key: TabGroup; label: string; icon: typeof MilestoneIcon; defaultTab: string; badge: number; badgeLevel: 'info' | 'warning' | 'critical'; badgeHint?: string }[] = [
+    { key: 'summary', label: 'الملخص', icon: LayoutDashboard, defaultTab: 'overview', badge: 0, badgeLevel: 'info' },
+    { key: 'planning', label: 'التخطيط', icon: MilestoneIcon, defaultTab: 'milestones', badge: badges.planning.count, badgeLevel: badges.planning.level, badgeHint: badges.planning.hint },
+    { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'budget', badge: badges.finance.count, badgeLevel: badges.finance.level, badgeHint: badges.finance.hint },
+    { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: badges.tracking.count, badgeLevel: badges.tracking.level, badgeHint: badges.tracking.hint },
+    { key: 'management', label: 'الإدارة', icon: FileEdit, defaultTab: 'changeorders', badge: badges.management.count, badgeLevel: badges.management.level, badgeHint: badges.management.hint },
   ];
 
   const subTabs: Record<TabGroup, { value: string; label: string; icon: typeof MilestoneIcon }[]> = {
@@ -313,15 +319,106 @@ export default function ProjectDetail() {
                   </div>
                 </div>
               </div>
-              {/* Action buttons - separate row on mobile */}
+              {/* Unified action menu — quick status select + ⋯ for the rest */}
               {!isReadOnly && (
-              <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-                <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8">
-                      <Pencil className="w-4 h-4" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select
+                  value={project.status}
+                  onValueChange={(val) => {
+                    updateProject(project.id, { status: val as ProjectStatus });
+                    toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
+                  }}
+                >
+                  <SelectTrigger className="w-[140px] h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-9 w-9" title="إجراءات">
+                      <MoreHorizontal className="w-4 h-4" />
                     </Button>
-                  </DialogTrigger>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>إجراءات المشروع</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                      <Pencil className="w-4 h-4 ml-2" />تعديل البيانات
+                    </DropdownMenuItem>
+                    {(isAdmin || canEditRole('project', project.id)) && (
+                      <>
+                        <DropdownMenuItem onSelect={() => {
+                          exportToExcel({
+                            projectName: project.name, contractValue: summary.effectiveContractValue,
+                            budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                            expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                            totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                            totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                            vatRate: project.taxPercent,
+                            contractValueInclVAT: summary.contractValueInclVAT,
+                            totalVATOnExpenses: summary.totalVATOnExpenses,
+                            totalVATOnRevenues: summary.totalVATOnRevenues,
+                            netVATPayable: summary.netVATPayable,
+                          });
+                          toast.success('تم تصدير التقرير إلى Excel');
+                        }}>
+                          <FileSpreadsheet className="w-4 h-4 ml-2" />تصدير Excel
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => {
+                          exportToPDF({
+                            projectName: project.name, contractValue: summary.effectiveContractValue,
+                            budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                            expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                            totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                            totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                            plannedProfit: summary.plannedProfit,
+                          });
+                          toast.success('تم تصدير التقرير إلى PDF');
+                        }}>
+                          <FileText className="w-4 h-4 ml-2" />تصدير PDF
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {isAdmin && project.status !== 'archived' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <ConfirmDeleteDialog
+                          title="أرشفة المشروع"
+                          description={`سيتم نقل مشروع "${project.name}" إلى الأرشيف. يمكنك استعادته أو حذفه نهائياً لاحقاً.`}
+                          confirmLabel="أرشفة"
+                          onConfirm={handleArchiveProject}
+                          trigger={
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-warning focus:text-warning">
+                              <Archive className="w-4 h-4 ml-2" />أرشفة المشروع
+                            </DropdownMenuItem>
+                          }
+                        />
+                      </>
+                    )}
+                    {isSystemAdmin && project.status === 'archived' && (
+                      <ConfirmDeleteDialog
+                        title="حذف نهائي للمشروع"
+                        description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
+                        confirmLabel="حذف نهائي"
+                        onConfirm={handleDeleteProject}
+                        trigger={
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                            <Trash2 className="w-4 h-4 ml-2" />حذف نهائي
+                          </DropdownMenuItem>
+                        }
+                      />
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Edit dialog kept separately so the menu item can open it */}
+                <Dialog open={editOpen} onOpenChange={setEditOpen}>
                   <DialogContent className="max-w-md" dir="rtl">
                     <DialogHeader>
                       <DialogTitle>تعديل بيانات المشروع</DialogTitle>
@@ -367,48 +464,6 @@ export default function ProjectDetail() {
                     </div>
                   </DialogContent>
                 </Dialog>
-                <Select
-                  value={project.status}
-                  onValueChange={(val) => {
-                    updateProject(project.id, { status: val as ProjectStatus });
-                    toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
-                  }}
-                >
-                  <SelectTrigger className="w-[120px] md:w-[140px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isAdmin && project.status !== 'archived' && (
-                  <ConfirmDeleteDialog
-                    title="أرشفة المشروع"
-                    description={`سيتم نقل مشروع "${project.name}" إلى الأرشيف. يمكنك استعادته أو حذفه نهائياً لاحقاً.`}
-                    confirmLabel="أرشفة"
-                    onConfirm={handleArchiveProject}
-                    trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-warning h-8 w-8" title="أرشفة">
-                        <Archive className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-                )}
-                {isSystemAdmin && project.status === 'archived' && (
-                  <ConfirmDeleteDialog
-                    title="حذف نهائي للمشروع"
-                    description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
-                    confirmLabel="حذف نهائي"
-                    onConfirm={handleDeleteProject}
-                    trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" title="حذف نهائي">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-                )}
               </div>
               )}
             </div>
@@ -624,48 +679,18 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        {/* Export Buttons - only for admin/editor */}
-        {(isAdmin || canEditRole('project', project.id)) && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1 sm:flex-none min-w-0" onClick={() => {
-              exportToExcel({
-                projectName: project.name, contractValue: summary.effectiveContractValue,
-                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-                expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-                totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-                totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-                vatRate: project.taxPercent,
-                contractValueInclVAT: summary.contractValueInclVAT,
-                totalVATOnExpenses: summary.totalVATOnExpenses,
-                totalVATOnRevenues: summary.totalVATOnRevenues,
-                netVATPayable: summary.netVATPayable,
-              });
-              toast.success('تم تصدير التقرير إلى Excel');
-            }}>
-              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" /><span className="truncate">Excel</span>
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1 sm:flex-none min-w-0" onClick={() => {
-              exportToPDF({
-                projectName: project.name, contractValue: summary.effectiveContractValue,
-                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-                expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-                totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-                totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-                plannedProfit: summary.plannedProfit,
-              });
-              toast.success('تم تصدير التقرير إلى PDF');
-            }}>
-              <FileText className="w-3.5 h-3.5 shrink-0" /><span className="truncate">PDF</span>
-            </Button>
-          </div>
-        )}
+        {/* Export actions live in the header ⋯ menu */}
 
         {/* 5 main tabs — sections inside each tab use Accordion */}
         <Tabs value={activeGroup} onValueChange={(v) => handleGroupChange(v as TabGroup)} className="space-y-4">
           <TabsList className="grid grid-cols-5 w-full h-auto p-1 gap-1 bg-muted/50 sticky top-[57px] z-10">
             {tabGroups.map((group) => {
               const Icon = group.icon;
-              return (
+              const badgeColor =
+                group.badgeLevel === 'critical' ? 'bg-destructive text-destructive-foreground'
+                : group.badgeLevel === 'warning' ? 'bg-warning text-warning-foreground'
+                : 'bg-primary text-primary-foreground';
+              const trigger = (
                 <TabsTrigger
                   key={group.key}
                   value={group.key}
@@ -674,12 +699,18 @@ export default function ProjectDetail() {
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="truncate leading-tight">{group.label}</span>
                   {group.badge > 0 && (
-                    <span className="absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    <span className={`absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center px-1 ${badgeColor}`}>
                       {group.badge}
                     </span>
                   )}
                 </TabsTrigger>
               );
+              return group.badgeHint && group.badge > 0 ? (
+                <Tooltip key={group.key}>
+                  <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">{group.badgeHint}</TooltipContent>
+                </Tooltip>
+              ) : trigger;
             })}
           </TabsList>
 
@@ -830,6 +861,29 @@ export default function ProjectDetail() {
           })()}
         </Tabs>
       </motion.div>
+
+      {/* Mobile FAB — primary contextual action per active tab */}
+      {!isReadOnly && (() => {
+        const fabMap: Record<string, { label: string; tab: string; group: TabGroup }> = {
+          finance: { label: 'إضافة مصروف', tab: 'expenses', group: 'finance' },
+          planning: { label: 'إضافة مرحلة', tab: 'milestones', group: 'planning' },
+          tracking: { label: 'إضافة خطر', tab: 'risks', group: 'tracking' },
+          management: { label: 'أمر تغيير', tab: 'changeorders', group: 'management' },
+        };
+        const fab = fabMap[activeGroup];
+        if (!fab) return null;
+        return (
+          <MobileFAB
+            label={fab.label}
+            onClick={() => {
+              setActiveGroup(fab.group);
+              setActiveTab(fab.tab);
+              // smooth scroll to section + flash hint to use the section's "+" button
+              setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+            }}
+          />
+        );
+      })()}
     </AppLayout>
   );
 }
