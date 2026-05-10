@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,11 +24,14 @@ import {
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
   Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, Sparkles, HandCoins,
+  MoreHorizontal, Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BudgetAlerts } from '@/components/BudgetAlerts';
 import { exportToExcel, exportToPDF } from '@/lib/export';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { MobileFAB } from '@/components/MobileFAB';
+import { useTabBadges } from '@/hooks/useTabBadges';
 
 // Sub-components
 import { ResourcesSection } from '@/components/project/ResourcesSection';
