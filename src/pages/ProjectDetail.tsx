@@ -671,7 +671,11 @@ export default function ProjectDetail() {
           <TabsList className="grid grid-cols-5 w-full h-auto p-1 gap-1 bg-muted/50 sticky top-[57px] z-10">
             {tabGroups.map((group) => {
               const Icon = group.icon;
-              return (
+              const badgeColor =
+                group.badgeLevel === 'critical' ? 'bg-destructive text-destructive-foreground'
+                : group.badgeLevel === 'warning' ? 'bg-warning text-warning-foreground'
+                : 'bg-primary text-primary-foreground';
+              const trigger = (
                 <TabsTrigger
                   key={group.key}
                   value={group.key}
@@ -680,12 +684,18 @@ export default function ProjectDetail() {
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="truncate leading-tight">{group.label}</span>
                   {group.badge > 0 && (
-                    <span className="absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    <span className={`absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center px-1 ${badgeColor}`}>
                       {group.badge}
                     </span>
                   )}
                 </TabsTrigger>
               );
+              return group.badgeHint && group.badge > 0 ? (
+                <Tooltip key={group.key}>
+                  <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">{group.badgeHint}</TooltipContent>
+                </Tooltip>
+              ) : trigger;
             })}
           </TabsList>
 
