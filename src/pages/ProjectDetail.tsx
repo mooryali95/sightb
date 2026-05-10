@@ -861,6 +861,29 @@ export default function ProjectDetail() {
           })()}
         </Tabs>
       </motion.div>
+
+      {/* Mobile FAB — primary contextual action per active tab */}
+      {!isReadOnly && (() => {
+        const fabMap: Record<string, { label: string; tab: string; group: TabGroup }> = {
+          finance: { label: 'إضافة مصروف', tab: 'expenses', group: 'finance' },
+          planning: { label: 'إضافة مرحلة', tab: 'milestones', group: 'planning' },
+          tracking: { label: 'إضافة خطر', tab: 'risks', group: 'tracking' },
+          management: { label: 'أمر تغيير', tab: 'changeorders', group: 'management' },
+        };
+        const fab = fabMap[activeGroup];
+        if (!fab) return null;
+        return (
+          <MobileFAB
+            label={fab.label}
+            onClick={() => {
+              setActiveGroup(fab.group);
+              setActiveTab(fab.tab);
+              // smooth scroll to section + flash hint to use the section's "+" button
+              setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+            }}
+          />
+        );
+      })()}
     </AppLayout>
   );
 }
