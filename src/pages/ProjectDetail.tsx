@@ -679,41 +679,7 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        {/* Export Buttons - only for admin/editor */}
-        {(isAdmin || canEditRole('project', project.id)) && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1 sm:flex-none min-w-0" onClick={() => {
-              exportToExcel({
-                projectName: project.name, contractValue: summary.effectiveContractValue,
-                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-                expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-                totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-                totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-                vatRate: project.taxPercent,
-                contractValueInclVAT: summary.contractValueInclVAT,
-                totalVATOnExpenses: summary.totalVATOnExpenses,
-                totalVATOnRevenues: summary.totalVATOnRevenues,
-                netVATPayable: summary.netVATPayable,
-              });
-              toast.success('تم تصدير التقرير إلى Excel');
-            }}>
-              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" /><span className="truncate">Excel</span>
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1 sm:flex-none min-w-0" onClick={() => {
-              exportToPDF({
-                projectName: project.name, contractValue: summary.effectiveContractValue,
-                budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-                expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-                totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-                totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-                plannedProfit: summary.plannedProfit,
-              });
-              toast.success('تم تصدير التقرير إلى PDF');
-            }}>
-              <FileText className="w-3.5 h-3.5 shrink-0" /><span className="truncate">PDF</span>
-            </Button>
-          </div>
-        )}
+        {/* Export actions live in the header ⋯ menu */}
 
         {/* 5 main tabs — sections inside each tab use Accordion */}
         <Tabs value={activeGroup} onValueChange={(v) => handleGroupChange(v as TabGroup)} className="space-y-4">
