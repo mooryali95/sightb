@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { Plus, Pencil, X, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -110,15 +110,15 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
           </p>
         </div>
         {!readOnly && (
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />أمر تغيير</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingId ? 'تعديل أمر التغيير' : 'أمر تغيير جديد'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
+        <ResponsiveFormDialog
+          open={open}
+          onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
+          title={editingId ? 'تعديل أمر التغيير' : 'أمر تغيير جديد'}
+          desktopWidthClassName="max-w-lg"
+          trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />أمر تغيير</Button>}
+          footer={<Button onClick={handleSubmit} className="w-full h-11">{editingId ? 'حفظ التعديلات' : 'إضافة أمر التغيير'}</Button>}
+        >
+          <div className="space-y-4">
               <div className="space-y-2">
                 <Label>الوصف</Label>
                 <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف التغيير المطلوب" />
@@ -150,11 +150,11 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>الأثر المالي (±)</Label>
-                  <Input type="number" value={amountImpact} onChange={(e) => setAmountImpact(e.target.value)} placeholder="50000" />
+                  <Input type="number" inputMode="decimal" value={amountImpact} onChange={(e) => setAmountImpact(e.target.value)} placeholder="50000" />
                 </div>
                 <div className="space-y-2">
                   <Label>أثر المدة (أشهر)</Label>
-                  <Input type="number" value={durationImpact} onChange={(e) => setDurationImpact(e.target.value)} />
+                  <Input type="number" inputMode="numeric" value={durationImpact} onChange={(e) => setDurationImpact(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -215,10 +215,8 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
                 </div>
               </div>
 
-              <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة أمر التغيير'}</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </ResponsiveFormDialog>
         )}
       </div>
 
@@ -243,7 +241,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
                 <tr key={co.id}>
                   <td>{co.description}</td>
                   <td className="text-xs">{CHANGE_ORDER_TYPE_LABELS[co.changeType]}</td>
-                  <td className={`font-mono text-sm ${co.amountImpact >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                  <td className={`font-mono text-sm ${co.amountImpact >= 0 ? 'health-good' : 'text-destructive'}`}>
                     {co.amountImpact > 0 ? '+' : ''}{formatCurrency(co.amountImpact)}
                   </td>
                   <td className="text-xs">{co.durationImpact !== 0 ? `${co.durationImpact > 0 ? '+' : ''}${co.durationImpact} شهر` : '—'}</td>
