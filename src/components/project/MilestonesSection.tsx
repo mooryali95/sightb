@@ -268,7 +268,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           <Progress value={weightedComplete} className="h-3" />
 
           {totalWeight > 0 && (totalWeight < 0.99 || totalWeight > 1.01) && (
-            <div className="p-2 rounded-lg health-warning-bg health-warning border-warning text-xs flex items-center gap-1.5">
+            <div className="p-2 rounded-lg border bg-health-warning health-warning text-xs flex items-center gap-1.5">
               ⚠️ مجموع الأوزان ({totalWeight.toFixed(2)}) {totalWeight < 0.99 ? 'أقل' : 'أكبر'} من 1 — يُفضل أن يكون المجموع = 1.00
             </div>
           )}
