@@ -1,103 +1,77 @@
-## الموجة الثانية: تسطيح التبويبات + الشارات الذكية + إكمال Mobile-First
+## الموجة الثالثة: إكمال Mobile-First لكل النماذج المالية
 
 ### الهدف
-تبسيط جذري للملاحة داخل المشروع، إضافة Information Scent عبر شارات ذكية، وإكمال نمط Mobile-First لكل النماذج المالية المتبقية.
+نقل النماذج الستة المتبقية إلى نمط `ResponsiveFormDialog` الموحَّد، مع إضافة `ResponsiveDataTable` للجداول الطويلة، وتسليم ماتريكس التقدّم النهائية.
 
 ---
 
-### 1. تسطيح التبويبات في `ProjectDetail.tsx`
+### 1. نقل النماذج إلى `ResponsiveFormDialog`
 
-التبويبات الرئيسية الخمسة فقط (بدون أي Sub-tabs أفقية):
+نفس النمط المطبَّق في `ExpensesSection` و`CustodySection`:
+- Bottom Sheet `h-[92vh]` على الجوال، Dialog على الديسكتوب
+- Sticky footer للأزرار (إلغاء + حفظ)
+- `h-11` للحقول، `inputMode="decimal"` للأرقام، `inputMode="numeric"` للكميات
+- استبدال أي ألوان Tailwind خام (emerald/amber/red) بـ `health-good/warning/critical`
 
-| التبويب | المحتوى (Accordion عمودي) |
+النماذج المستهدفة:
+
+| الملف | النموذج |
 |---|---|
-| **نظرة عامة** | Executive Summary + AI Insights + Smart Alerts |
-| **التخطيط** | Baseline · Budget · Monthly Plan · Milestones · Resources |
-| **المالية** | Expenses · Commitments · Funds · Custody · Revenue · Resource Payables · Cash Ledger |
-| **المتابعة** | Charts · Gantt · Risks · Change Orders · What-If |
-| **الإدارة** | Audit Log · Budget Amendments · إعدادات المشروع |
+| `RevenueSection.tsx` | إضافة/تعديل إيراد |
+| `CommitmentsSection.tsx` | إضافة/تعديل التزام |
+| `ChangeOrdersSection.tsx` | إضافة/تعديل أمر تغيير |
+| `BudgetSection.tsx` | إضافة/تعديل بند ميزانية |
+| `MilestonesSection.tsx` | إضافة/تعديل معلم |
+| `RisksSection.tsx` | إضافة/تعديل مخاطرة |
 
-- استخدام `Accordion type="multiple"` مع حفظ الحالة في `searchParams` (deep-link).
-- إزالة كل `TabsList` المتداخلة الحالية.
+### 2. مكوّن `ResponsiveDataTable.tsx` (جديد)
 
-### 2. الشارات الذكية (Information Scent)
+- Desktop: `<Table>` كالمعتاد
+- Mobile (<768px): قائمة `Card` تعرض الحقول الأهم + شارة حالة + قائمة `⋯` للإجراءات
+- props: `columns`, `data`, `mobileCard(row)`, `actions(row)`, `emptyState`
 
-شارة بجوار اسم كل تبويب رئيسي تعكس حالات تستحق الانتباه:
+تطبيقه أولاً على: `RevenueSection`, `CommitmentsSection`, `CustodySection`, `ResourcePayablesSection`. الباقي يتبع لاحقًا حسب الحاجة.
 
-- **المالية**: عدد المصروفات المعلّقة + عدد البنود التي تجاوزت 90% من ميزانيتها (لون `health-warning`/`health-critical`).
-- **المتابعة**: عدد المخاطر العالية + أوامر التغيير المعلّقة.
-- **التخطيط**: مؤشر إذا لم يُعتمد Baseline بعد.
-- **الإدارة**: عدد التعديلات في آخر 7 أيام (للأدمن فقط).
+### 3. تنظيف الألوان الخام
 
-تنفيذ عبر hook موحّد `useTabBadges(projectId)` يحسب القيم من الـ store.
+فحص شامل بـ `rg "text-(emerald|amber|red|green|yellow)-"` في `src/components/project/` واستبدالها بالـ tokens.
 
-### 3. ترويسة المشروع (Header)
+### 4. Empty States
 
-- زر إجراءات موحّد `⋯` (DropdownMenu) يجمع: تصدير، أرشفة، إعدادات، حذف.
-- إزالة الأزرار المبعثرة في الترويسة.
-- تثبيت ارتفاع الترويسة وإضافة `sticky top-0` على شريط التبويبات.
+استبدال نصوص "لا توجد بيانات" بمكوّن `EmptyState` مع CTA لكل قسم.
 
-### 4. إكمال Mobile-First للنماذج المالية
+### 5. ماتريكس التقدّم النهائية
 
-تحويل النماذج التالية لاستخدام `ResponsiveFormDialog` بنفس نمط `ExpensesSection`:
+في نهاية التنفيذ سأرفق جدول Markdown + رسم Mermaid يوضّح:
 
-- `CustodySection.tsx`
-- `RevenueSection.tsx`
-- `CommitmentsSection.tsx`
-- `ChangeOrdersSection.tsx`
-- `BudgetSection.tsx` (نموذج إضافة/تعديل البند)
-- `MilestonesSection.tsx`
-- `RisksSection.tsx`
-
-تحسينات موحّدة لكل نموذج:
-- Sticky footer للأزرار
-- `h-11` للحقول و`inputMode="decimal"` للأرقام
-- Bottom Sheet `h-[92vh]` على الجوال
-
-### 5. مكوّن `ResponsiveDataTable`
-
-مكوّن جديد يعرض:
-- **Desktop**: جدول `<Table>` كالمعتاد
-- **Mobile**: قائمة بطاقات `Card` مع الحقول الأهم + زر `⋯` للإجراءات
-
-سيُستخدم في: Expenses, Commitments, Funds, Custody, Revenue, Resource Payables.
-
-### 6. FAB موحّد على الجوال
-
-زر عائم (Floating Action Button) أسفل-يسار في صفحة المشروع، يعرض الإجراء الأساسي حسب التبويب النشط (مثلاً: + مصروف، + إيراد).
-
-### 7. Empty States + Onboarding خفيف
-
-- استبدال كل القوائم الفارغة بمكوّن `EmptyState` (موجود مسبقًا) مع CTA واضح.
-- Tooltip أول مرة يُلمح إلى `Ctrl+K` للبحث الشامل (يُحفظ في localStorage).
+```text
+المحور                   | الموجة 1 | الموجة 2 | الموجة 3 | %
+-------------------------|---------|---------|---------|-----
+Design Tokens            |   ✅    |   ✅    |   ✅    | 100
+Information Architecture |   —     |   ✅    |   ✅    | 100
+Mobile-First (8 نماذج)   |   —     |  2/8    |  8/8    | 100
+Smart Badges             |   —     |   ✅    |   —     | 100
+Empty States             |   ✅    |   —     |   ✅    | 100
+A11y (focus-ring/ARIA)   |   ✅    |   —     |   ✅    |  90
+Onboarding (Ctrl+K hint) |   —     |   —     |   ✅    | 100
+```
 
 ---
 
 ### الملفات المتأثرة
 
 ```text
-src/pages/ProjectDetail.tsx              (تسطيح التبويبات + Header)
-src/hooks/useTabBadges.ts                (جديد)
-src/components/ResponsiveDataTable.tsx   (جديد)
-src/components/MobileFAB.tsx             (جديد)
-src/components/project/CustodySection.tsx
+src/components/ResponsiveDataTable.tsx        (جديد)
 src/components/project/RevenueSection.tsx
 src/components/project/CommitmentsSection.tsx
 src/components/project/ChangeOrdersSection.tsx
 src/components/project/BudgetSection.tsx
 src/components/project/MilestonesSection.tsx
 src/components/project/RisksSection.tsx
-src/components/AppSidebar.tsx            (Onboarding tooltip لـ Ctrl+K)
+src/components/AppSidebar.tsx                 (Ctrl+K tooltip أول مرة)
 ```
 
-لا تغييرات على قاعدة البيانات أو منطق الأعمال — كله UI/UX.
-
----
-
-### ماتريكس التقدّم (سيُسلَّم بعد التنفيذ)
-
-سأرسل في نهاية التنفيذ ماتريكس Mermaid يوضّح:
-- ما اكتمل في الموجات 1 و 2
-- ما تبقّى للموجة 3 (لو وُجد)
-- نسبة الإنجاز لكل محور (Design Tokens, IA, Mobile-First, A11y, Onboarding)
-
+### القيود
+- لا تغييرات على قاعدة البيانات أو RLS أو منطق الأعمال.
+- لا تغييرات على الحسابات المالية أو EVM.
+- كله UI/UX فقط.
