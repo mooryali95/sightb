@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -107,15 +107,14 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
           </p>
         </div>
         {!readOnly && (
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />التزام جديد</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>{editingId ? 'تعديل الالتزام' : 'إضافة التزام'}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
+          <ResponsiveFormDialog
+            open={open}
+            onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
+            title={editingId ? 'تعديل الالتزام' : 'إضافة التزام'}
+            trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />التزام جديد</Button>}
+            footer={<Button onClick={handleSubmit} className="w-full h-11">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>}
+          >
+            <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>الوصف</Label>
                   <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: عقد توريد معدات" />
@@ -133,11 +132,11 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>إجمالي المبلغ</Label>
-                    <Input type="number" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} placeholder="0" />
+                    <Input type="number" inputMode="decimal" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} placeholder="0" />
                   </div>
                   <div className="space-y-2">
                     <Label>المصروف حتى الآن</Label>
-                    <Input type="number" value={spentAmount} onChange={(e) => setSpentAmount(e.target.value)} placeholder="0" />
+                    <Input type="number" inputMode="decimal" value={spentAmount} onChange={(e) => setSpentAmount(e.target.value)} placeholder="0" />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -155,10 +154,8 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
                   <Label>ملاحظات (اختياري)</Label>
                   <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
                 </div>
-                <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+            </div>
+          </ResponsiveFormDialog>
         )}
       </div>
 
@@ -179,7 +176,7 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
           </div>
           <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
             <p className="text-xs text-muted-foreground">المتاح من الموازنة</p>
-            <p className={`text-sm font-mono font-bold mt-1 ${availableBudget >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+            <p className={`text-sm font-mono font-bold mt-1 ${availableBudget >= 0 ? 'health-good' : 'text-destructive'}`}>
               {formatCurrency(availableBudget)}
             </p>
           </div>
