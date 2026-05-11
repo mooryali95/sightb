@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Plus, AlertTriangle, Shield } from 'lucide-react';
 import { toast } from 'sonner';
@@ -108,8 +108,8 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
           </div>
         </div>
         <div className="stat-card flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-amber-700 dark:text-amber-400" />
+          <div className="w-10 h-10 rounded-lg bg-health-warning flex items-center justify-center">
+            <Shield className="w-5 h-5 health-warning" />
           </div>
           <div>
             <p className="text-xs text-muted-foreground">إجمالي التعرض المالي</p>
@@ -120,87 +120,87 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
 
       {/* Add button */}
       {!readOnly && (
-      <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
-        <DialogTrigger asChild>
-          <Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة خطر</Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editingRisk ? 'تعديل الخطر' : 'إضافة خطر جديد'}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label>العنوان *</Label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="وصف مختصر للخطر" />
-            </div>
-            <div className="space-y-1">
-              <Label>الوصف</Label>
-              <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="تفاصيل إضافية" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>الاحتمال</Label>
-                <Select value={probability} onValueChange={v => setProbability(v as RiskProbability)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(RISK_PROBABILITY_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>الأثر</Label>
-                <Select value={impact} onValueChange={v => setImpact(v as RiskImpact)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(RISK_IMPACT_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>الفئة</Label>
-                <Select value={category} onValueChange={v => setCategory(v as RiskCategory)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(RISK_CATEGORY_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>الحالة</Label>
-                <Select value={status} onValueChange={v => setStatus(v as RiskStatus)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(RISK_STATUS_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>الأثر المالي (ر.س)</Label>
-                <Input type="number" value={financialImpact} onChange={e => setFinancialImpact(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label>المسؤول</Label>
-                <Input value={owner} onChange={e => setOwner(e.target.value)} placeholder="اسم المسؤول" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>خطة التخفيف</Label>
-              <Input value={mitigationPlan} onChange={e => setMitigationPlan(e.target.value)} placeholder="الإجراءات المتخذة" />
-            </div>
-            <Button onClick={handleSubmit} className="w-full">{editingRisk ? 'تحديث' : 'إضافة'}</Button>
+      <ResponsiveFormDialog
+        open={open}
+        onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}
+        title={editingRisk ? 'تعديل الخطر' : 'إضافة خطر جديد'}
+        desktopWidthClassName="max-w-lg"
+        trigger={<Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة خطر</Button>}
+        footer={<Button onClick={handleSubmit} className="w-full h-11">{editingRisk ? 'تحديث' : 'إضافة'}</Button>}
+      >
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label>العنوان *</Label>
+            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="وصف مختصر للخطر" />
           </div>
-        </DialogContent>
-      </Dialog>
+          <div className="space-y-1">
+            <Label>الوصف</Label>
+            <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="تفاصيل إضافية" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>الاحتمال</Label>
+              <Select value={probability} onValueChange={v => setProbability(v as RiskProbability)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(RISK_PROBABILITY_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>الأثر</Label>
+              <Select value={impact} onValueChange={v => setImpact(v as RiskImpact)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(RISK_IMPACT_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>الفئة</Label>
+              <Select value={category} onValueChange={v => setCategory(v as RiskCategory)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(RISK_CATEGORY_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <Select value={status} onValueChange={v => setStatus(v as RiskStatus)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(RISK_STATUS_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>الأثر المالي (ر.س)</Label>
+              <Input type="number" inputMode="decimal" value={financialImpact} onChange={e => setFinancialImpact(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>المسؤول</Label>
+              <Input value={owner} onChange={e => setOwner(e.target.value)} placeholder="اسم المسؤول" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>خطة التخفيف</Label>
+            <Input value={mitigationPlan} onChange={e => setMitigationPlan(e.target.value)} placeholder="الإجراءات المتخذة" />
+          </div>
+        </div>
+      </ResponsiveFormDialog>
       )}
 
       {/* Table */}

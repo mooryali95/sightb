@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { Plus, BarChart3, Pencil, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -168,7 +168,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground">الضريبة ({taxPercent}%)</p>
-              <p className="text-sm font-mono font-bold mt-1 text-amber-600">{formatCurrency(taxAmount)}</p>
+              <p className="text-sm font-mono font-bold mt-1 health-warning">{formatCurrency(taxAmount)}</p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground">شامل الضريبة</p>
@@ -180,13 +180,13 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground">غير مخصص</p>
-              <p className={`text-sm font-mono font-bold mt-1 ${unallocated >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+              <p className={`text-sm font-mono font-bold mt-1 ${unallocated >= 0 ? 'health-good' : 'text-destructive'}`}>
                 {formatCurrency(unallocated)}
               </p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground">الربح المخطط</p>
-              <p className={`text-sm font-mono font-bold mt-1 ${plannedProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+              <p className={`text-sm font-mono font-bold mt-1 ${plannedProfit >= 0 ? 'health-good' : 'text-destructive'}`}>
                 {formatCurrency(plannedProfit)} <span className="text-xs">({plannedProfitMargin.toFixed(1)}%)</span>
               </p>
             </div>
@@ -277,7 +277,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
               )}
             </h3>
             {baselineLocked && !readOnly && !activeDraft && (
-              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-2 flex-wrap">
+              <div className="text-xs health-warning mt-1 flex items-center gap-2 flex-wrap">
                 <span>🔒 الموازنة مقفلة — استخدم "فتح الموازنة للتعديل" أعلاه أو أنشئ أمر تغيير</span>
                 <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => {
                   const tab = document.querySelector('[value="changeorders"]') as HTMLElement;
@@ -290,15 +290,14 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
             </p>
           </div>
           {!isLocked && (
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />بند جديد</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>{editingId ? 'تعديل بند الموازنة' : 'إضافة بند موازنة'}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
+          <ResponsiveFormDialog
+            open={open}
+            onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
+            title={editingId ? 'تعديل بند الموازنة' : 'إضافة بند موازنة'}
+            trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />بند جديد</Button>}
+            footer={<Button onClick={handleSubmit} className="w-full h-11">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>}
+          >
+            <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>الفئة</Label>
                   <Select value={category} onValueChange={(v) => setCategory(v as ExpenseCategory)}>
@@ -317,7 +316,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>المبلغ المخطط</Label>
-                    <Input type="number" value={plannedAmount} onChange={(e) => setPlannedAmount(e.target.value)} placeholder="0" />
+                    <Input type="number" inputMode="decimal" value={plannedAmount} onChange={(e) => setPlannedAmount(e.target.value)} placeholder="0" />
                   </div>
                   <div className="space-y-2">
                     <Label>نوع التكلفة</Label>
@@ -380,10 +379,8 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
                     </Select>
                   </div>
                 )}
-                <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+            </div>
+          </ResponsiveFormDialog>
           )}
         </div>
 

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -108,15 +108,14 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
           </p>
         </div>
         {!readOnly && (
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة إيراد</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingId ? 'تعديل الإيراد' : 'إضافة إيراد'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
+        <ResponsiveFormDialog
+          open={open}
+          onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
+          title={editingId ? 'تعديل الإيراد' : 'إضافة إيراد'}
+          trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة إيراد</Button>}
+          footer={<Button onClick={handleSubmit} className="w-full h-11">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>}
+        >
+          <div className="space-y-4">
               <div className="space-y-2">
                 <Label>الوصف</Label>
                 <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: دفعة أولى من العميل" />
@@ -124,7 +123,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>المبلغ</Label>
-                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                  <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>الشهر</Label>
@@ -218,10 +217,8 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   <Input type="date" value={collectionDate} onChange={(e) => setCollectionDate(e.target.value)} />
                 </div>
               )}
-              <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </ResponsiveFormDialog>
         )}
       </div>
 
@@ -301,7 +298,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   <td>{r.description}</td>
                   <td className="text-xs">{REVENUE_TYPE_LABELS[r.revenueType as RevenueType] || r.revenueType}</td>
                   <td className="font-mono text-sm">{formatCurrency(r.amount)}</td>
-                  {showVAT && <td className="font-mono text-xs text-emerald-600">{formatCurrency(calcVAT(r.amount, taxPercent))}</td>}
+                  {showVAT && <td className="font-mono text-xs health-good">{formatCurrency(calcVAT(r.amount, taxPercent))}</td>}
                   {showVAT && <td className="font-mono text-xs">{formatCurrency(addVAT(r.amount, taxPercent))}</td>}
                   <td>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${REVENUE_STATUS_COLORS[r.status as RevenueStatus] || ''}`}>
