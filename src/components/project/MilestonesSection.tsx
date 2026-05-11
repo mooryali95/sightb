@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -189,15 +190,14 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           </p>
         </div>
         {!readOnly && (
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />مرحلة جديدة</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingId ? 'تعديل المرحلة' : 'إضافة مرحلة'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
+        <ResponsiveFormDialog
+          open={open}
+          onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
+          title={editingId ? 'تعديل المرحلة' : 'إضافة مرحلة'}
+          trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />مرحلة جديدة</Button>}
+          footer={<Button onClick={handleSubmit} className="w-full h-11">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>}
+        >
+          <div className="space-y-4">
               <div className="space-y-2">
                 <Label>اسم المرحلة</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مرحلة التصميم" />
@@ -209,11 +209,11 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>الوزن (0-1)</Label>
-                  <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} step="0.1" min="0" max="1" placeholder="0.25" />
+                  <Input type="number" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} step="0.1" min="0" max="1" placeholder="0.25" />
                 </div>
                 <div className="space-y-2">
                   <Label>الإنجاز %</Label>
-                  <Input type="number" value={percentComplete} onChange={(e) => setPercentComplete(e.target.value)} min="0" max="100" />
+                  <Input type="number" inputMode="numeric" value={percentComplete} onChange={(e) => setPercentComplete(e.target.value)} min="0" max="100" />
                 </div>
                 <div className="space-y-2">
                   <Label>الحالة</Label>
@@ -253,10 +253,8 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
                   </Select>
                 </div>
               )}
-              <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </ResponsiveFormDialog>
         )}
       </div>
 
@@ -270,7 +268,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           <Progress value={weightedComplete} className="h-3" />
 
           {totalWeight > 0 && (totalWeight < 0.99 || totalWeight > 1.01) && (
-            <div className="p-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-xs flex items-center gap-1.5">
+            <div className="p-2 rounded-lg health-warning-bg health-warning border-warning text-xs flex items-center gap-1.5">
               ⚠️ مجموع الأوزان ({totalWeight.toFixed(2)}) {totalWeight < 0.99 ? 'أقل' : 'أكبر'} من 1 — يُفضل أن يكون المجموع = 1.00
             </div>
           )}
@@ -305,7 +303,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
                   </span>
                   {m.weight > 0 && <span className="text-xs text-muted-foreground">وزن: {m.weight}</span>}
                   {m.linkedRevenueId && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">مربوط بإيراد</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">مربوط بإيراد</span>
                   )}
                 </div>
                 {!readOnly && (
