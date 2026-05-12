@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
+import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -100,7 +101,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
           onOpenChange={setOpen}
           title="إضافة عهدة جديدة"
           trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />عهدة جديدة</Button>}
-          footer={<Button onClick={handleAdd} className="w-full h-11">إضافة</Button>}
+          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleAdd} submitLabel="إضافة" />}
         >
           <div className="space-y-4">
             <div className="space-y-2">

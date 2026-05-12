@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
+import { FormFooter } from '@/components/FormFooter';
 import { Plus, BarChart3, Pencil, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -295,7 +296,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
             onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
             title={editingId ? 'تعديل بند الموازنة' : 'إضافة بند موازنة'}
             trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />بند جديد</Button>}
-            footer={<Button onClick={handleSubmit} className="w-full h-11">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>}
+            footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
           >
             <div className="space-y-4">
                 <div className="space-y-2">

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
+import { FormFooter } from '@/components/FormFooter';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Plus, AlertTriangle, Shield } from 'lucide-react';
 import { toast } from 'sonner';
@@ -126,7 +127,7 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
         title={editingRisk ? 'تعديل الخطر' : 'إضافة خطر جديد'}
         desktopWidthClassName="max-w-lg"
         trigger={<Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة خطر</Button>}
-        footer={<Button onClick={handleSubmit} className="w-full h-11">{editingRisk ? 'تحديث' : 'إضافة'}</Button>}
+        footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingRisk ? 'تحديث' : 'إضافة'} />}
       >
         <div className="space-y-3">
           <div className="space-y-1">
