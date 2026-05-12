@@ -45,10 +45,10 @@ export function AttentionProjects({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.33 }}
-          className="stat-card mb-8 border-amber-300 dark:border-amber-700"
+          className="stat-card mb-8 border-warning/40"
         >
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <AlertTriangle className="w-4 h-4 health-warning" />
             <h3 className="text-sm font-semibold">مشاريع تحتاج انتباه ({attentionProjects.length})</h3>
           </div>
           <div className="space-y-2">
