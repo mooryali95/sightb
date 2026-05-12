@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
+import { FormFooter } from '@/components/FormFooter';
 import { Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -195,7 +196,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
           title={editingId ? 'تعديل المرحلة' : 'إضافة مرحلة'}
           trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />مرحلة جديدة</Button>}
-          footer={<Button onClick={handleSubmit} className="w-full h-11">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>}
+          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
         >
           <div className="space-y-4">
               <div className="space-y-2">

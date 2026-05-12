@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
+import { FormFooter } from '@/components/FormFooter';
 import { Plus, Pencil, Check, X, AlertCircle, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -328,7 +329,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
             onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
             title={editingId ? 'تعديل المصروف' : 'إضافة مصروف جديد'}
             trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مصروف</Button>}
-            footer={<Button onClick={handleSubmit} className="w-full h-11">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>}
+            footer={<FormFooter onCancel={() => { setOpen(false); }} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
           >
             <div className="space-y-4">
                 <div className="space-y-2">
