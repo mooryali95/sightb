@@ -61,13 +61,13 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
               </div>
               <div className="text-center p-2 rounded-lg bg-muted/30">
                 <p className="text-xs text-muted-foreground">الربح المخطط</p>
-                <p className={`text-xs font-mono font-semibold ${summary.plannedProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                <p className={`text-xs font-mono font-semibold ${summary.plannedProfit >= 0 ? 'health-good' : 'text-destructive'}`}>
                   {formatCurrency(summary.plannedProfit)}
                 </p>
               </div>
               <div className="text-center p-2 rounded-lg bg-muted/30">
                 <p className="text-xs text-muted-foreground">متبقي الموازنة</p>
-                <p className={`text-xs font-mono font-semibold ${summary.budgetRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                <p className={`text-xs font-mono font-semibold ${summary.budgetRemaining >= 0 ? 'health-good' : 'text-destructive'}`}>
                   {formatCurrency(summary.budgetRemaining)}
                 </p>
               </div>

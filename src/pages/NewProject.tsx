@@ -207,7 +207,7 @@ export default function NewProject() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">الضريبة ({taxPercent}%):</span>
-                    <span className="font-mono text-amber-600">
+                    <span className="font-mono health-warning">
                       {formatCurrency(vatInclusive
                         ? parsedValue - removeVAT(parsedValue, parsedTax)
                         : calcVAT(parsedValue, parsedTax)

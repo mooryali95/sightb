@@ -365,7 +365,7 @@ export default function MobileExpenseCapture() {
                   </p>
                 )}
                 {projectId && !activeFund && (
-                  <p className="text-xs text-amber-600">
+                  <p className="text-xs health-warning">
                     ⚠️ لا توجد دفعة نشطة — لن يتم ربط المصروف بدفعة
                   </p>
                 )}
