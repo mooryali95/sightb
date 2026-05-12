@@ -179,7 +179,7 @@ export default function ResetPassword() {
             <h2 className="text-lg font-semibold text-center">تعيين كلمة مرور جديدة</h2>
             <div className="space-y-2">
               <Label>كلمة المرور الجديدة</Label>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" required minLength={6} />
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" required minLength={6} className="h-11" />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'جاري الحفظ...' : 'حفظ كلمة المرور'}

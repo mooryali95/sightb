@@ -302,9 +302,9 @@ export default function Login() {
                 <h2 className="text-lg font-semibold text-center">استعادة كلمة المرور</h2>
                 <div className="space-y-2">
                   <Label htmlFor="forgot-email">البريد الإلكتروني</Label>
-                  <Input id="forgot-email" name="email" type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
+                  <Input id="forgot-email" name="email" type="email" inputMode="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required className="h-11" />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11" disabled={loading}>
                   {loading ? 'جاري الإرسال...' : 'إرسال رابط الاستعادة'}
                 </Button>
                 <Button type="button" variant="ghost" className="w-full text-sm" onClick={() => setIsForgotPassword(false)}>
@@ -323,7 +323,7 @@ export default function Login() {
                 <h2 className="text-lg font-semibold text-center">تسجيل الدخول</h2>
                 <div className="space-y-2">
                   <Label htmlFor="login-email">البريد الإلكتروني</Label>
-                  <Input id="login-email" name="email" type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required />
+                  <Input id="login-email" name="email" type="email" inputMode="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required className="h-11" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">كلمة المرور</Label>
@@ -339,6 +339,7 @@ export default function Login() {
                       dir="ltr"
                       required
                       minLength={6}
+                      className="h-11"
                     />
                     <button
                       type="button"
@@ -355,7 +356,7 @@ export default function Login() {
                   نسيت كلمة المرور؟
                 </button>
 
-                <Button type="submit" className="w-full gap-2" disabled={loading}>
+                <Button type="submit" className="w-full h-11 gap-2" disabled={loading}>
                   {loading ? 'جاري التحميل...' : (
                     <><LogIn className="w-4 h-4" /> تسجيل الدخول</>
                   )}
