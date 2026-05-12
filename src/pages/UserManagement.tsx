@@ -457,12 +457,12 @@ export default function UserManagement() {
                       <h2 className="text-lg font-semibold">سجل الدعوات</h2>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {pendingInvitesCount > 0 && (
-                          <Badge variant="outline" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-xs">
+                          <Badge variant="outline" className="bg-warning/10 health-warning text-xs">
                             {pendingInvitesCount} معلّقة
                           </Badge>
                         )}
                         {sentInvitesCount > 0 && (
-                          <Badge variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs">
+                          <Badge variant="outline" className="bg-primary/10 text-primary text-xs">
                             {sentInvitesCount} مرسلة
                           </Badge>
                         )}
@@ -472,7 +472,7 @@ export default function UserManagement() {
                           </Badge>
                         )}
                         {acceptedInvitesCount > 0 && (
-                          <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs">
+                          <Badge variant="outline" className="bg-success/10 health-good text-xs">
                             {acceptedInvitesCount} مقبولة
                           </Badge>
                         )}
@@ -516,34 +516,34 @@ export default function UserManagement() {
                       dir="ltr"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button
                       onClick={() => setInviteStatusFilter('all')}
-                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-colors min-h-[32px] ${inviteStatusFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
                     >
                       الكل ({invites.length})
                     </button>
                     <button
                       onClick={() => setInviteStatusFilter('pending')}
-                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'pending' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:opacity-80'}`}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-colors min-h-[32px] ${inviteStatusFilter === 'pending' ? 'bg-warning text-warning-foreground' : 'bg-warning/10 health-warning hover:opacity-80'}`}
                     >
                       معلّقة ({pendingInvitesCount})
                     </button>
                     <button
                       onClick={() => setInviteStatusFilter('sent')}
-                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'sent' ? 'bg-primary text-primary-foreground' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:opacity-80'}`}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-colors min-h-[32px] ${inviteStatusFilter === 'sent' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary hover:opacity-80'}`}
                     >
                       مرسلة ({sentInvitesCount})
                     </button>
                     <button
                       onClick={() => setInviteStatusFilter('failed')}
-                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'failed' ? 'bg-destructive text-destructive-foreground' : 'bg-destructive/10 text-destructive hover:bg-destructive/20'}`}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-colors min-h-[32px] ${inviteStatusFilter === 'failed' ? 'bg-destructive text-destructive-foreground' : 'bg-destructive/10 text-destructive hover:bg-destructive/20'}`}
                     >
                       فاشلة ({failedInvitesCount})
                     </button>
                     <button
                       onClick={() => setInviteStatusFilter('accepted')}
-                      className={`text-xs px-3 py-1 rounded-full transition-colors ${inviteStatusFilter === 'accepted' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:opacity-80'}`}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-colors min-h-[32px] ${inviteStatusFilter === 'accepted' ? 'bg-success text-success-foreground' : 'bg-success/10 health-good hover:opacity-80'}`}
                     >
                       مقبولة ({acceptedInvitesCount})
                     </button>

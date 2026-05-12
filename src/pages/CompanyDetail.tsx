@@ -162,15 +162,15 @@ export default function CompanyDetail() {
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header with Blue Theme */}
-        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-to-l from-blue-500/10 via-primary/5 to-transparent">
+        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-to-l from-primary/10 via-primary/5 to-transparent">
           <div className="p-6">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
               <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="w-12 h-12 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-primary" />
                 </div>
                 <div>
                   <div className="flex items-center gap-3">
@@ -411,7 +411,7 @@ export default function CompanyDetail() {
                       </div>
                       <div className="text-center p-2 rounded-lg bg-muted/40">
                         <p className="text-xs text-muted-foreground mb-0.5">الربح</p>
-                        <p className={`text-xs font-mono font-bold ${ps.aggregatePlannedProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
+                        <p className={`text-xs font-mono font-bold ${ps.aggregatePlannedProfit >= 0 ? 'health-good' : 'text-destructive'}`}>
                           {formatCurrency(ps.aggregatePlannedProfit)}
                         </p>
                       </div>
@@ -436,8 +436,8 @@ export default function CompanyDetail() {
                             className="px-4 py-3 hover:bg-muted/20 cursor-pointer transition-colors flex items-center gap-4"
                             onClick={() => navigate(`/project/${project.id}`)}
                           >
-                            <div className="w-7 h-7 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
-                              <Briefcase className="w-3.5 h-3.5 text-blue-500" />
+                            <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                              <Briefcase className="w-3.5 h-3.5 text-primary" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
@@ -455,7 +455,7 @@ export default function CompanyDetail() {
                               </div>
                               <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
                                 <div
-                                  className={`h-full rounded-full transition-all ${spentPercent > 90 ? 'bg-destructive' : spentPercent > 70 ? 'bg-amber-500' : 'bg-primary'}`}
+                                  className={`h-full rounded-full transition-all ${spentPercent > 90 ? 'bg-destructive' : spentPercent > 70 ? 'bg-warning' : 'bg-primary'}`}
                                   style={{ width: `${spentPercent}%` }}
                                 />
                               </div>
@@ -582,8 +582,8 @@ export default function CompanyDetail() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                          <Briefcase className="w-4 h-4 text-blue-500" />
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Briefcase className="w-4 h-4 text-primary" />
                         </div>
                         <span className="text-sm font-semibold truncate">{project.name}</span>
                       </div>
@@ -607,7 +607,7 @@ export default function CompanyDetail() {
                     </div>
                     <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${spentPercent > 90 ? 'bg-destructive' : spentPercent > 70 ? 'bg-amber-500' : 'bg-primary'}`}
+                        className={`h-full rounded-full transition-all ${spentPercent > 90 ? 'bg-destructive' : spentPercent > 70 ? 'bg-warning' : 'bg-primary'}`}
                         style={{ width: `${spentPercent}%` }}
                       />
                     </div>

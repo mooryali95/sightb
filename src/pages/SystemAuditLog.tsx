@@ -25,16 +25,16 @@ interface AuditEntry {
 }
 
 const entityTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
-  company: { label: 'شركة', icon: Building2, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  portfolio: { label: 'محفظة', icon: FolderKanban, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  project: { label: 'مشروع', icon: Briefcase, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
-  user_role: { label: 'صلاحية', icon: Shield, color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  user_invite: { label: 'دعوة', icon: Mail, color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
+  company: { label: 'شركة', icon: Building2, color: 'bg-primary/10 text-primary' },
+  portfolio: { label: 'محفظة', icon: FolderKanban, color: 'bg-accent/15 text-accent-foreground' },
+  project: { label: 'مشروع', icon: Briefcase, color: 'bg-success/10 health-good' },
+  user_role: { label: 'صلاحية', icon: Shield, color: 'bg-warning/10 health-warning' },
+  user_invite: { label: 'دعوة', icon: Mail, color: 'bg-muted text-muted-foreground' },
 };
 
 const actionConfig: Record<string, { label: string; icon: any; color: string }> = {
-  insert: { label: 'إضافة', icon: Plus, color: 'text-emerald-600 dark:text-emerald-400' },
-  update: { label: 'تعديل', icon: Pencil, color: 'text-amber-600 dark:text-amber-400' },
+  insert: { label: 'إضافة', icon: Plus, color: 'health-good' },
+  update: { label: 'تعديل', icon: Pencil, color: 'health-warning' },
   delete: { label: 'حذف', icon: Trash2, color: 'text-destructive' },
 };
 
