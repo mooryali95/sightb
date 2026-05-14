@@ -1,146 +1,121 @@
-# تحليل أمني شامل (Red Team) — منصة Rouya / Basserh
+  
+لالخطة: الموجة 4ج — مشاكل الصرفيات + توحيد مصدر المعلومات
 
-تم إجراء فحص شامل على: قاعدة البيانات (RLS, Functions, Triggers)، Edge Functions، طبقة المصادقة، التخزين، و Realtime. النتائج مرتبة حسب الخطورة الفعلية.
-
----
-
-## 🔴 CRITICAL — يجب الإصلاح فوراً
-
-### C1. تجاوز عزل المشاريع في `budget_amendments` (IDOR)
-
-- **الموقع**: RLS policies على `budget_amendments`
-- **التفاصيل**: سياسات INSERT/UPDATE تتحقق فقط من `auth.uid() = user_id` ولا تتحقق من عضوية المستخدم في `project_id`. أي مستخدم مصادَق عليه يستطيع إنشاء/تعديل تعديلات ميزانية لأي مشروع في النظام (بما فيها مشاريع شركات أخرى).
-- **التأثير**: تلاعب مالي مباشر، خرق Budget Lock، تجاوز Change Orders.
-- **الإصلاح**: إضافة `can_edit(auth.uid(), 'project', project_id)` إلى WITH CHECK لكل من INSERT و UPDATE، وإلى USING في DELETE.
-
-### C2. Realtime بدون تفويض قنوات
-
-- **الموقع**: `realtime.messages` بدون أي RLS policy
-- **التفاصيل**: 8 جداول منشورة (budget_items, expenses, revenues, milestones, change_orders, resource_reimbursements, payment_requests, resource_settlements) تبث تغييرات الصفوف لأي مشترك مصادَق عليه بصرف النظر عن عضويته في المشروع.
-- **التأثير**: تسريب مالي مباشر — أي مستخدم لديه حساب يمكنه الاشتراك ورؤية كل الحركات المالية لكل المشاريع لحظة حدوثها.
-- **الإصلاح**: تفعيل RLS على `realtime.messages` مع سياسة تربط topic بعضوية المستخدم عبر `has_access()`. أو تقييد القنوات إلى topic-per-project مع التحقق من JWT.
-
-### C3. تنفيذ `SECURITY DEFINER` متاح لأي مجهول/مصادَق
-
-- **التفاصيل**: 28 دالة `SECURITY DEFINER` في schema public جميعها يمكن تنفيذها من قِبل `anon` و `authenticated` بشكل مباشر عبر PostgREST RPC. منها دوال حساسة:
-  - `enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq` → تلاعب بطابور البريد، إغراق، حذف رسائل.
-  - `has_role`, `has_access`, `can_edit` → استخدام مشروع عبر RLS لكن EXECUTE لا يجب أن يكون لـ `anon`.
-  - `audit_delete`, `audit_update`, `system_audit_*` → دوال trigger يجب ألا تكون قابلة للاستدعاء RPC أصلاً.
-- **التأثير**: حسب الدالة — إغراق طابور البريد، تنفيذ إجراءات إدارية، تجاوز RLS.
-- **الإصلاح**:
-  - لكل دوال `system_audit_*`, `audit_*`, `touch_*`, `protect_*`, `auto_*`, `enforce_*`, `check_*`, `recalc_*`, `handle_new_user`: 
-  `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated;` (تُستدعى من triggers فقط، لا حاجة لـ EXECUTE خارجي).
-  - دوال طابور البريد (`enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq`): REVOKE من anon/authenticated، تُستدعى من service_role فقط.
-  - `has_role`, `has_access`, `can_edit`: REVOKE من anon فقط، الإبقاء لـ authenticated (تُستخدم في RLS).
+أحلل أسئلتك الست واحداً واحداً، وأقترح حلاً لكل واحد. لا حاجة لقبول الكل — اختر ما تريد تنفيذه.
 
 ---
 
-## 🟠 HIGH
+### 1) "الدفعة لا تظهر حتى أسجل عهدة"
 
-### H1. CORS `*` في `auth-email-hook`
+**السبب:** الـ store يُحمّل `projectFunds` فقط عند زيارة تبويب "المالية"، لكن العهد تُحمّل من تبويب الصرفيات. عند تسجيل عهدة يتم استدعاء `loadCustodies` الذي يُحمّل أيضاً `projectFunds` كأثر جانبي. لذلك تبدو الدفعة كأنها "ظهرت بعد العهدة" لكنها كانت موجودة، فقط لم تُحمَّل.
 
-- يقبل أي origin. رغم أنه webhook موقّع من Supabase Auth، يفضل تقييد الـ origin أو الاعتماد فقط على التحقق من توقيع الـ webhook (`SEND_EMAIL_HOOK_SECRET` عبر standard-webhooks).
-
-### H2. سياسة UPDATE مفقودة على bucket `expense-receipts`
-
-- يمكن لمستخدم الكتابة فوق ملف مستخدم آخر إذا خَمَّن المسار. أضف سياسة UPDATE مماثلة لـ INSERT (`auth.uid()::text = storage.foldername(name)[1]`).
-
-### H3. `resource_settlements` مع `project_id IS NULL` مرئية للجميع
-
-- أي authenticated يستطيع SELECT لأي تسوية موارد غير مرتبطة بمشروع. قيّد الفرع `project_id IS NULL` بـ `user_id = auth.uid() OR has_role(auth.uid(),'admin')`.
-
-### H4. غياب Rate Limiting على Edge Functions الحساسة
-
-- `admin-otp`, `send-invite`, `extract-receipt-data`, `ai-executive-summary`, `delete-user`, `accept-invite` — لا يوجد throttling. مخاطر:
-  - `admin-otp`: brute-force على رموز OTP (رغم عدّاد `failed_attempts`، لا يوجد rate limit على إرسال جديد).
-  - `extract-receipt-data` و `ai-executive-summary`: استنزاف credits لـ Lovable AI.
-  - `send-invite`: spam البريد.
-- **الإصلاح**: جدول `rate_limits(user_id, endpoint, window, count)` + فحص في كل function، أو استعمال Upstash/Edge KV.
-
-### H5. Session Timeout عميل-جانبي فقط
-
-- `useSessionTimeout` يعتمد على activity في المتصفح. لا يوجد فرض من السيرفر — توكن JWT يبقى صالحاً ساعة كاملة. مهاجم سرق التوكن لا يتأثر بـ"timeout" المحلي. الإصلاح: تقصير مدة JWT في إعدادات Auth + refresh-rotation + revocation list.
+**الإصلاح:** ضمّ `projectFunds` و `fundSettlements` في AppBootstrap الأولي (مع Realtime subscription) حتى تظهر فوراً عند فتح المشروع.
 
 ---
 
-## 🟡 MEDIUM
+### 2) "لماذا لا أستطيع فتح دفعة جديدة قبل التسوية؟"
 
-### M1. غياب SELECT للمدعو على دعوته الخاصة
+**السبب المنطقي:** هذا نظام **Revolving Fund / عهدة دائمة**. القاعدة المحاسبية: لا تُصرف دفعة جديدة قبل تصفية السابقة (وإلا اختلط الرصيد ولا يمكن تتبّع مصدر المصروف). هذا مطابق لممارسات المالية في الشركات السعودية.
 
-- `user_invites` يقتصر على admins. إن كان الـ UI يعتمد على قراءة client-side للحالة، سيفشل بصمت. (مذكور في الفحص).
+**لكن في الواقع:** قد تكون الدفعة الأولى لم تُستهلك بالكامل وتحتاج دفعة عاجلة (مثل: مرتبات نهاية الشهر). أقترح:
 
-### M2. لا توجد سياسة على حذف admin_otp_codes منتهية
-
-- جدول `admin_otp_codes` محمي بـ `qual:false` (جيد)، لكن لا يوجد job لتنظيف الرموز المنتهية → نمو غير محدود + خطر replay لو فُكّ تشفير الـ DB. أضف cron daily delete.
-
-### M3. `password_hibp_enabled` غير مؤكد
-
-- يجب التأكد من تفعيله (`configure_auth password_hibp_enabled: true`).
-
-### M4. لا يوجد `disable_signup`
-
-- إن كان النظام دعوات-فقط، يجب `disable_signup: true` لمنع تسجيل ذاتي.
-
-### M5. بيانات حساسة في `audit_log.record_data` (jsonb)
-
-- يخزن سجلات كاملة محذوفة. سياسة SELECT تسمح للمستخدم برؤية سجلاته أو سجلات مشاريعه — جيد، لكن قد تحتوي على بيانات بنوك/موردين. اعتبر تقليم الحقول الحساسة قبل التخزين.
-
-### M6. `Allow-Headers` يقبل `apikey` في وظائف ذات `verify_jwt = false`
-
-- `admin-otp` و `auth-email-hook` و `send-invite` و `accept-invite` معطّلة JWT verification. لا تعتمد أبداً على `apikey` للتفويض داخلها — تأكد من أن منطق التفويض الداخلي صارم (موجود في send-invite عبر `getUser(token)` ✓).
+- **إبقاء القاعدة افتراضياً** (دفعة واحدة نشطة).
+- **إضافة زر "دفعة استثنائية"** للأدمن فقط، يفتح حواراً يطلب: السبب + المبلغ + ملاحظة. تُسجَّل الدفعة بحقل `is_emergency=true` ويُكتب السبب في `system_audit_log`. الدفعة السابقة تبقى وتُسوّى لاحقاً.
 
 ---
 
-## 🟢 LOW / Hygiene
+### 3) خطأ الحساب في بطاقات الصرفيات (Screenshot 2)
 
-- L1. `ALLOWED_ORIGINS` يسمح بـ `*.lovableproject.com` و `*.lovable.app` — نطاق واسع؛ بعد الإطلاق قيّده إلى `sight.basserh.com` فقط.
-- L2. لا يوجد Content-Security-Policy في `index.html`. أضف CSP صارم (script-src self, connect-src supabase URLs).
-- L3. `admin_otp_codes` لا يخزن hash للرمز بل النص الخام (`code text`). يفضل تخزين `crypt(code, gen_salt('bf'))`.
-- L4. لا يوجد WAF/فلتر على الحقول النصية — XSS sanitization موجود (memory)، تحقق من تطبيقه على كل input مستخدم في PDF/Excel أيضاً.
-- L5. Service-role key مستخدم في 6 functions — تأكد أن لا واحدة منها تعكس بيانات service-role-fetched إلى مستخدم غير مفوض.
-
----
-
-## خطة التنفيذ المقترحة (Migrations)
-
-```text
-Migration 1 — Critical RLS fixes
-  - budget_amendments: WITH CHECK = auth.uid()=user_id AND can_edit(...)
-  - resource_settlements: تشديد فرع project_id IS NULL
-  - storage.objects: UPDATE policy لـ expense-receipts
-
-Migration 2 — REVOKE EXECUTE
-  - REVOKE EXECUTE من anon/authenticated على دوال triggers و queue
-  - الإبقاء فقط على has_role/has_access/can_edit لـ authenticated
-
-Migration 3 — Realtime authorization
-  - ENABLE RLS على realtime.messages
-  - سياسة تربط topic بـ has_access(project_id)
-
-Migration 4 — Hygiene
-  - Hash لـ admin_otp_codes.code
-  - Cron يومي لحذف رموز OTP منتهية
-  - Rate limit table
-
-Edge functions hardening
-  - admin-otp: rate limit per IP+user (5 OTP/hour)
-  - send-invite / extract-receipt-data / ai-executive-summary: rate limit
-  - auth-email-hook: تقييد CORS + التأكد من توقيع webhook
-
-Auth config
-  - configure_auth: password_hibp_enabled=true, disable_signup=true (إن كان دعوات فقط)
-  - تقصير JWT expiry (30 دقيقة) مع refresh rotation
+```
+محوّل: 67,000  |  موثّق: 80,023  |  بيد حاملي العهد: 3,700  |  بيد المدير: 10,277
 ```
 
+**المشكلة:** 67,000 − 80,023 = −13,023 (مستحيل أن يبقى 14,000 بيد الناس!). السبب أن **المصروف الموثّق يضم مصروفات داخل العهد، بينما "المتبقي" يحسب العهد كاستنزاف كامل + المصروف داخل العهد كاستنزاف ثانٍ** — ازدواج.
+
+**الإصلاح في `lib/funds.ts`:**
+
+- "المصروف الموثّق" يجب أن = (مصروف مباشر) + (مصروف داخل عُهد منشأها هذه الدفعة) — بدون عدّ الـ custody draw نفسها.
+- "بيد حاملي العهد" = Σ (مبلغ العهدة − مصروفها).
+- "بيد المدير" = Σ دفعات نشطة − مصروف مباشر − مبلغ كامل العهد المسحوبة.
+- **التحقق:** محوّل = موثّق + بيد المدير + بيد العهد + مسوّى.
+
+كذلك "1 دفعة، 0 مفتوحة" خطأ — الدفعة `acknowledged` يجب أن تُحسب مفتوحة.
+
 ---
 
-## ملخص الأرقام
+### 4) Toast "يجب ربط المصروف بدفعة نشطة" يظهر بعد الحفظ
 
-- إجمالي ثغرات مكتشفة: **61**
-- Critical: **3**  |  High: **5**  |  Medium: **6**  |  Low: **5**
-- الأكثر إلحاحاً: **C1, C2, C3** — خرق سرية مالية مباشر.
+**السبب:** الدفعة بحالة `transferred` (لم يُقَرّ بها) — DB trigger يرفض. النموذج لا يكشف هذا قبل الإرسال.
 
-هل تريد أن أبدأ بـ Migration 1 (الإصلاحات الحرجة الثلاث)   
-أولاً، أم أن أنفذ الخطة كاملة دفعة واحدة؟  
-  
-بدا المايجرشن الاول، تاكد من اي مشكلة او ارتبطاتا تخص التعديلات او ستؤثر لا تنفيهذا حتي توضحها لي
+**الإصلاح:**
+
+- في حوار "إضافة مصروف"، إذا الدفعة النشطة `transferred`، يُعرض **بانر علوي بارز** فيه زر "إقرار استلام الدفعة الآن" قبل أي حقل.
+- زر الحفظ معطّل مع توضيح "يلزم إقرار استلام الدفعة #N أولاً".
+- إذا لا توجد دفعة إطلاقاً، يُعرض زر "إنشاء دفعة" مباشرةً من النموذج (للأدمن).
+
+---
+
+### 5) شارات التحذير على التبويبات بدون توضيح (Screenshot 4)
+
+**الحالي:** "1" على التخطيط و "2" على المالية بدون تفسير.
+
+**الإصلاح:**
+
+- Tooltip عند المرور يُظهر العناوين (مثلاً: "خط الأساس بانتظار الاعتماد · دفعة #1 لم تُسوَّ").
+- النقر على الشارة ينقل المستخدم تلقائياً للقسم المُسبِّب داخل التبويب (`scrollIntoView` + highlight مؤقت).
+- في `useTabBadges` نُرجع كائناً `{ count, items: [{label, anchor}] }` بدل عدد فقط.
+
+---
+
+### 6) شرح "مستحقات الموارد" + التكامل المفقود
+
+**ما هي اليوم:** نظام مستقل لتتبّع ما تدين به الشركة للموارد البشرية:
+
+1. **استرداد (Reimbursement):** المورد دفع من جيبه → يُسجَّل → يُعتمد → يصبح مستحقاً.
+2. **طلب صرف (Payment Request):** طلب رسمي للدفع (راتب/حافز/سلفة/استرداد) يمر بدورة: مسودة → إرسال → مراجعة → اعتماد → جدولة → دفع.
+3. **مخالصة (Settlement):** عند انتهاء التعاون، إقرار بإنهاء جميع المستحقات.
+4. عند `paid` يُنشأ تلقائياً مصروف في جدول المصروفات (trigger `auto_create_expense_on_payment`).
+
+**الفجوات في التكامل (المشكلة الرئيسية التي ذكرتها):**
+
+
+| المشكلة                                                                                                      | الحل المقترح                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `resources.monthlyCost` (الراتب الشهري) لا ينعكس تلقائياً كمستحق شهري — على المستخدم أن يُسجّل يدوياً كل شهر | عند بداية كل شهر (cron أو عند فتح التبويب) إنشاء `payment_request` تلقائي بنوع `salary` لكل مورد له `monthlyCost > 0` ومشروع نشط |
+| المصروف بفئة "رواتب موظفين" المُسجَّل يدوياً لا يُربط بسجل المستحقات                                         | عند إنشاء expense.category='salary' مع `resourceId`، نخصم تلقائياً من رصيد الراتب المُستحق                                       |
+| `Reimbursement` المعتمد يظل مستحقاً لكن لا يُعرض ضمن "مصروفات المشروع" قبل دفعه                              | إضافة بطاقة "مستحقات معتمدة لم تُدفع" في تبويب المالية → الميزانية                                                               |
+| العهد لا تعرف بالمستحقات: قد يصرف حامل العهدة لمورد ولا يُخصم من مستحقاته                                    | عند إضافة expense داخل عهدة مع `resourceId`، يُعرض اقتراح "هل هذا سداد لمستحق سابق؟" يربطه بـ reimbursement مفتوح                |
+| لا توجد بطاقة "إجمالي مستحقات المورد عبر كل المشاريع"                                                        | إضافة صفحة "ملف المورد" تجمع الأرصدة من كل مشاريعه                                                                               |
+
+
+**ملاحظة مهمة:** المستحقات حالياً **منفصلة عن نظام الدفعات/العهد** — قرار تصميمي صحيح لأن:
+
+- الدفعات/العهد = نقد سائل بيد المدير الميداني.
+- المستحقات = التزامات مالية على الشركة (Accounts Payable).
+لكن نقطة الالتقاء (الدفع الفعلي) يجب أن تكون مرتبطة: عند `payPaymentRequest`، يجب أن يُخصم المبلغ من دفعة نشطة (إن وُجدت) أو يُسجَّل كصرف خارج النظام النقدي.
+
+---
+
+### الترتيب المقترح للتنفيذ
+
+أقترح تنفيذ على دفعتين:
+
+**الموجة 4ج-1 (إصلاحات حرجة — أُنفذها أولاً):**
+
+1. إصلاح حساب الصرفيات (مشكلة #3).
+2. بانر "إقرار الاستلام" داخل نموذج المصروف (مشكلة #4).
+3. تحميل الدفعات في bootstrap (مشكلة #1).
+4. توضيح شارات التبويب بـ tooltip + scroll (مشكلة #5).
+
+**الموجة 4ج-2 (تحسينات + تكامل):**
+5. زر "دفعة استثنائية" للأدمن (مشكلة #2).
+6. تكامل المستحقات: توليد طلب راتب شهري تلقائي + ربط expense.salary بـ resource balance (مشكلة #6 — الجزء الأهم).
+
+---
+
+### سؤال قبل البدء
+
+- هل تريد البدء بالموجة 4ج-1 الآن، ثم الانتقال للموجة 4ج-2؟ أم تفضّل أن أبدأ بنقطة بعينها (مثل تكامل المستحقات #6 لأنها الأكثر إزعاجاً)؟  
+ابدا بما تراه مناسب لك كمطور وخبيرتقني
+- بخصوص "الدفعة الاستثنائية": هل تريد أن تكون متاحة لـ **الأدمن فقط** أم لـ **مدير المشروع كذلك** بشرط تبرير + إخطار الأدمن؟  
+للمدير ايضا بالتبرير 
