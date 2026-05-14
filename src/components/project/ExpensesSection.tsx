@@ -149,12 +149,18 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     }
   };
 
+  // Block submit if active fund is still in `transferred` state (server will reject anyway)
+  const fundBlocksSubmit = !editingId && !!activeFund && activeFund.status === 'transferred';
+
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
+    if (fundBlocksSubmit) {
+      toast.error(`الدفعة #${activeFund!.fundNumber} لم يُقَرّ باستلامها بعد. اضغط "إقرار الاستلام" أعلى النموذج.`);
+      return;
+    }
     const rawAmount = parseFloat(amount);
     const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
 
-    // التحقق: ربط بدفعة إلزامي عند وجود دفعة نشطة (سواء transferred أو acknowledged)
     const effectiveFundId = fundId && fundId !== 'none'
       ? fundId
       : (fundIsRequired && !editingId ? activeFund?.id : undefined);
