@@ -68,10 +68,18 @@ export default function ProjectDetail() {
     loadAll, updateProject, archiveProject, deleteProject,
   } = useStore();
 
-  const { detailsLoaded, detailsLoading, loadProjectData, subscribeToProject } = useStore();
+  const { detailsLoaded, detailsLoading, loadProjectData, subscribeToProject, loadFundsForProject, loadResourcePayablesForProject } = useStore() as any;
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded, loadProjectData]);
+  // Always ensure funds + payables are loaded for the active project — these are NOT
+  // included in the global loadAll(), so without this they appear blank until a custody
+  // or expense triggers a side-effect refetch.
+  useEffect(() => {
+    if (!id) return;
+    loadFundsForProject?.(id).catch((e: any) => console.warn('[ProjectDetail] funds', e));
+    loadResourcePayablesForProject?.(id).catch((e: any) => console.warn('[ProjectDetail] payables', e));
+  }, [id, loadFundsForProject, loadResourcePayablesForProject]);
   // Realtime subscription for collaborative editing — cleanup on id change
   useEffect(() => {
     if (!id) return;

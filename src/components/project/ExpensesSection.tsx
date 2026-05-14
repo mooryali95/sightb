@@ -149,12 +149,18 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     }
   };
 
+  // Block submit if active fund is still in `transferred` state (server will reject anyway)
+  const fundBlocksSubmit = !editingId && !!activeFund && activeFund.status === 'transferred';
+
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
+    if (fundBlocksSubmit) {
+      toast.error(`الدفعة #${activeFund!.fundNumber} لم يُقَرّ باستلامها بعد. اضغط "إقرار الاستلام" أعلى النموذج.`);
+      return;
+    }
     const rawAmount = parseFloat(amount);
     const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
 
-    // التحقق: ربط بدفعة إلزامي عند وجود دفعة نشطة (سواء transferred أو acknowledged)
     const effectiveFundId = fundId && fundId !== 'none'
       ? fundId
       : (fundIsRequired && !editingId ? activeFund?.id : undefined);
@@ -329,7 +335,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
             onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
             title={editingId ? 'تعديل المصروف' : 'إضافة مصروف جديد'}
             trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مصروف</Button>}
-            footer={<FormFooter onCancel={() => { setOpen(false); }} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
+            footer={<FormFooter onCancel={() => { setOpen(false); }} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} submitDisabled={fundBlocksSubmit} />}
           >
             <div className="space-y-4">
                 <div className="space-y-2">
