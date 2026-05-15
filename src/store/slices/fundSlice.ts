@@ -22,6 +22,7 @@ export interface FundSlice {
     amount: number,
     transferDate: string,
     notes?: string,
+    options?: { emergency?: boolean; emergencyReason?: string },
   ) => Promise<string>;
 
   /** إقرار الاستلام من مدير المشروع — يُنشئ تلقائياً تسوية بحالة draft */
