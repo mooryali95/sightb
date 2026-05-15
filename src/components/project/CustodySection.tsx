@@ -139,11 +139,15 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
               <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
             </div>
             <div className="space-y-2">
-              <Label>مصدر العهدة (الدفعة)</Label>
+              <Label>مصدر العهدة (الدفعة) {fundsExist && <span className="text-destructive">*</span>}</Label>
               <Select value={sourceFundId} onValueChange={setSourceFundId}>
                 <SelectTrigger><SelectValue placeholder="اختر الدفعة المصدر" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">بدون ربط بدفعة (تمويل مستقل)</SelectItem>
+                  {(!fundsExist || isAdmin) && (
+                    <SelectItem value="none">
+                      {fundsExist ? '⚠️ بدون ربط (إدارة فقط — يتطلب مبرر)' : 'بدون ربط بدفعة (لا توجد دفعات نشطة)'}
+                    </SelectItem>
+                  )}
                   {availableFunds.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
                       دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
@@ -152,9 +156,22 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                عند ربط العهدة بدفعة، يُخصم مبلغها فوراً من رصيد الدفعة بيد المدير.
+                {fundsExist
+                  ? 'الربط بدفعة إلزامي للحفاظ على دقة المحاسبة. يُخصم مبلغ العهدة فوراً من رصيد الدفعة.'
+                  : 'لا توجد دفعات نشطة — يمكن إنشاء العهدة بدون ربط.'}
               </p>
             </div>
+            {requiresUnlinkReason && (
+              <div className="space-y-2 p-3 rounded-md border border-destructive/30 bg-destructive/5">
+                <Label className="text-destructive">سبب عدم الربط بدفعة <span className="text-destructive">*</span></Label>
+                <Input
+                  value={unlinkReason}
+                  onChange={(e) => setUnlinkReason(e.target.value)}
+                  placeholder="مثال: عهدة طارئة بانتظار اعتماد دفعة جديدة"
+                />
+                <p className="text-xs text-destructive/80">سيُحفظ السبب في ملاحظات العهدة كأثر تدقيق.</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>تاريخ استلام العهدة</Label>
               <Input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
