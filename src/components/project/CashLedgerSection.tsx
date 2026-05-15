@@ -285,14 +285,18 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                             )}>
                               {c.status === 'active' ? 'نشطة' : 'مغلقة'}
                             </Badge>
-                            {c.sourceFundId && (() => {
+                            {c.sourceFundId ? (() => {
                               const sf = projectFundsList.find(f => f.id === c.sourceFundId);
                               return sf ? (
                                 <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 dark:text-amber-400">
                                   من دفعة #{sf.fundNumber}
                                 </Badge>
                               ) : null;
-                            })()}
+                            })() : (
+                              <Badge variant="outline" className="text-xs border-destructive/50 text-destructive">
+                                غير مربوطة بدفعة
+                              </Badge>
+                            )}
                           </div>
                           <span className="font-mono text-xs text-muted-foreground">
                             {formatCurrency(spent)} / {formatCurrency(c.amount)}
