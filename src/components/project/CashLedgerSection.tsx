@@ -345,7 +345,15 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
         </div>
       </div>
 
-      {/* Unlinked expenses warning */}
+      {/* Unlinked items warnings */}
+      {unlinkedCustodies.length > 0 && (
+        <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5">
+          <p className="text-sm text-destructive">
+            ⚠️ {unlinkedCustodies.length} عُهدة غير مربوطة بدفعة (إجمالي {formatCurrency(unlinkedCustodyTotal)}).
+            اربطها بدفعتها المصدر من تبويب «العُهد» لضمان دقة الأرصدة.
+          </p>
+        </div>
+      )}
       {unlinkedExpenses.length > 0 && (
         <div className="p-3 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-900/10">
           <p className="text-sm text-amber-800 dark:text-amber-300">
