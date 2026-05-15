@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { getFundSpent, getFundCustodyDraw } from '@/lib/funds';
+import { useRole } from '@/hooks/useRole';
 
 interface CustodySectionProps {
   projectId: string;
