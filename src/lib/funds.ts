@@ -123,14 +123,18 @@ export function getProjectFundsSummary(
   );
   const totalSettled = approvedSettlements.reduce((s, st) => s + st.totalSpent, 0);
 
-  // المتبقي بيد المدير = مجموع المتبقي من الدفعات النشطة (بعد خصم المصروف المباشر والعهد المسحوبة)
+  // المتبقي بيد المدير = مجموع الدفعات النشطة − المصروف المباشر منها − **كل** العهد المسحوبة للمشروع
+  // (حتى لو كانت العهدة بدون sourceFundId — لأنها فعلياً خرجت من نقد المدير)
   const activeOrAckFunds = projectFunds.filter(
     (f) => f.status === 'transferred' || f.status === 'acknowledged',
   );
-  const cashStillWithManager = activeOrAckFunds.reduce(
-    (s, f) => s + getFundRemaining(f, expenses, projectCustodies),
+  const activeFundsTotal = activeOrAckFunds.reduce((s, f) => s + f.amount, 0);
+  const directSpendOnActive = activeOrAckFunds.reduce(
+    (s, f) => s + getFundDirectSpent(f.id, expenses, projectCustodies),
     0,
   );
+  const allCustodyDraw = projectCustodies.reduce((s, c) => s + c.amount, 0);
+  const cashStillWithManager = activeFundsTotal - directSpendOnActive - allCustodyDraw;
 
   const unsettledFunds = projectFunds.filter((f) => f.status !== 'settled');
   const activeFund = getActiveFund(projectId, funds);

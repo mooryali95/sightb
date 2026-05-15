@@ -64,6 +64,8 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
 
   const unlinkedExpenses = projectExpenses.filter((e) => !e.fundId && !e.custodyId);
   const unlinkedTotal = unlinkedExpenses.reduce((s, e) => s + e.amount, 0);
+  const unlinkedCustodies = projectCustodies.filter((c) => !c.sourceFundId);
+  const unlinkedCustodyTotal = unlinkedCustodies.reduce((s, c) => s + c.amount, 0);
 
   const [openFunds, setOpenFunds] = useState<Set<string>>(new Set());
   const [openCustodies, setOpenCustodies] = useState<Set<string>>(new Set());
@@ -285,14 +287,18 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                             )}>
                               {c.status === 'active' ? 'نشطة' : 'مغلقة'}
                             </Badge>
-                            {c.sourceFundId && (() => {
+                            {c.sourceFundId ? (() => {
                               const sf = projectFundsList.find(f => f.id === c.sourceFundId);
                               return sf ? (
                                 <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 dark:text-amber-400">
                                   من دفعة #{sf.fundNumber}
                                 </Badge>
                               ) : null;
-                            })()}
+                            })() : (
+                              <Badge variant="outline" className="text-xs border-destructive/50 text-destructive">
+                                غير مربوطة بدفعة
+                              </Badge>
+                            )}
                           </div>
                           <span className="font-mono text-xs text-muted-foreground">
                             {formatCurrency(spent)} / {formatCurrency(c.amount)}
@@ -339,7 +345,15 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
         </div>
       </div>
 
-      {/* Unlinked expenses warning */}
+      {/* Unlinked items warnings */}
+      {unlinkedCustodies.length > 0 && (
+        <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5">
+          <p className="text-sm text-destructive">
+            ⚠️ {unlinkedCustodies.length} عُهدة غير مربوطة بدفعة (إجمالي {formatCurrency(unlinkedCustodyTotal)}).
+            اربطها بدفعتها المصدر من تبويب «العُهد» لضمان دقة الأرصدة.
+          </p>
+        </div>
+      )}
       {unlinkedExpenses.length > 0 && (
         <div className="p-3 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-900/10">
           <p className="text-sm text-amber-800 dark:text-amber-300">
