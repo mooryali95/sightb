@@ -26,12 +26,15 @@ interface CustodySectionProps {
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
   const { addCustody, deleteCustody, projectFunds } = useStore();
+  const { isAdminFor } = useRole();
+  const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
   const [resourceName, setResourceName] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
   const [sourceFundId, setSourceFundId] = useState<string>('none');
+  const [unlinkReason, setUnlinkReason] = useState('');
 
   const availableFunds = useMemo(
     () => projectFunds
@@ -45,19 +48,41 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
     [projectFunds, projectId, expenses, custodies],
   );
 
+  // افتراضياً اختر أحدث دفعة متاحة عند فتح النموذج
+  useEffect(() => {
+    if (open && sourceFundId === 'none' && availableFunds.length > 0) {
+      setSourceFundId(availableFunds[0].id);
+    }
+  }, [open, availableFunds.length]);
+
+  const fundsExist = availableFunds.length > 0;
+  const isUnlinked = sourceFundId === 'none';
+  const requiresUnlinkReason = fundsExist && isUnlinked;
+
   const handleAdd = async () => {
     if (!resourceName.trim() || !amount) return;
+    if (fundsExist && isUnlinked && !isAdmin) {
+      toast.error('يجب ربط العهدة بدفعة نشطة. تواصل مع المدير لإنشاء عهدة بدون ربط.');
+      return;
+    }
+    if (requiresUnlinkReason && (!unlinkReason.trim() || unlinkReason.trim().length < 10)) {
+      toast.error('سبب عدم الربط بدفعة مطلوب (10 أحرف على الأقل)');
+      return;
+    }
     try {
+      const finalNotes = requiresUnlinkReason
+        ? `[عهدة غير مربوطة بدفعة] ${unlinkReason.trim()}${notes.trim() ? ` — ${notes.trim()}` : ''}`
+        : (notes.trim() || undefined);
       await addCustody({
         projectId,
         resourceName: resourceName.trim(),
         amount: parseFloat(amount),
-        notes: notes.trim() || undefined,
+        notes: finalNotes,
         status: 'active',
         receivedDate,
         sourceFundId: sourceFundId !== 'none' ? sourceFundId : undefined,
       } as any);
-      setResourceName(''); setAmount(''); setNotes('');
+      setResourceName(''); setAmount(''); setNotes(''); setUnlinkReason('');
       setReceivedDate(new Date().toISOString().split('T')[0]);
       setSourceFundId('none');
       setOpen(false);
