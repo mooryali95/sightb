@@ -91,6 +91,13 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [newNotes, setNewNotes] = useState('');
 
+  // ───── Emergency Fund Dialog ─────
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
+  const [emAmount, setEmAmount] = useState('');
+  const [emDate, setEmDate] = useState(new Date().toISOString().split('T')[0]);
+  const [emReason, setEmReason] = useState('');
+  const [emNotes, setEmNotes] = useState('');
+
   const handleCreate = async () => {
     const amt = parseFloat(newAmount);
     if (!amt || amt <= 0) { toast.error('أدخل مبلغاً صحيحاً'); return; }
@@ -101,6 +108,26 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
       setNewAmount(''); setNewNotes('');
     } catch (e: any) {
       toast.error(e.message || 'تعذّر إنشاء الدفعة');
+    }
+  };
+
+  const handleEmergency = async () => {
+    const amt = parseFloat(emAmount);
+    if (!amt || amt <= 0) { toast.error('أدخل مبلغاً صحيحاً'); return; }
+    if (!emReason.trim() || emReason.trim().length < 10) {
+      toast.error('سبب الدفعة الاستثنائية مطلوب (10 أحرف على الأقل)');
+      return;
+    }
+    try {
+      await createFund(projectId, amt, emDate, emNotes.trim() || undefined, {
+        emergency: true,
+        emergencyReason: emReason.trim(),
+      });
+      toast.success('تم إنشاء الدفعة الاستثنائية وتسجيلها في سجل التدقيق');
+      setEmergencyOpen(false);
+      setEmAmount(''); setEmNotes(''); setEmReason('');
+    } catch (e: any) {
+      toast.error(e.message || 'تعذّر إنشاء الدفعة الاستثنائية');
     }
   };
 
