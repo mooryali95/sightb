@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { getFundSpent, getFundCustodyDraw } from '@/lib/funds';
+import { useRole } from '@/hooks/useRole';
 
 interface CustodySectionProps {
   projectId: string;
@@ -25,12 +26,15 @@ interface CustodySectionProps {
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
   const { addCustody, deleteCustody, projectFunds } = useStore();
+  const { isAdminFor } = useRole();
+  const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
   const [resourceName, setResourceName] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
   const [sourceFundId, setSourceFundId] = useState<string>('none');
+  const [unlinkReason, setUnlinkReason] = useState('');
 
   const availableFunds = useMemo(
     () => projectFunds
@@ -44,19 +48,41 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
     [projectFunds, projectId, expenses, custodies],
   );
 
+  // افتراضياً اختر أحدث دفعة متاحة عند فتح النموذج
+  useEffect(() => {
+    if (open && sourceFundId === 'none' && availableFunds.length > 0) {
+      setSourceFundId(availableFunds[0].id);
+    }
+  }, [open, availableFunds.length]);
+
+  const fundsExist = availableFunds.length > 0;
+  const isUnlinked = sourceFundId === 'none';
+  const requiresUnlinkReason = fundsExist && isUnlinked;
+
   const handleAdd = async () => {
     if (!resourceName.trim() || !amount) return;
+    if (fundsExist && isUnlinked && !isAdmin) {
+      toast.error('يجب ربط العهدة بدفعة نشطة. تواصل مع المدير لإنشاء عهدة بدون ربط.');
+      return;
+    }
+    if (requiresUnlinkReason && (!unlinkReason.trim() || unlinkReason.trim().length < 10)) {
+      toast.error('سبب عدم الربط بدفعة مطلوب (10 أحرف على الأقل)');
+      return;
+    }
     try {
+      const finalNotes = requiresUnlinkReason
+        ? `[عهدة غير مربوطة بدفعة] ${unlinkReason.trim()}${notes.trim() ? ` — ${notes.trim()}` : ''}`
+        : (notes.trim() || undefined);
       await addCustody({
         projectId,
         resourceName: resourceName.trim(),
         amount: parseFloat(amount),
-        notes: notes.trim() || undefined,
+        notes: finalNotes,
         status: 'active',
         receivedDate,
         sourceFundId: sourceFundId !== 'none' ? sourceFundId : undefined,
       } as any);
-      setResourceName(''); setAmount(''); setNotes('');
+      setResourceName(''); setAmount(''); setNotes(''); setUnlinkReason('');
       setReceivedDate(new Date().toISOString().split('T')[0]);
       setSourceFundId('none');
       setOpen(false);
@@ -113,11 +139,15 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
               <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
             </div>
             <div className="space-y-2">
-              <Label>مصدر العهدة (الدفعة)</Label>
+              <Label>مصدر العهدة (الدفعة) {fundsExist && <span className="text-destructive">*</span>}</Label>
               <Select value={sourceFundId} onValueChange={setSourceFundId}>
                 <SelectTrigger><SelectValue placeholder="اختر الدفعة المصدر" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">بدون ربط بدفعة (تمويل مستقل)</SelectItem>
+                  {(!fundsExist || isAdmin) && (
+                    <SelectItem value="none">
+                      {fundsExist ? '⚠️ بدون ربط (إدارة فقط — يتطلب مبرر)' : 'بدون ربط بدفعة (لا توجد دفعات نشطة)'}
+                    </SelectItem>
+                  )}
                   {availableFunds.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
                       دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
@@ -126,9 +156,22 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                عند ربط العهدة بدفعة، يُخصم مبلغها فوراً من رصيد الدفعة بيد المدير.
+                {fundsExist
+                  ? 'الربط بدفعة إلزامي للحفاظ على دقة المحاسبة. يُخصم مبلغ العهدة فوراً من رصيد الدفعة.'
+                  : 'لا توجد دفعات نشطة — يمكن إنشاء العهدة بدون ربط.'}
               </p>
             </div>
+            {requiresUnlinkReason && (
+              <div className="space-y-2 p-3 rounded-md border border-destructive/30 bg-destructive/5">
+                <Label className="text-destructive">سبب عدم الربط بدفعة <span className="text-destructive">*</span></Label>
+                <Input
+                  value={unlinkReason}
+                  onChange={(e) => setUnlinkReason(e.target.value)}
+                  placeholder="مثال: عهدة طارئة بانتظار اعتماد دفعة جديدة"
+                />
+                <p className="text-xs text-destructive/80">سيُحفظ السبب في ملاحظات العهدة كأثر تدقيق.</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>تاريخ استلام العهدة</Label>
               <Input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />

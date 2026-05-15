@@ -91,6 +91,13 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [newNotes, setNewNotes] = useState('');
 
+  // ───── Emergency Fund Dialog ─────
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
+  const [emAmount, setEmAmount] = useState('');
+  const [emDate, setEmDate] = useState(new Date().toISOString().split('T')[0]);
+  const [emReason, setEmReason] = useState('');
+  const [emNotes, setEmNotes] = useState('');
+
   const handleCreate = async () => {
     const amt = parseFloat(newAmount);
     if (!amt || amt <= 0) { toast.error('أدخل مبلغاً صحيحاً'); return; }
@@ -101,6 +108,26 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
       setNewAmount(''); setNewNotes('');
     } catch (e: any) {
       toast.error(e.message || 'تعذّر إنشاء الدفعة');
+    }
+  };
+
+  const handleEmergency = async () => {
+    const amt = parseFloat(emAmount);
+    if (!amt || amt <= 0) { toast.error('أدخل مبلغاً صحيحاً'); return; }
+    if (!emReason.trim() || emReason.trim().length < 10) {
+      toast.error('سبب الدفعة الاستثنائية مطلوب (10 أحرف على الأقل)');
+      return;
+    }
+    try {
+      await createFund(projectId, amt, emDate, emNotes.trim() || undefined, {
+        emergency: true,
+        emergencyReason: emReason.trim(),
+      });
+      toast.success('تم إنشاء الدفعة الاستثنائية وتسجيلها في سجل التدقيق');
+      setEmergencyOpen(false);
+      setEmAmount(''); setEmNotes(''); setEmReason('');
+    } catch (e: any) {
+      toast.error(e.message || 'تعذّر إنشاء الدفعة الاستثنائية');
     }
   };
 
@@ -326,8 +353,55 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
         </div>
 
         {!canCreate.allowed && showCreate && (
-          <div className="mb-3 p-2 rounded-md bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/40 text-xs text-amber-800 dark:text-amber-300">
-            ⚠️ {canCreate.reason}
+          <div className="mb-3 p-3 rounded-md bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/40 text-xs text-amber-800 dark:text-amber-300 space-y-2">
+            <p>⚠️ {canCreate.reason}</p>
+            {isAdmin && (
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-200/60 dark:border-amber-700/30">
+                <span className="text-[11px] opacity-80">للحالات الاضطرارية فقط — يُسجَّل في سجل التدقيق</span>
+                <Dialog open={emergencyOpen} onOpenChange={setEmergencyOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1 border-destructive/40 text-destructive hover:bg-destructive/5">
+                      <AlertTriangle className="w-3 h-3" /> دفعة استثنائية
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md" dir="rtl">
+                    <DialogHeader>
+                      <DialogTitle className="text-destructive">دفعة استثنائية (تجاوز قاعدة التسوية)</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      <div className="p-2 rounded-md bg-destructive/5 border border-destructive/30 text-xs text-destructive">
+                        ستنشئ دفعة جديدة قبل تسوية الدفعة #{canCreate.blockingFundNumber}. هذا الإجراء يُسجَّل في سجل التدقيق ويظهر باسم "دفعة استثنائية" في الملاحظات.
+                      </div>
+                      <div>
+                        <Label>المبلغ</Label>
+                        <Input type="number" value={emAmount} onChange={(e) => setEmAmount(e.target.value)} placeholder="0" />
+                      </div>
+                      <div>
+                        <Label>تاريخ التحويل</Label>
+                        <Input type="date" value={emDate} onChange={(e) => setEmDate(e.target.value)} />
+                      </div>
+                      <div>
+                        <Label>سبب الاستثناء <span className="text-destructive">*</span></Label>
+                        <Textarea
+                          value={emReason}
+                          onChange={(e) => setEmReason(e.target.value)}
+                          rows={3}
+                          placeholder="مثال: مدفوعات عاجلة لمورد حرج قبل اكتمال تسوية الدفعة السابقة..."
+                        />
+                      </div>
+                      <div>
+                        <Label>ملاحظات إضافية (اختياري)</Label>
+                        <Textarea value={emNotes} onChange={(e) => setEmNotes(e.target.value)} rows={2} />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setEmergencyOpen(false)}>إلغاء</Button>
+                      <Button variant="destructive" onClick={handleEmergency}>اعتماد الدفعة الاستثنائية</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
           </div>
         )}
 

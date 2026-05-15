@@ -22,6 +22,7 @@ export interface FundSlice {
     amount: number,
     transferDate: string,
     notes?: string,
+    options?: { emergency?: boolean; emergencyReason?: string },
   ) => Promise<string>;
 
   /** إقرار الاستلام من مدير المشروع — يُنشئ تلقائياً تسوية بحالة draft */
@@ -125,15 +126,21 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     }));
   },
 
-  createFund: async (projectId, amount, transferDate, notes) => {
+  createFund: async (projectId, amount, transferDate, notes, options) => {
     const userId = await getUserId();
+    const isEmergency = !!options?.emergency;
+    const emergencyReason = options?.emergencyReason?.trim();
+
+    if (isEmergency && !emergencyReason) {
+      throw new Error('سبب الدفعة الاستثنائية مطلوب');
+    }
 
     // إعادة تحميل من DB لمنع state stale
     try { await get().loadFundsForProject(projectId); } catch {}
 
     const projectFunds = get().projectFunds.filter((f) => f.projectId === projectId);
     const unsettled = projectFunds.find((f) => f.status !== 'settled');
-    if (unsettled) {
+    if (unsettled && !isEmergency) {
       throw new Error(
         `لا يمكن إنشاء دفعة جديدة قبل تسوية الدفعة رقم ${unsettled.fundNumber}`,
       );
@@ -152,6 +159,10 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
       return last + 1;
     };
 
+    const finalNotes = isEmergency
+      ? `[دفعة استثنائية] ${emergencyReason}${notes?.trim() ? ` — ${notes.trim()}` : ''}`
+      : (notes?.trim() || null);
+
     const tryInsert = async (n: number) => {
       return await (supabase as any)
         .from('project_funds')
@@ -160,7 +171,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
           fund_number: n,
           amount,
           transfer_date: transferDate,
-          notes: notes?.trim() || null,
+          notes: finalNotes,
           created_by: userId,
           status: 'transferred',
         })
@@ -171,7 +182,6 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     let nextNumber = await computeNext();
     let { data, error } = await tryInsert(nextNumber);
 
-    // معالجة سباق التفرّد بإعادة المحاولة مرة واحدة
     if (error && (error.code === '23505' || /duplicate key/i.test(error.message || ''))) {
       nextNumber = await computeNext();
       ({ data, error } = await tryInsert(nextNumber));
@@ -184,6 +194,28 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     }
 
     const mapped = mapFund(data);
+
+    // سجل تدقيق للدفعات الاستثنائية
+    if (isEmergency) {
+      try {
+        await (supabase as any).from('system_audit_log').insert({
+          user_id: userId,
+          action: 'emergency_fund_create',
+          entity_type: 'project_fund',
+          entity_id: mapped.id,
+          entity_name: `دفعة #${mapped.fundNumber} — ${amount.toLocaleString('en-US')}`,
+          details: {
+            project_id: projectId,
+            amount,
+            blocking_fund_number: unsettled?.fundNumber ?? null,
+            reason: emergencyReason,
+          },
+        });
+      } catch (e) {
+        console.warn('فشل تسجيل سجل التدقيق للدفعة الاستثنائية', e);
+      }
+    }
+
     set((s) => ({ projectFunds: [...s.projectFunds, mapped] }));
     return mapped.id;
   },
