@@ -64,6 +64,8 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
 
   const unlinkedExpenses = projectExpenses.filter((e) => !e.fundId && !e.custodyId);
   const unlinkedTotal = unlinkedExpenses.reduce((s, e) => s + e.amount, 0);
+  const unlinkedCustodies = projectCustodies.filter((c) => !c.sourceFundId);
+  const unlinkedCustodyTotal = unlinkedCustodies.reduce((s, c) => s + c.amount, 0);
 
   const [openFunds, setOpenFunds] = useState<Set<string>>(new Set());
   const [openCustodies, setOpenCustodies] = useState<Set<string>>(new Set());
