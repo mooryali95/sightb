@@ -395,6 +395,13 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
       .eq('fund_id', fundId);
     if (unlinkErr) throw unlinkErr;
 
+    // فك ربط العهد المرتبطة بالدفعة
+    const { error: unlinkCust } = await (supabase as any)
+      .from('custodies')
+      .update({ source_fund_id: null })
+      .eq('source_fund_id', fundId);
+    if (unlinkCust) throw unlinkCust;
+
     const { error } = await (supabase as any)
       .from('project_funds')
       .delete()
@@ -405,6 +412,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
       projectFunds: s.projectFunds.filter((f) => f.id !== fundId),
       fundSettlements: s.fundSettlements.filter((st) => st.fundId !== fundId),
       expenses: s.expenses.map((e) => (e.fundId === fundId ? { ...e, fundId: undefined } : e)),
+      custodies: s.custodies.map((c) => (c.sourceFundId === fundId ? { ...c, sourceFundId: undefined } as any : c)),
     }));
   },
 });
