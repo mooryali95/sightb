@@ -60,36 +60,66 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   const isUnlinked = sourceFundId === 'none';
   const requiresUnlinkReason = fundsExist && isUnlinked;
 
+  const openEdit = (c: any) => {
+    setEditingId(c.id);
+    setResourceName(c.resourceName);
+    setAmount(String(c.amount));
+    setNotes(c.notes || '');
+    setReceivedDate(c.receivedDate || new Date().toISOString().split('T')[0]);
+    setSourceFundId(c.sourceFundId || 'none');
+    setUnlinkReason('');
+    setOpen(true);
+  };
+
   const handleAdd = async () => {
     if (!resourceName.trim() || !amount) return;
     if (fundsExist && isUnlinked && !isAdmin) {
       toast.error('يجب ربط العهدة بدفعة نشطة. تواصل مع المدير لإنشاء عهدة بدون ربط.');
       return;
     }
-    if (requiresUnlinkReason && (!unlinkReason.trim() || unlinkReason.trim().length < 10)) {
+    if (requiresUnlinkReason && !editingId && (!unlinkReason.trim() || unlinkReason.trim().length < 10)) {
       toast.error('سبب عدم الربط بدفعة مطلوب (10 أحرف على الأقل)');
       return;
     }
     try {
-      const finalNotes = requiresUnlinkReason
+      const finalNotes = requiresUnlinkReason && !editingId
         ? `[عهدة غير مربوطة بدفعة] ${unlinkReason.trim()}${notes.trim() ? ` — ${notes.trim()}` : ''}`
         : (notes.trim() || undefined);
-      await addCustody({
-        projectId,
-        resourceName: resourceName.trim(),
-        amount: parseFloat(amount),
-        notes: finalNotes,
-        status: 'active',
-        receivedDate,
-        sourceFundId: sourceFundId !== 'none' ? sourceFundId : undefined,
-      } as any);
+      if (editingId) {
+        const original = custodies.find(c => c.id === editingId);
+        const spent = expenses.filter((e: any) => e.custodyId === editingId).reduce((s: number, e: any) => s + e.amount, 0);
+        const newAmt = parseFloat(amount);
+        if (original && newAmt !== original.amount && newAmt < spent) {
+          toast.error(`لا يمكن تخفيض المبلغ تحت ${formatCurrency(spent)} (المصروف عليها)`);
+          return;
+        }
+        await updateCustody(editingId, {
+          resourceName: resourceName.trim(),
+          amount: newAmt,
+          notes: finalNotes ?? null,
+          receivedDate,
+          sourceFundId: sourceFundId !== 'none' ? sourceFundId : null,
+        } as any);
+        toast.success('تم تعديل العهدة');
+      } else {
+        await addCustody({
+          projectId,
+          resourceName: resourceName.trim(),
+          amount: parseFloat(amount),
+          notes: finalNotes,
+          status: 'active',
+          receivedDate,
+          sourceFundId: sourceFundId !== 'none' ? sourceFundId : undefined,
+        } as any);
+        toast.success('تمت إضافة العهدة');
+      }
+      setEditingId(null);
       setResourceName(''); setAmount(''); setNotes(''); setUnlinkReason('');
       setReceivedDate(new Date().toISOString().split('T')[0]);
       setSourceFundId('none');
       setOpen(false);
-      toast.success('تمت إضافة العهدة');
     } catch (e: any) {
-      toast.error(e.message || 'تعذّر إضافة العهدة');
+      toast.error(e.message || 'تعذّر حفظ العهدة');
     }
   };
 
