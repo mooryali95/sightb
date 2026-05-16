@@ -692,6 +692,8 @@ export interface PaymentRequest {
   justification?: string;
   linkedReimbursementIds: string[];
   linkedFundId?: string;
+  paidFromFundId?: string;
+  paidFromCustodyId?: string;
   priority: PaymentPriority;
   status: PaymentRequestStatus;
   requestedBy: string;
