@@ -60,6 +60,8 @@ export interface ResourcePayableSlice {
     paymentMethod: PaymentMethod;
     paymentReference?: string;
     paymentAttachments?: ReceiptAttachment[];
+    paidFromFundId?: string | null;
+    paidFromCustodyId?: string | null;
   }) => Promise<void>;
   cancelPaymentRequest: (id: string) => Promise<void>;
   deletePaymentRequest: (id: string) => Promise<void>;
