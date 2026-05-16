@@ -699,6 +699,16 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             catch (e: any) { toast.error(e.message); }
                           }}>إلغاء</Button>
                       )}
+                      {isAdmin && (req.status === 'draft' || req.status === 'cancelled' || req.status === 'rejected') && (
+                        <ConfirmDeleteDialog
+                          title="حذف طلب الصرف"
+                          description={`حذف طلب صرف "${req.description}" نهائياً؟`}
+                          onConfirm={async () => {
+                            try { await deletePaymentRequest(req.id); toast.success('تم الحذف'); }
+                            catch (e: any) { toast.error(e.message); }
+                          }}
+                        />
+                      )}
                     </div>
                   </Card>
                 );
