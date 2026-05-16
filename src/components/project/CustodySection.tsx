@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,10 +25,11 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, deleteCustody, projectFunds } = useStore();
+  const { addCustody, updateCustody, deleteCustody, projectFunds } = useStore();
   const { isAdminFor } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [resourceName, setResourceName] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
@@ -59,36 +60,66 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   const isUnlinked = sourceFundId === 'none';
   const requiresUnlinkReason = fundsExist && isUnlinked;
 
+  const openEdit = (c: any) => {
+    setEditingId(c.id);
+    setResourceName(c.resourceName);
+    setAmount(String(c.amount));
+    setNotes(c.notes || '');
+    setReceivedDate(c.receivedDate || new Date().toISOString().split('T')[0]);
+    setSourceFundId(c.sourceFundId || 'none');
+    setUnlinkReason('');
+    setOpen(true);
+  };
+
   const handleAdd = async () => {
     if (!resourceName.trim() || !amount) return;
     if (fundsExist && isUnlinked && !isAdmin) {
       toast.error('يجب ربط العهدة بدفعة نشطة. تواصل مع المدير لإنشاء عهدة بدون ربط.');
       return;
     }
-    if (requiresUnlinkReason && (!unlinkReason.trim() || unlinkReason.trim().length < 10)) {
+    if (requiresUnlinkReason && !editingId && (!unlinkReason.trim() || unlinkReason.trim().length < 10)) {
       toast.error('سبب عدم الربط بدفعة مطلوب (10 أحرف على الأقل)');
       return;
     }
     try {
-      const finalNotes = requiresUnlinkReason
+      const finalNotes = requiresUnlinkReason && !editingId
         ? `[عهدة غير مربوطة بدفعة] ${unlinkReason.trim()}${notes.trim() ? ` — ${notes.trim()}` : ''}`
         : (notes.trim() || undefined);
-      await addCustody({
-        projectId,
-        resourceName: resourceName.trim(),
-        amount: parseFloat(amount),
-        notes: finalNotes,
-        status: 'active',
-        receivedDate,
-        sourceFundId: sourceFundId !== 'none' ? sourceFundId : undefined,
-      } as any);
+      if (editingId) {
+        const original = custodies.find(c => c.id === editingId);
+        const spent = expenses.filter((e: any) => e.custodyId === editingId).reduce((s: number, e: any) => s + e.amount, 0);
+        const newAmt = parseFloat(amount);
+        if (original && newAmt !== original.amount && newAmt < spent) {
+          toast.error(`لا يمكن تخفيض المبلغ تحت ${formatCurrency(spent)} (المصروف عليها)`);
+          return;
+        }
+        await updateCustody(editingId, {
+          resourceName: resourceName.trim(),
+          amount: newAmt,
+          notes: finalNotes ?? null,
+          receivedDate,
+          sourceFundId: sourceFundId !== 'none' ? sourceFundId : null,
+        } as any);
+        toast.success('تم تعديل العهدة');
+      } else {
+        await addCustody({
+          projectId,
+          resourceName: resourceName.trim(),
+          amount: parseFloat(amount),
+          notes: finalNotes,
+          status: 'active',
+          receivedDate,
+          sourceFundId: sourceFundId !== 'none' ? sourceFundId : undefined,
+        } as any);
+        toast.success('تمت إضافة العهدة');
+      }
+      setEditingId(null);
       setResourceName(''); setAmount(''); setNotes(''); setUnlinkReason('');
       setReceivedDate(new Date().toISOString().split('T')[0]);
       setSourceFundId('none');
       setOpen(false);
-      toast.success('تمت إضافة العهدة');
     } catch (e: any) {
-      toast.error(e.message || 'تعذّر إضافة العهدة');
+      toast.error(e.message || 'تعذّر حفظ العهدة');
     }
   };
 
@@ -124,10 +155,18 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         {!readOnly && (
         <ResponsiveFormDialog
           open={open}
-          onOpenChange={setOpen}
-          title="إضافة عهدة جديدة"
+          onOpenChange={(o) => {
+            setOpen(o);
+            if (!o) {
+              setEditingId(null);
+              setResourceName(''); setAmount(''); setNotes(''); setUnlinkReason('');
+              setReceivedDate(new Date().toISOString().split('T')[0]);
+              setSourceFundId('none');
+            }
+          }}
+          title={editingId ? 'تعديل العهدة' : 'إضافة عهدة جديدة'}
           trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />عهدة جديدة</Button>}
-          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleAdd} submitLabel="إضافة" />}
+          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleAdd} submitLabel={editingId ? 'حفظ' : 'إضافة'} />}
         >
           <div className="space-y-4">
             <div className="space-y-2">
@@ -250,7 +289,16 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                       )}
                     </td>
                     <td className="text-muted-foreground text-xs hidden md:table-cell">{c.notes || '—'}</td>
-                    {!readOnly && <td><ConfirmDeleteDialog title="حذف العهدة" description="هل أنت متأكد من حذف هذه العهدة؟" onConfirm={() => deleteCustody(c.id)} /></td>}
+                    {!readOnly && (
+                      <td>
+                        <div className="flex items-center gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(c)} title="تعديل العهدة">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <ConfirmDeleteDialog title="حذف العهدة" description={c.spent > 0 ? `⚠️ هذه العهدة عليها ${formatCurrency(c.spent)} من المصروفات. الحذف سيُسقط الربط مع تلك المصروفات. متابعة؟` : 'هل أنت متأكد من حذف هذه العهدة؟'} onConfirm={() => deleteCustody(c.id)} />
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

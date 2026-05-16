@@ -899,6 +899,8 @@ export type Database = {
           linked_fund_id: string | null
           linked_reimbursement_ids: Json
           paid_date: string | null
+          paid_from_custody_id: string | null
+          paid_from_fund_id: string | null
           payment_attachments: Json
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           payment_reference: string | null
@@ -931,6 +933,8 @@ export type Database = {
           linked_fund_id?: string | null
           linked_reimbursement_ids?: Json
           paid_date?: string | null
+          paid_from_custody_id?: string | null
+          paid_from_fund_id?: string | null
           payment_attachments?: Json
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_reference?: string | null
@@ -963,6 +967,8 @@ export type Database = {
           linked_fund_id?: string | null
           linked_reimbursement_ids?: Json
           paid_date?: string | null
+          paid_from_custody_id?: string | null
+          paid_from_fund_id?: string | null
           payment_attachments?: Json
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_reference?: string | null

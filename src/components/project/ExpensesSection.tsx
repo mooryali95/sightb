@@ -178,12 +178,15 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
           date,
           month: parseInt(month),
           responsible: responsible.trim() || undefined,
+          resourceId: resourceId && resourceId !== 'none' ? resourceId : null,
+          custodyId: custodyId && custodyId !== 'none' ? custodyId : null,
+          budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : null,
           approvalStatus,
           vendor: vendor.trim() || undefined,
           invoiceRef: invoiceRef.trim() || undefined,
           isVatExempt,
           fundId: effectiveFundId,
-        });
+        } as any);
         toast.success('تم تعديل المصروف');
       } else {
         await addExpense({

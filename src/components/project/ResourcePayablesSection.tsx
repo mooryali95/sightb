@@ -63,7 +63,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     createReimbursement, approveReimbursement, rejectReimbursement, deleteReimbursement,
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
-    payPaymentRequest, cancelPaymentRequest,
+    payPaymentRequest, cancelPaymentRequest, deletePaymentRequest,
     createResourceSettlement, signResourceSettlement,
   } = useStore();
 
@@ -698,6 +698,16 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             try { await cancelPaymentRequest(req.id); toast.success('تم الإلغاء'); }
                             catch (e: any) { toast.error(e.message); }
                           }}>إلغاء</Button>
+                      )}
+                      {isAdmin && (req.status === 'draft' || req.status === 'cancelled' || req.status === 'rejected') && (
+                        <ConfirmDeleteDialog
+                          title="حذف طلب الصرف"
+                          description={`حذف طلب صرف "${req.description}" نهائياً؟`}
+                          onConfirm={async () => {
+                            try { await deletePaymentRequest(req.id); toast.success('تم الحذف'); }
+                            catch (e: any) { toast.error(e.message); }
+                          }}
+                        />
                       )}
                     </div>
                   </Card>
