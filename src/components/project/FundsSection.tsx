@@ -525,8 +525,13 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               description={(() => {
                                 const linked = projectExpenses.filter((e) => e.fundId === f.id);
                                 const linkedTotal = linked.reduce((s, e) => s + e.amount, 0);
-                                if (linked.length === 0) return `حذف الدفعة #${f.fundNumber}؟`;
-                                return `حذف الدفعة #${f.fundNumber}؟ سيتم فك ربط ${linked.length} مصروف (إجمالي ${formatCurrency(linkedTotal)}) — المصروفات نفسها لن تُحذف.`;
+                                const linkedCust = (useStore.getState().custodies || []).filter((c: any) => c.sourceFundId === f.id);
+                                const custTotal = linkedCust.reduce((s: number, c: any) => s + c.amount, 0);
+                                const parts: string[] = [];
+                                if (linked.length > 0) parts.push(`${linked.length} مصروف (${formatCurrency(linkedTotal)})`);
+                                if (linkedCust.length > 0) parts.push(`${linkedCust.length} عهدة (${formatCurrency(custTotal)})`);
+                                if (parts.length === 0) return `حذف الدفعة #${f.fundNumber}؟`;
+                                return `حذف الدفعة #${f.fundNumber}؟ سيتم فك ربط ${parts.join(' و')} — البنود نفسها لن تُحذف.`;
                               })()}
                               onConfirm={async () => {
                                 try { await deleteFund(f.id); toast.success('تم الحذف'); }
