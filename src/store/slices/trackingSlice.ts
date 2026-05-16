@@ -280,6 +280,20 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     return mapped.id;
   },
 
+  updateCustody: async (id, c) => {
+    const updates: Record<string, unknown> = {};
+    if (c.resourceName !== undefined) updates.resource_name = c.resourceName;
+    if (c.amount !== undefined) updates.amount = c.amount;
+    if (c.notes !== undefined) updates.notes = c.notes;
+    if ((c as any).receivedDate !== undefined) updates.received_date = (c as any).receivedDate;
+    if ((c as any).sourceFundId !== undefined) updates.source_fund_id = (c as any).sourceFundId || null;
+    if (c.status !== undefined) updates.status = c.status;
+    if (c.closedDate !== undefined) updates.closed_date = c.closedDate || null;
+    const { error } = await (supabase as any).from('custodies').update(updates).eq('id', id);
+    if (error) throw error;
+    set((s) => ({ custodies: s.custodies.map((x) => x.id === id ? { ...x, ...c } as any : x) }));
+  },
+
   deleteCustody: async (id) => {
     const { error } = await supabase.from('custodies').delete().eq('id', id);
     if (error) throw error;
