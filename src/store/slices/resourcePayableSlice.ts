@@ -117,6 +117,8 @@ function mapReq(d: any): PaymentRequest {
     justification: d.justification || undefined,
     linkedReimbursementIds: Array.isArray(d.linked_reimbursement_ids) ? d.linked_reimbursement_ids : [],
     linkedFundId: d.linked_fund_id || undefined,
+    paidFromFundId: d.paid_from_fund_id || undefined,
+    paidFromCustodyId: d.paid_from_custody_id || undefined,
     priority: d.priority as PaymentPriority,
     status: d.status as PaymentRequestStatus,
     requestedBy: d.requested_by,
