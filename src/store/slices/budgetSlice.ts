@@ -96,7 +96,9 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (e.month !== undefined) updates.month = e.month;
     if (e.responsible !== undefined) updates.responsible = e.responsible;
     if (e.notes !== undefined) updates.notes = e.notes;
-    if (e.budgetItemId !== undefined) updates.budget_item_id = e.budgetItemId;
+    if (e.budgetItemId !== undefined) updates.budget_item_id = e.budgetItemId || null;
+    if (e.custodyId !== undefined) updates.custody_id = e.custodyId || null;
+    if (e.resourceId !== undefined) updates.resource_id = e.resourceId || null;
     if (e.approvalStatus !== undefined) updates.approval_status = e.approvalStatus;
     if (e.approvedBy !== undefined) updates.approved_by = e.approvedBy;
     if (e.vendor !== undefined) updates.vendor = e.vendor;
