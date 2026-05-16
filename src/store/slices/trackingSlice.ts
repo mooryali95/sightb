@@ -28,6 +28,7 @@ export interface TrackingSlice {
   updateResource: (id: string, r: Partial<Resource>) => Promise<void>;
   deleteResource: (id: string) => Promise<void>;
   addCustody: (c: Omit<Custody, 'id' | 'createdAt' | 'spent' | 'remaining'>) => Promise<string>;
+  updateCustody: (id: string, c: Partial<Custody> & { sourceFundId?: string | null }) => Promise<void>;
   deleteCustody: (id: string) => Promise<void>;
   addCommitment: (c: Omit<Commitment, 'id' | 'createdAt'>) => Promise<string>;
   updateCommitment: (id: string, c: Partial<Commitment>) => Promise<void>;
