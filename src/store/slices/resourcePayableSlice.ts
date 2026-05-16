@@ -350,6 +350,8 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
         payment_method: input.paymentMethod,
         payment_reference: input.paymentReference?.trim() || null,
         payment_attachments: input.paymentAttachments || [],
+        paid_from_fund_id: input.paidFromFundId ?? null,
+        paid_from_custody_id: input.paidFromCustodyId ?? null,
       })
       .eq('id', id).select().single();
     if (error) throw error;
