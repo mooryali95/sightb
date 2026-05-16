@@ -25,10 +25,11 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, deleteCustody, projectFunds } = useStore();
+  const { addCustody, updateCustody, deleteCustody, projectFunds } = useStore();
   const { isAdminFor } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [resourceName, setResourceName] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
