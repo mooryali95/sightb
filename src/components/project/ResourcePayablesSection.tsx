@@ -63,7 +63,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     createReimbursement, approveReimbursement, rejectReimbursement, deleteReimbursement,
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
-    payPaymentRequest, cancelPaymentRequest,
+    payPaymentRequest, cancelPaymentRequest, deletePaymentRequest,
     createResourceSettlement, signResourceSettlement,
   } = useStore();
 
