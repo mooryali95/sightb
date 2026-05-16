@@ -155,10 +155,18 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         {!readOnly && (
         <ResponsiveFormDialog
           open={open}
-          onOpenChange={setOpen}
-          title="إضافة عهدة جديدة"
+          onOpenChange={(o) => {
+            setOpen(o);
+            if (!o) {
+              setEditingId(null);
+              setResourceName(''); setAmount(''); setNotes(''); setUnlinkReason('');
+              setReceivedDate(new Date().toISOString().split('T')[0]);
+              setSourceFundId('none');
+            }
+          }}
+          title={editingId ? 'تعديل العهدة' : 'إضافة عهدة جديدة'}
           trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />عهدة جديدة</Button>}
-          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleAdd} submitLabel="إضافة" />}
+          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleAdd} submitLabel={editingId ? 'حفظ' : 'إضافة'} />}
         >
           <div className="space-y-4">
             <div className="space-y-2">
