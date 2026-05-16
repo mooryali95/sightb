@@ -289,7 +289,16 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                       )}
                     </td>
                     <td className="text-muted-foreground text-xs hidden md:table-cell">{c.notes || '—'}</td>
-                    {!readOnly && <td><ConfirmDeleteDialog title="حذف العهدة" description="هل أنت متأكد من حذف هذه العهدة؟" onConfirm={() => deleteCustody(c.id)} /></td>}
+                    {!readOnly && (
+                      <td>
+                        <div className="flex items-center gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(c)} title="تعديل العهدة">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <ConfirmDeleteDialog title="حذف العهدة" description={c.spent > 0 ? `⚠️ هذه العهدة عليها ${formatCurrency(c.spent)} من المصروفات. الحذف سيُسقط الربط مع تلك المصروفات. متابعة؟` : 'هل أنت متأكد من حذف هذه العهدة؟'} onConfirm={() => deleteCustody(c.id)} />
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
