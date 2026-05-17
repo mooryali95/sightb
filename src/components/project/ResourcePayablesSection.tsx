@@ -60,6 +60,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   const {
     resources, reimbursements, paymentRequests, resourceSettlements,
+    projectFunds, custodies, expenses,
     createReimbursement, approveReimbursement, rejectReimbursement, deleteReimbursement,
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
