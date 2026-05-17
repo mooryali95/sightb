@@ -868,8 +868,66 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
               <Label>مرجع الدفع (اختياري)</Label>
               <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="رقم التحويل/الشيك" />
             </div>
+            {/* ─── مصدر النقد ─── */}
+            <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
+              <Label className="font-semibold">مصدر النقد *</Label>
+              {payingReq && (
+                <p className="text-xs text-muted-foreground">
+                  المبلغ المطلوب: <strong className="text-foreground">{formatCurrency(payingReq.amount)}</strong>
+                </p>
+              )}
+              <RadioGroup value={paySource} onValueChange={(v) => setPaySource(v as any)} className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="fund" id="src-fund" disabled={availableFunds.length === 0} className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="src-fund" className={cn('cursor-pointer', availableFunds.length === 0 && 'text-muted-foreground')}>
+                      من دفعة محددة {availableFunds.length === 0 && '(لا توجد دفعات بها رصيد)'}
+                    </Label>
+                    {paySource === 'fund' && availableFunds.length > 0 && (
+                      <Select value={paySourceFundId} onValueChange={setPaySourceFundId}>
+                        <SelectTrigger className="mt-1.5"><SelectValue placeholder="اختر الدفعة" /></SelectTrigger>
+                        <SelectContent>
+                          {availableFunds.map(({ fund, remaining }) => (
+                            <SelectItem key={fund.id} value={fund.id}>
+                              دفعة #{fund.fundNumber} — متاح {formatCurrency(remaining)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="custody" id="src-custody" disabled={availableCustodies.length === 0} className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="src-custody" className={cn('cursor-pointer', availableCustodies.length === 0 && 'text-muted-foreground')}>
+                      من عهدة قائمة {availableCustodies.length === 0 && '(لا توجد عُهد نشطة برصيد)'}
+                    </Label>
+                    {paySource === 'custody' && availableCustodies.length > 0 && (
+                      <Select value={paySourceCustodyId} onValueChange={setPaySourceCustodyId}>
+                        <SelectTrigger className="mt-1.5"><SelectValue placeholder="اختر العهدة" /></SelectTrigger>
+                        <SelectContent>
+                          {availableCustodies.map(({ custody, remaining }) => (
+                            <SelectItem key={custody.id} value={custody.id}>
+                              {custody.resourceName} — متاح {formatCurrency(remaining)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="none" id="src-none" className="mt-1" />
+                  <Label htmlFor="src-none" className="cursor-pointer">
+                    خارج النظام (دفع مباشر بدون خصم من دفعة/عهدة)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             <p className="text-xs text-muted-foreground">
-              عند التأكيد سيتم إنشاء مصروف في الموازنة الفعلية تلقائياً.
+              عند التأكيد سيُنشأ مصروف تلقائياً مربوط بالمصدر المحدد ويُحسب ضمن رصيد الدفعة/العهدة.
             </p>
           </div>
           <DialogFooter>
