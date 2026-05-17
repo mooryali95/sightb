@@ -11,10 +11,11 @@ import {
   SETTLEMENT_STATUS_COLORS,
 } from '@/types/project';
 import { getProjectFundsSummary, getFundSpent, getFundRemaining, getSettlementForFund } from '@/lib/funds';
+import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronLeft, Wallet, HandCoins, Banknote, Receipt } from 'lucide-react';
+import { ChevronDown, ChevronLeft, Wallet, HandCoins, Banknote, Receipt, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
