@@ -437,7 +437,31 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
       })
       .eq('id', id).select().single();
     if (error) throw error;
-    set((s) => ({ resourceSettlements: s.resourceSettlements.map((r) => r.id === id ? mapSettle(data) : r) }));
+    const settled = mapSettle(data);
+    set((s) => ({ resourceSettlements: s.resourceSettlements.map((r) => r.id === id ? settled : r) }));
+
+    // Close linked reimbursements: any 'approved' → 'reimbursed' (paid through this settlement)
+    const linkedIds = settled.linkedReimbursementIds || [];
+    if (linkedIds.length > 0) {
+      const toClose = get().reimbursements
+        .filter((r) => linkedIds.includes(r.id) && r.status === 'approved')
+        .map((r) => r.id);
+      if (toClose.length > 0) {
+        const { error: upErr } = await (supabase as any)
+          .from('resource_reimbursements')
+          .update({ status: 'reimbursed' })
+          .in('id', toClose);
+        if (!upErr) {
+          set((s) => ({
+            reimbursements: s.reimbursements.map((r) =>
+              toClose.includes(r.id) ? { ...r, status: 'reimbursed' as ReimbursementStatus } : r,
+            ),
+          }));
+        } else {
+          console.warn('Failed to close reimbursements on settlement sign:', upErr);
+        }
+      }
+    }
   },
 
   cancelResourceSettlement: async (id) => {

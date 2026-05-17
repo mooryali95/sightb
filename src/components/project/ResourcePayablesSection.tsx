@@ -38,6 +38,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { getFundRemaining } from '@/lib/funds';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import {
   Plus, HandCoins, CheckCircle2, XCircle, FileText, Send, Clock,
@@ -60,6 +62,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   const {
     resources, reimbursements, paymentRequests, resourceSettlements,
+    projectFunds, custodies, expenses,
     createReimbursement, approveReimbursement, rejectReimbursement, deleteReimbursement,
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
@@ -175,16 +178,86 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
   const [payMethod, setPayMethod] = useState<PaymentMethod>('bank_transfer');
   const [payRef, setPayRef] = useState('');
+  const [paySource, setPaySource] = useState<'fund' | 'custody' | 'none'>('fund');
+  const [paySourceFundId, setPaySourceFundId] = useState<string>('');
+  const [paySourceCustodyId, setPaySourceCustodyId] = useState<string>('');
+
+  const payingReq = useMemo(
+    () => projReqs.find((r) => r.id === payDialogId),
+    [projReqs, payDialogId],
+  );
+
+  // Active funds (transferred/acknowledged) with remaining balance
+  const availableFunds = useMemo(() => {
+    return projectFunds
+      .filter((f) => f.projectId === projectId && (f.status === 'transferred' || f.status === 'acknowledged'))
+      .map((f) => ({
+        fund: f,
+        remaining: getFundRemaining(
+          f,
+          expenses.filter((e) => e.projectId === projectId),
+          custodies.filter((c) => c.projectId === projectId),
+        ),
+      }))
+      .filter((x) => x.remaining > 0);
+  }, [projectFunds, expenses, custodies, projectId]);
+
+  // Active custodies with remaining balance
+  const availableCustodies = useMemo(() => {
+    return custodies
+      .filter((c) => c.projectId === projectId && c.status === 'active')
+      .map((c) => {
+        const spent = expenses
+          .filter((e) => e.custodyId === c.id)
+          .reduce((s, e) => s + e.amount, 0);
+        return { custody: c, remaining: c.amount - spent };
+      })
+      .filter((x) => x.remaining > 0);
+  }, [custodies, expenses, projectId]);
+
+  const openPayDialog = (reqId: string, scheduledDate?: string) => {
+    setPayDialogId(reqId);
+    setPayDate(scheduledDate || new Date().toISOString().split('T')[0]);
+    // auto-pick first available fund as default source
+    if (availableFunds.length > 0) {
+      setPaySource('fund');
+      setPaySourceFundId(availableFunds[0].fund.id);
+    } else if (availableCustodies.length > 0) {
+      setPaySource('custody');
+      setPaySourceCustodyId(availableCustodies[0].custody.id);
+    } else {
+      setPaySource('none');
+    }
+  };
 
   const handlePay = async () => {
-    if (!payDialogId) return;
+    if (!payDialogId || !payingReq) return;
+    // Balance check
+    if (paySource === 'fund') {
+      if (!paySourceFundId) { toast.error('اختر الدفعة المصدر'); return; }
+      const f = availableFunds.find((x) => x.fund.id === paySourceFundId);
+      if (!f) { toast.error('الدفعة المختارة غير متوفرة'); return; }
+      if (f.remaining < payingReq.amount) {
+        toast.error(`رصيد الدفعة غير كافٍ. المتاح: ${formatCurrency(f.remaining)}`); return;
+      }
+    } else if (paySource === 'custody') {
+      if (!paySourceCustodyId) { toast.error('اختر العهدة المصدر'); return; }
+      const c = availableCustodies.find((x) => x.custody.id === paySourceCustodyId);
+      if (!c) { toast.error('العهدة المختارة غير متوفرة'); return; }
+      if (c.remaining < payingReq.amount) {
+        toast.error(`رصيد العهدة غير كافٍ. المتاح: ${formatCurrency(c.remaining)}`); return;
+      }
+    }
     try {
       await payPaymentRequest(payDialogId, {
         paidDate: payDate, paymentMethod: payMethod,
         paymentReference: payRef,
+        paidFromFundId: paySource === 'fund' ? paySourceFundId : null,
+        paidFromCustodyId: paySource === 'custody' ? paySourceCustodyId : null,
       });
       toast.success('تم تأكيد الدفع وتسجيل المصروف تلقائياً');
       setPayDialogId(null); setPayRef('');
+      setPaySourceFundId(''); setPaySourceCustodyId('');
     } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
   };
 
@@ -681,14 +754,14 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             <CalendarClock className="h-4 w-4 ml-1" /> جدولة
                           </Button>
                           <Button size="sm"
-                            onClick={() => { setPayDialogId(req.id); setPayDate(new Date().toISOString().split('T')[0]); }}>
+                            onClick={() => openPayDialog(req.id)}>
                             تأكيد الدفع
                           </Button>
                         </>
                       )}
                       {isAdmin && req.status === 'scheduled' && (
                         <Button size="sm"
-                          onClick={() => { setPayDialogId(req.id); setPayDate(req.scheduledDate || new Date().toISOString().split('T')[0]); }}>
+                          onClick={() => openPayDialog(req.id, req.scheduledDate)}>
                           تأكيد الدفع
                         </Button>
                       )}
@@ -795,8 +868,66 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
               <Label>مرجع الدفع (اختياري)</Label>
               <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="رقم التحويل/الشيك" />
             </div>
+            {/* ─── مصدر النقد ─── */}
+            <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
+              <Label className="font-semibold">مصدر النقد *</Label>
+              {payingReq && (
+                <p className="text-xs text-muted-foreground">
+                  المبلغ المطلوب: <strong className="text-foreground">{formatCurrency(payingReq.amount)}</strong>
+                </p>
+              )}
+              <RadioGroup value={paySource} onValueChange={(v) => setPaySource(v as any)} className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="fund" id="src-fund" disabled={availableFunds.length === 0} className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="src-fund" className={cn('cursor-pointer', availableFunds.length === 0 && 'text-muted-foreground')}>
+                      من دفعة محددة {availableFunds.length === 0 && '(لا توجد دفعات بها رصيد)'}
+                    </Label>
+                    {paySource === 'fund' && availableFunds.length > 0 && (
+                      <Select value={paySourceFundId} onValueChange={setPaySourceFundId}>
+                        <SelectTrigger className="mt-1.5"><SelectValue placeholder="اختر الدفعة" /></SelectTrigger>
+                        <SelectContent>
+                          {availableFunds.map(({ fund, remaining }) => (
+                            <SelectItem key={fund.id} value={fund.id}>
+                              دفعة #{fund.fundNumber} — متاح {formatCurrency(remaining)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="custody" id="src-custody" disabled={availableCustodies.length === 0} className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="src-custody" className={cn('cursor-pointer', availableCustodies.length === 0 && 'text-muted-foreground')}>
+                      من عهدة قائمة {availableCustodies.length === 0 && '(لا توجد عُهد نشطة برصيد)'}
+                    </Label>
+                    {paySource === 'custody' && availableCustodies.length > 0 && (
+                      <Select value={paySourceCustodyId} onValueChange={setPaySourceCustodyId}>
+                        <SelectTrigger className="mt-1.5"><SelectValue placeholder="اختر العهدة" /></SelectTrigger>
+                        <SelectContent>
+                          {availableCustodies.map(({ custody, remaining }) => (
+                            <SelectItem key={custody.id} value={custody.id}>
+                              {custody.resourceName} — متاح {formatCurrency(remaining)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="none" id="src-none" className="mt-1" />
+                  <Label htmlFor="src-none" className="cursor-pointer">
+                    خارج النظام (دفع مباشر بدون خصم من دفعة/عهدة)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             <p className="text-xs text-muted-foreground">
-              عند التأكيد سيتم إنشاء مصروف في الموازنة الفعلية تلقائياً.
+              عند التأكيد سيُنشأ مصروف تلقائياً مربوط بالمصدر المحدد ويُحسب ضمن رصيد الدفعة/العهدة.
             </p>
           </div>
           <DialogFooter>

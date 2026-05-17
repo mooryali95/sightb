@@ -11,10 +11,11 @@ import {
   SETTLEMENT_STATUS_COLORS,
 } from '@/types/project';
 import { getProjectFundsSummary, getFundSpent, getFundRemaining, getSettlementForFund } from '@/lib/funds';
+import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronLeft, Wallet, HandCoins, Banknote, Receipt } from 'lucide-react';
+import { ChevronDown, ChevronLeft, Wallet, HandCoins, Banknote, Receipt, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -61,6 +62,20 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
   const totalDocumentedExpense = directSpend + custodyTotalSpend;
 
   const openFundsCount = projectFundsList.filter((f) => f.status !== 'settled').length;
+
+  // ── مستحقات معلّقة (E) — معلوماتية فقط، لا تُطرح من نقد المدير ──
+  const reimbursements = useStore((s) => s.reimbursements);
+  const paymentRequests = useStore((s) => s.paymentRequests);
+  const pendingPayables = useMemo(() => {
+    const approvedNotPaid = reimbursements
+      .filter((r) => r.projectId === projectId && r.status === 'approved')
+      .reduce((s, r) => s + r.amount, 0);
+    const inFlightRequests = paymentRequests
+      .filter((p) => p.projectId === projectId
+        && ['submitted', 'under_review', 'approved', 'scheduled'].includes(p.status))
+      .reduce((s, p) => s + p.amount, 0);
+    return { approvedNotPaid, inFlightRequests, total: approvedNotPaid + inFlightRequests };
+  }, [reimbursements, paymentRequests, projectId]);
 
   const unlinkedExpenses = projectExpenses.filter((e) => !e.fundId && !e.custodyId);
   const unlinkedTotal = unlinkedExpenses.reduce((s, e) => s + e.amount, 0);
@@ -344,6 +359,26 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
           )}
         </div>
       </div>
+
+      {/* Unlinked items warnings */}
+      {/* مستحقات معلّقة — معلوماتية */}
+      {pendingPayables.total > 0 && (
+        <Card className="p-3 rounded-xl border-amber-300/40 bg-amber-50/40 dark:bg-amber-900/10">
+          <div className="flex items-start gap-3">
+            <Clock className="w-4 h-4 mt-0.5 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1 text-xs">
+              <p className="font-semibold text-amber-800 dark:text-amber-300">
+                مستحقات موارد معلّقة — لم تُصرف بعد (لا تُطرح من النقد)
+              </p>
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
+                <span>استردادات معتمدة بانتظار الدفع: <strong className="font-mono text-foreground">{formatCurrency(pendingPayables.approvedNotPaid)}</strong></span>
+                <span>طلبات صرف قيد المعالجة: <strong className="font-mono text-foreground">{formatCurrency(pendingPayables.inFlightRequests)}</strong></span>
+                <span>الإجمالي: <strong className="font-mono text-foreground">{formatCurrency(pendingPayables.total)}</strong></span>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Unlinked items warnings */}
       {unlinkedCustodies.length > 0 && (
