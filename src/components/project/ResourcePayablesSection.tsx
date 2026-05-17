@@ -754,14 +754,14 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             <CalendarClock className="h-4 w-4 ml-1" /> جدولة
                           </Button>
                           <Button size="sm"
-                            onClick={() => { setPayDialogId(req.id); setPayDate(new Date().toISOString().split('T')[0]); }}>
+                            onClick={() => openPayDialog(req.id)}>
                             تأكيد الدفع
                           </Button>
                         </>
                       )}
                       {isAdmin && req.status === 'scheduled' && (
                         <Button size="sm"
-                          onClick={() => { setPayDialogId(req.id); setPayDate(req.scheduledDate || new Date().toISOString().split('T')[0]); }}>
+                          onClick={() => openPayDialog(req.id, req.scheduledDate)}>
                           تأكيد الدفع
                         </Button>
                       )}
