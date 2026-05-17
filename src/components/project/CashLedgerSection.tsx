@@ -361,6 +361,26 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
       </div>
 
       {/* Unlinked items warnings */}
+      {/* مستحقات معلّقة — معلوماتية */}
+      {pendingPayables.total > 0 && (
+        <Card className="p-3 rounded-xl border-amber-300/40 bg-amber-50/40 dark:bg-amber-900/10">
+          <div className="flex items-start gap-3">
+            <Clock className="w-4 h-4 mt-0.5 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1 text-xs">
+              <p className="font-semibold text-amber-800 dark:text-amber-300">
+                مستحقات موارد معلّقة — لم تُصرف بعد (لا تُطرح من النقد)
+              </p>
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
+                <span>استردادات معتمدة بانتظار الدفع: <strong className="font-mono text-foreground">{formatCurrency(pendingPayables.approvedNotPaid)}</strong></span>
+                <span>طلبات صرف قيد المعالجة: <strong className="font-mono text-foreground">{formatCurrency(pendingPayables.inFlightRequests)}</strong></span>
+                <span>الإجمالي: <strong className="font-mono text-foreground">{formatCurrency(pendingPayables.total)}</strong></span>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Unlinked items warnings */}
       {unlinkedCustodies.length > 0 && (
         <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5">
           <p className="text-sm text-destructive">
