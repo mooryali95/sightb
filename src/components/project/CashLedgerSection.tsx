@@ -63,6 +63,20 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
 
   const openFundsCount = projectFundsList.filter((f) => f.status !== 'settled').length;
 
+  // ── مستحقات معلّقة (E) — معلوماتية فقط، لا تُطرح من نقد المدير ──
+  const reimbursements = useStore((s) => s.reimbursements);
+  const paymentRequests = useStore((s) => s.paymentRequests);
+  const pendingPayables = useMemo(() => {
+    const approvedNotPaid = reimbursements
+      .filter((r) => r.projectId === projectId && r.status === 'approved')
+      .reduce((s, r) => s + r.amount, 0);
+    const inFlightRequests = paymentRequests
+      .filter((p) => p.projectId === projectId
+        && ['submitted', 'under_review', 'approved', 'scheduled'].includes(p.status))
+      .reduce((s, p) => s + p.amount, 0);
+    return { approvedNotPaid, inFlightRequests, total: approvedNotPaid + inFlightRequests };
+  }, [reimbursements, paymentRequests, projectId]);
+
   const unlinkedExpenses = projectExpenses.filter((e) => !e.fundId && !e.custodyId);
   const unlinkedTotal = unlinkedExpenses.reduce((s, e) => s + e.amount, 0);
   const unlinkedCustodies = projectCustodies.filter((c) => !c.sourceFundId);
