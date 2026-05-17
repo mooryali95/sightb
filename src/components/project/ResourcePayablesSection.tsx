@@ -178,16 +178,86 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
   const [payMethod, setPayMethod] = useState<PaymentMethod>('bank_transfer');
   const [payRef, setPayRef] = useState('');
+  const [paySource, setPaySource] = useState<'fund' | 'custody' | 'none'>('fund');
+  const [paySourceFundId, setPaySourceFundId] = useState<string>('');
+  const [paySourceCustodyId, setPaySourceCustodyId] = useState<string>('');
+
+  const payingReq = useMemo(
+    () => projReqs.find((r) => r.id === payDialogId),
+    [projReqs, payDialogId],
+  );
+
+  // Active funds (transferred/acknowledged) with remaining balance
+  const availableFunds = useMemo(() => {
+    return projectFunds
+      .filter((f) => f.projectId === projectId && (f.status === 'transferred' || f.status === 'acknowledged'))
+      .map((f) => ({
+        fund: f,
+        remaining: getFundRemaining(
+          f,
+          expenses.filter((e) => e.projectId === projectId),
+          custodies.filter((c) => c.projectId === projectId),
+        ),
+      }))
+      .filter((x) => x.remaining > 0);
+  }, [projectFunds, expenses, custodies, projectId]);
+
+  // Active custodies with remaining balance
+  const availableCustodies = useMemo(() => {
+    return custodies
+      .filter((c) => c.projectId === projectId && c.status === 'active')
+      .map((c) => {
+        const spent = expenses
+          .filter((e) => e.custodyId === c.id)
+          .reduce((s, e) => s + e.amount, 0);
+        return { custody: c, remaining: c.amount - spent };
+      })
+      .filter((x) => x.remaining > 0);
+  }, [custodies, expenses, projectId]);
+
+  const openPayDialog = (reqId: string, scheduledDate?: string) => {
+    setPayDialogId(reqId);
+    setPayDate(scheduledDate || new Date().toISOString().split('T')[0]);
+    // auto-pick first available fund as default source
+    if (availableFunds.length > 0) {
+      setPaySource('fund');
+      setPaySourceFundId(availableFunds[0].fund.id);
+    } else if (availableCustodies.length > 0) {
+      setPaySource('custody');
+      setPaySourceCustodyId(availableCustodies[0].custody.id);
+    } else {
+      setPaySource('none');
+    }
+  };
 
   const handlePay = async () => {
-    if (!payDialogId) return;
+    if (!payDialogId || !payingReq) return;
+    // Balance check
+    if (paySource === 'fund') {
+      if (!paySourceFundId) { toast.error('اختر الدفعة المصدر'); return; }
+      const f = availableFunds.find((x) => x.fund.id === paySourceFundId);
+      if (!f) { toast.error('الدفعة المختارة غير متوفرة'); return; }
+      if (f.remaining < payingReq.amount) {
+        toast.error(`رصيد الدفعة غير كافٍ. المتاح: ${formatCurrency(f.remaining)}`); return;
+      }
+    } else if (paySource === 'custody') {
+      if (!paySourceCustodyId) { toast.error('اختر العهدة المصدر'); return; }
+      const c = availableCustodies.find((x) => x.custody.id === paySourceCustodyId);
+      if (!c) { toast.error('العهدة المختارة غير متوفرة'); return; }
+      if (c.remaining < payingReq.amount) {
+        toast.error(`رصيد العهدة غير كافٍ. المتاح: ${formatCurrency(c.remaining)}`); return;
+      }
+    }
     try {
       await payPaymentRequest(payDialogId, {
         paidDate: payDate, paymentMethod: payMethod,
         paymentReference: payRef,
+        paidFromFundId: paySource === 'fund' ? paySourceFundId : null,
+        paidFromCustodyId: paySource === 'custody' ? paySourceCustodyId : null,
       });
       toast.success('تم تأكيد الدفع وتسجيل المصروف تلقائياً');
       setPayDialogId(null); setPayRef('');
+      setPaySourceFundId(''); setPaySourceCustodyId('');
     } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
   };
 
