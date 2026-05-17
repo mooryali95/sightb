@@ -38,6 +38,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { getFundRemaining } from '@/lib/funds';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import {
   Plus, HandCoins, CheckCircle2, XCircle, FileText, Send, Clock,
