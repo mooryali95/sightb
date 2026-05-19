@@ -608,6 +608,7 @@ export type Database = {
           fund_id: string | null
           id: string
           invoice_ref: string | null
+          is_outstanding_advance: boolean
           is_vat_exempt: boolean | null
           legacy_pre_fund: boolean
           month: number
@@ -634,6 +635,7 @@ export type Database = {
           fund_id?: string | null
           id?: string
           invoice_ref?: string | null
+          is_outstanding_advance?: boolean
           is_vat_exempt?: boolean | null
           legacy_pre_fund?: boolean
           month?: number
@@ -660,6 +662,7 @@ export type Database = {
           fund_id?: string | null
           id?: string
           invoice_ref?: string | null
+          is_outstanding_advance?: boolean
           is_vat_exempt?: boolean | null
           legacy_pre_fund?: boolean
           month?: number
