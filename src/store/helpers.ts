@@ -85,6 +85,8 @@ export function mapExpense(d: any): Expense {
     invoiceRef: d.invoice_ref || undefined,
     isVatExempt: d.is_vat_exempt ?? false,
     fundId: d.fund_id || undefined,
+    isOutstandingAdvance: d.is_outstanding_advance ?? false,
+    commitmentId: d.commitment_id || undefined,
   };
 }
 

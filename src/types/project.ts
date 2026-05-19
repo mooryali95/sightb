@@ -139,6 +139,9 @@ export interface Expense {
   approvalStatus: ApprovalStatus; approvedBy?: string; vendor?: string; invoiceRef?: string;
   isVatExempt: boolean;
   fundId?: string;
+  /** سلفة موظف لم تُسوَّ بعد — لا تُحتسب ضمن AC في تقارير الأداء حتى التسوية. */
+  isOutstandingAdvance?: boolean;
+  commitmentId?: string;
 }
 
 export type RevenueType = 'advance' | 'milestone' | 'final' | 'retention' | 'variation' | 'deduction';
@@ -694,6 +697,7 @@ export interface PaymentRequest {
   linkedFundId?: string;
   paidFromFundId?: string;
   paidFromCustodyId?: string;
+  budgetItemId?: string;
   priority: PaymentPriority;
   status: PaymentRequestStatus;
   requestedBy: string;
@@ -711,6 +715,10 @@ export interface PaymentRequest {
   paymentAttachments: ReceiptAttachment[];
   rejectionReason?: string;
   autoCreatedExpenseId?: string;
+  /** سلفة لم تُسوَّ بعد (تبقى ديناً على الموظف). */
+  isAdvanceOutstanding?: boolean;
+  advanceSettledAt?: string;
+  advanceSettledBy?: string;
   createdAt: string;
   updatedAt: string;
 }
