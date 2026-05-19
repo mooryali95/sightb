@@ -385,12 +385,21 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     if (error) throw error;
     const req = mapReq(data);
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
-    // Reload reimbursements/expenses for this project — DB triggers may have changed them
+    // Reload reimbursements (DB trigger may have changed them) and fetch the auto-created expense
     try { await get().loadResourcePayablesForProject(req.projectId); } catch (e) { console.warn(e); }
-    try {
-      const { loadProjectFinancialsFor } = (get() as any);
-      if (typeof loadProjectFinancialsFor === 'function') await loadProjectFinancialsFor(req.projectId);
-    } catch (e) { /* optional */ }
+    if (req.autoCreatedExpenseId) {
+      try {
+        const { data: exp } = await (supabase as any)
+          .from('expenses').select('*').eq('id', req.autoCreatedExpenseId).maybeSingle();
+        if (exp) {
+          const { mapExpense } = await import('@/store/helpers');
+          const mapped = mapExpense(exp);
+          set((s) => ({
+            expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)],
+          }));
+        }
+      } catch (e) { console.warn(e); }
+    }
   },
 
   cancelPaymentRequest: async (id) => {
