@@ -121,6 +121,7 @@ function mapReq(d: any): PaymentRequest {
     linkedFundId: d.linked_fund_id || undefined,
     paidFromFundId: d.paid_from_fund_id || undefined,
     paidFromCustodyId: d.paid_from_custody_id || undefined,
+    budgetItemId: d.budget_item_id || undefined,
     priority: d.priority as PaymentPriority,
     status: d.status as PaymentRequestStatus,
     requestedBy: d.requested_by,
@@ -138,6 +139,9 @@ function mapReq(d: any): PaymentRequest {
     paymentAttachments: Array.isArray(d.payment_attachments) ? d.payment_attachments : [],
     rejectionReason: d.rejection_reason || undefined,
     autoCreatedExpenseId: d.auto_created_expense_id || undefined,
+    isAdvanceOutstanding: d.is_advance_outstanding ?? false,
+    advanceSettledAt: d.advance_settled_at || undefined,
+    advanceSettledBy: d.advance_settled_by || undefined,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
   };
