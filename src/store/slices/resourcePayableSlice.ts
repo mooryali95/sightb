@@ -49,7 +49,9 @@ export interface ResourcePayableSlice {
     justification?: string;
     linkedReimbursementIds?: string[];
     priority?: PaymentPriority;
+    budgetItemId?: string | null;
   }) => Promise<string>;
+  updatePaymentRequest: (id: string, updates: Partial<PaymentRequest>) => Promise<void>;
   submitPaymentRequest: (id: string) => Promise<void>;
   reviewPaymentRequest: (id: string, notes?: string) => Promise<void>;
   approvePaymentRequest: (id: string, notes?: string) => Promise<void>;
@@ -62,9 +64,12 @@ export interface ResourcePayableSlice {
     paymentAttachments?: ReceiptAttachment[];
     paidFromFundId?: string | null;
     paidFromCustodyId?: string | null;
+    budgetItemId?: string | null;
   }) => Promise<void>;
   cancelPaymentRequest: (id: string) => Promise<void>;
   deletePaymentRequest: (id: string) => Promise<void>;
+  /** تسوية سلفة: تُعيد المبلغ من راتب أو نقد، فيتحوّل المصروف المرتبط من "قيد التسوية" إلى تكلفة فعلية. */
+  settleAdvance: (id: string, notes?: string) => Promise<void>;
 
   // Settlements
   createResourceSettlement: (input: {
