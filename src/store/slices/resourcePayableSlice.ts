@@ -49,7 +49,9 @@ export interface ResourcePayableSlice {
     justification?: string;
     linkedReimbursementIds?: string[];
     priority?: PaymentPriority;
+    budgetItemId?: string | null;
   }) => Promise<string>;
+  updatePaymentRequest: (id: string, updates: Partial<PaymentRequest>) => Promise<void>;
   submitPaymentRequest: (id: string) => Promise<void>;
   reviewPaymentRequest: (id: string, notes?: string) => Promise<void>;
   approvePaymentRequest: (id: string, notes?: string) => Promise<void>;
@@ -62,9 +64,12 @@ export interface ResourcePayableSlice {
     paymentAttachments?: ReceiptAttachment[];
     paidFromFundId?: string | null;
     paidFromCustodyId?: string | null;
+    budgetItemId?: string | null;
   }) => Promise<void>;
   cancelPaymentRequest: (id: string) => Promise<void>;
   deletePaymentRequest: (id: string) => Promise<void>;
+  /** تسوية سلفة: تُعيد المبلغ من راتب أو نقد، فيتحوّل المصروف المرتبط من "قيد التسوية" إلى تكلفة فعلية. */
+  settleAdvance: (id: string, notes?: string) => Promise<void>;
 
   // Settlements
   createResourceSettlement: (input: {
@@ -121,6 +126,7 @@ function mapReq(d: any): PaymentRequest {
     linkedFundId: d.linked_fund_id || undefined,
     paidFromFundId: d.paid_from_fund_id || undefined,
     paidFromCustodyId: d.paid_from_custody_id || undefined,
+    budgetItemId: d.budget_item_id || undefined,
     priority: d.priority as PaymentPriority,
     status: d.status as PaymentRequestStatus,
     requestedBy: d.requested_by,
@@ -138,6 +144,9 @@ function mapReq(d: any): PaymentRequest {
     paymentAttachments: Array.isArray(d.payment_attachments) ? d.payment_attachments : [],
     rejectionReason: d.rejection_reason || undefined,
     autoCreatedExpenseId: d.auto_created_expense_id || undefined,
+    isAdvanceOutstanding: d.is_advance_outstanding ?? false,
+    advanceSettledAt: d.advance_settled_at || undefined,
+    advanceSettledBy: d.advance_settled_by || undefined,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
   };
@@ -281,6 +290,7 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
         justification: input.justification?.trim() || null,
         linked_reimbursement_ids: input.linkedReimbursementIds || [],
         priority: input.priority || 'normal',
+        budget_item_id: input.budgetItemId || null,
         status: 'draft',
         requested_by: userId,
         user_id: userId,
@@ -291,6 +301,24 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     set((s) => ({ paymentRequests: [m, ...s.paymentRequests] }));
     return m.id;
   },
+
+  updatePaymentRequest: async (id, updates) => {
+    const payload: Record<string, unknown> = {};
+    if (updates.requestType !== undefined) payload.request_type = updates.requestType;
+    if (updates.amount !== undefined) payload.amount = updates.amount;
+    if (updates.description !== undefined) payload.description = updates.description;
+    if (updates.justification !== undefined) payload.justification = updates.justification || null;
+    if (updates.linkedReimbursementIds !== undefined) payload.linked_reimbursement_ids = updates.linkedReimbursementIds;
+    if (updates.priority !== undefined) payload.priority = updates.priority;
+    if (updates.budgetItemId !== undefined) payload.budget_item_id = updates.budgetItemId || null;
+    if (updates.scheduledDate !== undefined) payload.scheduled_date = updates.scheduledDate || null;
+    if (Object.keys(payload).length === 0) return;
+    const { data, error } = await (supabase as any)
+      .from('payment_requests').update(payload).eq('id', id).select().single();
+    if (error) throw error;
+    set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? mapReq(data) : r) }));
+  },
+
 
   submitPaymentRequest: async (id) => {
     const { data, error } = await (supabase as any)
@@ -342,23 +370,36 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
   },
 
   payPaymentRequest: async (id, input) => {
+    const payload: Record<string, unknown> = {
+      status: 'paid',
+      paid_date: input.paidDate,
+      payment_method: input.paymentMethod,
+      payment_reference: input.paymentReference?.trim() || null,
+      payment_attachments: input.paymentAttachments || [],
+      paid_from_fund_id: input.paidFromFundId ?? null,
+      paid_from_custody_id: input.paidFromCustodyId ?? null,
+    };
+    if (input.budgetItemId !== undefined) payload.budget_item_id = input.budgetItemId || null;
     const { data, error } = await (supabase as any)
-      .from('payment_requests')
-      .update({
-        status: 'paid',
-        paid_date: input.paidDate,
-        payment_method: input.paymentMethod,
-        payment_reference: input.paymentReference?.trim() || null,
-        payment_attachments: input.paymentAttachments || [],
-        paid_from_fund_id: input.paidFromFundId ?? null,
-        paid_from_custody_id: input.paidFromCustodyId ?? null,
-      })
-      .eq('id', id).select().single();
+      .from('payment_requests').update(payload).eq('id', id).select().single();
     if (error) throw error;
-    // Reload reimbursements for this project — DB trigger may have changed them
     const req = mapReq(data);
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
+    // Reload reimbursements (DB trigger may have changed them) and fetch the auto-created expense
     try { await get().loadResourcePayablesForProject(req.projectId); } catch (e) { console.warn(e); }
+    if (req.autoCreatedExpenseId) {
+      try {
+        const { data: exp } = await (supabase as any)
+          .from('expenses').select('*').eq('id', req.autoCreatedExpenseId).maybeSingle();
+        if (exp) {
+          const { mapExpense } = await import('@/store/helpers');
+          const mapped = mapExpense(exp);
+          set((s) => ({
+            expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)],
+          }));
+        }
+      } catch (e) { console.warn(e); }
+    }
   },
 
   cancelPaymentRequest: async (id) => {
@@ -368,10 +409,44 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? mapReq(data) : r) }));
   },
 
+  settleAdvance: async (id, notes) => {
+    const userId = await getUserId();
+    const cur = get().paymentRequests.find((r) => r.id === id);
+    if (!cur) throw new Error('طلب الصرف غير موجود');
+    if (cur.requestType !== 'advance') throw new Error('هذه العملية متاحة للسلف فقط');
+    if (!cur.isAdvanceOutstanding) throw new Error('السلفة مسوّاة بالفعل');
+    const newNotes = [cur.approvalNotes, notes?.trim()].filter(Boolean).join(' | ') || null;
+    const { data, error } = await (supabase as any)
+      .from('payment_requests').update({
+        is_advance_outstanding: false,
+        advance_settled_at: new Date().toISOString(),
+        advance_settled_by: userId,
+        approval_notes: newNotes,
+      }).eq('id', id).select().single();
+    if (error) throw error;
+    const req = mapReq(data);
+    set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
+    // Trigger flipped the linked expense's is_outstanding_advance — patch local state
+    if (req.autoCreatedExpenseId) {
+      set((s) => ({
+        expenses: s.expenses.map((e) =>
+          e.id === req.autoCreatedExpenseId ? { ...e, isOutstandingAdvance: false } : e,
+        ),
+      }));
+    }
+  },
+
   deletePaymentRequest: async (id) => {
+    const cur = get().paymentRequests.find((r) => r.id === id);
     const { error } = await (supabase as any).from('payment_requests').delete().eq('id', id);
     if (error) throw error;
-    set((s) => ({ paymentRequests: s.paymentRequests.filter((r) => r.id !== id) }));
+    set((s) => ({
+      paymentRequests: s.paymentRequests.filter((r) => r.id !== id),
+      // DB trigger removed the auto-created expense — drop it from local state too
+      expenses: cur?.autoCreatedExpenseId
+        ? s.expenses.filter((e) => e.id !== cur.autoCreatedExpenseId)
+        : s.expenses,
+    }));
   },
 
   // ─── Settlements ───

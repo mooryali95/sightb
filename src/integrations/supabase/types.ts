@@ -600,6 +600,7 @@ export type Database = {
           approved_by: string | null
           budget_item_id: string | null
           category: string
+          commitment_id: string | null
           created_at: string
           custody_id: string | null
           date: string
@@ -607,6 +608,7 @@ export type Database = {
           fund_id: string | null
           id: string
           invoice_ref: string | null
+          is_outstanding_advance: boolean
           is_vat_exempt: boolean | null
           legacy_pre_fund: boolean
           month: number
@@ -625,6 +627,7 @@ export type Database = {
           approved_by?: string | null
           budget_item_id?: string | null
           category: string
+          commitment_id?: string | null
           created_at?: string
           custody_id?: string | null
           date: string
@@ -632,6 +635,7 @@ export type Database = {
           fund_id?: string | null
           id?: string
           invoice_ref?: string | null
+          is_outstanding_advance?: boolean
           is_vat_exempt?: boolean | null
           legacy_pre_fund?: boolean
           month?: number
@@ -650,6 +654,7 @@ export type Database = {
           approved_by?: string | null
           budget_item_id?: string | null
           category?: string
+          commitment_id?: string | null
           created_at?: string
           custody_id?: string | null
           date?: string
@@ -657,6 +662,7 @@ export type Database = {
           fund_id?: string | null
           id?: string
           invoice_ref?: string | null
+          is_outstanding_advance?: boolean
           is_vat_exempt?: boolean | null
           legacy_pre_fund?: boolean
           month?: number
@@ -886,15 +892,19 @@ export type Database = {
       }
       payment_requests: {
         Row: {
+          advance_settled_at: string | null
+          advance_settled_by: string | null
           amount: number
           approval_notes: string | null
           approved_at: string | null
           approved_by: string | null
           auto_created_expense_id: string | null
+          budget_item_id: string | null
           created_at: string
           currency: string
           description: string
           id: string
+          is_advance_outstanding: boolean
           justification: string | null
           linked_fund_id: string | null
           linked_reimbursement_ids: Json
@@ -920,15 +930,19 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          advance_settled_at?: string | null
+          advance_settled_by?: string | null
           amount?: number
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
           auto_created_expense_id?: string | null
+          budget_item_id?: string | null
           created_at?: string
           currency?: string
           description: string
           id?: string
+          is_advance_outstanding?: boolean
           justification?: string | null
           linked_fund_id?: string | null
           linked_reimbursement_ids?: Json
@@ -954,15 +968,19 @@ export type Database = {
           user_id: string
         }
         Update: {
+          advance_settled_at?: string | null
+          advance_settled_by?: string | null
           amount?: number
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
           auto_created_expense_id?: string | null
+          budget_item_id?: string | null
           created_at?: string
           currency?: string
           description?: string
           id?: string
+          is_advance_outstanding?: boolean
           justification?: string | null
           linked_fund_id?: string | null
           linked_reimbursement_ids?: Json
