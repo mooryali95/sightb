@@ -77,7 +77,10 @@ export function getProjectSummary(
   changeOrders: ChangeOrder[] = []
 ): ProjectSummary {
   const totalPlanned = getTotalPlanned(budgetItems);
-  const totalActual = expenses.filter(e => (e as any).approvalStatus !== 'rejected').reduce((sum, e) => sum + e.amount, 0);
+  // استبعاد المرفوضات + السلف غير المسوّاة (Outstanding Advances) من AC
+  const totalActual = expenses
+    .filter(e => (e as any).approvalStatus !== 'rejected' && !(e as any).isOutstandingAdvance)
+    .reduce((sum, e) => sum + e.amount, 0);
 
   const effectiveContractValue = getEffectiveContractValue(project.contractValue, changeOrders);
   const contractRemaining = effectiveContractValue - totalActual;
@@ -112,7 +115,7 @@ export function getProjectSummary(
   const contractValueInclVAT = vatRate > 0 ? addVAT(effectiveContractValue, vatRate) : effectiveContractValue;
 
   const totalVATOnExpenses = expenses
-    .filter(e => (e as any).approvalStatus !== 'rejected' && !(e as any).isVatExempt)
+    .filter(e => (e as any).approvalStatus !== 'rejected' && !(e as any).isOutstandingAdvance && !(e as any).isVatExempt)
     .reduce((sum, e) => sum + calcVAT(e.amount, vatRate), 0);
   const totalActualInclVAT = totalActual + totalVATOnExpenses;
 
@@ -164,6 +167,7 @@ export function getExpensesByCategory(expenses: Expense[]) {
 export function getMonthlyBreakdown(expenses: Expense[], months: number) {
   const result: number[] = Array(months).fill(0);
   expenses.forEach((e) => {
+    if ((e as any).isOutstandingAdvance) return; // exclude unsettled advances
     if (e.month >= 1 && e.month <= months) {
       result[e.month - 1] += e.amount;
     }
@@ -464,6 +468,7 @@ export function getMonthlyBudgetPlan(
   const actualPerMonth: number[] = Array(months).fill(0);
   expenses.forEach((exp) => {
     if ((exp as any).approvalStatus === 'rejected') return;
+    if ((exp as any).isOutstandingAdvance) return;
     if (exp.month >= 1 && exp.month <= months) {
       actualPerMonth[exp.month - 1] += exp.amount;
     }
