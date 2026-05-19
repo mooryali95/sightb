@@ -426,15 +426,27 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     if (error) throw error;
     const req = mapReq(data);
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
-    // Trigger updates the linked expense's is_outstanding_advance — reload expenses
-    try { await get().loadResourcePayablesForProject(req.projectId); } catch (e) { /* */ }
+    // Trigger flipped the linked expense's is_outstanding_advance — patch local state
+    if (req.autoCreatedExpenseId) {
+      set((s) => ({
+        expenses: s.expenses.map((e) =>
+          e.id === req.autoCreatedExpenseId ? { ...e, isOutstandingAdvance: false } : e,
+        ),
+      }));
+    }
   },
 
-
   deletePaymentRequest: async (id) => {
+    const cur = get().paymentRequests.find((r) => r.id === id);
     const { error } = await (supabase as any).from('payment_requests').delete().eq('id', id);
     if (error) throw error;
-    set((s) => ({ paymentRequests: s.paymentRequests.filter((r) => r.id !== id) }));
+    set((s) => ({
+      paymentRequests: s.paymentRequests.filter((r) => r.id !== id),
+      // DB trigger removed the auto-created expense — drop it from local state too
+      expenses: cur?.autoCreatedExpenseId
+        ? s.expenses.filter((e) => e.id !== cur.autoCreatedExpenseId)
+        : s.expenses,
+    }));
   },
 
   // ─── Settlements ───
