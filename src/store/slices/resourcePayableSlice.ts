@@ -290,6 +290,7 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
         justification: input.justification?.trim() || null,
         linked_reimbursement_ids: input.linkedReimbursementIds || [],
         priority: input.priority || 'normal',
+        budget_item_id: input.budgetItemId || null,
         status: 'draft',
         requested_by: userId,
         user_id: userId,
@@ -300,6 +301,24 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     set((s) => ({ paymentRequests: [m, ...s.paymentRequests] }));
     return m.id;
   },
+
+  updatePaymentRequest: async (id, updates) => {
+    const payload: Record<string, unknown> = {};
+    if (updates.requestType !== undefined) payload.request_type = updates.requestType;
+    if (updates.amount !== undefined) payload.amount = updates.amount;
+    if (updates.description !== undefined) payload.description = updates.description;
+    if (updates.justification !== undefined) payload.justification = updates.justification || null;
+    if (updates.linkedReimbursementIds !== undefined) payload.linked_reimbursement_ids = updates.linkedReimbursementIds;
+    if (updates.priority !== undefined) payload.priority = updates.priority;
+    if (updates.budgetItemId !== undefined) payload.budget_item_id = updates.budgetItemId || null;
+    if (updates.scheduledDate !== undefined) payload.scheduled_date = updates.scheduledDate || null;
+    if (Object.keys(payload).length === 0) return;
+    const { data, error } = await (supabase as any)
+      .from('payment_requests').update(payload).eq('id', id).select().single();
+    if (error) throw error;
+    set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? mapReq(data) : r) }));
+  },
+
 
   submitPaymentRequest: async (id) => {
     const { data, error } = await (supabase as any)
@@ -351,23 +370,27 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
   },
 
   payPaymentRequest: async (id, input) => {
+    const payload: Record<string, unknown> = {
+      status: 'paid',
+      paid_date: input.paidDate,
+      payment_method: input.paymentMethod,
+      payment_reference: input.paymentReference?.trim() || null,
+      payment_attachments: input.paymentAttachments || [],
+      paid_from_fund_id: input.paidFromFundId ?? null,
+      paid_from_custody_id: input.paidFromCustodyId ?? null,
+    };
+    if (input.budgetItemId !== undefined) payload.budget_item_id = input.budgetItemId || null;
     const { data, error } = await (supabase as any)
-      .from('payment_requests')
-      .update({
-        status: 'paid',
-        paid_date: input.paidDate,
-        payment_method: input.paymentMethod,
-        payment_reference: input.paymentReference?.trim() || null,
-        payment_attachments: input.paymentAttachments || [],
-        paid_from_fund_id: input.paidFromFundId ?? null,
-        paid_from_custody_id: input.paidFromCustodyId ?? null,
-      })
-      .eq('id', id).select().single();
+      .from('payment_requests').update(payload).eq('id', id).select().single();
     if (error) throw error;
-    // Reload reimbursements for this project — DB trigger may have changed them
     const req = mapReq(data);
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
+    // Reload reimbursements/expenses for this project — DB triggers may have changed them
     try { await get().loadResourcePayablesForProject(req.projectId); } catch (e) { console.warn(e); }
+    try {
+      const { loadProjectFinancialsFor } = (get() as any);
+      if (typeof loadProjectFinancialsFor === 'function') await loadProjectFinancialsFor(req.projectId);
+    } catch (e) { /* optional */ }
   },
 
   cancelPaymentRequest: async (id) => {
@@ -376,6 +399,28 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     if (error) throw error;
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? mapReq(data) : r) }));
   },
+
+  settleAdvance: async (id, notes) => {
+    const userId = await getUserId();
+    const cur = get().paymentRequests.find((r) => r.id === id);
+    if (!cur) throw new Error('طلب الصرف غير موجود');
+    if (cur.requestType !== 'advance') throw new Error('هذه العملية متاحة للسلف فقط');
+    if (!cur.isAdvanceOutstanding) throw new Error('السلفة مسوّاة بالفعل');
+    const newNotes = [cur.approvalNotes, notes?.trim()].filter(Boolean).join(' | ') || null;
+    const { data, error } = await (supabase as any)
+      .from('payment_requests').update({
+        is_advance_outstanding: false,
+        advance_settled_at: new Date().toISOString(),
+        advance_settled_by: userId,
+        approval_notes: newNotes,
+      }).eq('id', id).select().single();
+    if (error) throw error;
+    const req = mapReq(data);
+    set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
+    // Trigger updates the linked expense's is_outstanding_advance — reload expenses
+    try { await get().loadResourcePayablesForProject(req.projectId); } catch (e) { /* */ }
+  },
+
 
   deletePaymentRequest: async (id) => {
     const { error } = await (supabase as any).from('payment_requests').delete().eq('id', id);
