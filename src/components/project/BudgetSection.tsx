@@ -34,7 +34,12 @@ interface BudgetSectionProps {
 }
 
 export function BudgetSection({ projectId, budgetItems, expenses, revenues = [], durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false, taxPercent = 15, startDate }: BudgetSectionProps) {
-  const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense } = useStore();
+  const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense, paymentRequests } = useStore();
+  const outstandingAdvancesTotal = paymentRequests
+    .filter((r: any) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding)
+    .reduce((s: number, r: any) => s + r.amount, 0);
+  const outstandingAdvancesCount = paymentRequests
+    .filter((r: any) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding).length;
   const [activeDraft, setActiveDraft] = useState<BudgetAmendment | null>(null);
   // الموازنة مفتوحة للتعديل عند: عدم القفل، أو وجود مسودة تعديل نشطة
   const isLocked = readOnly || (baselineLocked && !activeDraft);
@@ -192,6 +197,23 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
               </p>
             </div>
           </div>
+
+          {outstandingAdvancesTotal > 0 && (
+            <div className="mb-4 p-3 rounded-lg border border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold">سلف قائمة (لم تُسوَّ بعد)</p>
+                <p className="text-[11px] text-muted-foreground">
+                  أصول قابلة للاسترداد — لا تدخل في التكلفة الفعلية (AC) ولا في حساب CPI حتى تتم تسويتها.
+                </p>
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-mono font-bold text-amber-700 dark:text-amber-400">
+                  {formatCurrency(outstandingAdvancesTotal)}
+                </p>
+                <p className="text-[11px] text-muted-foreground">{outstandingAdvancesCount} سلفة</p>
+              </div>
+            </div>
+          )}
 
           <div className="mb-4">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">

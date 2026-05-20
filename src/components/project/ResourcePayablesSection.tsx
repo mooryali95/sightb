@@ -62,13 +62,18 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   const {
     resources, reimbursements, paymentRequests, resourceSettlements,
-    projectFunds, custodies, expenses,
+    projectFunds, custodies, expenses, budgetItems,
     createReimbursement, approveReimbursement, rejectReimbursement, deleteReimbursement,
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
-    payPaymentRequest, cancelPaymentRequest, deletePaymentRequest,
+    payPaymentRequest, cancelPaymentRequest, deletePaymentRequest, settleAdvance,
     createResourceSettlement, signResourceSettlement,
   } = useStore();
+
+  const projBudgetItems = useMemo(
+    () => budgetItems.filter((b: any) => b.projectId === projectId),
+    [budgetItems, projectId],
+  );
 
   const projResources = useMemo(
     () => resources.filter((r) => r.projectId === projectId),
@@ -130,6 +135,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const [pJustification, setPJustification] = useState('');
   const [pPriority, setPPriority] = useState<PaymentPriority>('normal');
   const [pSelectedReimbs, setPSelectedReimbs] = useState<string[]>([]);
+  const [pBudgetItemId, setPBudgetItemId] = useState<string>('');
 
   const eligibleReimbs = useMemo(
     () => projReimbs.filter(
@@ -148,7 +154,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const resetReq = () => {
     setPResourceId(''); setPType('reimbursement'); setPAmount('');
     setPDescription(''); setPJustification(''); setPPriority('normal');
-    setPSelectedReimbs([]);
+    setPSelectedReimbs([]); setPBudgetItemId('');
   };
 
   const handleCreateReq = async () => {
@@ -165,6 +171,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         amount: finalAmount, description: pDescription,
         justification: pJustification, priority: pPriority,
         linkedReimbursementIds: pType === 'reimbursement' ? pSelectedReimbs : [],
+        budgetItemId: pBudgetItemId || undefined,
       });
       // Auto-submit if user wants? For now keep as draft, then submit
       await submitPaymentRequest(id);
@@ -345,10 +352,19 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
   };
 
+  // ─── Outstanding advances (paid but not settled) ───
+  const outstandingAdvances = useMemo(
+    () => projReqs.filter(
+      (r) => r.requestType === 'advance' && r.status === 'paid' && (r as any).isAdvanceOutstanding,
+    ),
+    [projReqs],
+  );
+  const outstandingAdvancesTotal = outstandingAdvances.reduce((s, r) => s + r.amount, 0);
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
             <HandCoins className="h-4 w-4" /> إجمالي المعتمد
@@ -372,6 +388,15 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
             <Clock className="h-4 w-4" /> طلبات معلقة
           </div>
           <div className="text-2xl font-bold">{summary.pendingRequestsCount}</div>
+        </Card>
+        <Card className="p-4 border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20" title="السلف المدفوعة لم تُسوَّ بعد — أصل قابل للاسترداد لا يدخل CPI">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm mb-1">
+            <FileText className="h-4 w-4" /> سلف قائمة (غير مسوّاة)
+          </div>
+          <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+            {formatCurrency(outstandingAdvancesTotal)}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">{outstandingAdvances.length} سلفة</div>
         </Card>
       </div>
 
@@ -652,6 +677,23 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                         </SelectContent>
                       </Select>
                     </div>
+                    <div>
+                      <Label>بند الموازنة المرتبط (اختياري)</Label>
+                      <Select value={pBudgetItemId || 'none'} onValueChange={(v) => setPBudgetItemId(v === 'none' ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">— بدون ربط —</SelectItem>
+                          {projBudgetItems.map((b: any) => (
+                            <SelectItem key={b.id} value={b.id}>
+                              {EXPENSE_CATEGORY_LABELS[b.category as ExpenseCategory] || b.category} — {b.description} ({formatCurrency(b.plannedAmount)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ربط الطلب ببند موازنة يضمن ظهوره في تحليل الانحراف وتقارير CPI.
+                      </p>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setReqOpen(false)}>إلغاء</Button>
@@ -764,6 +806,22 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           onClick={() => openPayDialog(req.id, req.scheduledDate)}>
                           تأكيد الدفع
                         </Button>
+                      )}
+                      {canEdit && req.status === 'paid' && req.requestType === 'advance' && (req as any).isAdvanceOutstanding && (
+                        <Button size="sm" variant="default"
+                          onClick={async () => {
+                            const notes = window.prompt('ملاحظات التسوية (اختياري) — مثلاً: خُصمت من راتب مايو:');
+                            if (notes === null) return;
+                            try { await settleAdvance(req.id, notes); toast.success('تم تسوية السلفة وستظهر في AC/CPI الآن'); }
+                            catch (e: any) { toast.error(e.message); }
+                          }}>
+                          تسوية السلفة
+                        </Button>
+                      )}
+                      {req.status === 'paid' && req.requestType === 'advance' && !(req as any).isAdvanceOutstanding && req.advanceSettledAt && (
+                        <Badge variant="outline" className="text-emerald-600 border-emerald-300">
+                          سلفة مسوّاة — {String(req.advanceSettledAt).split('T')[0]}
+                        </Badge>
                       )}
                       {canEdit && (req.status === 'draft' || req.status === 'submitted') && (
                         <Button size="sm" variant="ghost"
