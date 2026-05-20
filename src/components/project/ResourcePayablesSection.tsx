@@ -135,6 +135,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const [pJustification, setPJustification] = useState('');
   const [pPriority, setPPriority] = useState<PaymentPriority>('normal');
   const [pSelectedReimbs, setPSelectedReimbs] = useState<string[]>([]);
+  const [pBudgetItemId, setPBudgetItemId] = useState<string>('');
 
   const eligibleReimbs = useMemo(
     () => projReimbs.filter(
