@@ -154,7 +154,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const resetReq = () => {
     setPResourceId(''); setPType('reimbursement'); setPAmount('');
     setPDescription(''); setPJustification(''); setPPriority('normal');
-    setPSelectedReimbs([]);
+    setPSelectedReimbs([]); setPBudgetItemId('');
   };
 
   const handleCreateReq = async () => {
