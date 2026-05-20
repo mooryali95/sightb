@@ -659,6 +659,23 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                         </SelectContent>
                       </Select>
                     </div>
+                    <div>
+                      <Label>بند الموازنة المرتبط (اختياري)</Label>
+                      <Select value={pBudgetItemId || 'none'} onValueChange={(v) => setPBudgetItemId(v === 'none' ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">— بدون ربط —</SelectItem>
+                          {projBudgetItems.map((b: any) => (
+                            <SelectItem key={b.id} value={b.id}>
+                              {EXPENSE_CATEGORY_LABELS[b.category as ExpenseCategory] || b.category} — {b.description} ({formatCurrency(b.plannedAmount)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ربط الطلب ببند موازنة يضمن ظهوره في تحليل الانحراف وتقارير CPI.
+                      </p>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setReqOpen(false)}>إلغاء</Button>
