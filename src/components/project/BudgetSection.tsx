@@ -34,7 +34,12 @@ interface BudgetSectionProps {
 }
 
 export function BudgetSection({ projectId, budgetItems, expenses, revenues = [], durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false, taxPercent = 15, startDate }: BudgetSectionProps) {
-  const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense } = useStore();
+  const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense, paymentRequests } = useStore();
+  const outstandingAdvancesTotal = paymentRequests
+    .filter((r: any) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding)
+    .reduce((s: number, r: any) => s + r.amount, 0);
+  const outstandingAdvancesCount = paymentRequests
+    .filter((r: any) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding).length;
   const [activeDraft, setActiveDraft] = useState<BudgetAmendment | null>(null);
   // الموازنة مفتوحة للتعديل عند: عدم القفل، أو وجود مسودة تعديل نشطة
   const isLocked = readOnly || (baselineLocked && !activeDraft);
