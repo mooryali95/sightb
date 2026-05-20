@@ -352,10 +352,19 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
   };
 
+  // ─── Outstanding advances (paid but not settled) ───
+  const outstandingAdvances = useMemo(
+    () => projReqs.filter(
+      (r) => r.requestType === 'advance' && r.status === 'paid' && (r as any).isAdvanceOutstanding,
+    ),
+    [projReqs],
+  );
+  const outstandingAdvancesTotal = outstandingAdvances.reduce((s, r) => s + r.amount, 0);
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
             <HandCoins className="h-4 w-4" /> إجمالي المعتمد
@@ -379,6 +388,15 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
             <Clock className="h-4 w-4" /> طلبات معلقة
           </div>
           <div className="text-2xl font-bold">{summary.pendingRequestsCount}</div>
+        </Card>
+        <Card className="p-4 border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20" title="السلف المدفوعة لم تُسوَّ بعد — أصل قابل للاسترداد لا يدخل CPI">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm mb-1">
+            <FileText className="h-4 w-4" /> سلف قائمة (غير مسوّاة)
+          </div>
+          <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+            {formatCurrency(outstandingAdvancesTotal)}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">{outstandingAdvances.length} سلفة</div>
         </Card>
       </div>
 
