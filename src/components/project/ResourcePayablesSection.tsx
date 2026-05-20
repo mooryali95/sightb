@@ -171,6 +171,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         amount: finalAmount, description: pDescription,
         justification: pJustification, priority: pPriority,
         linkedReimbursementIds: pType === 'reimbursement' ? pSelectedReimbs : [],
+        budgetItemId: pBudgetItemId || undefined,
       });
       // Auto-submit if user wants? For now keep as draft, then submit
       await submitPaymentRequest(id);
