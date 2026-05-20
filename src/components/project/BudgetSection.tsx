@@ -198,6 +198,23 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
             </div>
           </div>
 
+          {outstandingAdvancesTotal > 0 && (
+            <div className="mb-4 p-3 rounded-lg border border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold">سلف قائمة (لم تُسوَّ بعد)</p>
+                <p className="text-[11px] text-muted-foreground">
+                  أصول قابلة للاسترداد — لا تدخل في التكلفة الفعلية (AC) ولا في حساب CPI حتى تتم تسويتها.
+                </p>
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-mono font-bold text-amber-700 dark:text-amber-400">
+                  {formatCurrency(outstandingAdvancesTotal)}
+                </p>
+                <p className="text-[11px] text-muted-foreground">{outstandingAdvancesCount} سلفة</p>
+              </div>
+            </div>
+          )}
+
           <div className="mb-4">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>نسبة ما خُطط للصرف من الموازنة ({budgetUtilization.toFixed(1)}%)</span>
