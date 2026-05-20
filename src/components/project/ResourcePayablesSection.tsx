@@ -806,6 +806,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           onClick={() => openPayDialog(req.id, req.scheduledDate)}>
                           تأكيد الدفع
                         </Button>
+                      )}
                       {canEdit && req.status === 'paid' && req.requestType === 'advance' && (req as any).isAdvanceOutstanding && (
                         <Button size="sm" variant="default"
                           onClick={async () => {
