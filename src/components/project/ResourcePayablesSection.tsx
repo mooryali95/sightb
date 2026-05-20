@@ -62,13 +62,18 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   const {
     resources, reimbursements, paymentRequests, resourceSettlements,
-    projectFunds, custodies, expenses,
+    projectFunds, custodies, expenses, budgetItems,
     createReimbursement, approveReimbursement, rejectReimbursement, deleteReimbursement,
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
-    payPaymentRequest, cancelPaymentRequest, deletePaymentRequest,
+    payPaymentRequest, cancelPaymentRequest, deletePaymentRequest, settleAdvance,
     createResourceSettlement, signResourceSettlement,
   } = useStore();
+
+  const projBudgetItems = useMemo(
+    () => budgetItems.filter((b: any) => b.projectId === projectId),
+    [budgetItems, projectId],
+  );
 
   const projResources = useMemo(
     () => resources.filter((r) => r.projectId === projectId),
