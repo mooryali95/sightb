@@ -295,7 +295,38 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     <td className="text-muted-foreground text-xs hidden md:table-cell">{c.notes || '—'}</td>
                     {!readOnly && (
                       <td>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {!c.sourceFundId && isAdmin && availableFunds.length > 0 && (
+                            <Select
+                              value=""
+                              onValueChange={async (fid) => {
+                                if (!fid) return;
+                                const f = availableFunds.find(x => x.id === fid);
+                                if (!f) return;
+                                if (f.remaining < c.amount - c.spent) {
+                                  toast.error(`رصيد الدفعة لا يكفي. المتاح: ${formatCurrency(f.remaining)}, المطلوب: ${formatCurrency(c.amount - c.spent)}`);
+                                  return;
+                                }
+                                try {
+                                  await updateCustody(c.id, { sourceFundId: fid } as any);
+                                  toast.success(`تم ربط العهدة بالدفعة #${f.fundNumber}`);
+                                } catch (e: any) {
+                                  toast.error(e.message || 'تعذّر الربط');
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-7 w-[140px] text-xs">
+                                <SelectValue placeholder="ربط بدفعة" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableFunds.map(f => (
+                                  <SelectItem key={f.id} value={f.id} className="text-xs">
+                                    دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(c)} title="تعديل العهدة">
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
