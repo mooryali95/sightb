@@ -120,12 +120,16 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setOpen(true);
   };
 
-  // Auto-fill fundId synchronously when opening for a NEW expense
+  const hasCustody = !!(custodyId && custodyId !== 'none');
+
+  // Auto-fill fundId for NEW expense ONLY if no custody selected.
+  // Single-source rule: custody-backed expense MUST NOT also link to a fund.
   useEffect(() => {
-    if (open && !editingId && activeFund) {
+    if (open && !editingId && activeFund && !hasCustody) {
       setFundId((prev) => prev || activeFund.id);
     }
-  }, [open, editingId, activeFund]);
+    if (hasCustody) setFundId('');
+  }, [open, editingId, activeFund, hasCustody]);
 
   // Quick-link an existing legacy expense to the active fund
   const handleQuickLinkFund = async (expId: string) => {
@@ -138,7 +142,6 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     }
   };
 
-  // Inline acknowledge: lets manager confirm a transferred fund without leaving the dialog
   const handleInlineAcknowledge = async () => {
     if (!activeFund || activeFund.status !== 'transferred') return;
     try {
@@ -149,8 +152,8 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     }
   };
 
-  // Block submit if active fund is still in `transferred` state (server will reject anyway)
-  const fundBlocksSubmit = !editingId && !!activeFund && activeFund.status === 'transferred';
+  // Block submit only if fund is required (no custody) AND fund still 'transferred'
+  const fundBlocksSubmit = !editingId && !!activeFund && activeFund.status === 'transferred' && !hasCustody;
 
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
@@ -161,11 +164,14 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     const rawAmount = parseFloat(amount);
     const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
 
-    const effectiveFundId = fundId && fundId !== 'none'
-      ? fundId
-      : (fundIsRequired && !editingId ? activeFund?.id : undefined);
-    if (fundIsRequired && !editingId && !effectiveFundId) {
-      toast.error('يجب ربط المصروف بالدفعة النشطة');
+    // Single-source: custody wins. Otherwise pick chosen fund or active fund.
+    const effectiveFundId = hasCustody
+      ? undefined
+      : (fundId && fundId !== 'none'
+          ? fundId
+          : (fundIsRequired && !editingId ? activeFund?.id : undefined));
+    if (fundIsRequired && !editingId && !hasCustody && !effectiveFundId) {
+      toast.error('يجب ربط المصروف بالدفعة النشطة أو اختيار عهدة');
       return;
     }
 
