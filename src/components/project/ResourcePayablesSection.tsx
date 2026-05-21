@@ -840,6 +840,16 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           }}
                         />
                       )}
+                      {isAdmin && req.status === 'paid' && req.requestType === 'advance' && (
+                        <ConfirmDeleteDialog
+                          title="إلغاء/حذف السلفة"
+                          description={`سيتم حذف السلفة "${req.description}" والمصروف التلقائي المرتبط بها، وعكس الخصم من الدفعة/العهدة. هل أنت متأكد؟ (يُستخدم لتصحيح الأخطاء فقط)`}
+                          onConfirm={async () => {
+                            try { await deletePaymentRequest(req.id); toast.success('تم حذف السلفة وعكس أثرها'); }
+                            catch (e: any) { toast.error(e.message); }
+                          }}
+                        />
+                      )}
                     </div>
                   </Card>
                 );
