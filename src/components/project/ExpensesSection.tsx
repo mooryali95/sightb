@@ -120,12 +120,16 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setOpen(true);
   };
 
-  // Auto-fill fundId synchronously when opening for a NEW expense
+  const hasCustody = !!(custodyId && custodyId !== 'none');
+
+  // Auto-fill fundId for NEW expense ONLY if no custody selected.
+  // Single-source rule: custody-backed expense MUST NOT also link to a fund.
   useEffect(() => {
-    if (open && !editingId && activeFund) {
+    if (open && !editingId && activeFund && !hasCustody) {
       setFundId((prev) => prev || activeFund.id);
     }
-  }, [open, editingId, activeFund]);
+    if (hasCustody) setFundId('');
+  }, [open, editingId, activeFund, hasCustody]);
 
   // Quick-link an existing legacy expense to the active fund
   const handleQuickLinkFund = async (expId: string) => {
@@ -138,7 +142,6 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     }
   };
 
-  // Inline acknowledge: lets manager confirm a transferred fund without leaving the dialog
   const handleInlineAcknowledge = async () => {
     if (!activeFund || activeFund.status !== 'transferred') return;
     try {
@@ -149,8 +152,8 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     }
   };
 
-  // Block submit if active fund is still in `transferred` state (server will reject anyway)
-  const fundBlocksSubmit = !editingId && !!activeFund && activeFund.status === 'transferred';
+  // Block submit only if fund is required (no custody) AND fund still 'transferred'
+  const fundBlocksSubmit = !editingId && !!activeFund && activeFund.status === 'transferred' && !hasCustody;
 
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
@@ -161,11 +164,14 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     const rawAmount = parseFloat(amount);
     const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
 
-    const effectiveFundId = fundId && fundId !== 'none'
-      ? fundId
-      : (fundIsRequired && !editingId ? activeFund?.id : undefined);
-    if (fundIsRequired && !editingId && !effectiveFundId) {
-      toast.error('يجب ربط المصروف بالدفعة النشطة');
+    // Single-source: custody wins. Otherwise pick chosen fund or active fund.
+    const effectiveFundId = hasCustody
+      ? undefined
+      : (fundId && fundId !== 'none'
+          ? fundId
+          : (fundIsRequired && !editingId ? activeFund?.id : undefined));
+    if (fundIsRequired && !editingId && !hasCustody && !effectiveFundId) {
+      toast.error('يجب ربط المصروف بالدفعة النشطة أو اختيار عهدة');
       return;
     }
 
@@ -369,8 +375,8 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     </Select>
                   </div>
                 )}
-                {/* Fund linking */}
-                {fundIsRequired && activeFund && (
+                {/* Fund linking — hidden when expense comes from a custody (single-source rule) */}
+                {fundIsRequired && activeFund && !hasCustody && (
                   <div className="space-y-2 p-3 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700/30">
                     <Label className="flex items-center gap-1.5">
                       <Wallet className="w-3.5 h-3.5" />
@@ -404,16 +410,21 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    {!!editingId && !isAdmin && !!(expenses.find((x: any) => x.id === editingId)?.fundId) && (
-                      <p className="text-xs text-muted-foreground">
-                        🔒 لا يمكن تغيير ربط الدفعة بعد الإنشاء (للأدمن فقط)
-                      </p>
-                    )}
                     {parseFloat(amount) > 0 && parseFloat(amount) > activeFundRemaining && (
                       <p className="text-xs text-destructive">
                         ⚠️ المبلغ يتجاوز رصيد الدفعة المتبقي — سيُرفض من النظام
                       </p>
                     )}
+                  </div>
+                )}
+                {hasCustody && (
+                  <div className="p-3 rounded-lg border border-emerald-300/50 bg-emerald-50/40 dark:bg-emerald-900/10 dark:border-emerald-700/30 text-xs space-y-1">
+                    <p className="font-semibold flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5" /> الصرف من عهدة
+                    </p>
+                    <p className="text-muted-foreground">
+                      هذا المصروف سيُخصم من رصيد العهدة المختارة فقط، ولن يُخصم من الدفعة مرة أخرى (تم حجز مبلغ العهدة عند إنشائها).
+                    </p>
                   </div>
                 )}
                 <div className="space-y-2">
