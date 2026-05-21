@@ -375,8 +375,8 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     </Select>
                   </div>
                 )}
-                {/* Fund linking */}
-                {fundIsRequired && activeFund && (
+                {/* Fund linking — hidden when expense comes from a custody (single-source rule) */}
+                {fundIsRequired && activeFund && !hasCustody && (
                   <div className="space-y-2 p-3 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700/30">
                     <Label className="flex items-center gap-1.5">
                       <Wallet className="w-3.5 h-3.5" />
@@ -410,16 +410,21 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    {!!editingId && !isAdmin && !!(expenses.find((x: any) => x.id === editingId)?.fundId) && (
-                      <p className="text-xs text-muted-foreground">
-                        🔒 لا يمكن تغيير ربط الدفعة بعد الإنشاء (للأدمن فقط)
-                      </p>
-                    )}
                     {parseFloat(amount) > 0 && parseFloat(amount) > activeFundRemaining && (
                       <p className="text-xs text-destructive">
                         ⚠️ المبلغ يتجاوز رصيد الدفعة المتبقي — سيُرفض من النظام
                       </p>
                     )}
+                  </div>
+                )}
+                {hasCustody && (
+                  <div className="p-3 rounded-lg border border-emerald-300/50 bg-emerald-50/40 dark:bg-emerald-900/10 dark:border-emerald-700/30 text-xs space-y-1">
+                    <p className="font-semibold flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5" /> الصرف من عهدة
+                    </p>
+                    <p className="text-muted-foreground">
+                      هذا المصروف سيُخصم من رصيد العهدة المختارة فقط، ولن يُخصم من الدفعة مرة أخرى (تم حجز مبلغ العهدة عند إنشائها).
+                    </p>
                   </div>
                 )}
                 <div className="space-y-2">
