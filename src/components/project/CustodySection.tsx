@@ -251,14 +251,18 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     <td className="font-medium">
                       <div className="flex flex-col gap-0.5">
                         <span>{c.resourceName}</span>
-                        {c.sourceFundId && (() => {
+                        {c.sourceFundId ? (() => {
                           const sf = projectFunds.find(f => f.id === c.sourceFundId);
                           return sf ? (
                             <Badge variant="outline" className="text-[10px] border-warning/40 text-warning w-fit">
                               من دفعة #{sf.fundNumber}
                             </Badge>
                           ) : null;
-                        })()}
+                        })() : (
+                          <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive w-fit">
+                            غير مرتبطة بدفعة
+                          </Badge>
+                        )}
                       </div>
                     </td>
                     <td className="font-mono text-sm">{formatCurrency(c.amount)}</td>
