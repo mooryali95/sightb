@@ -809,18 +809,16 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                       )}
                       {canEdit && req.status === 'paid' && req.requestType === 'advance' && (req as any).isAdvanceOutstanding && (
                         <Button size="sm" variant="default"
-                          onClick={async () => {
-                            const notes = window.prompt('ملاحظات التسوية (اختياري) — مثلاً: خُصمت من راتب مايو:');
-                            if (notes === null) return;
-                            try { await settleAdvance(req.id, notes); toast.success('تم تسوية السلفة وستظهر في AC/CPI الآن'); }
-                            catch (e: any) { toast.error(e.message); }
-                          }}>
+                          onClick={() => setSettleAdvanceId(req.id)}>
                           تسوية السلفة
                         </Button>
                       )}
                       {req.status === 'paid' && req.requestType === 'advance' && !(req as any).isAdvanceOutstanding && req.advanceSettledAt && (
                         <Badge variant="outline" className="text-emerald-600 border-emerald-300">
-                          سلفة مسوّاة — {String(req.advanceSettledAt).split('T')[0]}
+                          {req.settlementType === 'cash_refund' ? 'رد نقدي' :
+                           req.settlementType === 'payroll_deduction' ? 'خصم من راتب' :
+                           req.settlementType === 'written_off' ? 'مشطوبة' :
+                           'مسوّاة بمستندات'} — {String(req.advanceSettledAt).split('T')[0]}
                         </Badge>
                       )}
                       {canEdit && (req.status === 'draft' || req.status === 'submitted') && (
