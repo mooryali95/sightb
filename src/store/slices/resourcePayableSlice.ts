@@ -69,8 +69,22 @@ export interface ResourcePayableSlice {
   }) => Promise<void>;
   cancelPaymentRequest: (id: string) => Promise<void>;
   deletePaymentRequest: (id: string) => Promise<void>;
-  /** تسوية سلفة: تُعيد المبلغ من راتب أو نقد، فيتحوّل المصروف المرتبط من "قيد التسوية" إلى تكلفة فعلية. */
-  settleAdvance: (id: string, notes?: string) => Promise<void>;
+  /**
+   * تسوية سلفة قائمة بنوع محدد:
+   * - documented: تنشئ مصروفاً فعلياً (يدخل AC/CPI)
+   * - cash_refund: يعيد المبلغ لرصيد الدفعة/العهدة (لا مصروف)
+   * - payroll_deduction: تُغلق كدين على المورد، لا أثر نقدي
+   * - written_off: شطب الدين (Admin فقط، يتطلب سبباً)
+   */
+  settleAdvance: (id: string, input: {
+    type: AdvanceSettlementType;
+    notes?: string;
+    settledAmount?: number; // للرد الجزئي؛ افتراضياً = amount
+    refundToFundId?: string | null;
+    refundToCustodyId?: string | null;
+    expenseCategory?: string; // لـ documented
+    expenseBudgetItemId?: string | null;
+  }) => Promise<void>;
 
   // Settlements
   createResourceSettlement: (input: {
