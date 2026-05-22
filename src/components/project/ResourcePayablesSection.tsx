@@ -361,6 +361,48 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   );
   const outstandingAdvancesTotal = outstandingAdvances.reduce((s, r) => s + r.amount, 0);
 
+  // ─── Settle advance dialog state ───
+  const [settleAdvanceId, setSettleAdvanceId] = useState<string | null>(null);
+  const [saType, setSaType] = useState<'documented' | 'cash_refund' | 'payroll_deduction' | 'written_off'>('documented');
+  const [saAmount, setSaAmount] = useState('');
+  const [saNotes, setSaNotes] = useState('');
+  const [saCategory, setSaCategory] = useState<string>('other');
+
+  const settlingAdvance = useMemo(
+    () => projReqs.find((r) => r.id === settleAdvanceId),
+    [projReqs, settleAdvanceId],
+  );
+
+  const openSettleAdvance = (id: string) => {
+    const req = projReqs.find((r) => r.id === id);
+    setSettleAdvanceId(id);
+    setSaType('documented');
+    setSaAmount(req ? String(req.amount) : '');
+    setSaNotes('');
+    setSaCategory('other');
+  };
+
+  const handleSettleAdvance = async () => {
+    if (!settleAdvanceId || !settlingAdvance) return;
+    if (saType === 'written_off' && !isAdmin) {
+      toast.error('الشطب صلاحية مدير فقط'); return;
+    }
+    if (saType === 'written_off' && !saNotes.trim()) {
+      toast.error('سبب الشطب مطلوب'); return;
+    }
+    try {
+      await settleAdvance(settleAdvanceId, {
+        type: saType,
+        notes: saNotes,
+        settledAmount: parseFloat(saAmount) || settlingAdvance.amount,
+        expenseCategory: saCategory,
+      });
+      toast.success('تمت تسوية السلفة');
+      setSettleAdvanceId(null);
+    } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
+  };
+
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* Summary Cards */}
@@ -809,18 +851,16 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                       )}
                       {canEdit && req.status === 'paid' && req.requestType === 'advance' && (req as any).isAdvanceOutstanding && (
                         <Button size="sm" variant="default"
-                          onClick={async () => {
-                            const notes = window.prompt('ملاحظات التسوية (اختياري) — مثلاً: خُصمت من راتب مايو:');
-                            if (notes === null) return;
-                            try { await settleAdvance(req.id, notes); toast.success('تم تسوية السلفة وستظهر في AC/CPI الآن'); }
-                            catch (e: any) { toast.error(e.message); }
-                          }}>
+                          onClick={() => setSettleAdvanceId(req.id)}>
                           تسوية السلفة
                         </Button>
                       )}
                       {req.status === 'paid' && req.requestType === 'advance' && !(req as any).isAdvanceOutstanding && req.advanceSettledAt && (
                         <Badge variant="outline" className="text-emerald-600 border-emerald-300">
-                          سلفة مسوّاة — {String(req.advanceSettledAt).split('T')[0]}
+                          {req.settlementType === 'cash_refund' ? 'رد نقدي' :
+                           req.settlementType === 'payroll_deduction' ? 'خصم من راتب' :
+                           req.settlementType === 'written_off' ? 'مشطوبة' :
+                           'مسوّاة بمستندات'} — {String(req.advanceSettledAt).split('T')[0]}
                         </Badge>
                       )}
                       {canEdit && (req.status === 'draft' || req.status === 'submitted') && (

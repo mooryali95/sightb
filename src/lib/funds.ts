@@ -7,6 +7,7 @@ import type {
   FundSettlement,
   Expense,
   Custody,
+  PaymentRequest,
 } from '@/types/project';
 
 export interface ProjectFundsSummary {
@@ -14,6 +15,7 @@ export interface ProjectFundsSummary {
   totalDocumentedSpend: number;
   totalSettled: number;
   totalCustodyDraw: number;       // مجموع العهد المسحوبة من دفعات
+  totalOutstandingAdvances: number; // سلف قائمة على الموردين (محجوزة من الدفعات)
   remainingInManagerHand: number;
   activeFund: ProjectFund | null;
   unsettledFunds: ProjectFund[];
@@ -49,22 +51,63 @@ export function getFundCustodyDraw(fundId: string, custodies: Custody[]): number
 }
 
 /**
- * إجمالي ما "خرج" من الدفعة = مصروف مباشر + عهد مسحوبة منها.
+ * مجموع السلف القائمة (مدفوعة، لم تُسوَّ) المخصومة من دفعة معيّنة.
+ * هذه السلف تُحجز من رصيد الدفعة كذمة مدينة على المورد.
+ */
+export function getFundOutstandingAdvances(
+  fundId: string,
+  paymentRequests: PaymentRequest[] = [],
+): number {
+  return paymentRequests
+    .filter((p) =>
+      p.paidFromFundId === fundId
+      && p.requestType === 'advance'
+      && p.status === 'paid'
+      && p.isAdvanceOutstanding === true,
+    )
+    .reduce((s, p) => s + p.amount, 0);
+}
+
+/**
+ * مجموع السلف القائمة المخصومة من عهدة معيّنة.
+ */
+export function getCustodyOutstandingAdvances(
+  custodyId: string,
+  paymentRequests: PaymentRequest[] = [],
+): number {
+  return paymentRequests
+    .filter((p) =>
+      p.paidFromCustodyId === custodyId
+      && p.requestType === 'advance'
+      && p.status === 'paid'
+      && p.isAdvanceOutstanding === true,
+    )
+    .reduce((s, p) => s + p.amount, 0);
+}
+
+/**
+ * إجمالي ما "خرج" من الدفعة = مصروف مباشر + عهد مسحوبة منها + سلف قائمة عليها.
  */
 export function getFundSpent(
   fundId: string,
   expenses: Expense[],
   custodies: Custody[] = [],
+  paymentRequests: PaymentRequest[] = [],
 ): number {
-  return getFundDirectSpent(fundId, expenses, custodies) + getFundCustodyDraw(fundId, custodies);
+  return (
+    getFundDirectSpent(fundId, expenses, custodies)
+    + getFundCustodyDraw(fundId, custodies)
+    + getFundOutstandingAdvances(fundId, paymentRequests)
+  );
 }
 
 export function getFundRemaining(
   fund: ProjectFund,
   expenses: Expense[],
   custodies: Custody[] = [],
+  paymentRequests: PaymentRequest[] = [],
 ): number {
-  return fund.amount - getFundSpent(fund.id, expenses, custodies);
+  return fund.amount - getFundSpent(fund.id, expenses, custodies, paymentRequests);
 }
 
 /**
@@ -101,13 +144,14 @@ export function getProjectFundsSummary(
   settlements: FundSettlement[],
   expenses: Expense[],
   custodies: Custody[] = [],
+  paymentRequests: PaymentRequest[] = [],
 ): ProjectFundsSummary {
   const projectFunds = funds.filter((f) => f.projectId === projectId);
   const projectCustodies = custodies.filter((c) => c.projectId === projectId);
+  const projectPRs = paymentRequests.filter((p) => p.projectId === projectId);
 
   const totalTransferred = projectFunds.reduce((s, f) => s + f.amount, 0);
 
-  // المصروفات المربوطة بدفعة (مباشرة، غير المنطوية تحت عهدة من نفس الدفعة)
   const totalDocumentedSpend = projectFunds.reduce(
     (s, f) => s + getFundDirectSpent(f.id, expenses, projectCustodies),
     0,
@@ -118,13 +162,16 @@ export function getProjectFundsSummary(
     0,
   );
 
+  const totalOutstandingAdvances = projectFunds.reduce(
+    (s, f) => s + getFundOutstandingAdvances(f.id, projectPRs),
+    0,
+  );
+
   const approvedSettlements = settlements.filter(
     (st) => st.projectId === projectId && st.status === 'approved',
   );
   const totalSettled = approvedSettlements.reduce((s, st) => s + st.totalSpent, 0);
 
-  // المتبقي بيد المدير = مجموع الدفعات النشطة − المصروف المباشر منها − **كل** العهد المسحوبة للمشروع
-  // (حتى لو كانت العهدة بدون sourceFundId — لأنها فعلياً خرجت من نقد المدير)
   const activeOrAckFunds = projectFunds.filter(
     (f) => f.status === 'transferred' || f.status === 'acknowledged',
   );
@@ -134,7 +181,11 @@ export function getProjectFundsSummary(
     0,
   );
   const allCustodyDraw = projectCustodies.reduce((s, c) => s + c.amount, 0);
-  const cashStillWithManager = activeFundsTotal - directSpendOnActive - allCustodyDraw;
+  const advancesOnActive = activeOrAckFunds.reduce(
+    (s, f) => s + getFundOutstandingAdvances(f.id, projectPRs),
+    0,
+  );
+  const cashStillWithManager = activeFundsTotal - directSpendOnActive - allCustodyDraw - advancesOnActive;
 
   const unsettledFunds = projectFunds.filter((f) => f.status !== 'settled');
   const activeFund = getActiveFund(projectId, funds);
@@ -144,6 +195,7 @@ export function getProjectFundsSummary(
     totalDocumentedSpend,
     totalSettled,
     totalCustodyDraw,
+    totalOutstandingAdvances,
     remainingInManagerHand: cashStillWithManager,
     activeFund,
     unsettledFunds,
