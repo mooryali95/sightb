@@ -144,13 +144,14 @@ export function getProjectFundsSummary(
   settlements: FundSettlement[],
   expenses: Expense[],
   custodies: Custody[] = [],
+  paymentRequests: PaymentRequest[] = [],
 ): ProjectFundsSummary {
   const projectFunds = funds.filter((f) => f.projectId === projectId);
   const projectCustodies = custodies.filter((c) => c.projectId === projectId);
+  const projectPRs = paymentRequests.filter((p) => p.projectId === projectId);
 
   const totalTransferred = projectFunds.reduce((s, f) => s + f.amount, 0);
 
-  // المصروفات المربوطة بدفعة (مباشرة، غير المنطوية تحت عهدة من نفس الدفعة)
   const totalDocumentedSpend = projectFunds.reduce(
     (s, f) => s + getFundDirectSpent(f.id, expenses, projectCustodies),
     0,
@@ -161,13 +162,16 @@ export function getProjectFundsSummary(
     0,
   );
 
+  const totalOutstandingAdvances = projectFunds.reduce(
+    (s, f) => s + getFundOutstandingAdvances(f.id, projectPRs),
+    0,
+  );
+
   const approvedSettlements = settlements.filter(
     (st) => st.projectId === projectId && st.status === 'approved',
   );
   const totalSettled = approvedSettlements.reduce((s, st) => s + st.totalSpent, 0);
 
-  // المتبقي بيد المدير = مجموع الدفعات النشطة − المصروف المباشر منها − **كل** العهد المسحوبة للمشروع
-  // (حتى لو كانت العهدة بدون sourceFundId — لأنها فعلياً خرجت من نقد المدير)
   const activeOrAckFunds = projectFunds.filter(
     (f) => f.status === 'transferred' || f.status === 'acknowledged',
   );
@@ -177,7 +181,11 @@ export function getProjectFundsSummary(
     0,
   );
   const allCustodyDraw = projectCustodies.reduce((s, c) => s + c.amount, 0);
-  const cashStillWithManager = activeFundsTotal - directSpendOnActive - allCustodyDraw;
+  const advancesOnActive = activeOrAckFunds.reduce(
+    (s, f) => s + getFundOutstandingAdvances(f.id, projectPRs),
+    0,
+  );
+  const cashStillWithManager = activeFundsTotal - directSpendOnActive - allCustodyDraw - advancesOnActive;
 
   const unsettledFunds = projectFunds.filter((f) => f.status !== 'settled');
   const activeFund = getActiveFund(projectId, funds);
@@ -187,6 +195,7 @@ export function getProjectFundsSummary(
     totalDocumentedSpend,
     totalSettled,
     totalCustodyDraw,
+    totalOutstandingAdvances,
     remainingInManagerHand: cashStillWithManager,
     activeFund,
     unsettledFunds,
