@@ -916,6 +916,8 @@ export type Database = {
           payment_reference: string | null
           priority: Database["public"]["Enums"]["payment_priority"]
           project_id: string
+          refund_to_custody_id: string | null
+          refund_to_fund_id: string | null
           rejection_reason: string | null
           request_type: Database["public"]["Enums"]["payment_request_type"]
           requested_at: string | null
@@ -925,6 +927,11 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           scheduled_date: string | null
+          settled_amount: number | null
+          settlement_notes: string | null
+          settlement_type:
+            | Database["public"]["Enums"]["advance_settlement_type"]
+            | null
           status: Database["public"]["Enums"]["payment_request_status"]
           updated_at: string
           user_id: string
@@ -954,6 +961,8 @@ export type Database = {
           payment_reference?: string | null
           priority?: Database["public"]["Enums"]["payment_priority"]
           project_id: string
+          refund_to_custody_id?: string | null
+          refund_to_fund_id?: string | null
           rejection_reason?: string | null
           request_type?: Database["public"]["Enums"]["payment_request_type"]
           requested_at?: string | null
@@ -963,6 +972,11 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           scheduled_date?: string | null
+          settled_amount?: number | null
+          settlement_notes?: string | null
+          settlement_type?:
+            | Database["public"]["Enums"]["advance_settlement_type"]
+            | null
           status?: Database["public"]["Enums"]["payment_request_status"]
           updated_at?: string
           user_id: string
@@ -992,6 +1006,8 @@ export type Database = {
           payment_reference?: string | null
           priority?: Database["public"]["Enums"]["payment_priority"]
           project_id?: string
+          refund_to_custody_id?: string | null
+          refund_to_fund_id?: string | null
           rejection_reason?: string | null
           request_type?: Database["public"]["Enums"]["payment_request_type"]
           requested_at?: string | null
@@ -1001,6 +1017,11 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           scheduled_date?: string | null
+          settled_amount?: number | null
+          settlement_notes?: string | null
+          settlement_type?:
+            | Database["public"]["Enums"]["advance_settlement_type"]
+            | null
           status?: Database["public"]["Enums"]["payment_request_status"]
           updated_at?: string
           user_id?: string
@@ -1750,6 +1771,11 @@ export type Database = {
       }
     }
     Enums: {
+      advance_settlement_type:
+        | "documented"
+        | "cash_refund"
+        | "payroll_deduction"
+        | "written_off"
       app_role: "admin" | "editor" | "viewer" | "owner"
       fund_status: "transferred" | "acknowledged" | "settled" | "pending_next"
       payment_method: "bank_transfer" | "cash" | "check" | "card"
@@ -1905,6 +1931,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      advance_settlement_type: [
+        "documented",
+        "cash_refund",
+        "payroll_deduction",
+        "written_off",
+      ],
       app_role: ["admin", "editor", "viewer", "owner"],
       fund_status: ["transferred", "acknowledged", "settled", "pending_next"],
       payment_method: ["bank_transfer", "cash", "check", "card"],
