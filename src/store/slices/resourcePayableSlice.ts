@@ -162,6 +162,11 @@ function mapReq(d: any): PaymentRequest {
     isAdvanceOutstanding: d.is_advance_outstanding ?? false,
     advanceSettledAt: d.advance_settled_at || undefined,
     advanceSettledBy: d.advance_settled_by || undefined,
+    settlementType: d.settlement_type || undefined,
+    settledAmount: d.settled_amount != null ? Number(d.settled_amount) : undefined,
+    settlementNotes: d.settlement_notes || undefined,
+    refundToFundId: d.refund_to_fund_id || undefined,
+    refundToCustodyId: d.refund_to_custody_id || undefined,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
   };
