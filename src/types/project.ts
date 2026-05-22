@@ -684,6 +684,15 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   card: 'بطاقة',
 };
 
+export type AdvanceSettlementType = 'documented' | 'cash_refund' | 'payroll_deduction' | 'written_off';
+
+export const ADVANCE_SETTLEMENT_TYPE_LABELS: Record<AdvanceSettlementType, string> = {
+  documented: 'تسوية بمستندات (تتحول لمصروف فعلي)',
+  cash_refund: 'رد نقدي (يعود للدفعة/العهدة)',
+  payroll_deduction: 'خصم من راتب/مستحقات',
+  written_off: 'شطب (دين معدوم)',
+};
+
 export interface PaymentRequest {
   id: string;
   projectId: string;
@@ -715,10 +724,17 @@ export interface PaymentRequest {
   paymentAttachments: ReceiptAttachment[];
   rejectionReason?: string;
   autoCreatedExpenseId?: string;
-  /** سلفة لم تُسوَّ بعد (تبقى ديناً على الموظف). */
+  /** سلفة لم تُسوَّ بعد — تُعامل كذمة مدينة على المورد ولا تظهر في المصروفات. */
   isAdvanceOutstanding?: boolean;
   advanceSettledAt?: string;
   advanceSettledBy?: string;
+  /** نوع التسوية المنفذ على السلفة بعد إغلاقها. */
+  settlementType?: AdvanceSettlementType;
+  settledAmount?: number;
+  settlementNotes?: string;
+  /** عند نوع cash_refund: الدفعة/العهدة التي عاد إليها المبلغ. */
+  refundToFundId?: string;
+  refundToCustodyId?: string;
   createdAt: string;
   updatedAt: string;
 }
