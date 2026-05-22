@@ -7,6 +7,7 @@ import type {
   FundSettlement,
   Expense,
   Custody,
+  PaymentRequest,
 } from '@/types/project';
 
 export interface ProjectFundsSummary {
@@ -14,6 +15,7 @@ export interface ProjectFundsSummary {
   totalDocumentedSpend: number;
   totalSettled: number;
   totalCustodyDraw: number;       // مجموع العهد المسحوبة من دفعات
+  totalOutstandingAdvances: number; // سلف قائمة على الموردين (محجوزة من الدفعات)
   remainingInManagerHand: number;
   activeFund: ProjectFund | null;
   unsettledFunds: ProjectFund[];
@@ -49,22 +51,63 @@ export function getFundCustodyDraw(fundId: string, custodies: Custody[]): number
 }
 
 /**
- * إجمالي ما "خرج" من الدفعة = مصروف مباشر + عهد مسحوبة منها.
+ * مجموع السلف القائمة (مدفوعة، لم تُسوَّ) المخصومة من دفعة معيّنة.
+ * هذه السلف تُحجز من رصيد الدفعة كذمة مدينة على المورد.
+ */
+export function getFundOutstandingAdvances(
+  fundId: string,
+  paymentRequests: PaymentRequest[] = [],
+): number {
+  return paymentRequests
+    .filter((p) =>
+      p.paidFromFundId === fundId
+      && p.requestType === 'advance'
+      && p.status === 'paid'
+      && p.isAdvanceOutstanding === true,
+    )
+    .reduce((s, p) => s + p.amount, 0);
+}
+
+/**
+ * مجموع السلف القائمة المخصومة من عهدة معيّنة.
+ */
+export function getCustodyOutstandingAdvances(
+  custodyId: string,
+  paymentRequests: PaymentRequest[] = [],
+): number {
+  return paymentRequests
+    .filter((p) =>
+      p.paidFromCustodyId === custodyId
+      && p.requestType === 'advance'
+      && p.status === 'paid'
+      && p.isAdvanceOutstanding === true,
+    )
+    .reduce((s, p) => s + p.amount, 0);
+}
+
+/**
+ * إجمالي ما "خرج" من الدفعة = مصروف مباشر + عهد مسحوبة منها + سلف قائمة عليها.
  */
 export function getFundSpent(
   fundId: string,
   expenses: Expense[],
   custodies: Custody[] = [],
+  paymentRequests: PaymentRequest[] = [],
 ): number {
-  return getFundDirectSpent(fundId, expenses, custodies) + getFundCustodyDraw(fundId, custodies);
+  return (
+    getFundDirectSpent(fundId, expenses, custodies)
+    + getFundCustodyDraw(fundId, custodies)
+    + getFundOutstandingAdvances(fundId, paymentRequests)
+  );
 }
 
 export function getFundRemaining(
   fund: ProjectFund,
   expenses: Expense[],
   custodies: Custody[] = [],
+  paymentRequests: PaymentRequest[] = [],
 ): number {
-  return fund.amount - getFundSpent(fund.id, expenses, custodies);
+  return fund.amount - getFundSpent(fund.id, expenses, custodies, paymentRequests);
 }
 
 /**
