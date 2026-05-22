@@ -429,30 +429,74 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? mapReq(data) : r) }));
   },
 
-  settleAdvance: async (id, notes) => {
+  settleAdvance: async (id, input) => {
     const userId = await getUserId();
     const cur = get().paymentRequests.find((r) => r.id === id);
     if (!cur) throw new Error('طلب الصرف غير موجود');
     if (cur.requestType !== 'advance') throw new Error('هذه العملية متاحة للسلف فقط');
     if (!cur.isAdvanceOutstanding) throw new Error('السلفة مسوّاة بالفعل');
-    const newNotes = [cur.approvalNotes, notes?.trim()].filter(Boolean).join(' | ') || null;
+
+    const settledAmount = input.settledAmount ?? cur.amount;
+    if (settledAmount <= 0 || settledAmount > cur.amount) {
+      throw new Error('مبلغ التسوية غير صحيح');
+    }
+    const newNotes = [cur.approvalNotes, input.notes?.trim()].filter(Boolean).join(' | ') || null;
+
+    // النوع documented: ينشئ مصروفاً فعلياً مرتبط بنفس مصدر السلفة
+    let createdExpenseId: string | null = null;
+    if (input.type === 'documented') {
+      const { data: expData, error: expErr } = await (supabase as any)
+        .from('expenses')
+        .insert({
+          project_id: cur.projectId,
+          resource_id: cur.resourceId,
+          category: input.expenseCategory || 'other',
+          description: 'تسوية سلفة بمستندات: ' + cur.description,
+          amount: settledAmount,
+          date: new Date().toISOString().split('T')[0],
+          month: new Date().getMonth() + 1,
+          approval_status: 'approved',
+          approved_by: userId,
+          notes: 'تسوية سلفة #' + id + (input.notes ? ' — ' + input.notes : ''),
+          user_id: userId,
+          is_vat_exempt: false,
+          fund_id: cur.paidFromCustodyId ? null : (cur.paidFromFundId || null),
+          custody_id: cur.paidFromCustodyId || null,
+          budget_item_id: input.expenseBudgetItemId || cur.budgetItemId || null,
+          is_outstanding_advance: false,
+        })
+        .select().single();
+      if (expErr) throw expErr;
+      createdExpenseId = expData.id;
+    }
+
     const { data, error } = await (supabase as any)
       .from('payment_requests').update({
         is_advance_outstanding: false,
         advance_settled_at: new Date().toISOString(),
         advance_settled_by: userId,
         approval_notes: newNotes,
+        settlement_type: input.type,
+        settled_amount: settledAmount,
+        settlement_notes: input.notes?.trim() || null,
+        refund_to_fund_id: input.type === 'cash_refund' ? (input.refundToFundId ?? cur.paidFromFundId ?? null) : null,
+        refund_to_custody_id: input.type === 'cash_refund' ? (input.refundToCustodyId ?? cur.paidFromCustodyId ?? null) : null,
       }).eq('id', id).select().single();
     if (error) throw error;
     const req = mapReq(data);
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
-    // Trigger flipped the linked expense's is_outstanding_advance — patch local state
-    if (req.autoCreatedExpenseId) {
-      set((s) => ({
-        expenses: s.expenses.map((e) =>
-          e.id === req.autoCreatedExpenseId ? { ...e, isOutstandingAdvance: false } : e,
-        ),
-      }));
+
+    // أعِد تحميل المصروفات لإظهار المصروف الجديد إن وُجد
+    if (createdExpenseId) {
+      try {
+        const { data: exp } = await (supabase as any)
+          .from('expenses').select('*').eq('id', createdExpenseId).maybeSingle();
+        if (exp) {
+          const { mapExpense } = await import('@/store/helpers');
+          const mapped = mapExpense(exp);
+          set((s) => ({ expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)] }));
+        }
+      } catch (e) { console.warn(e); }
     }
   },
 
