@@ -87,7 +87,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
 
   const matchingBudgetItems = budgetItems.filter(b => b.category === category);
 
-  const pendingCount = expenses.filter(e => e.approvalStatus === 'pending').length;
+  const pendingCount = visibleExpenses.filter(e => e.approvalStatus === 'pending').length;
 
   const resetForm = () => {
     setEditingId(null);
