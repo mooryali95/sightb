@@ -71,7 +71,13 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterApproval, setFilterApproval] = useState<string>('all');
 
-  const filteredExpenses = expenses.filter((exp) => {
+  // إخفاء السلف القائمة من جدول المصروفات (تُعرض كذمم مدينة في قسم المستحقات)
+  const visibleExpenses = useMemo(
+    () => expenses.filter((e) => !e.isOutstandingAdvance),
+    [expenses],
+  );
+
+  const filteredExpenses = visibleExpenses.filter((exp) => {
     const matchesSearch = !searchQuery || exp.description?.toLowerCase().includes(searchQuery.toLowerCase()) || exp.responsible?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = filterCategory === 'all' || exp.category === filterCategory;
     const matchesMonth = filterMonth === 'all' || String(exp.month) === filterMonth;
