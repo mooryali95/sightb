@@ -204,10 +204,11 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           f,
           expenses.filter((e) => e.projectId === projectId),
           custodies.filter((c) => c.projectId === projectId),
+          projReqs,
         ),
       }))
       .filter((x) => x.remaining > 0);
-  }, [projectFunds, expenses, custodies, projectId]);
+  }, [projectFunds, expenses, custodies, projectId, projReqs]);
 
   // Active custodies with remaining balance
   const availableCustodies = useMemo(() => {
