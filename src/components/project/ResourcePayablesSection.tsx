@@ -1088,6 +1088,123 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Settle Advance Dialog */}
+      <Dialog open={!!settleAdvanceId} onOpenChange={(o) => !o && setSettleAdvanceId(null)}>
+        <DialogContent className="max-w-xl" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تسوية سلفة قائمة</DialogTitle>
+          </DialogHeader>
+          {settlingAdvance && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted/40 rounded text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">المورد</span>
+                  <span className="font-semibold">
+                    {resources.find((r) => r.id === settlingAdvance.resourceId)?.name || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">مبلغ السلفة</span>
+                  <span className="font-mono font-bold">{formatCurrency(settlingAdvance.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">المصدر</span>
+                  <span className="text-xs">
+                    {settlingAdvance.paidFromCustodyId ? 'عهدة' :
+                     settlingAdvance.paidFromFundId ? 'دفعة' : '—'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <Label className="mb-2 block">نوع التسوية</Label>
+                <RadioGroup value={saType} onValueChange={(v) => setSaType(v as any)} className="space-y-2">
+                  <label className="flex items-start gap-2 p-3 rounded border cursor-pointer hover:bg-muted/40">
+                    <RadioGroupItem value="documented" className="mt-1" />
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">تسوية بمستندات</div>
+                      <div className="text-xs text-muted-foreground">تنشئ مصروفاً فعلياً يدخل التكلفة الفعلية (AC/CPI)</div>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-3 rounded border cursor-pointer hover:bg-muted/40">
+                    <RadioGroupItem value="cash_refund" className="mt-1" />
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">رد نقدي</div>
+                      <div className="text-xs text-muted-foreground">يُعاد المبلغ لرصيد الدفعة/العهدة (لا مصروف)</div>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-3 rounded border cursor-pointer hover:bg-muted/40">
+                    <RadioGroupItem value="payroll_deduction" className="mt-1" />
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">خصم من مستحقات</div>
+                      <div className="text-xs text-muted-foreground">تُغلق السلفة كتقاص من مستحقات المورد، بدون أثر نقدي</div>
+                    </div>
+                  </label>
+                  <label className={cn(
+                    'flex items-start gap-2 p-3 rounded border cursor-pointer hover:bg-muted/40',
+                    !isAdmin && 'opacity-50 cursor-not-allowed',
+                  )}>
+                    <RadioGroupItem value="written_off" className="mt-1" disabled={!isAdmin} />
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">شطب {!isAdmin && '(مدير فقط)'}</div>
+                      <div className="text-xs text-muted-foreground">شطب الدين نهائياً، يتطلب سبباً</div>
+                    </div>
+                  </label>
+                </RadioGroup>
+              </div>
+
+              {(saType === 'cash_refund' || saType === 'documented') && (
+                <div>
+                  <Label>المبلغ</Label>
+                  <Input
+                    type="number"
+                    value={saAmount}
+                    onChange={(e) => setSaAmount(e.target.value)}
+                    placeholder={String(settlingAdvance.amount)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    اتركه فارغاً للتسوية الكاملة. أي مبلغ أقل = تسوية جزئية، والباقي يبقى قائماً.
+                  </p>
+                </div>
+              )}
+
+              {saType === 'documented' && (
+                <div>
+                  <Label>فئة المصروف</Label>
+                  <Select value={saCategory} onValueChange={setSaCategory}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="materials">مواد</SelectItem>
+                      <SelectItem value="labor">عمالة</SelectItem>
+                      <SelectItem value="equipment">معدات</SelectItem>
+                      <SelectItem value="subcontractor">مقاول باطن</SelectItem>
+                      <SelectItem value="transport">نقل</SelectItem>
+                      <SelectItem value="other">أخرى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div>
+                <Label>
+                  ملاحظات {saType === 'written_off' && <span className="text-destructive">*</span>}
+                </Label>
+                <Textarea
+                  value={saNotes}
+                  onChange={(e) => setSaNotes(e.target.value)}
+                  rows={3}
+                  placeholder={saType === 'written_off' ? 'سبب الشطب (إلزامي)' : 'اختياري'}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettleAdvanceId(null)}>إلغاء</Button>
+            <Button onClick={handleSettleAdvance}>تنفيذ التسوية</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
