@@ -25,7 +25,8 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, updateCustody, deleteCustody, projectFunds } = useStore();
+  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests } = useStore();
+  const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
   const { isAdminFor } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
@@ -41,12 +42,12 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
     () => projectFunds
       .filter((f) => f.projectId === projectId && (f.status === 'transferred' || f.status === 'acknowledged'))
       .map((f) => {
-        const spent = getFundSpent(f.id, expenses, custodies);
+        const spent = getFundSpent(f.id, expenses, custodies, projPRs);
         return { ...f, remaining: f.amount - spent };
       })
       .filter((f) => f.remaining > 0)
       .sort((a, b) => b.fundNumber - a.fundNumber),
-    [projectFunds, projectId, expenses, custodies],
+    [projectFunds, projectId, expenses, custodies, projPRs],
   );
 
   // افتراضياً اختر أحدث دفعة متاحة عند فتح النموذج

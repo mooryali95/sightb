@@ -48,10 +48,14 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const { isAdminFor, isOwner } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const {
-    projectFunds, fundSettlements, custodies,
+    projectFunds, fundSettlements, custodies, paymentRequests,
     createFund, acknowledgeFund, submitSettlement, approveSettlement,
     rejectSettlement, deleteFund, updateSettlementDraft,
   } = useStore();
+  const projPRs = useMemo(
+    () => paymentRequests.filter((p) => p.projectId === projectId),
+    [paymentRequests, projectId],
+  );
 
   const projectExpenses = useMemo(
     () => expenses.filter((e) => e.projectId === projectId),
@@ -64,8 +68,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   );
 
   const summary = useMemo(
-    () => getProjectFundsSummary(projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies as any),
-    [projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies],
+    () => getProjectFundsSummary(projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies as any, projPRs),
+    [projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies, projPRs],
   );
 
   const projectFundsList = useMemo(
@@ -427,8 +431,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
               </thead>
               <tbody>
                 {projectFundsList.map((f) => {
-                  const spent = getFundSpent(f.id, projectExpenses, projectCustodies);
-                  const remaining = getFundRemaining(f, projectExpenses, projectCustodies);
+                  const spent = getFundSpent(f.id, projectExpenses, projectCustodies, projPRs);
+                  const remaining = getFundRemaining(f, projectExpenses, projectCustodies, projPRs);
                   const settlement = getSettlementForFund(f.id, fundSettlements);
                   const days = daysBetween(f.acknowledgedAt || f.transferDate);
                   const overdue = (f.status === 'transferred' || f.status === 'acknowledged') && days >= 30;
