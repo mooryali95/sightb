@@ -68,8 +68,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   );
 
   const summary = useMemo(
-    () => getProjectFundsSummary(projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies as any),
-    [projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies],
+    () => getProjectFundsSummary(projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies as any, projPRs),
+    [projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies, projPRs],
   );
 
   const projectFundsList = useMemo(
