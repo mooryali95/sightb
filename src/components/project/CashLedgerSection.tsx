@@ -43,14 +43,24 @@ type TimelineEvent = {
 };
 
 export function CashLedgerSection({ projectId, funds, settlements, expenses, custodies }: Props) {
+  const reimbursements = useStore((s) => s.reimbursements);
+  const paymentRequests = useStore((s) => s.paymentRequests);
+  const resourceSettlements = useStore((s) => s.resourceSettlements);
+  const resources = useStore((s) => s.resources);
+
+  const projectPayReqs = useMemo(
+    () => paymentRequests.filter((p) => p.projectId === projectId),
+    [paymentRequests, projectId],
+  );
+
   const projectExpenses = useMemo(
     () => expenses.filter((e) => e.projectId === projectId),
     [expenses, projectId],
   );
 
   const summary = useMemo(
-    () => getProjectFundsSummary(projectId, funds, settlements, projectExpenses, custodies, paymentRequests.filter((p) => p.projectId === projectId)),
-    [projectId, funds, settlements, projectExpenses, custodies, paymentRequests],
+    () => getProjectFundsSummary(projectId, funds, settlements, projectExpenses, custodies, projectPayReqs),
+    [projectId, funds, settlements, projectExpenses, custodies, projectPayReqs],
   );
 
   const projectFundsList = useMemo(
@@ -63,15 +73,7 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
     [custodies, projectId],
   );
 
-  const reimbursements = useStore((s) => s.reimbursements);
-  const paymentRequests = useStore((s) => s.paymentRequests);
-  const resourceSettlements = useStore((s) => s.resourceSettlements);
-  const resources = useStore((s) => s.resources);
 
-  const projectPayReqs = useMemo(
-    () => paymentRequests.filter((p) => p.projectId === projectId),
-    [paymentRequests, projectId],
-  );
 
   // خريطة: expense.id -> PaymentRequest (للمصروفات المُولَّدة تلقائياً)
   const expenseToPayReq = useMemo(() => {
