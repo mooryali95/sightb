@@ -60,8 +60,10 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     [projectId, projectFunds],
   );
   const fundIsRequired = !!activeFund;
+  const paymentRequests = useStore((s) => s.paymentRequests);
+  const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
   const activeFundRemaining = activeFund
-    ? getFundRemaining(activeFund, expenses)
+    ? getFundRemaining(activeFund, expenses, custodies, projPRs)
     : 0;
 
   const [searchQuery, setSearchQuery] = useState('');
