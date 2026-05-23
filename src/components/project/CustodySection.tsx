@@ -25,7 +25,8 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, updateCustody, deleteCustody, projectFunds } = useStore();
+  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests } = useStore();
+  const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
   const { isAdminFor } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
