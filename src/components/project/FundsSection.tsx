@@ -431,8 +431,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
               </thead>
               <tbody>
                 {projectFundsList.map((f) => {
-                  const spent = getFundSpent(f.id, projectExpenses, projectCustodies);
-                  const remaining = getFundRemaining(f, projectExpenses, projectCustodies);
+                  const spent = getFundSpent(f.id, projectExpenses, projectCustodies, projPRs);
+                  const remaining = getFundRemaining(f, projectExpenses, projectCustodies, projPRs);
                   const settlement = getSettlementForFund(f.id, fundSettlements);
                   const days = daysBetween(f.acknowledgedAt || f.transferDate);
                   const overdue = (f.status === 'transferred' || f.status === 'acknowledged') && days >= 30;
