@@ -48,10 +48,14 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const { isAdminFor, isOwner } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const {
-    projectFunds, fundSettlements, custodies,
+    projectFunds, fundSettlements, custodies, paymentRequests,
     createFund, acknowledgeFund, submitSettlement, approveSettlement,
     rejectSettlement, deleteFund, updateSettlementDraft,
   } = useStore();
+  const projPRs = useMemo(
+    () => paymentRequests.filter((p) => p.projectId === projectId),
+    [paymentRequests, projectId],
+  );
 
   const projectExpenses = useMemo(
     () => expenses.filter((e) => e.projectId === projectId),
