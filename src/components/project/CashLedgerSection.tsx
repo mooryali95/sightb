@@ -49,8 +49,8 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
   );
 
   const summary = useMemo(
-    () => getProjectFundsSummary(projectId, funds, settlements, projectExpenses, custodies),
-    [projectId, funds, settlements, projectExpenses, custodies],
+    () => getProjectFundsSummary(projectId, funds, settlements, projectExpenses, custodies, paymentRequests.filter((p) => p.projectId === projectId)),
+    [projectId, funds, settlements, projectExpenses, custodies, paymentRequests],
   );
 
   const projectFundsList = useMemo(
