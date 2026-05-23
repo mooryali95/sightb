@@ -68,7 +68,7 @@ export default function MobileExpenseCapture() {
     () => (projectId ? getActiveFund(projectId, projectFunds) : undefined),
     [projectId, projectFunds],
   );
-  const fundRemaining = activeFund ? getFundRemaining(activeFund, expenses, useStore.getState().custodies || []) : 0;
+  const fundRemaining = activeFund ? getFundRemaining(activeFund, expenses, useStore.getState().custodies || [], useStore.getState().paymentRequests || []) : 0;
 
   useEffect(() => {
     if (!projectId && activeProjects.length === 1) {
