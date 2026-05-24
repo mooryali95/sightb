@@ -356,11 +356,23 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   // ─── Outstanding advances (paid but not settled) ───
   const outstandingAdvances = useMemo(
     () => projReqs.filter(
-      (r) => r.requestType === 'advance' && r.status === 'paid' && (r as any).isAdvanceOutstanding,
+      (r) => r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding,
     ),
     [projReqs],
   );
-  const outstandingAdvancesTotal = outstandingAdvances.reduce((s, r) => s + r.amount, 0);
+  const outstandingAdvancesTotal = outstandingAdvances.reduce(
+    (s, r) => s + Math.max(r.amount - (r.refundedAmount ?? 0), 0), 0,
+  );
+  const oldestAdvanceDays = useMemo(() => {
+    if (outstandingAdvances.length === 0) return 0;
+    const now = Date.now();
+    return Math.max(
+      ...outstandingAdvances.map((r) => {
+        const t = r.paidDate ? new Date(r.paidDate).getTime() : new Date(r.createdAt).getTime();
+        return Math.floor((now - t) / (1000 * 60 * 60 * 24));
+      }),
+    );
+  }, [outstandingAdvances]);
 
   // ─── Settle advance dialog state ───
   const [settleAdvanceId, setSettleAdvanceId] = useState<string | null>(null);
@@ -439,7 +451,21 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
             {formatCurrency(outstandingAdvancesTotal)}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">{outstandingAdvances.length} سلفة</div>
+          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+            <span>{outstandingAdvances.length} سلفة</span>
+            {oldestAdvanceDays > 0 && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-xs',
+                  oldestAdvanceDays > 60 && 'border-destructive text-destructive',
+                  oldestAdvanceDays > 30 && oldestAdvanceDays <= 60 && 'border-amber-500 text-amber-700 dark:text-amber-400',
+                )}
+              >
+                أقدمها: {oldestAdvanceDays} يوم
+              </Badge>
+            )}
+          </div>
         </Card>
       </div>
 
