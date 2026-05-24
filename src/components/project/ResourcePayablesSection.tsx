@@ -881,16 +881,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           }}
                         />
                       )}
-                      {isAdmin && req.status === 'paid' && req.requestType === 'advance' && (
-                        <ConfirmDeleteDialog
-                          title="إلغاء/حذف السلفة"
-                          description={`سيتم حذف السلفة "${req.description}" والمصروف التلقائي المرتبط بها، وعكس الخصم من الدفعة/العهدة. هل أنت متأكد؟ (يُستخدم لتصحيح الأخطاء فقط)`}
-                          onConfirm={async () => {
-                            try { await deletePaymentRequest(req.id); toast.success('تم حذف السلفة وعكس أثرها'); }
-                            catch (e: any) { toast.error(e.message); }
-                          }}
-                        />
-                      )}
+                      {/* السلف المدفوعة تُغلق فقط عبر مسار التسوية أعلاه (لا حذف) */}
                     </div>
                   </Card>
                 );
@@ -1109,6 +1100,24 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                   <span className="text-muted-foreground">مبلغ السلفة</span>
                   <span className="font-mono font-bold">{formatCurrency(settlingAdvance.amount)}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">مبلغ السلفة</span>
+                  <span className="font-mono font-bold">{formatCurrency(settlingAdvance.amount)}</span>
+                </div>
+                {(settlingAdvance.refundedAmount ?? 0) > 0 && (
+                  <>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">مردود سابقاً</span>
+                      <span className="font-mono">{formatCurrency(settlingAdvance.refundedAmount ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-amber-700 dark:text-amber-400 font-semibold">
+                      <span>المتبقي القائم</span>
+                      <span className="font-mono">
+                        {formatCurrency(Math.max(settlingAdvance.amount - (settlingAdvance.refundedAmount ?? 0), 0))}
+                      </span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">المصدر</span>
                   <span className="text-xs">
