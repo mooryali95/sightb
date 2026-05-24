@@ -640,6 +640,11 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         <div>
                           {exp.description}
                           {exp.vendor && <span className="block text-xs text-muted-foreground">{exp.vendor}</span>}
+                          {exp.sourcePaymentRequestId && (
+                            <Badge variant="outline" className="mt-1 text-[10px] border-amber-300 text-amber-700 dark:text-amber-400">
+                              تسوية سلفة
+                            </Badge>
+                          )}
                         </div>
                       </td>
                       <td className="font-mono text-sm">{formatCurrency(exp.amount)}</td>
