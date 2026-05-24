@@ -1100,10 +1100,6 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                   <span className="text-muted-foreground">مبلغ السلفة</span>
                   <span className="font-mono font-bold">{formatCurrency(settlingAdvance.amount)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">مبلغ السلفة</span>
-                  <span className="font-mono font-bold">{formatCurrency(settlingAdvance.amount)}</span>
-                </div>
                 {(settlingAdvance.refundedAmount ?? 0) > 0 && (
                   <>
                     <div className="flex justify-between text-xs">
