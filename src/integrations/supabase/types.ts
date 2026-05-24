@@ -618,6 +618,7 @@ export type Database = {
           receipt_attachments: Json
           resource_id: string | null
           responsible: string | null
+          source_payment_request_id: string | null
           user_id: string
           vendor: string | null
         }
@@ -645,6 +646,7 @@ export type Database = {
           receipt_attachments?: Json
           resource_id?: string | null
           responsible?: string | null
+          source_payment_request_id?: string | null
           user_id: string
           vendor?: string | null
         }
@@ -672,6 +674,7 @@ export type Database = {
           receipt_attachments?: Json
           resource_id?: string | null
           responsible?: string | null
+          source_payment_request_id?: string | null
           user_id?: string
           vendor?: string | null
         }
@@ -918,6 +921,7 @@ export type Database = {
           project_id: string
           refund_to_custody_id: string | null
           refund_to_fund_id: string | null
+          refunded_amount: number
           rejection_reason: string | null
           request_type: Database["public"]["Enums"]["payment_request_type"]
           requested_at: string | null
@@ -963,6 +967,7 @@ export type Database = {
           project_id: string
           refund_to_custody_id?: string | null
           refund_to_fund_id?: string | null
+          refunded_amount?: number
           rejection_reason?: string | null
           request_type?: Database["public"]["Enums"]["payment_request_type"]
           requested_at?: string | null
@@ -1008,6 +1013,7 @@ export type Database = {
           project_id?: string
           refund_to_custody_id?: string | null
           refund_to_fund_id?: string | null
+          refunded_amount?: number
           rejection_reason?: string | null
           request_type?: Database["public"]["Enums"]["payment_request_type"]
           requested_at?: string | null
