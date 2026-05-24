@@ -142,6 +142,8 @@ export interface Expense {
   /** سلفة موظف لم تُسوَّ بعد — لا تُحتسب ضمن AC في تقارير الأداء حتى التسوية. */
   isOutstandingAdvance?: boolean;
   commitmentId?: string;
+  /** مصروف ناتج عن تسوية سلفة — يُشير إلى طلب الصرف الأصلي. */
+  sourcePaymentRequestId?: string;
 }
 
 export type RevenueType = 'advance' | 'milestone' | 'final' | 'retention' | 'variation' | 'deduction';
@@ -735,6 +737,8 @@ export interface PaymentRequest {
   /** عند نوع cash_refund: الدفعة/العهدة التي عاد إليها المبلغ. */
   refundToFundId?: string;
   refundToCustodyId?: string;
+  /** مجموع المبلغ المُعاد فعلياً (يدعم الردود الجزئية). */
+  refundedAmount?: number;
   createdAt: string;
   updatedAt: string;
 }
