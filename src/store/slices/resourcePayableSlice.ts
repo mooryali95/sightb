@@ -167,6 +167,7 @@ function mapReq(d: any): PaymentRequest {
     settlementNotes: d.settlement_notes || undefined,
     refundToFundId: d.refund_to_fund_id || undefined,
     refundToCustodyId: d.refund_to_custody_id || undefined,
+    refundedAmount: d.refunded_amount != null ? Number(d.refunded_amount) : 0,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
   };
