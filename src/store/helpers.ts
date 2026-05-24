@@ -87,6 +87,7 @@ export function mapExpense(d: any): Expense {
     fundId: d.fund_id || undefined,
     isOutstandingAdvance: d.is_outstanding_advance ?? false,
     commitmentId: d.commitment_id || undefined,
+    sourcePaymentRequestId: d.source_payment_request_id || undefined,
   };
 }
 

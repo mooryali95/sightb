@@ -167,6 +167,7 @@ function mapReq(d: any): PaymentRequest {
     settlementNotes: d.settlement_notes || undefined,
     refundToFundId: d.refund_to_fund_id || undefined,
     refundToCustodyId: d.refund_to_custody_id || undefined,
+    refundedAmount: d.refunded_amount != null ? Number(d.refunded_amount) : 0,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
   };
@@ -436,57 +437,88 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     if (cur.requestType !== 'advance') throw new Error('هذه العملية متاحة للسلف فقط');
     if (!cur.isAdvanceOutstanding) throw new Error('السلفة مسوّاة بالفعل');
 
-    const settledAmount = input.settledAmount ?? cur.amount;
-    if (settledAmount <= 0 || settledAmount > cur.amount) {
+    const remainingOutstanding = Math.max(cur.amount - (cur.refundedAmount ?? 0), 0);
+    const settledAmount = input.settledAmount ?? remainingOutstanding;
+    if (settledAmount <= 0 || settledAmount > remainingOutstanding) {
       throw new Error('مبلغ التسوية غير صحيح');
     }
-    const newNotes = [cur.approvalNotes, input.notes?.trim()].filter(Boolean).join(' | ') || null;
+    const isPartialRefund = input.type === 'cash_refund' && settledAmount < remainingOutstanding;
+    const newRefundedAmount = input.type === 'cash_refund'
+      ? (cur.refundedAmount ?? 0) + settledAmount
+      : (cur.refundedAmount ?? 0);
 
-    // النوع documented: ينشئ مصروفاً فعلياً مرتبط بنفس مصدر السلفة
+    // إنشاء مصروف فعلي لأنواع التسوية التي يخرج فيها النقد ولا يعود:
+    // - documented: مصروف بفئة المستخدم
+    // - payroll_deduction: مصروف بفئة "salary" (خصم من مستحقات)
+    // - written_off: مصروف بفئة "other" (خسارة/شطب)
     let createdExpenseId: string | null = null;
-    if (input.type === 'documented') {
+    const needsExpense = input.type === 'documented'
+      || input.type === 'payroll_deduction'
+      || input.type === 'written_off';
+
+    if (needsExpense) {
+      const descPrefix = input.type === 'documented' ? 'تسوية سلفة بمستندات: '
+        : input.type === 'payroll_deduction' ? 'خصم سلفة من مستحقات: '
+        : 'شطب سلفة (دين معدوم): ';
+      const category = input.type === 'payroll_deduction' ? 'salary'
+        : input.type === 'written_off' ? 'other'
+        : (input.expenseCategory || 'other');
       const { data: expData, error: expErr } = await (supabase as any)
         .from('expenses')
         .insert({
           project_id: cur.projectId,
           resource_id: cur.resourceId,
-          category: input.expenseCategory || 'other',
-          description: 'تسوية سلفة بمستندات: ' + cur.description,
+          category,
+          description: descPrefix + cur.description,
           amount: settledAmount,
           date: new Date().toISOString().split('T')[0],
           month: new Date().getMonth() + 1,
           approval_status: 'approved',
           approved_by: userId,
-          notes: 'تسوية سلفة #' + id + (input.notes ? ' — ' + input.notes : ''),
+          notes: 'تسوية سلفة #' + id + ' (' + input.type + ')' + (input.notes ? ' — ' + input.notes : ''),
           user_id: userId,
-          is_vat_exempt: false,
+          is_vat_exempt: input.type !== 'documented',
           fund_id: cur.paidFromCustodyId ? null : (cur.paidFromFundId || null),
           custody_id: cur.paidFromCustodyId || null,
           budget_item_id: input.expenseBudgetItemId || cur.budgetItemId || null,
           is_outstanding_advance: false,
+          source_payment_request_id: id,
         })
         .select().single();
       if (expErr) throw expErr;
       createdExpenseId = expData.id;
     }
 
+    const newNotes = [cur.approvalNotes, input.notes?.trim()].filter(Boolean).join(' | ') || null;
+
+    // تحديث السلفة:
+    // - عند رد جزئي: نُبقي is_advance_outstanding=true ونزيد refunded_amount فقط
+    // - عند تسوية كاملة (بكل الأنواع): نُغلق السلفة
+    const updatePayload: Record<string, unknown> = {
+      settlement_type: input.type,
+      settlement_notes: input.notes?.trim() || null,
+      refund_to_fund_id: input.type === 'cash_refund'
+        ? (input.refundToFundId ?? cur.paidFromFundId ?? null)
+        : null,
+      refund_to_custody_id: input.type === 'cash_refund'
+        ? (input.refundToCustodyId ?? cur.paidFromCustodyId ?? null)
+        : null,
+      refunded_amount: newRefundedAmount,
+    };
+    if (!isPartialRefund) {
+      updatePayload.is_advance_outstanding = false;
+      updatePayload.advance_settled_at = new Date().toISOString();
+      updatePayload.advance_settled_by = userId;
+      updatePayload.settled_amount = settledAmount;
+      updatePayload.approval_notes = newNotes;
+    }
+
     const { data, error } = await (supabase as any)
-      .from('payment_requests').update({
-        is_advance_outstanding: false,
-        advance_settled_at: new Date().toISOString(),
-        advance_settled_by: userId,
-        approval_notes: newNotes,
-        settlement_type: input.type,
-        settled_amount: settledAmount,
-        settlement_notes: input.notes?.trim() || null,
-        refund_to_fund_id: input.type === 'cash_refund' ? (input.refundToFundId ?? cur.paidFromFundId ?? null) : null,
-        refund_to_custody_id: input.type === 'cash_refund' ? (input.refundToCustodyId ?? cur.paidFromCustodyId ?? null) : null,
-      }).eq('id', id).select().single();
+      .from('payment_requests').update(updatePayload).eq('id', id).select().single();
     if (error) throw error;
     const req = mapReq(data);
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
 
-    // أعِد تحميل المصروفات لإظهار المصروف الجديد إن وُجد
     if (createdExpenseId) {
       try {
         const { data: exp } = await (supabase as any)

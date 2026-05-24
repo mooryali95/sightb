@@ -65,11 +65,11 @@ export function getFundOutstandingAdvances(
       && p.status === 'paid'
       && p.isAdvanceOutstanding === true,
     )
-    .reduce((s, p) => s + p.amount, 0);
+    .reduce((s, p) => s + Math.max(p.amount - (p.refundedAmount ?? 0), 0), 0);
 }
 
 /**
- * مجموع السلف القائمة المخصومة من عهدة معيّنة.
+ * مجموع السلف القائمة المخصومة من عهدة معيّنة (يطرح ما رُدّ منها جزئياً).
  */
 export function getCustodyOutstandingAdvances(
   custodyId: string,
@@ -82,7 +82,7 @@ export function getCustodyOutstandingAdvances(
       && p.status === 'paid'
       && p.isAdvanceOutstanding === true,
     )
-    .reduce((s, p) => s + p.amount, 0);
+    .reduce((s, p) => s + Math.max(p.amount - (p.refundedAmount ?? 0), 0), 0);
 }
 
 /**
