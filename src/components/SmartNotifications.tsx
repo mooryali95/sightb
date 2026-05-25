@@ -54,7 +54,7 @@ function persistRead(s: Set<string>) {
 }
 
 export function SmartNotifications() {
-  const { projects, budgetItems, expenses, revenues, changeOrders, milestones, risks } = useStore();
+  const { projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, paymentRequests } = useStore();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(getRead());
