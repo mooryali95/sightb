@@ -181,6 +181,24 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
         badge: { label: 'طلب صرف', cls: 'bg-violet-500/15 text-violet-700 dark:text-violet-400' },
       });
     });
+    // ردود نقدية للسلف (cash_refund) — تظهر كحركة inflow في السجل
+    projectPayReqs
+      .filter((p) => p.requestType === 'advance' && (p.refundedAmount ?? 0) > 0)
+      .forEach((p) => {
+        const r = resources.find((x) => x.id === p.resourceId);
+        evs.push({
+          id: `rf-${p.id}`,
+          date: p.advanceSettledAt || p.updatedAt,
+          type: 'payment_request',
+          title: `رد سلفة نقدية${r ? ` من ${r.name}` : ''}`,
+          subtitle: p.isAdvanceOutstanding
+            ? `رد جزئي — متبقي ${formatCurrency(Math.max(p.amount - (p.refundedAmount ?? 0), 0))}`
+            : 'رد كامل',
+          amount: p.refundedAmount ?? 0,
+          direction: 'in',
+          badge: { label: 'رد سلفة', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
+        });
+      });
     settlements.filter((s) => s.projectId === projectId).forEach((st) => evs.push({
       id: `s-${st.id}`, date: st.settlementDate || st.createdAt,
       type: 'settlement',
