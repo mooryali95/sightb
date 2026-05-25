@@ -28,13 +28,14 @@ const TYPE_LABELS: Record<string, string> = {
   milestone: 'مراحل متأخرة',
   deadline: 'تجاوز المواعيد',
   risk: 'مخاطر مفتوحة',
+  advance: 'سلف متقادمة',
 };
 
-const TYPE_ORDER = ['deadline', 'budget', 'risk', 'milestone', 'approval'];
+const TYPE_ORDER = ['deadline', 'budget', 'advance', 'risk', 'milestone', 'approval'];
 
 const ICONS: Record<string, typeof Bell> = {
   budget: TrendingDown, milestone: Clock, deadline: AlertTriangle,
-  risk: ShieldAlert, approval: Receipt,
+  risk: ShieldAlert, approval: Receipt, advance: Clock,
 };
 
 const COLORS: Record<Notification['severity'], string> = {
@@ -53,7 +54,7 @@ function persistRead(s: Set<string>) {
 }
 
 export function SmartNotifications() {
-  const { projects, budgetItems, expenses, revenues, changeOrders, milestones, risks } = useStore();
+  const { projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, paymentRequests } = useStore();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(getRead());
@@ -92,9 +93,28 @@ export function SmartNotifications() {
       const hr = risks.filter(r => r.projectId === p.id && r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length;
       if (hr > 0)
         items.push({ id: `hr-${p.id}`, type: 'risk', severity: 'warning', title: `${hr} خطر عالي`, description: p.name, link: `/project/${p.id}` });
+
+      // سلف قائمة متقادمة (> 60 يوم حرج، 30-60 تحذير)
+      const now = Date.now();
+      const outstandingAdv = paymentRequests.filter((r: any) =>
+        r.projectId === p.id && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding
+      );
+      let oldestDays = 0;
+      for (const adv of outstandingAdv) {
+        const ref = (adv as any).paidDate || adv.createdAt;
+        if (!ref) continue;
+        const days = Math.floor((now - new Date(ref).getTime()) / 86400000);
+        if (days > oldestDays) oldestDays = days;
+      }
+      if (oldestDays > 60)
+        items.push({ id: `ao-${p.id}`, type: 'advance', severity: 'critical',
+          title: `سلفة قائمة عمرها ${oldestDays} يوم`, description: `${p.name} · ${outstandingAdv.length} سلفة`, link: `/project/${p.id}` });
+      else if (oldestDays > 30)
+        items.push({ id: `aw-${p.id}`, type: 'advance', severity: 'warning',
+          title: `سلفة قائمة عمرها ${oldestDays} يوم`, description: `${p.name} · ${outstandingAdv.length} سلفة`, link: `/project/${p.id}` });
     }
     return items;
-  }, [projects, budgetItems, expenses, revenues, changeOrders, milestones, risks]);
+  }, [projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, paymentRequests]);
 
   const active = useMemo(() => all.filter(n => !readIds.has(n.id)), [all, readIds]);
   const critCount = active.filter(n => n.severity === 'critical').length;
