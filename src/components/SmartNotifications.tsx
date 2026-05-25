@@ -93,6 +93,25 @@ export function SmartNotifications() {
       const hr = risks.filter(r => r.projectId === p.id && r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length;
       if (hr > 0)
         items.push({ id: `hr-${p.id}`, type: 'risk', severity: 'warning', title: `${hr} خطر عالي`, description: p.name, link: `/project/${p.id}` });
+
+      // سلف قائمة متقادمة (> 60 يوم حرج، 30-60 تحذير)
+      const now = Date.now();
+      const outstandingAdv = paymentRequests.filter((r: any) =>
+        r.projectId === p.id && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding
+      );
+      let oldestDays = 0;
+      for (const adv of outstandingAdv) {
+        const ref = (adv as any).paidDate || adv.createdAt;
+        if (!ref) continue;
+        const days = Math.floor((now - new Date(ref).getTime()) / 86400000);
+        if (days > oldestDays) oldestDays = days;
+      }
+      if (oldestDays > 60)
+        items.push({ id: `ao-${p.id}`, type: 'advance', severity: 'critical',
+          title: `سلفة قائمة عمرها ${oldestDays} يوم`, description: `${p.name} · ${outstandingAdv.length} سلفة`, link: `/project/${p.id}` });
+      else if (oldestDays > 30)
+        items.push({ id: `aw-${p.id}`, type: 'advance', severity: 'warning',
+          title: `سلفة قائمة عمرها ${oldestDays} يوم`, description: `${p.name} · ${outstandingAdv.length} سلفة`, link: `/project/${p.id}` });
     }
     return items;
   }, [projects, budgetItems, expenses, revenues, changeOrders, milestones, risks]);
