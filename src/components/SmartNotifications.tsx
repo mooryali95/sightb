@@ -28,13 +28,14 @@ const TYPE_LABELS: Record<string, string> = {
   milestone: 'مراحل متأخرة',
   deadline: 'تجاوز المواعيد',
   risk: 'مخاطر مفتوحة',
+  advance: 'سلف متقادمة',
 };
 
-const TYPE_ORDER = ['deadline', 'budget', 'risk', 'milestone', 'approval'];
+const TYPE_ORDER = ['deadline', 'budget', 'advance', 'risk', 'milestone', 'approval'];
 
 const ICONS: Record<string, typeof Bell> = {
   budget: TrendingDown, milestone: Clock, deadline: AlertTriangle,
-  risk: ShieldAlert, approval: Receipt,
+  risk: ShieldAlert, approval: Receipt, advance: Clock,
 };
 
 const COLORS: Record<Notification['severity'], string> = {
