@@ -188,6 +188,8 @@ describe('Custody-based advances', () => {
     projectId: PID,
     resourceName: 'عمر',
     amount: 5000,
+    spent: 0,
+    remaining: 5000,
     status: 'active',
     sourceFundId: FID,
     createdAt: '2026-01-01',
