@@ -114,7 +114,7 @@ export function SmartNotifications() {
           title: `سلفة قائمة عمرها ${oldestDays} يوم`, description: `${p.name} · ${outstandingAdv.length} سلفة`, link: `/project/${p.id}` });
     }
     return items;
-  }, [projects, budgetItems, expenses, revenues, changeOrders, milestones, risks]);
+  }, [projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, paymentRequests]);
 
   const active = useMemo(() => all.filter(n => !readIds.has(n.id)), [all, readIds]);
   const critCount = active.filter(n => n.severity === 'critical').length;
