@@ -981,13 +981,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           تأكيد الدفع
                         </Button>
                       )}
-                      {canEdit && req.status === 'paid' && req.requestType === 'advance' && (req as any).isAdvanceOutstanding && (
+                      {canEdit && req.status === 'paid' && req.requestType === 'advance' && req.isAdvanceOutstanding && (
                         <Button size="sm" variant="default"
-                          onClick={() => setSettleAdvanceId(req.id)}>
+                          onClick={() => openSettleAdvance(req.id)}>
                           تسوية السلفة
                         </Button>
                       )}
-                      {req.status === 'paid' && req.requestType === 'advance' && !(req as any).isAdvanceOutstanding && req.advanceSettledAt && (
+                      {req.status === 'paid' && req.requestType === 'advance' && !req.isAdvanceOutstanding && req.advanceSettledAt && (
                         <Badge variant="outline" className="text-emerald-600 border-emerald-300">
                           {req.settlementType === 'cash_refund' ? 'رد نقدي' :
                            req.settlementType === 'payroll_deduction' ? 'خصم من راتب' :
