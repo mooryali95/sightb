@@ -391,14 +391,56 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const openSettleAdvance = (id: string) => {
     const req = projReqs.find((r) => r.id === id);
     const outstanding = req ? Math.max(req.amount - (req.refundedAmount ?? 0), 0) : 0;
+    // F) اشتقاق فئة المصروف الافتراضية من البند الموازني المرتبط (إن وُجد)
+    const linkedBudget = req?.budgetItemId
+      ? projBudgetItems.find((b: any) => b.id === req.budgetItemId)
+      : undefined;
+    const defaultCategory = (linkedBudget?.category as string) || 'other';
     setSettleAdvanceId(id);
     setSaType('documented');
     setSaAmount(String(outstanding));
     setSaRefundAmount('');
     setSaDocAmount('');
     setSaNotes('');
-    setSaCategory('other');
+    setSaCategory(defaultCategory);
   };
+
+  // E) سجل التسويات السابقة للسلفة المفتوحة في الحوار
+  const settlementHistory = useMemo(() => {
+    if (!settlingAdvance) return [] as Array<{
+      kind: 'refund' | 'expense';
+      date: string;
+      amount: number;
+      label: string;
+      sub?: string;
+    }>;
+    const events: Array<{ kind: 'refund' | 'expense'; date: string; amount: number; label: string; sub?: string }> = [];
+    // مصروفات موثَّقة/مشطوبة/خصم مرتبطة بهذه السلفة
+    expenses
+      .filter((e: any) => e.sourcePaymentRequestId === settlingAdvance.id)
+      .forEach((e: any) => {
+        const cat = EXPENSE_CATEGORY_LABELS[e.category as ExpenseCategory] || e.category;
+        events.push({
+          kind: 'expense',
+          date: String(e.date),
+          amount: Number(e.amount) || 0,
+          label: 'تسوية بمصروف',
+          sub: cat,
+        });
+      });
+    // إجمالي الردود النقدية (لا نملك سجلاً منفصلاً لكل رد، نعرضه كسطر مُجمَّع)
+    const refunded = settlingAdvance.refundedAmount ?? 0;
+    if (refunded > 0) {
+      events.push({
+        kind: 'refund',
+        date: settlingAdvance.advanceSettledAt ? String(settlingAdvance.advanceSettledAt).split('T')[0] : '',
+        amount: refunded,
+        label: 'رد نقدي (إجمالي)',
+        sub: settlingAdvance.paidFromCustodyId ? 'لرصيد العهدة' : 'لرصيد الدفعة',
+      });
+    }
+    return events.sort((a, b) => (a.date > b.date ? -1 : 1));
+  }, [settlingAdvance, expenses]);
 
   // ─── Settlement math (live preview) ───
   const settlementMath = useMemo(() => {
@@ -939,13 +981,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           تأكيد الدفع
                         </Button>
                       )}
-                      {canEdit && req.status === 'paid' && req.requestType === 'advance' && (req as any).isAdvanceOutstanding && (
+                      {canEdit && req.status === 'paid' && req.requestType === 'advance' && req.isAdvanceOutstanding && (
                         <Button size="sm" variant="default"
-                          onClick={() => setSettleAdvanceId(req.id)}>
+                          onClick={() => openSettleAdvance(req.id)}>
                           تسوية السلفة
                         </Button>
                       )}
-                      {req.status === 'paid' && req.requestType === 'advance' && !(req as any).isAdvanceOutstanding && req.advanceSettledAt && (
+                      {req.status === 'paid' && req.requestType === 'advance' && !req.isAdvanceOutstanding && req.advanceSettledAt && (
                         <Badge variant="outline" className="text-emerald-600 border-emerald-300">
                           {req.settlementType === 'cash_refund' ? 'رد نقدي' :
                            req.settlementType === 'payroll_deduction' ? 'خصم من راتب' :
@@ -1270,6 +1312,33 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                   </div>
                 );
               })()}
+
+              {/* E) سجل التسويات السابقة */}
+              {settlementHistory.length > 0 && (
+                <div className="rounded border bg-muted/20 p-3 space-y-2">
+                  <div className="text-xs font-semibold text-muted-foreground">سجل التسويات السابقة</div>
+                  <div className="space-y-1.5">
+                    {settlementHistory.map((ev, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            'inline-block h-2 w-2 rounded-full',
+                            ev.kind === 'refund' ? 'bg-emerald-500' : 'bg-primary',
+                          )} />
+                          <span className="font-medium">{ev.label}</span>
+                          {ev.sub && <span className="text-muted-foreground">— {ev.sub}</span>}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {ev.date && <span className="text-muted-foreground font-mono">{ev.date}</span>}
+                          <span className="font-mono font-semibold">{formatCurrency(ev.amount)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+
 
               <div>
                 <Label className="mb-2 block">نوع التسوية</Label>
