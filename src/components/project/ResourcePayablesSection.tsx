@@ -1386,7 +1386,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setSettleAdvanceId(null)}>إلغاء</Button>
-            <Button onClick={handleSettleAdvance}>تنفيذ التسوية</Button>
+            <Button onClick={handleSettleAdvance} disabled={settlementMath.overflow}>تنفيذ التسوية</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
