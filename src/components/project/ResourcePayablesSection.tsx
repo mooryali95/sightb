@@ -1212,6 +1212,65 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                 </div>
               </div>
 
+              {/* Settlement progress bar (live) */}
+              {(() => {
+                const { amount, prev, thisOp, remainder, overflow } = settlementMath;
+                if (amount <= 0) return null;
+                const pct = (n: number) => Math.min(100, Math.max(0, (n / amount) * 100));
+                const prevPct = pct(prev);
+                const opPct = pct(thisOp);
+                const remPct = Math.max(0, 100 - prevPct - opPct);
+                return (
+                  <div className="space-y-2">
+                    <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/40 border">
+                      {prevPct > 0 && (
+                        <div
+                          className="h-full bg-muted-foreground/40 transition-all"
+                          style={{ width: `${prevPct}%` }}
+                          title={`مسوّى سابقاً: ${formatCurrency(prev)}`}
+                        />
+                      )}
+                      {opPct > 0 && (
+                        <div
+                          className={cn('h-full transition-all', overflow ? 'bg-destructive' : 'bg-primary')}
+                          style={{ width: `${opPct}%` }}
+                          title={`هذه العملية: ${formatCurrency(thisOp)}`}
+                        />
+                      )}
+                      {remPct > 0 && !overflow && (
+                        <div
+                          className="h-full bg-warning/60 transition-all"
+                          style={{ width: `${remPct}%` }}
+                          title={`المتبقي: ${formatCurrency(remainder)}`}
+                        />
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/40" />
+                        <span className="text-muted-foreground">مسوّى سابقاً</span>
+                        <span className="font-mono ms-auto">{formatCurrency(prev)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={cn('inline-block h-2 w-2 rounded-full', overflow ? 'bg-destructive' : 'bg-primary')} />
+                        <span className="text-muted-foreground">هذه العملية</span>
+                        <span className="font-mono ms-auto">{formatCurrency(thisOp)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-block h-2 w-2 rounded-full bg-warning/60" />
+                        <span className="text-muted-foreground">المتبقي</span>
+                        <span className="font-mono ms-auto">{formatCurrency(remainder)}</span>
+                      </div>
+                    </div>
+                    {overflow && (
+                      <p className="text-xs text-destructive font-semibold">
+                        المبلغ يتجاوز المتبقي القائم ({formatCurrency(settlementMath.outstanding)})
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div>
                 <Label className="mb-2 block">نوع التسوية</Label>
                 <RadioGroup value={saType} onValueChange={(v) => setSaType(v as any)} className="space-y-2">
@@ -1227,6 +1286,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                     <div className="flex-1">
                       <div className="font-semibold text-sm">رد نقدي</div>
                       <div className="text-xs text-muted-foreground">يُعاد المبلغ لرصيد الدفعة/العهدة (لا مصروف)</div>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 p-3 rounded border cursor-pointer hover:bg-muted/40">
+                    <RadioGroupItem value="compound" className="mt-1" />
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">تسوية مركّبة</div>
+                      <div className="text-xs text-muted-foreground">جزء يُرد نقداً وجزء يُوثَّق كمصروف فعلي في عملية واحدة</div>
                     </div>
                   </label>
                   <label className="flex items-start gap-2 p-3 rounded border cursor-pointer hover:bg-muted/40">
@@ -1256,15 +1322,38 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                     type="number"
                     value={saAmount}
                     onChange={(e) => setSaAmount(e.target.value)}
-                    placeholder={String(settlingAdvance.amount)}
+                    placeholder={String(settlementMath.outstanding)}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    اتركه فارغاً للتسوية الكاملة. أي مبلغ أقل = تسوية جزئية، والباقي يبقى قائماً.
+                    أي مبلغ أقل من المتبقي = تسوية جزئية، والباقي يبقى قائماً.
                   </p>
                 </div>
               )}
 
-              {saType === 'documented' && (
+              {saType === 'compound' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>المبلغ المردود نقداً</Label>
+                    <Input
+                      type="number"
+                      value={saRefundAmount}
+                      onChange={(e) => setSaRefundAmount(e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <Label>المبلغ الموثَّق كمصروف</Label>
+                    <Input
+                      type="number"
+                      value={saDocAmount}
+                      onChange={(e) => setSaDocAmount(e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(saType === 'documented' || saType === 'compound') && (
                 <div>
                   <Label>فئة المصروف</Label>
                   <Select value={saCategory} onValueChange={setSaCategory}>
@@ -1292,6 +1381,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                   placeholder={saType === 'written_off' ? 'سبب الشطب (إلزامي)' : 'اختياري'}
                 />
               </div>
+
             </div>
           )}
           <DialogFooter>
