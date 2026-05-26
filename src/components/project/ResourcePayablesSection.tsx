@@ -1313,6 +1313,33 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                 );
               })()}
 
+              {/* E) سجل التسويات السابقة */}
+              {settlementHistory.length > 0 && (
+                <div className="rounded border bg-muted/20 p-3 space-y-2">
+                  <div className="text-xs font-semibold text-muted-foreground">سجل التسويات السابقة</div>
+                  <div className="space-y-1.5">
+                    {settlementHistory.map((ev, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            'inline-block h-2 w-2 rounded-full',
+                            ev.kind === 'refund' ? 'bg-emerald-500' : 'bg-primary',
+                          )} />
+                          <span className="font-medium">{ev.label}</span>
+                          {ev.sub && <span className="text-muted-foreground">— {ev.sub}</span>}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {ev.date && <span className="text-muted-foreground font-mono">{ev.date}</span>}
+                          <span className="font-mono font-semibold">{formatCurrency(ev.amount)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+
+
               <div>
                 <Label className="mb-2 block">نوع التسوية</Label>
                 <RadioGroup value={saType} onValueChange={(v) => setSaType(v as any)} className="space-y-2">
