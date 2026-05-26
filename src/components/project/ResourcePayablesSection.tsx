@@ -376,8 +376,10 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   // ─── Settle advance dialog state ───
   const [settleAdvanceId, setSettleAdvanceId] = useState<string | null>(null);
-  const [saType, setSaType] = useState<'documented' | 'cash_refund' | 'payroll_deduction' | 'written_off'>('documented');
+  const [saType, setSaType] = useState<'documented' | 'cash_refund' | 'payroll_deduction' | 'written_off' | 'compound'>('documented');
   const [saAmount, setSaAmount] = useState('');
+  const [saRefundAmount, setSaRefundAmount] = useState('');
+  const [saDocAmount, setSaDocAmount] = useState('');
   const [saNotes, setSaNotes] = useState('');
   const [saCategory, setSaCategory] = useState<string>('other');
 
@@ -388,12 +390,35 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   const openSettleAdvance = (id: string) => {
     const req = projReqs.find((r) => r.id === id);
+    const outstanding = req ? Math.max(req.amount - (req.refundedAmount ?? 0), 0) : 0;
     setSettleAdvanceId(id);
     setSaType('documented');
-    setSaAmount(req ? String(req.amount) : '');
+    setSaAmount(String(outstanding));
+    setSaRefundAmount('');
+    setSaDocAmount('');
     setSaNotes('');
     setSaCategory('other');
   };
+
+  // ─── Settlement math (live preview) ───
+  const settlementMath = useMemo(() => {
+    if (!settlingAdvance) return { amount: 0, prev: 0, outstanding: 0, thisOp: 0, remainder: 0, overflow: false };
+    const amount = settlingAdvance.amount;
+    const prev = settlingAdvance.refundedAmount ?? 0;
+    const outstanding = Math.max(amount - prev, 0);
+    let thisOp = 0;
+    if (saType === 'compound') {
+      thisOp = (parseFloat(saRefundAmount) || 0) + (parseFloat(saDocAmount) || 0);
+    } else if (saType === 'cash_refund' || saType === 'documented') {
+      thisOp = parseFloat(saAmount) || 0;
+    } else {
+      thisOp = outstanding;
+    }
+    thisOp = Math.max(thisOp, 0);
+    const overflow = thisOp > outstanding + 0.0001;
+    const remainder = Math.max(outstanding - thisOp, 0);
+    return { amount, prev, outstanding, thisOp, remainder, overflow };
+  }, [settlingAdvance, saType, saAmount, saRefundAmount, saDocAmount]);
 
   const handleSettleAdvance = async () => {
     if (!settleAdvanceId || !settlingAdvance) return;
@@ -403,17 +428,55 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     if (saType === 'written_off' && !saNotes.trim()) {
       toast.error('سبب الشطب مطلوب'); return;
     }
+    if (settlementMath.overflow) {
+      toast.error('المبلغ يتجاوز المتبقي القائم'); return;
+    }
     try {
-      await settleAdvance(settleAdvanceId, {
-        type: saType,
-        notes: saNotes,
-        settledAmount: parseFloat(saAmount) || settlingAdvance.amount,
-        expenseCategory: saCategory,
-      });
-      toast.success('تمت تسوية السلفة');
+      if (saType === 'compound') {
+        const refundAmt = parseFloat(saRefundAmount) || 0;
+        const docAmt = parseFloat(saDocAmount) || 0;
+        if (refundAmt <= 0 && docAmt <= 0) {
+          toast.error('أدخل مبلغ الرد و/أو التوثيق'); return;
+        }
+        let refundDone = false;
+        if (refundAmt > 0) {
+          await settleAdvance(settleAdvanceId, {
+            type: 'cash_refund',
+            notes: saNotes,
+            settledAmount: refundAmt,
+          });
+          refundDone = true;
+        }
+        if (docAmt > 0) {
+          try {
+            await settleAdvance(settleAdvanceId, {
+              type: 'documented',
+              notes: saNotes,
+              settledAmount: docAmt,
+              expenseCategory: saCategory,
+            });
+          } catch (e: any) {
+            if (refundDone) {
+              toast.warning('تم الرد النقدي لكن فشل التوثيق: ' + (e.message || ''));
+              return;
+            }
+            throw e;
+          }
+        }
+        toast.success('تمت التسوية المركّبة');
+      } else {
+        await settleAdvance(settleAdvanceId, {
+          type: saType,
+          notes: saNotes,
+          settledAmount: parseFloat(saAmount) || settlingAdvance.amount,
+          expenseCategory: saCategory,
+        });
+        toast.success('تمت تسوية السلفة');
+      }
       setSettleAdvanceId(null);
     } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
   };
+
 
 
   return (
