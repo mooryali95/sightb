@@ -391,14 +391,56 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const openSettleAdvance = (id: string) => {
     const req = projReqs.find((r) => r.id === id);
     const outstanding = req ? Math.max(req.amount - (req.refundedAmount ?? 0), 0) : 0;
+    // F) اشتقاق فئة المصروف الافتراضية من البند الموازني المرتبط (إن وُجد)
+    const linkedBudget = req?.budgetItemId
+      ? projBudgetItems.find((b: any) => b.id === req.budgetItemId)
+      : undefined;
+    const defaultCategory = (linkedBudget?.category as string) || 'other';
     setSettleAdvanceId(id);
     setSaType('documented');
     setSaAmount(String(outstanding));
     setSaRefundAmount('');
     setSaDocAmount('');
     setSaNotes('');
-    setSaCategory('other');
+    setSaCategory(defaultCategory);
   };
+
+  // E) سجل التسويات السابقة للسلفة المفتوحة في الحوار
+  const settlementHistory = useMemo(() => {
+    if (!settlingAdvance) return [] as Array<{
+      kind: 'refund' | 'expense';
+      date: string;
+      amount: number;
+      label: string;
+      sub?: string;
+    }>;
+    const events: Array<{ kind: 'refund' | 'expense'; date: string; amount: number; label: string; sub?: string }> = [];
+    // مصروفات موثَّقة/مشطوبة/خصم مرتبطة بهذه السلفة
+    expenses
+      .filter((e: any) => e.sourcePaymentRequestId === settlingAdvance.id)
+      .forEach((e: any) => {
+        const cat = EXPENSE_CATEGORY_LABELS[e.category as ExpenseCategory] || e.category;
+        events.push({
+          kind: 'expense',
+          date: String(e.date),
+          amount: Number(e.amount) || 0,
+          label: 'تسوية بمصروف',
+          sub: cat,
+        });
+      });
+    // إجمالي الردود النقدية (لا نملك سجلاً منفصلاً لكل رد، نعرضه كسطر مُجمَّع)
+    const refunded = settlingAdvance.refundedAmount ?? 0;
+    if (refunded > 0) {
+      events.push({
+        kind: 'refund',
+        date: settlingAdvance.advanceSettledAt ? String(settlingAdvance.advanceSettledAt).split('T')[0] : '',
+        amount: refunded,
+        label: 'رد نقدي (إجمالي)',
+        sub: settlingAdvance.paidFromCustodyId ? 'لرصيد العهدة' : 'لرصيد الدفعة',
+      });
+    }
+    return events.sort((a, b) => (a.date > b.date ? -1 : 1));
+  }, [settlingAdvance, expenses]);
 
   // ─── Settlement math (live preview) ───
   const settlementMath = useMemo(() => {
