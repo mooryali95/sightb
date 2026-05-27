@@ -410,42 +410,33 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     loadSettlementEventsForRequest(id).catch(console.warn);
   };
 
-  // E) سجل التسويات السابقة للسلفة المفتوحة في الحوار
+  // E) سجل التسويات من جدول settlement_events
   const settlementHistory = useMemo(() => {
     if (!settlingAdvance) return [] as Array<{
-      kind: 'refund' | 'expense';
+      kind: 'refund' | 'expense' | 'other';
       date: string;
       amount: number;
       label: string;
       sub?: string;
     }>;
-    const events: Array<{ kind: 'refund' | 'expense'; date: string; amount: number; label: string; sub?: string }> = [];
-    // مصروفات موثَّقة/مشطوبة/خصم مرتبطة بهذه السلفة
-    expenses
-      .filter((e: any) => e.sourcePaymentRequestId === settlingAdvance.id)
-      .forEach((e: any) => {
-        const cat = EXPENSE_CATEGORY_LABELS[e.category as ExpenseCategory] || e.category;
-        events.push({
-          kind: 'expense',
-          date: String(e.date),
-          amount: Number(e.amount) || 0,
-          label: 'تسوية بمصروف',
-          sub: cat,
-        });
-      });
-    // إجمالي الردود النقدية (لا نملك سجلاً منفصلاً لكل رد، نعرضه كسطر مُجمَّع)
-    const refunded = settlingAdvance.refundedAmount ?? 0;
-    if (refunded > 0) {
-      events.push({
-        kind: 'refund',
-        date: settlingAdvance.advanceSettledAt ? String(settlingAdvance.advanceSettledAt).split('T')[0] : '',
-        amount: refunded,
-        label: 'رد نقدي (إجمالي)',
-        sub: settlingAdvance.paidFromCustodyId ? 'لرصيد العهدة' : 'لرصيد الدفعة',
-      });
-    }
-    return events.sort((a, b) => (a.date > b.date ? -1 : 1));
-  }, [settlingAdvance, expenses]);
+    const evs = settlementEvents.filter((e) => e.paymentRequestId === settlingAdvance.id);
+    return evs.map((e) => {
+      const label = e.eventType === 'cash_refund' ? 'رد نقدي'
+        : e.eventType === 'documented' ? 'تسوية بمستندات'
+        : e.eventType === 'payroll_deduction' ? 'خصم من مستحقات'
+        : e.eventType === 'written_off' ? 'شطب'
+        : 'تراجع';
+      const kind: 'refund' | 'expense' | 'other' = e.eventType === 'cash_refund' ? 'refund'
+        : e.expenseId ? 'expense' : 'other';
+      return {
+        kind,
+        date: String(e.createdAt).split('T')[0],
+        amount: e.amount,
+        label,
+        sub: e.expenseCategory || e.notes || undefined,
+      };
+    });
+  }, [settlingAdvance, settlementEvents]);
 
   // ─── Settlement math (live preview) ───
   const settlementMath = useMemo(() => {
