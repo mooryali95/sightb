@@ -22,6 +22,7 @@ export interface ResourcePayableSlice {
   reimbursements: ResourceReimbursement[];
   paymentRequests: PaymentRequest[];
   resourceSettlements: ResourceSettlement[];
+  settlementEvents: SettlementEvent[];
 
   loadResourcePayablesForProject: (projectId: string) => Promise<void>;
 
