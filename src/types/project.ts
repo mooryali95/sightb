@@ -695,6 +695,30 @@ export const ADVANCE_SETTLEMENT_TYPE_LABELS: Record<AdvanceSettlementType, strin
   written_off: 'شطب (دين معدوم)',
 };
 
+export type SettlementEventType =
+  | 'cash_refund'
+  | 'documented'
+  | 'payroll_deduction'
+  | 'written_off'
+  | 'reverse';
+
+export interface SettlementEvent {
+  id: string;
+  paymentRequestId: string;
+  projectId: string;
+  eventType: SettlementEventType;
+  amount: number;
+  refundToFundId?: string | null;
+  refundToCustodyId?: string | null;
+  expenseId?: string | null;
+  expenseCategory?: string | null;
+  budgetItemId?: string | null;
+  notes?: string | null;
+  reversedEventId?: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
 export interface PaymentRequest {
   id: string;
   projectId: string;
