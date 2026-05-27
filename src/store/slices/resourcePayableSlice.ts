@@ -88,6 +88,19 @@ export interface ResourcePayableSlice {
     expenseCategory?: string; // لـ documented
     expenseBudgetItemId?: string | null;
   }) => Promise<void>;
+  /**
+   * تسوية سلفة مع فاتورة أكبر من المتبقي القائم:
+   * - تُغلق السلفة كاملةً بحدث `documented` بمقدار المتبقي.
+   * - الفائض يُسجَّل كمصروف مستقل على دفعة/عهدة أخرى يختارها المستخدم.
+   */
+  settleAdvanceWithSplit: (id: string, input: {
+    invoiceAmount: number;
+    overflowSource: { fundId?: string | null; custodyId?: string | null };
+    expenseCategory: string;
+    expenseBudgetItemId?: string | null;
+    notes?: string;
+  }) => Promise<void>;
+  loadSettlementEventsForRequest: (paymentRequestId: string) => Promise<void>;
 
   // Settlements
   createResourceSettlement: (input: {
