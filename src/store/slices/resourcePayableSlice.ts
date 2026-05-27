@@ -12,6 +12,8 @@ import type {
   PaymentMethod,
   ResourceSettlementStatus,
   AdvanceSettlementType,
+  SettlementEvent,
+  SettlementEventType,
 } from '@/types/project';
 import { getUserId } from '../helpers';
 import type { AppState } from '../useStore';
@@ -20,6 +22,7 @@ export interface ResourcePayableSlice {
   reimbursements: ResourceReimbursement[];
   paymentRequests: PaymentRequest[];
   resourceSettlements: ResourceSettlement[];
+  settlementEvents: SettlementEvent[];
 
   loadResourcePayablesForProject: (projectId: string) => Promise<void>;
 
@@ -85,6 +88,19 @@ export interface ResourcePayableSlice {
     expenseCategory?: string; // لـ documented
     expenseBudgetItemId?: string | null;
   }) => Promise<void>;
+  /**
+   * تسوية سلفة مع فاتورة أكبر من المتبقي القائم:
+   * - تُغلق السلفة كاملةً بحدث `documented` بمقدار المتبقي.
+   * - الفائض يُسجَّل كمصروف مستقل على دفعة/عهدة أخرى يختارها المستخدم.
+   */
+  settleAdvanceWithSplit: (id: string, input: {
+    invoiceAmount: number;
+    overflowSource: { fundId?: string | null; custodyId?: string | null };
+    expenseCategory: string;
+    expenseBudgetItemId?: string | null;
+    notes?: string;
+  }) => Promise<void>;
+  loadSettlementEventsForRequest: (paymentRequestId: string) => Promise<void>;
 
   // Settlements
   createResourceSettlement: (input: {
@@ -201,6 +217,7 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
   reimbursements: [],
   paymentRequests: [],
   resourceSettlements: [],
+  settlementEvents: [],
 
   loadResourcePayablesForProject: async (projectId) => {
     const [rRes, pRes, sRes] = await Promise.all([
@@ -442,15 +459,8 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     if (settledAmount <= 0 || settledAmount > remainingOutstanding) {
       throw new Error('مبلغ التسوية غير صحيح');
     }
-    const isPartialRefund = input.type === 'cash_refund' && settledAmount < remainingOutstanding;
-    const newRefundedAmount = input.type === 'cash_refund'
-      ? (cur.refundedAmount ?? 0) + settledAmount
-      : (cur.refundedAmount ?? 0);
 
-    // إنشاء مصروف فعلي لأنواع التسوية التي يخرج فيها النقد ولا يعود:
-    // - documented: مصروف بفئة المستخدم
-    // - payroll_deduction: مصروف بفئة "salary" (خصم من مستحقات)
-    // - written_off: مصروف بفئة "other" (خسارة/شطب)
+    // إنشاء مصروف فعلي للأنواع التي يخرج فيها النقد ولا يعود
     let createdExpenseId: string | null = null;
     const needsExpense = input.type === 'documented'
       || input.type === 'payroll_deduction'
@@ -489,35 +499,33 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
       createdExpenseId = expData.id;
     }
 
-    const newNotes = [cur.approvalNotes, input.notes?.trim()].filter(Boolean).join(' | ') || null;
+    // إدراج حدث التسوية — المحفّز سيُعيد حساب payment_requests تلقائياً
+    const { error: evErr } = await (supabase as any)
+      .from('settlement_events')
+      .insert({
+        payment_request_id: id,
+        project_id: cur.projectId,
+        event_type: input.type,
+        amount: settledAmount,
+        refund_to_fund_id: input.type === 'cash_refund'
+          ? (input.refundToFundId ?? cur.paidFromFundId ?? null) : null,
+        refund_to_custody_id: input.type === 'cash_refund'
+          ? (input.refundToCustodyId ?? cur.paidFromCustodyId ?? null) : null,
+        expense_id: createdExpenseId,
+        expense_category: input.expenseCategory || null,
+        budget_item_id: input.expenseBudgetItemId || cur.budgetItemId || null,
+        notes: input.notes?.trim() || null,
+        created_by: userId,
+      });
+    if (evErr) throw evErr;
 
-    // تحديث السلفة:
-    // - عند رد جزئي: نُبقي is_advance_outstanding=true ونزيد refunded_amount فقط
-    // - عند تسوية كاملة (بكل الأنواع): نُغلق السلفة
-    const updatePayload: Record<string, unknown> = {
-      settlement_type: input.type,
-      settlement_notes: input.notes?.trim() || null,
-      refund_to_fund_id: input.type === 'cash_refund'
-        ? (input.refundToFundId ?? cur.paidFromFundId ?? null)
-        : null,
-      refund_to_custody_id: input.type === 'cash_refund'
-        ? (input.refundToCustodyId ?? cur.paidFromCustodyId ?? null)
-        : null,
-      refunded_amount: newRefundedAmount,
-    };
-    if (!isPartialRefund) {
-      updatePayload.is_advance_outstanding = false;
-      updatePayload.advance_settled_at = new Date().toISOString();
-      updatePayload.advance_settled_by = userId;
-      updatePayload.settled_amount = settledAmount;
-      updatePayload.approval_notes = newNotes;
+    // إعادة جلب السلفة بعد تحديث المحفّز
+    const { data: refreshed } = await (supabase as any)
+      .from('payment_requests').select('*').eq('id', id).single();
+    if (refreshed) {
+      const req = mapReq(refreshed);
+      set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
     }
-
-    const { data, error } = await (supabase as any)
-      .from('payment_requests').update(updatePayload).eq('id', id).select().single();
-    if (error) throw error;
-    const req = mapReq(data);
-    set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
 
     if (createdExpenseId) {
       try {
@@ -530,6 +538,96 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
         }
       } catch (e) { console.warn(e); }
     }
+
+    // تحديث سجل الأحداث محلياً
+    await get().loadSettlementEventsForRequest(id);
+  },
+
+  settleAdvanceWithSplit: async (id, input) => {
+    const userId = await getUserId();
+    const cur = get().paymentRequests.find((r) => r.id === id);
+    if (!cur) throw new Error('طلب الصرف غير موجود');
+    if (cur.requestType !== 'advance') throw new Error('هذه العملية متاحة للسلف فقط');
+    if (!cur.isAdvanceOutstanding) throw new Error('السلفة مسوّاة بالفعل');
+
+    const outstanding = Math.max(cur.amount - (cur.refundedAmount ?? 0), 0);
+    if (input.invoiceAmount <= outstanding) {
+      throw new Error('قيمة الفاتورة لا تتجاوز المتبقي — استخدم التسوية العادية');
+    }
+    const overflow = input.invoiceAmount - outstanding;
+    if (!input.overflowSource.fundId && !input.overflowSource.custodyId) {
+      throw new Error('اختر دفعة أو عهدة لتغطية الجزء الفائض من الفاتورة');
+    }
+
+    // الخطوة 1: تسوية بمستندات بمقدار المتبقي (تُغلق السلفة)
+    await get().settleAdvance(id, {
+      type: 'documented',
+      notes: input.notes,
+      settledAmount: outstanding,
+      expenseCategory: input.expenseCategory,
+      expenseBudgetItemId: input.expenseBudgetItemId ?? null,
+    });
+
+    // الخطوة 2: مصروف مستقل للفائض من المصدر المختار
+    const invoiceRef = 'split-' + id.slice(0, 8);
+    const { data: expData, error: expErr } = await (supabase as any)
+      .from('expenses')
+      .insert({
+        project_id: cur.projectId,
+        resource_id: cur.resourceId,
+        category: input.expenseCategory,
+        description: 'فائض فاتورة سلفة: ' + cur.description,
+        amount: overflow,
+        date: new Date().toISOString().split('T')[0],
+        month: new Date().getMonth() + 1,
+        approval_status: 'approved',
+        approved_by: userId,
+        notes: 'جزء فائض من تسوية السلفة #' + id + (input.notes ? ' — ' + input.notes : ''),
+        invoice_ref: invoiceRef,
+        user_id: userId,
+        is_vat_exempt: false,
+        fund_id: input.overflowSource.custodyId ? null : (input.overflowSource.fundId || null),
+        custody_id: input.overflowSource.custodyId || null,
+        budget_item_id: input.expenseBudgetItemId ?? cur.budgetItemId ?? null,
+        is_outstanding_advance: false,
+      })
+      .select().single();
+    if (expErr) throw expErr;
+
+    const { mapExpense } = await import('@/store/helpers');
+    const mapped = mapExpense(expData);
+    set((s) => ({ expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)] }));
+  },
+
+  loadSettlementEventsForRequest: async (paymentRequestId) => {
+    const { data, error } = await (supabase as any)
+      .from('settlement_events')
+      .select('*')
+      .eq('payment_request_id', paymentRequestId)
+      .order('created_at', { ascending: false });
+    if (error) { console.warn(error); return; }
+    const mapped: SettlementEvent[] = (data || []).map((d: any) => ({
+      id: d.id,
+      paymentRequestId: d.payment_request_id,
+      projectId: d.project_id,
+      eventType: d.event_type as SettlementEventType,
+      amount: Number(d.amount),
+      refundToFundId: d.refund_to_fund_id,
+      refundToCustodyId: d.refund_to_custody_id,
+      expenseId: d.expense_id,
+      expenseCategory: d.expense_category,
+      budgetItemId: d.budget_item_id,
+      notes: d.notes,
+      reversedEventId: d.reversed_event_id,
+      createdBy: d.created_by,
+      createdAt: d.created_at,
+    }));
+    set((s) => ({
+      settlementEvents: [
+        ...s.settlementEvents.filter((e) => e.paymentRequestId !== paymentRequestId),
+        ...mapped,
+      ],
+    }));
   },
 
   deletePaymentRequest: async (id) => {

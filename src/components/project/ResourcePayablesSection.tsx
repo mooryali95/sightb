@@ -63,6 +63,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const {
     resources, reimbursements, paymentRequests, resourceSettlements,
     projectFunds, custodies, expenses, budgetItems,
+    settlementEvents, loadSettlementEventsForRequest, settleAdvanceWithSplit,
     createReimbursement, approveReimbursement, rejectReimbursement, deleteReimbursement,
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
@@ -382,6 +383,8 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const [saDocAmount, setSaDocAmount] = useState('');
   const [saNotes, setSaNotes] = useState('');
   const [saCategory, setSaCategory] = useState<string>('other');
+  // Split overflow source (when invoice > outstanding)
+  const [saOverflowSource, setSaOverflowSource] = useState<string>(''); // "fund:<id>" | "custody:<id>"
 
   const settlingAdvance = useMemo(
     () => projReqs.find((r) => r.id === settleAdvanceId),
@@ -391,7 +394,6 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const openSettleAdvance = (id: string) => {
     const req = projReqs.find((r) => r.id === id);
     const outstanding = req ? Math.max(req.amount - (req.refundedAmount ?? 0), 0) : 0;
-    // F) اشتقاق فئة المصروف الافتراضية من البند الموازني المرتبط (إن وُجد)
     const linkedBudget = req?.budgetItemId
       ? projBudgetItems.find((b: any) => b.id === req.budgetItemId)
       : undefined;
@@ -403,48 +405,42 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     setSaDocAmount('');
     setSaNotes('');
     setSaCategory(defaultCategory);
+    setSaOverflowSource('');
+    // Load settlement events for this PR
+    loadSettlementEventsForRequest(id).catch(console.warn);
   };
 
-  // E) سجل التسويات السابقة للسلفة المفتوحة في الحوار
+  // E) سجل التسويات من جدول settlement_events
   const settlementHistory = useMemo(() => {
     if (!settlingAdvance) return [] as Array<{
-      kind: 'refund' | 'expense';
+      kind: 'refund' | 'expense' | 'other';
       date: string;
       amount: number;
       label: string;
       sub?: string;
     }>;
-    const events: Array<{ kind: 'refund' | 'expense'; date: string; amount: number; label: string; sub?: string }> = [];
-    // مصروفات موثَّقة/مشطوبة/خصم مرتبطة بهذه السلفة
-    expenses
-      .filter((e: any) => e.sourcePaymentRequestId === settlingAdvance.id)
-      .forEach((e: any) => {
-        const cat = EXPENSE_CATEGORY_LABELS[e.category as ExpenseCategory] || e.category;
-        events.push({
-          kind: 'expense',
-          date: String(e.date),
-          amount: Number(e.amount) || 0,
-          label: 'تسوية بمصروف',
-          sub: cat,
-        });
-      });
-    // إجمالي الردود النقدية (لا نملك سجلاً منفصلاً لكل رد، نعرضه كسطر مُجمَّع)
-    const refunded = settlingAdvance.refundedAmount ?? 0;
-    if (refunded > 0) {
-      events.push({
-        kind: 'refund',
-        date: settlingAdvance.advanceSettledAt ? String(settlingAdvance.advanceSettledAt).split('T')[0] : '',
-        amount: refunded,
-        label: 'رد نقدي (إجمالي)',
-        sub: settlingAdvance.paidFromCustodyId ? 'لرصيد العهدة' : 'لرصيد الدفعة',
-      });
-    }
-    return events.sort((a, b) => (a.date > b.date ? -1 : 1));
-  }, [settlingAdvance, expenses]);
+    const evs = settlementEvents.filter((e) => e.paymentRequestId === settlingAdvance.id);
+    return evs.map((e) => {
+      const label = e.eventType === 'cash_refund' ? 'رد نقدي'
+        : e.eventType === 'documented' ? 'تسوية بمستندات'
+        : e.eventType === 'payroll_deduction' ? 'خصم من مستحقات'
+        : e.eventType === 'written_off' ? 'شطب'
+        : 'تراجع';
+      const kind: 'refund' | 'expense' | 'other' = e.eventType === 'cash_refund' ? 'refund'
+        : e.expenseId ? 'expense' : 'other';
+      return {
+        kind,
+        date: String(e.createdAt).split('T')[0],
+        amount: e.amount,
+        label,
+        sub: e.expenseCategory || e.notes || undefined,
+      };
+    });
+  }, [settlingAdvance, settlementEvents]);
 
   // ─── Settlement math (live preview) ───
   const settlementMath = useMemo(() => {
-    if (!settlingAdvance) return { amount: 0, prev: 0, outstanding: 0, thisOp: 0, remainder: 0, overflow: false };
+    if (!settlingAdvance) return { amount: 0, prev: 0, outstanding: 0, thisOp: 0, remainder: 0, overflow: false, overflowAmount: 0 };
     const amount = settlingAdvance.amount;
     const prev = settlingAdvance.refundedAmount ?? 0;
     const outstanding = Math.max(amount - prev, 0);
@@ -457,51 +453,45 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       thisOp = outstanding;
     }
     thisOp = Math.max(thisOp, 0);
-    const overflow = thisOp > outstanding + 0.0001;
+    // Split allowed only for documented (Split Expense scenario)
+    const isSplitEligible = saType === 'documented' && thisOp > outstanding;
+    const overflowAmount = isSplitEligible ? thisOp - outstanding : 0;
+    const overflow = thisOp > outstanding + 0.0001 && !isSplitEligible;
     const remainder = Math.max(outstanding - thisOp, 0);
-    return { amount, prev, outstanding, thisOp, remainder, overflow };
+    return { amount, prev, outstanding, thisOp, remainder, overflow, overflowAmount };
   }, [settlingAdvance, saType, saAmount, saRefundAmount, saDocAmount]);
 
   const handleSettleAdvance = async () => {
     if (!settleAdvanceId || !settlingAdvance) return;
-    if (saType === 'written_off' && !isAdmin) {
-      toast.error('الشطب صلاحية مدير فقط'); return;
-    }
-    if (saType === 'written_off' && !saNotes.trim()) {
-      toast.error('سبب الشطب مطلوب'); return;
-    }
-    if (settlementMath.overflow) {
-      toast.error('المبلغ يتجاوز المتبقي القائم'); return;
-    }
+    if (saType === 'written_off' && !isAdmin) { toast.error('الشطب صلاحية مدير فقط'); return; }
+    if (saType === 'written_off' && !saNotes.trim()) { toast.error('سبب الشطب مطلوب'); return; }
+    if (settlementMath.overflow) { toast.error('المبلغ يتجاوز المتبقي القائم'); return; }
     try {
-      if (saType === 'compound') {
+      // Split Expense: documented with invoice > outstanding
+      if (saType === 'documented' && settlementMath.overflowAmount > 0) {
+        if (!saOverflowSource) { toast.error('اختر مصدر تغطية الجزء الفائض'); return; }
+        const [kind, srcId] = saOverflowSource.split(':');
+        await settleAdvanceWithSplit(settleAdvanceId, {
+          invoiceAmount: parseFloat(saAmount),
+          overflowSource: kind === 'fund' ? { fundId: srcId } : { custodyId: srcId },
+          expenseCategory: saCategory,
+          notes: saNotes,
+        });
+        toast.success('تمت التسوية المقسّمة: السلفة مُغلقة + مصروف فائض مسجَّل');
+      } else if (saType === 'compound') {
         const refundAmt = parseFloat(saRefundAmount) || 0;
         const docAmt = parseFloat(saDocAmount) || 0;
-        if (refundAmt <= 0 && docAmt <= 0) {
-          toast.error('أدخل مبلغ الرد و/أو التوثيق'); return;
-        }
+        if (refundAmt <= 0 && docAmt <= 0) { toast.error('أدخل مبلغ الرد و/أو التوثيق'); return; }
         let refundDone = false;
         if (refundAmt > 0) {
-          await settleAdvance(settleAdvanceId, {
-            type: 'cash_refund',
-            notes: saNotes,
-            settledAmount: refundAmt,
-          });
+          await settleAdvance(settleAdvanceId, { type: 'cash_refund', notes: saNotes, settledAmount: refundAmt });
           refundDone = true;
         }
         if (docAmt > 0) {
           try {
-            await settleAdvance(settleAdvanceId, {
-              type: 'documented',
-              notes: saNotes,
-              settledAmount: docAmt,
-              expenseCategory: saCategory,
-            });
+            await settleAdvance(settleAdvanceId, { type: 'documented', notes: saNotes, settledAmount: docAmt, expenseCategory: saCategory });
           } catch (e: any) {
-            if (refundDone) {
-              toast.warning('تم الرد النقدي لكن فشل التوثيق: ' + (e.message || ''));
-              return;
-            }
+            if (refundDone) { toast.warning('تم الرد لكن فشل التوثيق: ' + (e.message || '')); return; }
             throw e;
           }
         }
@@ -1386,7 +1376,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
               {(saType === 'cash_refund' || saType === 'documented') && (
                 <div>
-                  <Label>المبلغ</Label>
+                  <Label>{saType === 'documented' ? 'قيمة الفاتورة' : 'المبلغ'}</Label>
                   <Input
                     type="number"
                     value={saAmount}
@@ -1394,10 +1384,47 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                     placeholder={String(settlementMath.outstanding)}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    أي مبلغ أقل من المتبقي = تسوية جزئية، والباقي يبقى قائماً.
+                    {saType === 'documented'
+                      ? 'إن تجاوزت الفاتورة المتبقي القائم، سيُفعَّل وضع التقسيم تلقائياً.'
+                      : 'أي مبلغ أقل من المتبقي = تسوية جزئية، والباقي يبقى قائماً.'}
                   </p>
                 </div>
               )}
+
+              {saType === 'documented' && settlementMath.overflowAmount > 0 && (
+                <div className="rounded border border-warning/40 bg-warning/5 p-3 space-y-2">
+                  <div className="text-sm font-semibold">
+                    تقسيم الفاتورة: السلفة ({formatCurrency(settlementMath.outstanding)}) + فائض ({formatCurrency(settlementMath.overflowAmount)})
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    سيُغلق المتبقي بمستندات، ويُسجَّل الفائض كمصروف مستقل من المصدر التالي:
+                  </p>
+                  <Select value={saOverflowSource} onValueChange={setSaOverflowSource}>
+                    <SelectTrigger><SelectValue placeholder="اختر دفعة/عهدة للفائض" /></SelectTrigger>
+                    <SelectContent>
+                      {availableFunds
+                        .filter((f) => f.remaining >= settlementMath.overflowAmount)
+                        .map((f) => (
+                          <SelectItem key={f.fund.id} value={`fund:${f.fund.id}`}>
+                            دفعة #{f.fund.fundNumber} — متاح {formatCurrency(f.remaining)}
+                          </SelectItem>
+                        ))}
+                      {availableCustodies
+                        .filter((c) => c.remaining >= settlementMath.overflowAmount)
+                        .map((c) => (
+                          <SelectItem key={c.custody.id} value={`custody:${c.custody.id}`}>
+                            عهدة {c.custody.resourceName} — متاح {formatCurrency(c.remaining)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {availableFunds.filter((f) => f.remaining >= settlementMath.overflowAmount).length === 0
+                   && availableCustodies.filter((c) => c.remaining >= settlementMath.overflowAmount).length === 0 && (
+                    <p className="text-xs text-destructive">لا يوجد مصدر برصيد كافٍ للفائض. أنشئ دفعة جديدة أو خفّض المبلغ.</p>
+                  )}
+                </div>
+              )}
+
 
               {saType === 'compound' && (
                 <div className="grid grid-cols-2 gap-3">

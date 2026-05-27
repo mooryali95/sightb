@@ -1578,6 +1578,65 @@ export type Database = {
           },
         ]
       }
+      settlement_events: {
+        Row: {
+          amount: number
+          budget_item_id: string | null
+          created_at: string
+          created_by: string
+          event_type: Database["public"]["Enums"]["settlement_event_type"]
+          expense_category: string | null
+          expense_id: string | null
+          id: string
+          notes: string | null
+          payment_request_id: string
+          project_id: string
+          refund_to_custody_id: string | null
+          refund_to_fund_id: string | null
+          reversed_event_id: string | null
+        }
+        Insert: {
+          amount: number
+          budget_item_id?: string | null
+          created_at?: string
+          created_by: string
+          event_type: Database["public"]["Enums"]["settlement_event_type"]
+          expense_category?: string | null
+          expense_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_request_id: string
+          project_id: string
+          refund_to_custody_id?: string | null
+          refund_to_fund_id?: string | null
+          reversed_event_id?: string | null
+        }
+        Update: {
+          amount?: number
+          budget_item_id?: string | null
+          created_at?: string
+          created_by?: string
+          event_type?: Database["public"]["Enums"]["settlement_event_type"]
+          expense_category?: string | null
+          expense_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_request_id?: string
+          project_id?: string
+          refund_to_custody_id?: string | null
+          refund_to_fund_id?: string | null
+          reversed_event_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_events_reversed_event_id_fkey"
+            columns: ["reversed_event_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -1809,6 +1868,12 @@ export type Database = {
         | "rejected"
       resource_settlement_status: "draft" | "signed" | "disputed" | "cancelled"
       scope_type: "system" | "company" | "project"
+      settlement_event_type:
+        | "cash_refund"
+        | "documented"
+        | "payroll_deduction"
+        | "written_off"
+        | "reverse"
       settlement_status: "draft" | "submitted" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -1973,6 +2038,13 @@ export const Constants = {
       ],
       resource_settlement_status: ["draft", "signed", "disputed", "cancelled"],
       scope_type: ["system", "company", "project"],
+      settlement_event_type: [
+        "cash_refund",
+        "documented",
+        "payroll_deduction",
+        "written_off",
+        "reverse",
+      ],
       settlement_status: ["draft", "submitted", "approved", "rejected"],
     },
   },
