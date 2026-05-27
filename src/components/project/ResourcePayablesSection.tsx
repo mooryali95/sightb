@@ -440,7 +440,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   // ─── Settlement math (live preview) ───
   const settlementMath = useMemo(() => {
-    if (!settlingAdvance) return { amount: 0, prev: 0, outstanding: 0, thisOp: 0, remainder: 0, overflow: false };
+    if (!settlingAdvance) return { amount: 0, prev: 0, outstanding: 0, thisOp: 0, remainder: 0, overflow: false, overflowAmount: 0 };
     const amount = settlingAdvance.amount;
     const prev = settlingAdvance.refundedAmount ?? 0;
     const outstanding = Math.max(amount - prev, 0);
@@ -453,51 +453,45 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       thisOp = outstanding;
     }
     thisOp = Math.max(thisOp, 0);
-    const overflow = thisOp > outstanding + 0.0001;
+    // Split allowed only for documented (Split Expense scenario)
+    const isSplitEligible = saType === 'documented' && thisOp > outstanding;
+    const overflowAmount = isSplitEligible ? thisOp - outstanding : 0;
+    const overflow = thisOp > outstanding + 0.0001 && !isSplitEligible;
     const remainder = Math.max(outstanding - thisOp, 0);
-    return { amount, prev, outstanding, thisOp, remainder, overflow };
+    return { amount, prev, outstanding, thisOp, remainder, overflow, overflowAmount };
   }, [settlingAdvance, saType, saAmount, saRefundAmount, saDocAmount]);
 
   const handleSettleAdvance = async () => {
     if (!settleAdvanceId || !settlingAdvance) return;
-    if (saType === 'written_off' && !isAdmin) {
-      toast.error('الشطب صلاحية مدير فقط'); return;
-    }
-    if (saType === 'written_off' && !saNotes.trim()) {
-      toast.error('سبب الشطب مطلوب'); return;
-    }
-    if (settlementMath.overflow) {
-      toast.error('المبلغ يتجاوز المتبقي القائم'); return;
-    }
+    if (saType === 'written_off' && !isAdmin) { toast.error('الشطب صلاحية مدير فقط'); return; }
+    if (saType === 'written_off' && !saNotes.trim()) { toast.error('سبب الشطب مطلوب'); return; }
+    if (settlementMath.overflow) { toast.error('المبلغ يتجاوز المتبقي القائم'); return; }
     try {
-      if (saType === 'compound') {
+      // Split Expense: documented with invoice > outstanding
+      if (saType === 'documented' && settlementMath.overflowAmount > 0) {
+        if (!saOverflowSource) { toast.error('اختر مصدر تغطية الجزء الفائض'); return; }
+        const [kind, srcId] = saOverflowSource.split(':');
+        await settleAdvanceWithSplit(settleAdvanceId, {
+          invoiceAmount: parseFloat(saAmount),
+          overflowSource: kind === 'fund' ? { fundId: srcId } : { custodyId: srcId },
+          expenseCategory: saCategory,
+          notes: saNotes,
+        });
+        toast.success('تمت التسوية المقسّمة: السلفة مُغلقة + مصروف فائض مسجَّل');
+      } else if (saType === 'compound') {
         const refundAmt = parseFloat(saRefundAmount) || 0;
         const docAmt = parseFloat(saDocAmount) || 0;
-        if (refundAmt <= 0 && docAmt <= 0) {
-          toast.error('أدخل مبلغ الرد و/أو التوثيق'); return;
-        }
+        if (refundAmt <= 0 && docAmt <= 0) { toast.error('أدخل مبلغ الرد و/أو التوثيق'); return; }
         let refundDone = false;
         if (refundAmt > 0) {
-          await settleAdvance(settleAdvanceId, {
-            type: 'cash_refund',
-            notes: saNotes,
-            settledAmount: refundAmt,
-          });
+          await settleAdvance(settleAdvanceId, { type: 'cash_refund', notes: saNotes, settledAmount: refundAmt });
           refundDone = true;
         }
         if (docAmt > 0) {
           try {
-            await settleAdvance(settleAdvanceId, {
-              type: 'documented',
-              notes: saNotes,
-              settledAmount: docAmt,
-              expenseCategory: saCategory,
-            });
+            await settleAdvance(settleAdvanceId, { type: 'documented', notes: saNotes, settledAmount: docAmt, expenseCategory: saCategory });
           } catch (e: any) {
-            if (refundDone) {
-              toast.warning('تم الرد النقدي لكن فشل التوثيق: ' + (e.message || ''));
-              return;
-            }
+            if (refundDone) { toast.warning('تم الرد لكن فشل التوثيق: ' + (e.message || '')); return; }
             throw e;
           }
         }
