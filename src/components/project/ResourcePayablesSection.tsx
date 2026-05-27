@@ -1376,7 +1376,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
               {(saType === 'cash_refund' || saType === 'documented') && (
                 <div>
-                  <Label>المبلغ</Label>
+                  <Label>{saType === 'documented' ? 'قيمة الفاتورة' : 'المبلغ'}</Label>
                   <Input
                     type="number"
                     value={saAmount}
@@ -1384,10 +1384,47 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                     placeholder={String(settlementMath.outstanding)}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    أي مبلغ أقل من المتبقي = تسوية جزئية، والباقي يبقى قائماً.
+                    {saType === 'documented'
+                      ? 'إن تجاوزت الفاتورة المتبقي القائم، سيُفعَّل وضع التقسيم تلقائياً.'
+                      : 'أي مبلغ أقل من المتبقي = تسوية جزئية، والباقي يبقى قائماً.'}
                   </p>
                 </div>
               )}
+
+              {saType === 'documented' && settlementMath.overflowAmount > 0 && (
+                <div className="rounded border border-warning/40 bg-warning/5 p-3 space-y-2">
+                  <div className="text-sm font-semibold">
+                    تقسيم الفاتورة: السلفة ({formatCurrency(settlementMath.outstanding)}) + فائض ({formatCurrency(settlementMath.overflowAmount)})
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    سيُغلق المتبقي بمستندات، ويُسجَّل الفائض كمصروف مستقل من المصدر التالي:
+                  </p>
+                  <Select value={saOverflowSource} onValueChange={setSaOverflowSource}>
+                    <SelectTrigger><SelectValue placeholder="اختر دفعة/عهدة للفائض" /></SelectTrigger>
+                    <SelectContent>
+                      {availableFunds
+                        .filter((f) => f.remaining >= settlementMath.overflowAmount)
+                        .map((f) => (
+                          <SelectItem key={f.fund.id} value={`fund:${f.fund.id}`}>
+                            دفعة #{f.fund.fundNumber} — متاح {formatCurrency(f.remaining)}
+                          </SelectItem>
+                        ))}
+                      {availableCustodies
+                        .filter((c) => c.remaining >= settlementMath.overflowAmount)
+                        .map((c) => (
+                          <SelectItem key={c.custody.id} value={`custody:${c.custody.id}`}>
+                            عهدة {c.custody.resourceName} — متاح {formatCurrency(c.remaining)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {availableFunds.filter((f) => f.remaining >= settlementMath.overflowAmount).length === 0
+                   && availableCustodies.filter((c) => c.remaining >= settlementMath.overflowAmount).length === 0 && (
+                    <p className="text-xs text-destructive">لا يوجد مصدر برصيد كافٍ للفائض. أنشئ دفعة جديدة أو خفّض المبلغ.</p>
+                  )}
+                </div>
+              )}
+
 
               {saType === 'compound' && (
                 <div className="grid grid-cols-2 gap-3">
