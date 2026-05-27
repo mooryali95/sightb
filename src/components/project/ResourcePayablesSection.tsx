@@ -383,6 +383,8 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const [saDocAmount, setSaDocAmount] = useState('');
   const [saNotes, setSaNotes] = useState('');
   const [saCategory, setSaCategory] = useState<string>('other');
+  // Split overflow source (when invoice > outstanding)
+  const [saOverflowSource, setSaOverflowSource] = useState<string>(''); // "fund:<id>" | "custody:<id>"
 
   const settlingAdvance = useMemo(
     () => projReqs.find((r) => r.id === settleAdvanceId),
@@ -392,7 +394,6 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const openSettleAdvance = (id: string) => {
     const req = projReqs.find((r) => r.id === id);
     const outstanding = req ? Math.max(req.amount - (req.refundedAmount ?? 0), 0) : 0;
-    // F) اشتقاق فئة المصروف الافتراضية من البند الموازني المرتبط (إن وُجد)
     const linkedBudget = req?.budgetItemId
       ? projBudgetItems.find((b: any) => b.id === req.budgetItemId)
       : undefined;
@@ -404,6 +405,9 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     setSaDocAmount('');
     setSaNotes('');
     setSaCategory(defaultCategory);
+    setSaOverflowSource('');
+    // Load settlement events for this PR
+    loadSettlementEventsForRequest(id).catch(console.warn);
   };
 
   // E) سجل التسويات السابقة للسلفة المفتوحة في الحوار
