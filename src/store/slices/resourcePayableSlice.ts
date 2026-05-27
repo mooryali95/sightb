@@ -12,6 +12,8 @@ import type {
   PaymentMethod,
   ResourceSettlementStatus,
   AdvanceSettlementType,
+  SettlementEvent,
+  SettlementEventType,
 } from '@/types/project';
 import { getUserId } from '../helpers';
 import type { AppState } from '../useStore';
