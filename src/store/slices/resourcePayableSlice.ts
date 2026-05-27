@@ -217,6 +217,7 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
   reimbursements: [],
   paymentRequests: [],
   resourceSettlements: [],
+  settlementEvents: [],
 
   loadResourcePayablesForProject: async (projectId) => {
     const [rRes, pRes, sRes] = await Promise.all([
