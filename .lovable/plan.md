@@ -1,76 +1,106 @@
 ## الهدف
-تنفيذ البندين A + B من الخطة السابقة داخل نافذة "تسوية سلفة قائمة" في `ResourcePayablesSection.tsx` — بدون أي تغييرات على قاعدة البيانات.
+
+1. إنشاء جدول `settlement_events` مستقل لتسجيل كل حدث تسوية (رد/توثيق/خصم/شطب) بدقة وقابلية تدقيق.
+2. اعتماد سيناريو واضح للتعامل مع مصروف قيمته أكبر من قيمة السلفة وحدها أو من رصيد الدفعة وحده.
 
 ---
 
-## B) شريط التقدم التفاعلي
+## 1) جدول `settlement_events`
 
-يُضاف أعلى الحقول داخل الحوار، أسفل بطاقة معلومات السلفة مباشرةً. ثلاثة مقاطع ملوّنة بترميز النظام الدلالي:
+### الهيكل
 
 ```
-[████ تم سابقاً ████|░░ هذه العملية ░░|██ متبقي قائم ██]
-   refundedAmount         settledAmount      remainder
-   (muted/info)           (primary)          (warning)
+settlement_events
+├─ id uuid PK
+├─ payment_request_id uuid NOT NULL  → السلفة المرتبطة
+├─ project_id uuid NOT NULL
+├─ event_type enum: cash_refund | documented | payroll_deduction | written_off | reopen
+├─ amount numeric NOT NULL CHECK > 0
+├─ refund_to_fund_id uuid NULL
+├─ refund_to_custody_id uuid NULL
+├─ expense_id uuid NULL          → المصروف الناتج (إن وُجد)
+├─ expense_category text NULL
+├─ budget_item_id uuid NULL
+├─ notes text NULL
+├─ created_by uuid NOT NULL
+├─ created_at timestamptz default now()
+└─ reversed_event_id uuid NULL   → لدعم إلغاء حدث سابق
 ```
 
-- الحساب لحظي حسب قيم الإدخال (refundAmount / docAmount / settledAmount):
-  - `previouslySettled = refundedAmount`
-  - `thisOperation = (refundAmount || 0) + (docAmount || 0)` للمركّبة، أو `settledAmount` للمفردة، أو `amount - refundedAmount` لـ payroll/written_off.
-  - `remainder = max(amount - previouslySettled - thisOperation, 0)`
-- ثلاثة Segments باستخدام عناصر `<div>` بنسب width مئوية + Tooltip لكل مقطع يعرض المبلغ بصيغة `formatCurrency`.
-- ملصقات أسفل الشريط: "مسوّى سابقاً" / "هذه العملية" / "المتبقي" + المبلغ.
-- تحذير بصري (نص destructive) إذا تجاوز `thisOperation` المتبقي القائم.
+- INDEX على `payment_request_id` و `project_id`.
+- GRANT للـ `authenticated` + `service_role`.
+- RLS: قراءة بـ `has_access(project)`، إدراج بـ `can_edit(project)`، تحديث/حذف مغلق (events غير قابلة للتعديل — للتراجع نُدرج حدث `reverse` جديد).
+- Trigger يكتب في `system_audit_log`.
+- Trigger يعيد حساب `payment_requests.refunded_amount` و `is_advance_outstanding` من مجموع الأحداث (مصدر الحقيقة الجديد).
 
-## A) التسوية المركّبة (رد نقدي + توثيق في عملية واحدة)
+### التكامل مع `settleAdvance`
 
-تُضاف خيار خامس في `RadioGroup` الخاص بنوع التسوية:
+- يصبح `settleAdvance` يُدرج صفّاً في `settlement_events` (بدلاً من تحديث `refunded_amount` مباشرة)، والتريغر يتكفّل بمزامنة `payment_requests`.
+- التسوية المركّبة تصبح صفّين في نفس المعاملة.
+- نُبقي الأعمدة القديمة على `payment_requests` (`settlement_type`, `refunded_amount`, …) كـ summary مشتقّة — لا نكسر التقارير الحالية.
 
-> **تسوية مركّبة** — جزء يُرد نقداً للدفعة/العهدة، وجزء يُوثَّق كمصروف فعلي.
+### Migration (تعبئة الماضي)
 
-عند اختياره:
-- يظهر حقلان للمبلغ: `المبلغ المردود نقداً` و `المبلغ الموثَّق كمصروف`.
-- حقل `فئة المصروف` يظهر (نفس Select الحالي).
-- التحقق: `refundAmount + docAmount > 0` وكلاهما ≤ المتبقي القائم.
-
-التنفيذ في `handleSettleAdvance` (بدون تغيير API السلايس):
-1. إن كان `refundAmount > 0`: `await settleAdvance(id, { type: 'cash_refund', settledAmount: refundAmount, notes })`.
-2. إن كان `docAmount > 0`: `await settleAdvance(id, { type: 'documented', settledAmount: docAmount, expenseCategory, notes })`.
-3. عرض toast واحد بنتيجة العملية المركّبة.
-4. في حال فشل الخطوة الثانية بعد نجاح الأولى: toast تحذيري يوضح أن الرد تم لكن التوثيق فشل، مع إبقاء النافذة مفتوحة لإعادة المحاولة.
+- Backfill حدث واحد لكل سلفة مُسوّاة سابقاً (cash_refund أو documented) بقيمة `refunded_amount`/`settled_amount` الحالية.
 
 ---
 
-## تفاصيل تقنية
+## 2) سيناريو: مصروف > قيمة السلفة المفردة / رصيد الدفعة المفرد
 
-**State جديد داخل المكوّن:**
-```ts
-const [saRefundAmount, setSaRefundAmount] = useState('');
-const [saDocAmount, setSaDocAmount] = useState('');
-```
+### المبدأ
+لا يوجد "مصدر واحد" يُجبر على تحمّل المصروف كاملاً. المصروف الفعلي يُسجَّل بقيمته الحقيقية، ويُقسَّم على مصدرَين/أكثر بطريقة شفّافة.
 
-**شريط التقدم:** مكوّن صغير محلي `SettlementProgressBar` يستقبل `{ amount, previouslySettled, thisOperation }` ويعرض الـ 3 segments + الملصقات + التحذير. لا نستخدم `<Progress>` الجاهز لأنه يدعم قيمة واحدة فقط.
+### السيناريو المعتمد: **Split Expense (مصروف موزَّع)**
 
-**التوكنز اللونية:**
-- "مسوّى سابقاً": `bg-muted` / `text-muted-foreground`
-- "هذه العملية": `bg-primary` / `text-primary`
-- "المتبقي": استخدام helper `health-warning` المعتمد في المشروع (وفق memory الـ tokens) — أي `bg-warning` / `text-warning-foreground`.
-- التحذير عند التجاوز: `text-destructive`.
+مثال: سلفة قائمة = 3,000 — رصيد دفعة متاح = 5,000 — فاتورة فعلية = 7,000.
 
-**لا تغييرات في:**
-- `resourcePayableSlice.ts` (نُعيد استخدام `settleAdvance` مرتين للمركّبة).
-- الـ schema / RLS / triggers.
-- ملفات الاختبارات (الـ 15 unit tests الحالية تغطّي كلا النوعَين بالفعل).
+التدفّق داخل نافذة تسوية السلفة:
+
+1. يختار المستخدم "تسوية بمستندات" ويُدخل قيمة الفاتورة الكاملة (7,000).
+2. النظام يكتشف أن `docAmount (7,000) > remainingOutstanding (3,000)` ويعرض تلقائياً قسمَين:
+   - **جزء يُغلق السلفة:** 3,000 → يُدرج `settlement_event(documented, 3000)` + مصروف مرتبط بـ `source_payment_request_id` و بنفس مصدر السلفة الأصلي (custody/fund).
+   - **جزء فائض من الفاتورة:** 4,000 → يُدرج كمصروف مستقل عادي خصماً من الدفعة/العهدة النشطة (يختارها المستخدم من قائمة، بشرط `available ≥ 4,000`).
+3. الفاتورة (المرفق) تُربط بكلا المصروفَين بنفس `invoice_ref` للتتبّع.
+
+نتيجة:
+- السلفة تُغلق بالكامل.
+- المصروف الفعلي مسجَّل بقيمته الكاملة 7,000.
+- لا يُكسر `check_fund_balance` لأن كل جزء يُحجز على المصدر القادر على تحمّله.
+
+### حالات حافّة
+
+| الحالة | المعالجة |
+|---|---|
+| لا توجد دفعة كافية للفائض | تحذير يمنع التنفيذ ويقترح: (أ) إنشاء دفعة جديدة، (ب) تقسيم على دفعتَين، (ج) خفض المبلغ الموثَّق. |
+| الفائض يُغطّى من عهدة | نفس التدفّق مع اختيار `custody_id`. |
+| المصروف < السلفة | لا تقسيم — تسوية جزئية عادية (موجودة فعلاً). |
+| مصروف من عهدة منشأها نفس الدفعة | يُسمح بالخصم من الدفعة مباشرة بدون double-count (المنطق موجود في `check_fund_balance`). |
+
+### بدائل مرفوضة
+
+- ❌ تسجيل مصروف 7,000 على السلفة فقط: يكسر معادلة `refunded_amount ≤ amount` ويُضخّم AC.
+- ❌ تسجيل مصروف 7,000 على الدفعة فقط مع تجاهل السلفة: يترك السلفة قائمة بلا مبرر.
+- ❌ زيادة قيمة السلفة لتغطية الفاتورة: يُحرّف سجل السلف الأصلي.
 
 ---
 
 ## الملفات المتأثرة
 
-- `src/components/project/ResourcePayablesSection.tsx` — تعديل الحوار: إضافة `SettlementProgressBar`، خيار "مركّبة"، حقول الإدخال المزدوجة، تعديل `handleSettleAdvance`، توسيع `setSaType` ليشمل `'compound'`.
+- `supabase/migrations/<ts>_settlement_events.sql` — الجدول + RLS + GRANT + triggers + backfill.
+- `src/types/project.ts` — نوع `SettlementEvent`.
+- `src/store/slices/resourcePayableSlice.ts` — `settleAdvance` يكتب في `settlement_events`، +action جديد `settleAdvanceWithSplit({ docAmount, overflowSource })`.
+- `src/components/project/ResourcePayablesSection.tsx`:
+  - شريط التقدم يقرأ من `settlement_events` بدل العمود المُجمَّع.
+  - عند إدخال `docAmount > remainingOutstanding`: إظهار قسم "الفائض" مع Select للدفعة/العهدة والتحقق من الرصيد المتاح.
+  - عرض history من `settlement_events` بدل reconstruction من المصاريف.
+- `src/lib/__tests__/advance-settlement.test.ts` — اختبارات جديدة لسيناريو split.
 
 ---
 
 ## القبول
-- شريط التقدم يتحدّث فوراً مع كل تغيير في حقل المبلغ.
-- اختيار "مركّبة" مع `refund=2000 + doc=1000` على سلفة 3000 يُغلقها بالكامل وينشئ سجل رد + مصروف موثَّق واحد.
-- تجاوز المتبقي يُظهر تحذيراً ويُعطّل زر التنفيذ.
-- لا أرقام عربية/هندية في الواجهة (وفق سياسة التوطين).
+
+- كل تسوية تُولّد صفّاً في `settlement_events` (موجودة قبلياً عبر backfill).
+- شريط التقدم وتاريخ الأحداث يقرآن من المصدر الجديد.
+- تسوية سلفة 3,000 بفاتورة 7,000 تُنشئ: حدثاً واحداً (documented, 3000) + مصروفَين (3000 على السلفة + 4000 على الدفعة)، وتُغلق السلفة.
+- محاولة split بدون رصيد كافٍ للفائض → خطأ واضح يمنع الحفظ.
+- الاختبارات تمر.
