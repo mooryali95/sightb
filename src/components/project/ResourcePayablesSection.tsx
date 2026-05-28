@@ -1569,6 +1569,46 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reverse settlement event confirmation */}
+      <AlertDialog
+        open={!!reverseTarget}
+        onOpenChange={(o) => { if (!o) { setReverseTarget(null); setReverseReason(''); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>تراجع عن حدث تسوية</AlertDialogTitle>
+            <AlertDialogDescription>
+              {reverseTarget && (
+                <>
+                  سيُلغى الحدث <strong>{reverseTarget.label}</strong> بمبلغ{' '}
+                  <span className="font-mono">{formatCurrency(reverseTarget.amount)}</span>،
+                  وسيُحذف المصروف المرتبط (إن وُجد)، وستُعاد حالة السلفة تلقائياً.
+                  هذا الإجراء سيُسجَّل كحدث جديد ولا يمكن التراجع عنه.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label className="text-sm">سبب التراجع <span className="text-destructive">*</span></Label>
+            <Textarea
+              value={reverseReason}
+              onChange={(e) => setReverseReason(e.target.value)}
+              placeholder="اشرح سبب التراجع (إلزامي للتدقيق)"
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reversing}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleReverseConfirm(); }}
+              disabled={reversing || !reverseReason.trim()}
+            >
+              {reversing ? 'جارٍ التراجع...' : 'تأكيد التراجع'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
