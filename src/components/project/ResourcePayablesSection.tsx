@@ -1353,22 +1353,60 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                 <div className="rounded border bg-muted/20 p-3 space-y-2">
                   <div className="text-xs font-semibold text-muted-foreground">سجل التسويات السابقة</div>
                   <div className="space-y-1.5">
-                    {settlementHistory.map((ev, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            'inline-block h-2 w-2 rounded-full',
-                            ev.kind === 'refund' ? 'bg-emerald-500' : 'bg-primary',
-                          )} />
-                          <span className="font-medium">{ev.label}</span>
-                          {ev.sub && <span className="text-muted-foreground">— {ev.sub}</span>}
+                    {settlementHistory.map((ev) => {
+                      const isReverse = ev.kind === 'reverse';
+                      const canReverseRow = canEdit && !isReverse && !ev.reversed;
+                      return (
+                        <div
+                          key={ev.id}
+                          className={cn(
+                            'flex items-center justify-between text-xs gap-2',
+                            ev.reversed && 'opacity-60',
+                          )}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={cn(
+                              'inline-block h-2 w-2 rounded-full shrink-0',
+                              isReverse ? 'bg-warning'
+                                : ev.kind === 'refund' ? 'bg-success'
+                                : 'bg-primary',
+                            )} />
+                            {isReverse && <Undo2 className="h-3 w-3 text-warning shrink-0" />}
+                            <span className={cn('font-medium truncate', ev.reversed && 'line-through')}>
+                              {ev.label}
+                            </span>
+                            {ev.sub && (
+                              <span className="text-muted-foreground truncate">— {ev.sub}</span>
+                            )}
+                            {ev.reversed && (
+                              <Badge variant="outline" className="h-4 px-1 text-[10px]">ملغى</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {ev.date && <span className="text-muted-foreground font-mono">{ev.date}</span>}
+                            <span className={cn(
+                              'font-mono font-semibold',
+                              ev.reversed && 'line-through',
+                            )}>{formatCurrency(ev.amount)}</span>
+                            {canReverseRow && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1.5"
+                                title="تراجع عن هذا الحدث"
+                                onClick={() => {
+                                  setReverseTarget({ id: ev.id, label: ev.label, amount: ev.amount });
+                                  setReverseReason('');
+                                }}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          {ev.date && <span className="text-muted-foreground font-mono">{ev.date}</span>}
-                          <span className="font-mono font-semibold">{formatCurrency(ev.amount)}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
