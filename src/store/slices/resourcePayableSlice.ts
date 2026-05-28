@@ -101,6 +101,11 @@ export interface ResourcePayableSlice {
     notes?: string;
   }) => Promise<void>;
   loadSettlementEventsForRequest: (paymentRequestId: string) => Promise<void>;
+  /**
+   * تراجع عن حدث تسوية: يُدرج حدث reverse، ويحذف المصروف المرتبط إن وُجد.
+   * التريغر يعيد حساب حالة السلفة تلقائياً.
+   */
+  reverseSettlementEvent: (eventId: string, reason: string) => Promise<void>;
 
   // Settlements
   createResourceSettlement: (input: {
