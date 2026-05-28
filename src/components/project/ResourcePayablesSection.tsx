@@ -390,6 +390,29 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const [saCategory, setSaCategory] = useState<string>('other');
   // Split overflow source (when invoice > outstanding)
   const [saOverflowSource, setSaOverflowSource] = useState<string>(''); // "fund:<id>" | "custody:<id>"
+  // Reverse event dialog
+  const [reverseTarget, setReverseTarget] = useState<{ id: string; label: string; amount: number } | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
+  const [reversing, setReversing] = useState(false);
+
+  const handleReverseConfirm = async () => {
+    if (!reverseTarget) return;
+    if (!reverseReason.trim()) {
+      toast.error('سبب التراجع مطلوب');
+      return;
+    }
+    setReversing(true);
+    try {
+      await reverseSettlementEvent(reverseTarget.id, reverseReason.trim());
+      toast.success('تم التراجع عن الحدث وإعادة حساب السلفة');
+      setReverseTarget(null);
+      setReverseReason('');
+    } catch (e: any) {
+      toast.error(e?.message || 'تعذّر التراجع');
+    } finally {
+      setReversing(false);
+    }
+  };
 
   const settlingAdvance = useMemo(
     () => projReqs.find((r) => r.id === settleAdvanceId),
