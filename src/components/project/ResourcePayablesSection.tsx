@@ -417,31 +417,48 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   // E) سجل التسويات من جدول settlement_events
   const settlementHistory = useMemo(() => {
-    if (!settlingAdvance) return [] as Array<{
-      kind: 'refund' | 'expense' | 'other';
+    type Row = {
+      id: string;
+      kind: 'refund' | 'expense' | 'other' | 'reverse';
+      eventType: string;
       date: string;
       amount: number;
       label: string;
       sub?: string;
-    }>;
+      reversedEventId?: string | null;
+      reversed: boolean;          // هذا الحدث الأصلي تم إلغاؤه
+      reverseEventId?: string;    // معرّف حدث الـ reverse الذي ألغاه
+    };
+    if (!settlingAdvance) return [] as Row[];
     const evs = settlementEvents.filter((e) => e.paymentRequestId === settlingAdvance.id);
-    return evs.map((e) => {
+    const reversedMap = new Map<string, string>(); // original.id -> reverse.id
+    evs.forEach((e) => {
+      if (e.eventType === 'reverse' && e.reversedEventId) reversedMap.set(e.reversedEventId, e.id);
+    });
+    return evs.map<Row>((e) => {
       const label = e.eventType === 'cash_refund' ? 'رد نقدي'
         : e.eventType === 'documented' ? 'تسوية بمستندات'
         : e.eventType === 'payroll_deduction' ? 'خصم من مستحقات'
         : e.eventType === 'written_off' ? 'شطب'
         : 'تراجع';
-      const kind: 'refund' | 'expense' | 'other' = e.eventType === 'cash_refund' ? 'refund'
+      const kind: Row['kind'] = e.eventType === 'reverse' ? 'reverse'
+        : e.eventType === 'cash_refund' ? 'refund'
         : e.expenseId ? 'expense' : 'other';
       return {
+        id: e.id,
         kind,
+        eventType: e.eventType,
         date: String(e.createdAt).split('T')[0],
         amount: e.amount,
         label,
         sub: e.expenseCategory || e.notes || undefined,
+        reversedEventId: e.reversedEventId,
+        reversed: reversedMap.has(e.id),
+        reverseEventId: reversedMap.get(e.id),
       };
     });
   }, [settlingAdvance, settlementEvents]);
+
 
   // ─── Settlement math (live preview) ───
   const settlementMath = useMemo(() => {
