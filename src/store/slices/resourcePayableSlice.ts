@@ -635,6 +635,61 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     }));
   },
 
+  reverseSettlementEvent: async (eventId, reason) => {
+    const userId = await getUserId();
+    const trimmedReason = (reason || '').trim();
+    if (!trimmedReason) throw new Error('سبب التراجع مطلوب');
+
+    // Fetch original event from DB to avoid stale local state
+    const { data: orig, error: origErr } = await (supabase as any)
+      .from('settlement_events').select('*').eq('id', eventId).maybeSingle();
+    if (origErr) throw origErr;
+    if (!orig) throw new Error('الحدث غير موجود');
+    if (orig.event_type === 'reverse') throw new Error('لا يمكن التراجع عن حدث تراجع');
+
+    // Check not already reversed
+    const { data: existingRev } = await (supabase as any)
+      .from('settlement_events')
+      .select('id')
+      .eq('reversed_event_id', eventId)
+      .eq('event_type', 'reverse')
+      .maybeSingle();
+    if (existingRev) throw new Error('هذا الحدث ملغى بالفعل');
+
+    const prId = orig.payment_request_id as string;
+
+    // Delete linked expense (if any) — trigger will recalc after reverse insert
+    if (orig.expense_id) {
+      const { error: delErr } = await (supabase as any)
+        .from('expenses').delete().eq('id', orig.expense_id);
+      if (delErr) throw delErr;
+      set((s) => ({ expenses: s.expenses.filter((e) => e.id !== orig.expense_id) }));
+    }
+
+    // Insert reverse event
+    const { error: revErr } = await (supabase as any)
+      .from('settlement_events')
+      .insert({
+        payment_request_id: prId,
+        project_id: orig.project_id,
+        event_type: 'reverse',
+        amount: Number(orig.amount),
+        reversed_event_id: eventId,
+        notes: trimmedReason,
+        created_by: userId,
+      });
+    if (revErr) throw revErr;
+
+    // Refresh payment request + events
+    const { data: refreshed } = await (supabase as any)
+      .from('payment_requests').select('*').eq('id', prId).maybeSingle();
+    if (refreshed) {
+      const req = mapReq(refreshed);
+      set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === prId ? req : r) }));
+    }
+    await get().loadSettlementEventsForRequest(prId);
+  },
+
   deletePaymentRequest: async (id) => {
     const cur = get().paymentRequests.find((r) => r.id === id);
     const { error } = await (supabase as any).from('payment_requests').delete().eq('id', id);
