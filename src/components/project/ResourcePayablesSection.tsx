@@ -43,8 +43,12 @@ import { getFundRemaining } from '@/lib/funds';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import {
   Plus, HandCoins, CheckCircle2, XCircle, FileText, Send, Clock,
-  CalendarClock, Wallet, Pencil,
+  CalendarClock, Wallet, Pencil, RotateCcw, Undo2,
 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -68,6 +72,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
     payPaymentRequest, cancelPaymentRequest, deletePaymentRequest, settleAdvance,
+    reverseSettlementEvent,
     createResourceSettlement, signResourceSettlement,
   } = useStore();
 
@@ -385,6 +390,29 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const [saCategory, setSaCategory] = useState<string>('other');
   // Split overflow source (when invoice > outstanding)
   const [saOverflowSource, setSaOverflowSource] = useState<string>(''); // "fund:<id>" | "custody:<id>"
+  // Reverse event dialog
+  const [reverseTarget, setReverseTarget] = useState<{ id: string; label: string; amount: number } | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
+  const [reversing, setReversing] = useState(false);
+
+  const handleReverseConfirm = async () => {
+    if (!reverseTarget) return;
+    if (!reverseReason.trim()) {
+      toast.error('سبب التراجع مطلوب');
+      return;
+    }
+    setReversing(true);
+    try {
+      await reverseSettlementEvent(reverseTarget.id, reverseReason.trim());
+      toast.success('تم التراجع عن الحدث وإعادة حساب السلفة');
+      setReverseTarget(null);
+      setReverseReason('');
+    } catch (e: any) {
+      toast.error(e?.message || 'تعذّر التراجع');
+    } finally {
+      setReversing(false);
+    }
+  };
 
   const settlingAdvance = useMemo(
     () => projReqs.find((r) => r.id === settleAdvanceId),
@@ -412,31 +440,48 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   // E) سجل التسويات من جدول settlement_events
   const settlementHistory = useMemo(() => {
-    if (!settlingAdvance) return [] as Array<{
-      kind: 'refund' | 'expense' | 'other';
+    type Row = {
+      id: string;
+      kind: 'refund' | 'expense' | 'other' | 'reverse';
+      eventType: string;
       date: string;
       amount: number;
       label: string;
       sub?: string;
-    }>;
+      reversedEventId?: string | null;
+      reversed: boolean;          // هذا الحدث الأصلي تم إلغاؤه
+      reverseEventId?: string;    // معرّف حدث الـ reverse الذي ألغاه
+    };
+    if (!settlingAdvance) return [] as Row[];
     const evs = settlementEvents.filter((e) => e.paymentRequestId === settlingAdvance.id);
-    return evs.map((e) => {
+    const reversedMap = new Map<string, string>(); // original.id -> reverse.id
+    evs.forEach((e) => {
+      if (e.eventType === 'reverse' && e.reversedEventId) reversedMap.set(e.reversedEventId, e.id);
+    });
+    return evs.map<Row>((e) => {
       const label = e.eventType === 'cash_refund' ? 'رد نقدي'
         : e.eventType === 'documented' ? 'تسوية بمستندات'
         : e.eventType === 'payroll_deduction' ? 'خصم من مستحقات'
         : e.eventType === 'written_off' ? 'شطب'
         : 'تراجع';
-      const kind: 'refund' | 'expense' | 'other' = e.eventType === 'cash_refund' ? 'refund'
+      const kind: Row['kind'] = e.eventType === 'reverse' ? 'reverse'
+        : e.eventType === 'cash_refund' ? 'refund'
         : e.expenseId ? 'expense' : 'other';
       return {
+        id: e.id,
         kind,
+        eventType: e.eventType,
         date: String(e.createdAt).split('T')[0],
         amount: e.amount,
         label,
         sub: e.expenseCategory || e.notes || undefined,
+        reversedEventId: e.reversedEventId,
+        reversed: reversedMap.has(e.id),
+        reverseEventId: reversedMap.get(e.id),
       };
     });
   }, [settlingAdvance, settlementEvents]);
+
 
   // ─── Settlement math (live preview) ───
   const settlementMath = useMemo(() => {
@@ -1308,22 +1353,60 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                 <div className="rounded border bg-muted/20 p-3 space-y-2">
                   <div className="text-xs font-semibold text-muted-foreground">سجل التسويات السابقة</div>
                   <div className="space-y-1.5">
-                    {settlementHistory.map((ev, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            'inline-block h-2 w-2 rounded-full',
-                            ev.kind === 'refund' ? 'bg-emerald-500' : 'bg-primary',
-                          )} />
-                          <span className="font-medium">{ev.label}</span>
-                          {ev.sub && <span className="text-muted-foreground">— {ev.sub}</span>}
+                    {settlementHistory.map((ev) => {
+                      const isReverse = ev.kind === 'reverse';
+                      const canReverseRow = canEdit && !isReverse && !ev.reversed;
+                      return (
+                        <div
+                          key={ev.id}
+                          className={cn(
+                            'flex items-center justify-between text-xs gap-2',
+                            ev.reversed && 'opacity-60',
+                          )}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={cn(
+                              'inline-block h-2 w-2 rounded-full shrink-0',
+                              isReverse ? 'bg-warning'
+                                : ev.kind === 'refund' ? 'bg-success'
+                                : 'bg-primary',
+                            )} />
+                            {isReverse && <Undo2 className="h-3 w-3 text-warning shrink-0" />}
+                            <span className={cn('font-medium truncate', ev.reversed && 'line-through')}>
+                              {ev.label}
+                            </span>
+                            {ev.sub && (
+                              <span className="text-muted-foreground truncate">— {ev.sub}</span>
+                            )}
+                            {ev.reversed && (
+                              <Badge variant="outline" className="h-4 px-1 text-[10px]">ملغى</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {ev.date && <span className="text-muted-foreground font-mono">{ev.date}</span>}
+                            <span className={cn(
+                              'font-mono font-semibold',
+                              ev.reversed && 'line-through',
+                            )}>{formatCurrency(ev.amount)}</span>
+                            {canReverseRow && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1.5"
+                                title="تراجع عن هذا الحدث"
+                                onClick={() => {
+                                  setReverseTarget({ id: ev.id, label: ev.label, amount: ev.amount });
+                                  setReverseReason('');
+                                }}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          {ev.date && <span className="text-muted-foreground font-mono">{ev.date}</span>}
-                          <span className="font-mono font-semibold">{formatCurrency(ev.amount)}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1486,6 +1569,46 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reverse settlement event confirmation */}
+      <AlertDialog
+        open={!!reverseTarget}
+        onOpenChange={(o) => { if (!o) { setReverseTarget(null); setReverseReason(''); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>تراجع عن حدث تسوية</AlertDialogTitle>
+            <AlertDialogDescription>
+              {reverseTarget && (
+                <>
+                  سيُلغى الحدث <strong>{reverseTarget.label}</strong> بمبلغ{' '}
+                  <span className="font-mono">{formatCurrency(reverseTarget.amount)}</span>،
+                  وسيُحذف المصروف المرتبط (إن وُجد)، وستُعاد حالة السلفة تلقائياً.
+                  هذا الإجراء سيُسجَّل كحدث جديد ولا يمكن التراجع عنه.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label className="text-sm">سبب التراجع <span className="text-destructive">*</span></Label>
+            <Textarea
+              value={reverseReason}
+              onChange={(e) => setReverseReason(e.target.value)}
+              placeholder="اشرح سبب التراجع (إلزامي للتدقيق)"
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reversing}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleReverseConfirm(); }}
+              disabled={reversing || !reverseReason.trim()}
+            >
+              {reversing ? 'جارٍ التراجع...' : 'تأكيد التراجع'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

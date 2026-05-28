@@ -268,3 +268,66 @@ describe('Multiple advances on same fund', () => {
     expect(getFundRemaining(fund, [], [], pr)).toBe(7000);
   });
 });
+
+/**
+ * Mirror of the DB recalc trigger logic (recalc_payment_request_from_events).
+ * Excludes events whose type is 'reverse' AND events that have been reversed
+ * (i.e. referenced by some reverse event with the same payment_request_id).
+ */
+type Ev = {
+  id: string;
+  paymentRequestId: string;
+  eventType: 'cash_refund' | 'documented' | 'payroll_deduction' | 'written_off' | 'reverse';
+  amount: number;
+  reversedEventId?: string | null;
+};
+function recalc(amount: number, events: Ev[]) {
+  const reversedIds = new Set(
+    events.filter((e) => e.eventType === 'reverse' && e.reversedEventId).map((e) => e.reversedEventId as string),
+  );
+  const effective = events.filter((e) => e.eventType !== 'reverse' && !reversedIds.has(e.id));
+  const refunded = effective.filter((e) => e.eventType === 'cash_refund').reduce((s, e) => s + e.amount, 0);
+  const settled = effective.filter((e) => e.eventType === 'documented' || e.eventType === 'payroll_deduction' || e.eventType === 'written_off').reduce((s, e) => s + e.amount, 0);
+  return {
+    refunded,
+    settled,
+    isAdvanceOutstanding: refunded + settled < amount,
+  };
+}
+
+describe('Reverse settlement event semantics (recalc trigger)', () => {
+  it('reversing a cash_refund reopens the advance and resets refunded_amount', () => {
+    const events: Ev[] = [
+      { id: 'e1', paymentRequestId: 'pr1', eventType: 'cash_refund', amount: 3000 },
+    ];
+    // Before reverse
+    expect(recalc(3000, events)).toEqual({ refunded: 3000, settled: 0, isAdvanceOutstanding: false });
+    // After reverse
+    events.push({ id: 'e2', paymentRequestId: 'pr1', eventType: 'reverse', amount: 3000, reversedEventId: 'e1' });
+    expect(recalc(3000, events)).toEqual({ refunded: 0, settled: 0, isAdvanceOutstanding: true });
+  });
+
+  it('reversing a documented settlement reopens the advance and removes its contribution', () => {
+    const events: Ev[] = [
+      { id: 'e1', paymentRequestId: 'pr1', eventType: 'documented', amount: 2000 },
+      { id: 'e2', paymentRequestId: 'pr1', eventType: 'cash_refund', amount: 1000 },
+    ];
+    expect(recalc(3000, events).isAdvanceOutstanding).toBe(false);
+    events.push({ id: 'e3', paymentRequestId: 'pr1', eventType: 'reverse', amount: 2000, reversedEventId: 'e1' });
+    const r = recalc(3000, events);
+    expect(r).toEqual({ refunded: 1000, settled: 0, isAdvanceOutstanding: true });
+  });
+
+  it('partial cash_refund preserved when reversing a sibling event', () => {
+    const events: Ev[] = [
+      { id: 'e1', paymentRequestId: 'pr1', eventType: 'cash_refund', amount: 1000 },
+      { id: 'e2', paymentRequestId: 'pr1', eventType: 'documented', amount: 2000 },
+      { id: 'e3', paymentRequestId: 'pr1', eventType: 'reverse', amount: 2000, reversedEventId: 'e2' },
+    ];
+    const r = recalc(3000, events);
+    expect(r.refunded).toBe(1000);
+    expect(r.settled).toBe(0);
+    expect(r.isAdvanceOutstanding).toBe(true);
+  });
+});
+

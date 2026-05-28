@@ -1,106 +1,127 @@
-## الهدف
 
-1. إنشاء جدول `settlement_events` مستقل لتسجيل كل حدث تسوية (رد/توثيق/خصم/شطب) بدقة وقابلية تدقيق.
-2. اعتماد سيناريو واضح للتعامل مع مصروف قيمته أكبر من قيمة السلفة وحدها أو من رصيد الدفعة وحده.
+## الجزء 1 — زر "تراجع" لإلغاء حدث تسوية
+
+### الفكرة
+كل حدث في `settlement_events` غير قابل للتعديل/الحذف. للتراجع نُدرج حدثاً جديداً `event_type = 'reverse'` يُشير إلى الحدث الأصلي عبر `reversed_event_id`. التريغر يعيد حساب حالة السلفة تلقائياً بعد استبعاد الأحداث الملغاة + الأحداث الـ reverse من المجموع.
+
+### تغييرات قاعدة البيانات (migration واحدة)
+1. **تحديث `recalc_payment_request_from_events()`**:
+   - تجاهل أي حدث `event_type = 'reverse'`.
+   - تجاهل أي حدث `id IN (SELECT reversed_event_id FROM settlement_events WHERE event_type='reverse' AND payment_request_id=_pr_id)` (أي تم إلغاؤه).
+   - إعادة الحساب تُرجع `is_advance_outstanding = true` و`advance_settled_at = NULL` تلقائياً إن لم يعد المجموع يغطّي السلفة.
+2. **توسيع التريغر** ليطلق على `INSERT OR DELETE` (للحماية فقط؛ DELETE ممنوع بـ RLS أصلاً).
+3. **CHECK constraint**: عند `event_type='reverse'` يجب أن يكون `reversed_event_id NOT NULL`، وعند غيره يكون `NULL`.
+4. **منع التراجع المزدوج**: unique partial index على `(reversed_event_id) WHERE event_type='reverse'`.
+5. RLS: السماح بـ INSERT لـ `reverse` فقط لمن لديه `can_edit` على المشروع + كون الحدث الأصلي يخص نفس المشروع.
+
+### تغييرات الكود
+
+**`src/store/slices/resourcePayableSlice.ts`** — إضافة action:
+```
+reverseSettlementEvent(eventId): Promise<void>
+```
+الخطوات:
+1. جلب الحدث الأصلي من `settlementEvents` المحلية.
+2. التحقق:
+   - الحدث ليس `reverse`.
+   - لم يُلغَ سابقاً (لا يوجد حدث reverse يشير إليه).
+3. إذا للحدث `expense_id`: نحذف المصروف المرتبط (DELETE FROM expenses WHERE id = …). RLS تسمح للمحرر. تحديث `expenses` محلياً.
+4. إن كان حدث `cash_refund`: لا مصروف لحذفه — التريغر وحده يعيد فتح السلفة.
+5. INSERT حدث reverse:
+   ```
+   { payment_request_id, project_id, event_type:'reverse',
+     amount: original.amount, reversed_event_id: original.id,
+     notes: input.reason, created_by: userId }
+   ```
+6. إعادة جلب `payment_requests` + `loadSettlementEventsForRequest`.
+
+**`src/components/project/ResourcePayablesSection.tsx`** — في `settlementHistory` panel داخل نافذة التسوية:
+- لكل حدث (ما عدا `reverse` وما عدا الأحداث التي لها reverse مرتبط): زر `RotateCcw` صغير "تراجع".
+- النقر يفتح `AlertDialog` تأكيدي + textarea للسبب (مطلوب)، ثم يستدعي `reverseSettlementEvent`.
+- الأحداث الملغاة تظهر بخط مشطوب + شارة "ملغى" + رابط لحدث الـ reverse.
+- أحداث `reverse` تظهر بأيقونة مميزة وتشير إلى الحدث الذي ألغته.
+- الزر مخفي للـ Viewer (readOnly).
+- إن نقص الرصيد بعد إعادة فتح السلفة (مثلاً تم استخدام الفائض)، نسمح بالتراجع لكن نُظهر toast تحذيري.
+
+### الاختبارات
+- `src/lib/__tests__/advance-settlement.test.ts`: 3 سيناريوهات جديدة:
+  1. تراجع عن `cash_refund` يعيد `refunded_amount` ويُعيد فتح السلفة.
+  2. تراجع عن `documented` يحذف المصروف ويُعيد فتح السلفة.
+  3. منع التراجع عن حدث ملغى مسبقاً.
 
 ---
 
-## 1) جدول `settlement_events`
+## الجزء 2 — تحليل التعديلات السابقة والتحسينات المتبقية
 
-### الهيكل
-
-```
-settlement_events
-├─ id uuid PK
-├─ payment_request_id uuid NOT NULL  → السلفة المرتبطة
-├─ project_id uuid NOT NULL
-├─ event_type enum: cash_refund | documented | payroll_deduction | written_off | reopen
-├─ amount numeric NOT NULL CHECK > 0
-├─ refund_to_fund_id uuid NULL
-├─ refund_to_custody_id uuid NULL
-├─ expense_id uuid NULL          → المصروف الناتج (إن وُجد)
-├─ expense_category text NULL
-├─ budget_item_id uuid NULL
-├─ notes text NULL
-├─ created_by uuid NOT NULL
-├─ created_at timestamptz default now()
-└─ reversed_event_id uuid NULL   → لدعم إلغاء حدث سابق
-```
-
-- INDEX على `payment_request_id` و `project_id`.
-- GRANT للـ `authenticated` + `service_role`.
-- RLS: قراءة بـ `has_access(project)`، إدراج بـ `can_edit(project)`، تحديث/حذف مغلق (events غير قابلة للتعديل — للتراجع نُدرج حدث `reverse` جديد).
-- Trigger يكتب في `system_audit_log`.
-- Trigger يعيد حساب `payment_requests.refunded_amount` و `is_advance_outstanding` من مجموع الأحداث (مصدر الحقيقة الجديد).
-
-### التكامل مع `settleAdvance`
-
-- يصبح `settleAdvance` يُدرج صفّاً في `settlement_events` (بدلاً من تحديث `refunded_amount` مباشرة)، والتريغر يتكفّل بمزامنة `payment_requests`.
-- التسوية المركّبة تصبح صفّين في نفس المعاملة.
-- نُبقي الأعمدة القديمة على `payment_requests` (`settlement_type`, `refunded_amount`, …) كـ summary مشتقّة — لا نكسر التقارير الحالية.
-
-### Migration (تعبئة الماضي)
-
-- Backfill حدث واحد لكل سلفة مُسوّاة سابقاً (cash_refund أو documented) بقيمة `refunded_amount`/`settled_amount` الحالية.
-
----
-
-## 2) سيناريو: مصروف > قيمة السلفة المفردة / رصيد الدفعة المفرد
-
-### المبدأ
-لا يوجد "مصدر واحد" يُجبر على تحمّل المصروف كاملاً. المصروف الفعلي يُسجَّل بقيمته الحقيقية، ويُقسَّم على مصدرَين/أكثر بطريقة شفّافة.
-
-### السيناريو المعتمد: **Split Expense (مصروف موزَّع)**
-
-مثال: سلفة قائمة = 3,000 — رصيد دفعة متاح = 5,000 — فاتورة فعلية = 7,000.
-
-التدفّق داخل نافذة تسوية السلفة:
-
-1. يختار المستخدم "تسوية بمستندات" ويُدخل قيمة الفاتورة الكاملة (7,000).
-2. النظام يكتشف أن `docAmount (7,000) > remainingOutstanding (3,000)` ويعرض تلقائياً قسمَين:
-   - **جزء يُغلق السلفة:** 3,000 → يُدرج `settlement_event(documented, 3000)` + مصروف مرتبط بـ `source_payment_request_id` و بنفس مصدر السلفة الأصلي (custody/fund).
-   - **جزء فائض من الفاتورة:** 4,000 → يُدرج كمصروف مستقل عادي خصماً من الدفعة/العهدة النشطة (يختارها المستخدم من قائمة، بشرط `available ≥ 4,000`).
-3. الفاتورة (المرفق) تُربط بكلا المصروفَين بنفس `invoice_ref` للتتبّع.
-
-نتيجة:
-- السلفة تُغلق بالكامل.
-- المصروف الفعلي مسجَّل بقيمته الكاملة 7,000.
-- لا يُكسر `check_fund_balance` لأن كل جزء يُحجز على المصدر القادر على تحمّله.
-
-### حالات حافّة
-
-| الحالة | المعالجة |
+### ما تمّ إنجازه (مختصر)
+| المحور | الحالة |
 |---|---|
-| لا توجد دفعة كافية للفائض | تحذير يمنع التنفيذ ويقترح: (أ) إنشاء دفعة جديدة، (ب) تقسيم على دفعتَين، (ج) خفض المبلغ الموثَّق. |
-| الفائض يُغطّى من عهدة | نفس التدفّق مع اختيار `custody_id`. |
-| المصروف < السلفة | لا تقسيم — تسوية جزئية عادية (موجودة فعلاً). |
-| مصروف من عهدة منشأها نفس الدفعة | يُسمح بالخصم من الدفعة مباشرة بدون double-count (المنطق موجود في `check_fund_balance`). |
+| Net Storage + VAT ديناميكي | ✅ |
+| Budget Lock + Change Orders | ✅ |
+| EVM (CPI/SPI) واختباراته | ✅ |
+| سلف: refunded/settled/partial + شريط تقدم | ✅ |
+| `settlement_events` كمصدر حقيقة + backfill | ✅ |
+| Split Expense للفاتورة > السلفة | ✅ |
+| RBAC + 2FA + Session timeout | ✅ |
+| Audit log خادمي + Admin only | ✅ |
+| Localization صارمة (English digits, RTL) | ✅ |
+| تكامل البريد + قوالب | ✅ |
 
-### بدائل مرفوضة
+### تحسينات تحتاج ضبط — مقسّمة ومرتّبة
 
-- ❌ تسجيل مصروف 7,000 على السلفة فقط: يكسر معادلة `refunded_amount ≤ amount` ويُضخّم AC.
-- ❌ تسجيل مصروف 7,000 على الدفعة فقط مع تجاهل السلفة: يترك السلفة قائمة بلا مبرر.
-- ❌ زيادة قيمة السلفة لتغطية الفاتورة: يُحرّف سجل السلف الأصلي.
+#### الأولوية A — حرجة (دقّة محاسبية / أمان)
+1. **توحيد سلوك Reverse مع التريغر** *(هذا الـ loop)* — كما هو موصوف أعلاه.
+2. **معاملة ذرّية لـ `settleAdvanceWithSplit`**: حالياً الخطوة 1 (settle) والخطوة 2 (overflow expense) منفصلتان — لو فشلت الثانية بقيت السلفة مغلقة بلا مصروف للفائض. الحل: تحويلهما إلى RPC واحدة (`split_settle_advance`) داخل transaction.
+3. **تحقّق رصيد المصدر للفائض على الخادم**: حالياً `check_fund_balance` موجود كـ trigger؛ نتأكد أنه يغطي حالة overflow expense + custody أيضاً ويرفض قبل إنشاء يتيم.
+4. **حذف العمود المهجور `expenses.is_outstanding_advance`**: تمّ تعطيله؛ بقي حذفه فعلياً وإزالة كل مرجع بالكود لتجنّب الالتباس.
+
+#### الأولوية B — مهمّة (UX/سلامة بيانات)
+5. **عرض الفائض في شريط التقدم**: شريط التسوية لا يُظهر حالياً جزء الـ overflow؛ نضيف شريحة منفصلة بلون مختلف.
+6. **History panel يشمل الأحداث المرتبطة بـ split**: إظهار "مصروف فائض 4,000 على الدفعة #X" داخل التايم لاين.
+7. **منع حذف payment_request له settlement_events**: إضافة policy/trigger يرفض الحذف لو وُجدت أحداث، حتى للـ Admin إلا بـ override.
+8. **`expense_id` على الحدث = ON DELETE SET NULL**: لو حُذف المصروف يدوياً يبقى الحدث متّسقاً.
+9. **اختبار end-to-end لسيناريو split + reverse** على بيانات حقيقية.
+
+#### الأولوية C — تحسينات (تجربة وتقارير)
+10. **تقرير "حركة السلف" في PDF/Excel**: قائمة كرونولوجية لكل حدث (نوع/مبلغ/مستخدم/مرجع مصروف) بأرقام إنجليزية.
+11. **Badge في قائمة طلبات الصرف**: يُظهر "سلفة مفتوحة منذ X يوماً" بناءً على `requested_at` (aging موجود لكن غير بارز).
+12. **إشعار ذكي**: تنبيه عند سلفة > 30 يوم بلا تسوية.
+13. **سجل reverse في AuditLog UI**: تصفية مخصّصة لأحداث `settlement_event_reverse`.
+
+#### الأولوية D — تنظيف تقني
+14. **إزالة `(supabase as any)` المتبقية** في `resourcePayableSlice.ts` بعد تحديث types.
+15. **توحيد `mapReq` / `mapExpense`** في ملف helpers واحد (مكرّر حالياً).
+16. **اختبارات إضافية للـ recalc trigger** عبر pgTAP أو سكربت Node بعد كل migration.
+
+### مصفوفة الأولوية
+```
+Priority │ Items │ Effort │ Impact
+─────────┼───────┼────────┼────────
+   A     │ 1-4   │ متوسط  │ عالي جداً
+   B     │ 5-9   │ متوسط  │ عالي
+   C     │ 10-13 │ منخفض  │ متوسط
+   D     │ 14-16 │ منخفض  │ صيانة
+```
+
+### الترتيب المقترح للتنفيذ
+1. هذا الـ loop: **A1 (Reverse)**.
+2. الـ loop التالي: **A2 + A3 + A4** (سلامة Split + تنظيف العمود المهجور).
+3. ثم: **B5-B9** كحزمة واحدة (تحسينات Split UX).
+4. ثم: **C10-C13** (تقارير وإشعارات).
+5. أخيراً: **D14-D16** (تنظيف).
 
 ---
 
-## الملفات المتأثرة
-
-- `supabase/migrations/<ts>_settlement_events.sql` — الجدول + RLS + GRANT + triggers + backfill.
-- `src/types/project.ts` — نوع `SettlementEvent`.
-- `src/store/slices/resourcePayableSlice.ts` — `settleAdvance` يكتب في `settlement_events`، +action جديد `settleAdvanceWithSplit({ docAmount, overflowSource })`.
-- `src/components/project/ResourcePayablesSection.tsx`:
-  - شريط التقدم يقرأ من `settlement_events` بدل العمود المُجمَّع.
-  - عند إدخال `docAmount > remainingOutstanding`: إظهار قسم "الفائض" مع Select للدفعة/العهدة والتحقق من الرصيد المتاح.
-  - عرض history من `settlement_events` بدل reconstruction من المصاريف.
-- `src/lib/__tests__/advance-settlement.test.ts` — اختبارات جديدة لسيناريو split.
-
----
+## الملفات المتأثرة لهذا الـ loop
+- `supabase/migrations/<ts>_reverse_settlement_events.sql`
+- `src/store/slices/resourcePayableSlice.ts` (+`reverseSettlementEvent`)
+- `src/components/project/ResourcePayablesSection.tsx` (UI زر التراجع + الحالات)
+- `src/lib/__tests__/advance-settlement.test.ts` (+3 سيناريوهات)
 
 ## القبول
-
-- كل تسوية تُولّد صفّاً في `settlement_events` (موجودة قبلياً عبر backfill).
-- شريط التقدم وتاريخ الأحداث يقرآن من المصدر الجديد.
-- تسوية سلفة 3,000 بفاتورة 7,000 تُنشئ: حدثاً واحداً (documented, 3000) + مصروفَين (3000 على السلفة + 4000 على الدفعة)، وتُغلق السلفة.
-- محاولة split بدون رصيد كافٍ للفائض → خطأ واضح يمنع الحفظ.
+- زر "تراجع" يظهر بجانب كل حدث قابل للتراجع.
+- النقر يُدرج حدث `reverse`، يحذف المصروف المرتبط إن وُجد، ويُعيد فتح السلفة فوراً.
+- التريغر يستثني الأحداث الملغاة والـ reverse من الحساب.
+- لا يمكن التراجع عن حدث ملغى مسبقاً.
+- Viewer لا يرى الزر.
 - الاختبارات تمر.
