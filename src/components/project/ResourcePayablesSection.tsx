@@ -43,8 +43,12 @@ import { getFundRemaining } from '@/lib/funds';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import {
   Plus, HandCoins, CheckCircle2, XCircle, FileText, Send, Clock,
-  CalendarClock, Wallet, Pencil,
+  CalendarClock, Wallet, Pencil, RotateCcw, Undo2,
 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -68,6 +72,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
     payPaymentRequest, cancelPaymentRequest, deletePaymentRequest, settleAdvance,
+    reverseSettlementEvent,
     createResourceSettlement, signResourceSettlement,
   } = useStore();
 
