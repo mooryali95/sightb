@@ -715,6 +715,7 @@ export interface SettlementEvent {
   budgetItemId?: string | null;
   notes?: string | null;
   reversedEventId?: string | null;
+  overflowExpenseId?: string | null;
   createdBy: string;
   createdAt: string;
 }
