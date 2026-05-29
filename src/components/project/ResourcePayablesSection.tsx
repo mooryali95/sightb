@@ -1398,6 +1398,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             {ev.sub && (
                               <span className="text-muted-foreground truncate">— {ev.sub}</span>
                             )}
+                            {ev.overflowAmount && ev.overflowAmount > 0 && (
+                              <Badge variant="secondary" className="h-4 px-1 text-[10px] shrink-0">
+                                + فائض {formatCurrency(ev.overflowAmount)}
+                                {ev.overflowSourceLabel ? ` · ${ev.overflowSourceLabel}` : ''}
+                              </Badge>
+                            )}
                             {ev.reversed && (
                               <Badge variant="outline" className="h-4 px-1 text-[10px]">ملغى</Badge>
                             )}
