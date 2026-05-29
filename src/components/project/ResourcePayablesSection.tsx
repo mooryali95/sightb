@@ -1311,12 +1311,17 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
               {/* Settlement progress bar (live) */}
               {(() => {
-                const { amount, prev, thisOp, remainder, overflow } = settlementMath;
+                const { amount, prev, thisOp, remainder, overflow, overflowAmount } = settlementMath;
                 if (amount <= 0) return null;
-                const pct = (n: number) => Math.min(100, Math.max(0, (n / amount) * 100));
+                // Split-eligible: progress shows outstanding portion + separate overflow segment
+                const isSplit = overflowAmount > 0;
+                const opVisible = isSplit ? Math.min(thisOp, Math.max(amount - prev, 0)) : thisOp;
+                const total = amount + (isSplit ? overflowAmount : 0);
+                const pct = (n: number) => Math.min(100, Math.max(0, (n / total) * 100));
                 const prevPct = pct(prev);
-                const opPct = pct(thisOp);
-                const remPct = Math.max(0, 100 - prevPct - opPct);
+                const opPct = pct(opVisible);
+                const overflowPct = isSplit ? pct(overflowAmount) : 0;
+                const remPct = Math.max(0, 100 - prevPct - opPct - overflowPct);
                 return (
                   <div className="space-y-2">
                     <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/40 border">
@@ -1331,7 +1336,14 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                         <div
                           className={cn('h-full transition-all', overflow ? 'bg-destructive' : 'bg-primary')}
                           style={{ width: `${opPct}%` }}
-                          title={`هذه العملية: ${formatCurrency(thisOp)}`}
+                          title={`هذه العملية: ${formatCurrency(opVisible)}`}
+                        />
+                      )}
+                      {overflowPct > 0 && (
+                        <div
+                          className="h-full bg-warning transition-all"
+                          style={{ width: `${overflowPct}%` }}
+                          title={`فائض (مصروف جديد): ${formatCurrency(overflowAmount)}`}
                         />
                       )}
                       {remPct > 0 && !overflow && (
@@ -1342,7 +1354,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                         />
                       )}
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className={cn('grid gap-2 text-xs', isSplit ? 'grid-cols-4' : 'grid-cols-3')}>
                       <div className="flex items-center gap-1.5">
                         <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/40" />
                         <span className="text-muted-foreground">مسوّى سابقاً</span>
@@ -1351,8 +1363,15 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                       <div className="flex items-center gap-1.5">
                         <span className={cn('inline-block h-2 w-2 rounded-full', overflow ? 'bg-destructive' : 'bg-primary')} />
                         <span className="text-muted-foreground">هذه العملية</span>
-                        <span className="font-mono ms-auto">{formatCurrency(thisOp)}</span>
+                        <span className="font-mono ms-auto">{formatCurrency(opVisible)}</span>
                       </div>
+                      {isSplit && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-block h-2 w-2 rounded-full bg-warning" />
+                          <span className="text-muted-foreground">فائض</span>
+                          <span className="font-mono ms-auto">{formatCurrency(overflowAmount)}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5">
                         <span className="inline-block h-2 w-2 rounded-full bg-warning/60" />
                         <span className="text-muted-foreground">المتبقي</span>
