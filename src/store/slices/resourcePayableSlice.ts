@@ -496,8 +496,8 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
           fund_id: cur.paidFromCustodyId ? null : (cur.paidFromFundId || null),
           custody_id: cur.paidFromCustodyId || null,
           budget_item_id: input.expenseBudgetItemId || cur.budgetItemId || null,
-          is_outstanding_advance: false,
           source_payment_request_id: id,
+
         })
         .select().single();
       if (expErr) throw expErr;
