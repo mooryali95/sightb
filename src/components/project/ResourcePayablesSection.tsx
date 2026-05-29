@@ -477,10 +477,10 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           overflowAmount = Number(exp.amount);
           if (exp.fundId) {
             const fund = projectFunds.find((f: any) => f.id === exp.fundId);
-            overflowSourceLabel = `دفعة${fund?.batchNumber ? ` #${fund.batchNumber}` : ''}`;
+            overflowSourceLabel = `دفعة${fund?.fundNumber ? ` #${fund.fundNumber}` : ''}`;
           } else if (exp.custodyId) {
             const cust = custodies.find((c: any) => c.id === exp.custodyId);
-            overflowSourceLabel = `عهدة${cust?.holderName ? ` (${cust.holderName})` : ''}`;
+            overflowSourceLabel = `عهدة${cust?.resourceName ? ` (${cust.resourceName})` : ''}`;
           }
         }
       }
