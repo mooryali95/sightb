@@ -549,7 +549,6 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
   },
 
   settleAdvanceWithSplit: async (id, input) => {
-    const userId = await getUserId();
     const cur = get().paymentRequests.find((r) => r.id === id);
     if (!cur) throw new Error('طلب الصرف غير موجود');
     if (cur.requestType !== 'advance') throw new Error('هذه العملية متاحة للسلف فقط');
@@ -560,49 +559,58 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
       throw new Error('قيمة الفاتورة لا تتجاوز المتبقي — استخدم التسوية العادية');
     }
     const overflow = input.invoiceAmount - outstanding;
-    if (!input.overflowSource.fundId && !input.overflowSource.custodyId) {
+    const fundId = input.overflowSource.fundId || null;
+    const custodyId = input.overflowSource.custodyId || null;
+    if (!fundId && !custodyId) {
       throw new Error('اختر دفعة أو عهدة لتغطية الجزء الفائض من الفاتورة');
     }
 
-    // الخطوة 1: تسوية بمستندات بمقدار المتبقي (تُغلق السلفة)
-    await get().settleAdvance(id, {
-      type: 'documented',
-      notes: input.notes,
-      settledAmount: outstanding,
-      expenseCategory: input.expenseCategory,
-      expenseBudgetItemId: input.expenseBudgetItemId ?? null,
+    const today = new Date();
+    const { data, error } = await (supabase as any).rpc('split_settle_advance', {
+      _payment_request_id: id,
+      _settle_amount: outstanding,
+      _overflow_amount: overflow,
+      _overflow_source: custodyId ? 'custody' : 'fund',
+      _overflow_fund_id: custodyId ? null : fundId,
+      _overflow_custody_id: custodyId,
+      _category: input.expenseCategory,
+      _description: 'فائض فاتورة سلفة: ' + cur.description,
+      _date: today.toISOString().split('T')[0],
+      _month: today.getMonth() + 1,
+      _budget_item_id: input.expenseBudgetItemId ?? cur.budgetItemId ?? null,
+      _notes: input.notes ?? null,
     });
+    if (error) {
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('insufficient_permission')) throw new Error('لا تملك صلاحية التسوية');
+      if (msg.includes('advance_not_outstanding')) throw new Error('السلفة مسوّاة بالفعل');
+      if (msg.includes('invalid_amounts') || msg.includes('settle_exceeds_outstanding'))
+        throw new Error('مبلغ التسوية غير صحيح');
+      if (msg.includes('يتجاوز رصيد') || msg.includes('يتجاوز الرصيد'))
+        throw new Error(error.message);
+      throw error;
+    }
 
-    // الخطوة 2: مصروف مستقل للفائض من المصدر المختار
-    const invoiceRef = 'split-' + id.slice(0, 8);
-    const { data: expData, error: expErr } = await (supabase as any)
-      .from('expenses')
-      .insert({
-        project_id: cur.projectId,
-        resource_id: cur.resourceId,
-        category: input.expenseCategory,
-        description: 'فائض فاتورة سلفة: ' + cur.description,
-        amount: overflow,
-        date: new Date().toISOString().split('T')[0],
-        month: new Date().getMonth() + 1,
-        approval_status: 'approved',
-        approved_by: userId,
-        notes: 'جزء فائض من تسوية السلفة #' + id + (input.notes ? ' — ' + input.notes : ''),
-        invoice_ref: invoiceRef,
-        user_id: userId,
-        is_vat_exempt: false,
-        fund_id: input.overflowSource.custodyId ? null : (input.overflowSource.fundId || null),
-        custody_id: input.overflowSource.custodyId || null,
-        budget_item_id: input.expenseBudgetItemId ?? cur.budgetItemId ?? null,
-        is_outstanding_advance: false,
-      })
-      .select().single();
-    if (expErr) throw expErr;
-
-    const { mapExpense } = await import('@/store/helpers');
-    const mapped = mapExpense(expData);
-    set((s) => ({ expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)] }));
+    // Refresh PR + expense + events
+    const expenseId = (data as any)?.expense_id as string | undefined;
+    const { data: refreshed } = await (supabase as any)
+      .from('payment_requests').select('*').eq('id', id).single();
+    if (refreshed) {
+      const req = mapReq(refreshed);
+      set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
+    }
+    if (expenseId) {
+      const { data: exp } = await (supabase as any)
+        .from('expenses').select('*').eq('id', expenseId).maybeSingle();
+      if (exp) {
+        const { mapExpense } = await import('@/store/helpers');
+        const mapped = mapExpense(exp);
+        set((s) => ({ expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)] }));
+      }
+    }
+    await get().loadSettlementEventsForRequest(id);
   },
+
 
   loadSettlementEventsForRequest: async (paymentRequestId) => {
     const { data, error } = await (supabase as any)
