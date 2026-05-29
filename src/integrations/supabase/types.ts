@@ -608,7 +608,6 @@ export type Database = {
           fund_id: string | null
           id: string
           invoice_ref: string | null
-          is_outstanding_advance: boolean
           is_vat_exempt: boolean | null
           legacy_pre_fund: boolean
           month: number
@@ -636,7 +635,6 @@ export type Database = {
           fund_id?: string | null
           id?: string
           invoice_ref?: string | null
-          is_outstanding_advance?: boolean
           is_vat_exempt?: boolean | null
           legacy_pre_fund?: boolean
           month?: number
@@ -664,7 +662,6 @@ export type Database = {
           fund_id?: string | null
           id?: string
           invoice_ref?: string | null
-          is_outstanding_advance?: boolean
           is_vat_exempt?: boolean | null
           legacy_pre_fund?: boolean
           month?: number
@@ -1833,6 +1830,23 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      split_settle_advance: {
+        Args: {
+          _budget_item_id: string
+          _category: string
+          _date: string
+          _description: string
+          _month: number
+          _notes: string
+          _overflow_amount: number
+          _overflow_custody_id: string
+          _overflow_fund_id: string
+          _overflow_source: string
+          _payment_request_id: string
+          _settle_amount: number
+        }
+        Returns: Json
       }
     }
     Enums: {
