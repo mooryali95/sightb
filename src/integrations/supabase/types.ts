@@ -1586,6 +1586,7 @@ export type Database = {
           expense_id: string | null
           id: string
           notes: string | null
+          overflow_expense_id: string | null
           payment_request_id: string
           project_id: string
           refund_to_custody_id: string | null
@@ -1602,6 +1603,7 @@ export type Database = {
           expense_id?: string | null
           id?: string
           notes?: string | null
+          overflow_expense_id?: string | null
           payment_request_id: string
           project_id: string
           refund_to_custody_id?: string | null
@@ -1618,6 +1620,7 @@ export type Database = {
           expense_id?: string | null
           id?: string
           notes?: string | null
+          overflow_expense_id?: string | null
           payment_request_id?: string
           project_id?: string
           refund_to_custody_id?: string | null
@@ -1625,6 +1628,41 @@ export type Database = {
           reversed_event_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "settlement_events_budget_item_id_fkey"
+            columns: ["budget_item_id"]
+            isOneToOne: false
+            referencedRelation: "budget_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_events_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_events_overflow_expense_id_fkey"
+            columns: ["overflow_expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_events_payment_request_id_fkey"
+            columns: ["payment_request_id"]
+            isOneToOne: false
+            referencedRelation: "payment_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "settlement_events_reversed_event_id_fkey"
             columns: ["reversed_event_id"]

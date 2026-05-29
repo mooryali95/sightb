@@ -449,12 +449,14 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       label: string;
       sub?: string;
       reversedEventId?: string | null;
-      reversed: boolean;          // هذا الحدث الأصلي تم إلغاؤه
-      reverseEventId?: string;    // معرّف حدث الـ reverse الذي ألغاه
+      reversed: boolean;
+      reverseEventId?: string;
+      overflowAmount?: number;
+      overflowSourceLabel?: string;
     };
     if (!settlingAdvance) return [] as Row[];
     const evs = settlementEvents.filter((e) => e.paymentRequestId === settlingAdvance.id);
-    const reversedMap = new Map<string, string>(); // original.id -> reverse.id
+    const reversedMap = new Map<string, string>();
     evs.forEach((e) => {
       if (e.eventType === 'reverse' && e.reversedEventId) reversedMap.set(e.reversedEventId, e.id);
     });
@@ -466,7 +468,22 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         : 'تراجع';
       const kind: Row['kind'] = e.eventType === 'reverse' ? 'reverse'
         : e.eventType === 'cash_refund' ? 'refund'
-        : e.expenseId ? 'expense' : 'other';
+        : e.expenseId || e.overflowExpenseId ? 'expense' : 'other';
+      let overflowAmount: number | undefined;
+      let overflowSourceLabel: string | undefined;
+      if (e.overflowExpenseId) {
+        const exp = expenses.find((x: any) => x.id === e.overflowExpenseId);
+        if (exp) {
+          overflowAmount = Number(exp.amount);
+          if (exp.fundId) {
+            const fund = projectFunds.find((f: any) => f.id === exp.fundId);
+            overflowSourceLabel = `دفعة${fund?.fundNumber ? ` #${fund.fundNumber}` : ''}`;
+          } else if (exp.custodyId) {
+            const cust = custodies.find((c: any) => c.id === exp.custodyId);
+            overflowSourceLabel = `عهدة${cust?.resourceName ? ` (${cust.resourceName})` : ''}`;
+          }
+        }
+      }
       return {
         id: e.id,
         kind,
@@ -478,9 +495,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         reversedEventId: e.reversedEventId,
         reversed: reversedMap.has(e.id),
         reverseEventId: reversedMap.get(e.id),
+        overflowAmount,
+        overflowSourceLabel,
       };
     });
-  }, [settlingAdvance, settlementEvents]);
+  }, [settlingAdvance, settlementEvents, expenses, projectFunds, custodies]);
+
 
 
   // ─── Settlement math (live preview) ───
@@ -1291,12 +1311,17 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
               {/* Settlement progress bar (live) */}
               {(() => {
-                const { amount, prev, thisOp, remainder, overflow } = settlementMath;
+                const { amount, prev, thisOp, remainder, overflow, overflowAmount } = settlementMath;
                 if (amount <= 0) return null;
-                const pct = (n: number) => Math.min(100, Math.max(0, (n / amount) * 100));
+                // Split-eligible: progress shows outstanding portion + separate overflow segment
+                const isSplit = overflowAmount > 0;
+                const opVisible = isSplit ? Math.min(thisOp, Math.max(amount - prev, 0)) : thisOp;
+                const total = amount + (isSplit ? overflowAmount : 0);
+                const pct = (n: number) => Math.min(100, Math.max(0, (n / total) * 100));
                 const prevPct = pct(prev);
-                const opPct = pct(thisOp);
-                const remPct = Math.max(0, 100 - prevPct - opPct);
+                const opPct = pct(opVisible);
+                const overflowPct = isSplit ? pct(overflowAmount) : 0;
+                const remPct = Math.max(0, 100 - prevPct - opPct - overflowPct);
                 return (
                   <div className="space-y-2">
                     <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/40 border">
@@ -1311,7 +1336,14 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                         <div
                           className={cn('h-full transition-all', overflow ? 'bg-destructive' : 'bg-primary')}
                           style={{ width: `${opPct}%` }}
-                          title={`هذه العملية: ${formatCurrency(thisOp)}`}
+                          title={`هذه العملية: ${formatCurrency(opVisible)}`}
+                        />
+                      )}
+                      {overflowPct > 0 && (
+                        <div
+                          className="h-full bg-warning transition-all"
+                          style={{ width: `${overflowPct}%` }}
+                          title={`فائض (مصروف جديد): ${formatCurrency(overflowAmount)}`}
                         />
                       )}
                       {remPct > 0 && !overflow && (
@@ -1322,7 +1354,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                         />
                       )}
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className={cn('grid gap-2 text-xs', isSplit ? 'grid-cols-4' : 'grid-cols-3')}>
                       <div className="flex items-center gap-1.5">
                         <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/40" />
                         <span className="text-muted-foreground">مسوّى سابقاً</span>
@@ -1331,8 +1363,15 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                       <div className="flex items-center gap-1.5">
                         <span className={cn('inline-block h-2 w-2 rounded-full', overflow ? 'bg-destructive' : 'bg-primary')} />
                         <span className="text-muted-foreground">هذه العملية</span>
-                        <span className="font-mono ms-auto">{formatCurrency(thisOp)}</span>
+                        <span className="font-mono ms-auto">{formatCurrency(opVisible)}</span>
                       </div>
+                      {isSplit && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-block h-2 w-2 rounded-full bg-warning" />
+                          <span className="text-muted-foreground">فائض</span>
+                          <span className="font-mono ms-auto">{formatCurrency(overflowAmount)}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5">
                         <span className="inline-block h-2 w-2 rounded-full bg-warning/60" />
                         <span className="text-muted-foreground">المتبقي</span>
@@ -1377,6 +1416,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             </span>
                             {ev.sub && (
                               <span className="text-muted-foreground truncate">— {ev.sub}</span>
+                            )}
+                            {ev.overflowAmount && ev.overflowAmount > 0 && (
+                              <Badge variant="secondary" className="h-4 px-1 text-[10px] shrink-0">
+                                + فائض {formatCurrency(ev.overflowAmount)}
+                                {ev.overflowSourceLabel ? ` · ${ev.overflowSourceLabel}` : ''}
+                              </Badge>
                             )}
                             {ev.reversed && (
                               <Badge variant="outline" className="h-4 px-1 text-[10px]">ملغى</Badge>

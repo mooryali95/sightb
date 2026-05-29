@@ -632,6 +632,7 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
       budgetItemId: d.budget_item_id,
       notes: d.notes,
       reversedEventId: d.reversed_event_id,
+      overflowExpenseId: d.overflow_expense_id,
       createdBy: d.created_by,
       createdAt: d.created_at,
     }));
