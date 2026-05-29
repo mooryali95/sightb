@@ -449,12 +449,14 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       label: string;
       sub?: string;
       reversedEventId?: string | null;
-      reversed: boolean;          // هذا الحدث الأصلي تم إلغاؤه
-      reverseEventId?: string;    // معرّف حدث الـ reverse الذي ألغاه
+      reversed: boolean;
+      reverseEventId?: string;
+      overflowAmount?: number;
+      overflowSourceLabel?: string;
     };
     if (!settlingAdvance) return [] as Row[];
     const evs = settlementEvents.filter((e) => e.paymentRequestId === settlingAdvance.id);
-    const reversedMap = new Map<string, string>(); // original.id -> reverse.id
+    const reversedMap = new Map<string, string>();
     evs.forEach((e) => {
       if (e.eventType === 'reverse' && e.reversedEventId) reversedMap.set(e.reversedEventId, e.id);
     });
@@ -466,7 +468,22 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         : 'تراجع';
       const kind: Row['kind'] = e.eventType === 'reverse' ? 'reverse'
         : e.eventType === 'cash_refund' ? 'refund'
-        : e.expenseId ? 'expense' : 'other';
+        : e.expenseId || e.overflowExpenseId ? 'expense' : 'other';
+      let overflowAmount: number | undefined;
+      let overflowSourceLabel: string | undefined;
+      if (e.overflowExpenseId) {
+        const exp = expenses.find((x: any) => x.id === e.overflowExpenseId);
+        if (exp) {
+          overflowAmount = Number(exp.amount);
+          if (exp.fundId) {
+            const fund = projectFunds.find((f: any) => f.id === exp.fundId);
+            overflowSourceLabel = `دفعة${fund?.batchNumber ? ` #${fund.batchNumber}` : ''}`;
+          } else if (exp.custodyId) {
+            const cust = custodies.find((c: any) => c.id === exp.custodyId);
+            overflowSourceLabel = `عهدة${cust?.holderName ? ` (${cust.holderName})` : ''}`;
+          }
+        }
+      }
       return {
         id: e.id,
         kind,
@@ -478,9 +495,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         reversedEventId: e.reversedEventId,
         reversed: reversedMap.has(e.id),
         reverseEventId: reversedMap.get(e.id),
+        overflowAmount,
+        overflowSourceLabel,
       };
     });
-  }, [settlingAdvance, settlementEvents]);
+  }, [settlingAdvance, settlementEvents, expenses, projectFunds, custodies]);
+
 
 
   // ─── Settlement math (live preview) ───
