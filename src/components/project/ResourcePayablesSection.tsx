@@ -429,6 +429,21 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     });
   }, [outstandingAdvances, projResources]);
 
+  // ─── Lazy-load settlement events for all advances of this project (once each) ───
+  const eventsLoaded = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const targets = projReqs.filter(
+      (r) => r.requestType === 'advance' && r.status === 'paid' && !eventsLoaded.current.has(r.id),
+    );
+    if (targets.length === 0) return;
+    targets.forEach((r) => {
+      eventsLoaded.current.add(r.id);
+      loadSettlementEventsForRequest(r.id).catch(() => {});
+    });
+  }, [projReqs, loadSettlementEventsForRequest]);
+
+
+
   // ─── Export rows builders ───
   const buildOutstandingRows = (): OutstandingAdvanceRow[] =>
     outstandingAdvances.map((req) => {
