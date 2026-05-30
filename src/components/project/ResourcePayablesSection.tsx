@@ -1117,7 +1117,15 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           {res?.name || '—'} · {PAYMENT_REQUEST_TYPE_LABELS[req.requestType]} · {formatCurrency(req.amount)}
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        {req.requestType === 'advance' && req.status === 'paid' && req.isAdvanceOutstanding && (() => {
+                          const days = advanceAgeDays(req as any);
+                          return (
+                            <Badge variant="outline" className={cn('text-xs', ageBadgeClasses(days))}>
+                              منذ {days} يوم
+                            </Badge>
+                          );
+                        })()}
                         <Badge className={PAYMENT_PRIORITY_COLORS[req.priority]}>
                           {PAYMENT_PRIORITY_LABELS[req.priority]}
                         </Badge>
@@ -1125,6 +1133,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           {PAYMENT_REQUEST_STATUS_LABELS[req.status]}
                         </Badge>
                       </div>
+
                     </div>
 
                     {/* Timeline */}
