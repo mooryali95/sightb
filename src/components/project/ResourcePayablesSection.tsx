@@ -1,4 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import {
+  exportOutstandingAdvancesExcel,
+  exportOutstandingAdvancesPDF,
+  exportSettlementEventsExcel,
+  exportSettlementEventsPDF,
+  type OutstandingAdvanceRow,
+  type SettlementEventRow,
+} from '@/lib/export';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Download, FileSpreadsheet, FileDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { formatCurrency } from '@/lib/finance';
@@ -380,6 +392,120 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     );
   }, [outstandingAdvances]);
 
+  // ─── Compute age days per advance ───
+  const advanceAgeDays = (req: typeof outstandingAdvances[number]): number => {
+    const t = req.paidDate ? new Date(req.paidDate).getTime() : new Date(req.createdAt).getTime();
+    return Math.max(0, Math.floor((Date.now() - t) / (1000 * 60 * 60 * 24)));
+  };
+
+  const ageBadgeClasses = (days: number) =>
+    days >= 90 ? 'border-destructive text-destructive bg-destructive/10'
+    : days >= 60 ? 'border-warning text-warning-foreground bg-warning/15'
+    : days >= 30 ? 'border-amber-500 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30'
+    : 'border-muted text-muted-foreground';
+
+  // ─── Aging toast alerts (once per session per advance/threshold) ───
+  const agingAlerted = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    outstandingAdvances.forEach((req) => {
+      const days = advanceAgeDays(req);
+      const res = projResources.find((r) => r.id === req.resourceId);
+      const name = res?.name || '—';
+      const thresholds: { key: string; min: number; fn: (msg: string, opts?: any) => any; label: string }[] = [
+        { key: `90-${req.id}`, min: 90, fn: toast.error, label: 'حرجة' },
+        { key: `60-${req.id}`, min: 60, fn: toast.warning, label: 'متأخرة' },
+        { key: `30-${req.id}`, min: 30, fn: toast.info, label: 'تحتاج متابعة' },
+      ];
+      for (const t of thresholds) {
+        if (days >= t.min && !agingAlerted.current.has(t.key)) {
+          agingAlerted.current.add(t.key);
+          t.fn(`سلفة ${t.label}: ${name} — منذ ${days} يومًا`, {
+            description: `المتبقي: ${formatCurrency(Math.max(req.amount - (req.refundedAmount ?? 0), 0))}`,
+            duration: t.min >= 90 ? 12000 : 8000,
+          });
+          break;
+        }
+      }
+    });
+  }, [outstandingAdvances, projResources]);
+
+  // ─── Lazy-load settlement events for all advances of this project (once each) ───
+  const eventsLoaded = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const targets = projReqs.filter(
+      (r) => r.requestType === 'advance' && r.status === 'paid' && !eventsLoaded.current.has(r.id),
+    );
+    if (targets.length === 0) return;
+    targets.forEach((r) => {
+      eventsLoaded.current.add(r.id);
+      loadSettlementEventsForRequest(r.id).catch(() => {});
+    });
+  }, [projReqs, loadSettlementEventsForRequest]);
+
+
+
+  // ─── Export rows builders ───
+  const buildOutstandingRows = (): OutstandingAdvanceRow[] =>
+    outstandingAdvances.map((req) => {
+      const res = projResources.find((r) => r.id === req.resourceId);
+      const settled = req.refundedAmount ?? 0;
+      const remaining = Math.max(req.amount - settled, 0);
+      let source = '—';
+      if (req.paidFromFundId) {
+        const f = projectFunds.find((x: any) => x.id === req.paidFromFundId);
+        source = `دفعة${f?.fundNumber ? ` #${f.fundNumber}` : ''}`;
+      } else if (req.paidFromCustodyId) {
+        const c = custodies.find((x: any) => x.id === req.paidFromCustodyId);
+        source = `عهدة${c?.resourceName ? ` (${c.resourceName})` : ''}`;
+      }
+      return {
+        resourceName: res?.name || '—',
+        paidDate: req.paidDate || String(req.createdAt).split('T')[0],
+        originalAmount: req.amount,
+        settledAmount: settled,
+        remainingAmount: remaining,
+        ageDays: advanceAgeDays(req),
+        source,
+        description: req.description,
+      };
+    });
+
+  const buildSettlementEventRows = (): SettlementEventRow[] => {
+    const projReqIds = new Set(projReqs.map((r) => r.id));
+    return settlementEvents
+      .filter((e) => projReqIds.has(e.paymentRequestId))
+      .map((e) => {
+        const req = projReqs.find((r) => r.id === e.paymentRequestId);
+        const res = req ? projResources.find((r) => r.id === req.resourceId) : undefined;
+        let overflowAmount: number | undefined;
+        let overflowSource: string | undefined;
+        if (e.overflowExpenseId) {
+          const exp = expenses.find((x: any) => x.id === e.overflowExpenseId);
+          if (exp) {
+            overflowAmount = Number(exp.amount);
+            if (exp.fundId) {
+              const f = projectFunds.find((x: any) => x.id === exp.fundId);
+              overflowSource = `دفعة${f?.fundNumber ? ` #${f.fundNumber}` : ''}`;
+            } else if (exp.custodyId) {
+              const c = custodies.find((x: any) => x.id === exp.custodyId);
+              overflowSource = `عهدة${c?.resourceName ? ` (${c.resourceName})` : ''}`;
+            }
+          }
+        }
+        return {
+          date: String(e.createdAt).split('T')[0],
+          resourceName: res?.name || '—',
+          eventType: e.eventType,
+          amount: Number(e.amount),
+          overflowAmount,
+          overflowSource,
+          notes: e.notes,
+        };
+      });
+  };
+
+
+
   // ─── Settle advance dialog state ───
   const [settleAdvanceId, setSettleAdvanceId] = useState<string | null>(null);
   const [saType, setSaType] = useState<'documented' | 'cash_refund' | 'payroll_deduction' | 'written_off' | 'compound'>('documented');
@@ -628,6 +754,48 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           </div>
         </Card>
       </div>
+
+      {/* Export bar for advances and settlement events */}
+      {(outstandingAdvances.length > 0 || settlementEvents.length > 0) && (
+        <div className="flex flex-wrap items-center gap-2 justify-end">
+          {outstandingAdvances.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Download className="h-4 w-4" /> تصدير السلف القائمة
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportOutstandingAdvancesPDF(buildOutstandingRows(), projectName || 'Project')}>
+                  <FileDown className="h-4 w-4 ml-2" /> PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportOutstandingAdvancesExcel(buildOutstandingRows(), projectName || 'Project')}>
+                  <FileSpreadsheet className="h-4 w-4 ml-2" /> Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {buildSettlementEventRows().length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Download className="h-4 w-4" /> تصدير سجل التسويات
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportSettlementEventsPDF(buildSettlementEventRows(), projectName || 'Project')}>
+                  <FileDown className="h-4 w-4 ml-2" /> PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSettlementEventsExcel(buildSettlementEventRows(), projectName || 'Project')}>
+                  <FileSpreadsheet className="h-4 w-4 ml-2" /> Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      )}
+
+
 
       {/* Resources balances */}
       <Card className="p-4">
@@ -949,7 +1117,15 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           {res?.name || '—'} · {PAYMENT_REQUEST_TYPE_LABELS[req.requestType]} · {formatCurrency(req.amount)}
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        {req.requestType === 'advance' && req.status === 'paid' && req.isAdvanceOutstanding && (() => {
+                          const days = advanceAgeDays(req as any);
+                          return (
+                            <Badge variant="outline" className={cn('text-xs', ageBadgeClasses(days))}>
+                              منذ {days} يوم
+                            </Badge>
+                          );
+                        })()}
                         <Badge className={PAYMENT_PRIORITY_COLORS[req.priority]}>
                           {PAYMENT_PRIORITY_LABELS[req.priority]}
                         </Badge>
@@ -957,6 +1133,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           {PAYMENT_REQUEST_STATUS_LABELS[req.status]}
                         </Badge>
                       </div>
+
                     </div>
 
                     {/* Timeline */}
