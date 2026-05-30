@@ -740,6 +740,48 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         </Card>
       </div>
 
+      {/* Export bar for advances and settlement events */}
+      {(outstandingAdvances.length > 0 || settlementEvents.length > 0) && (
+        <div className="flex flex-wrap items-center gap-2 justify-end">
+          {outstandingAdvances.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Download className="h-4 w-4" /> تصدير السلف القائمة
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportOutstandingAdvancesPDF(buildOutstandingRows(), projectName || 'Project')}>
+                  <FileDown className="h-4 w-4 ml-2" /> PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportOutstandingAdvancesExcel(buildOutstandingRows(), projectName || 'Project')}>
+                  <FileSpreadsheet className="h-4 w-4 ml-2" /> Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {buildSettlementEventRows().length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Download className="h-4 w-4" /> تصدير سجل التسويات
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportSettlementEventsPDF(buildSettlementEventRows(), projectName || 'Project')}>
+                  <FileDown className="h-4 w-4 ml-2" /> PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSettlementEventsExcel(buildSettlementEventRows(), projectName || 'Project')}>
+                  <FileSpreadsheet className="h-4 w-4 ml-2" /> Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      )}
+
+
+
       {/* Resources balances */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3">
