@@ -392,6 +392,105 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     );
   }, [outstandingAdvances]);
 
+  // ─── Compute age days per advance ───
+  const advanceAgeDays = (req: typeof outstandingAdvances[number]): number => {
+    const t = req.paidDate ? new Date(req.paidDate).getTime() : new Date(req.createdAt).getTime();
+    return Math.max(0, Math.floor((Date.now() - t) / (1000 * 60 * 60 * 24)));
+  };
+
+  const ageBadgeClasses = (days: number) =>
+    days >= 90 ? 'border-destructive text-destructive bg-destructive/10'
+    : days >= 60 ? 'border-warning text-warning-foreground bg-warning/15'
+    : days >= 30 ? 'border-amber-500 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30'
+    : 'border-muted text-muted-foreground';
+
+  // ─── Aging toast alerts (once per session per advance/threshold) ───
+  const agingAlerted = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    outstandingAdvances.forEach((req) => {
+      const days = advanceAgeDays(req);
+      const res = projResources.find((r) => r.id === req.resourceId);
+      const name = res?.name || '—';
+      const thresholds: { key: string; min: number; fn: (msg: string, opts?: any) => any; label: string }[] = [
+        { key: `90-${req.id}`, min: 90, fn: toast.error, label: 'حرجة' },
+        { key: `60-${req.id}`, min: 60, fn: toast.warning, label: 'متأخرة' },
+        { key: `30-${req.id}`, min: 30, fn: toast.info, label: 'تحتاج متابعة' },
+      ];
+      for (const t of thresholds) {
+        if (days >= t.min && !agingAlerted.current.has(t.key)) {
+          agingAlerted.current.add(t.key);
+          t.fn(`سلفة ${t.label}: ${name} — منذ ${days} يومًا`, {
+            description: `المتبقي: ${formatCurrency(Math.max(req.amount - (req.refundedAmount ?? 0), 0))}`,
+            duration: t.min >= 90 ? 12000 : 8000,
+          });
+          break;
+        }
+      }
+    });
+  }, [outstandingAdvances, projResources]);
+
+  // ─── Export rows builders ───
+  const buildOutstandingRows = (): OutstandingAdvanceRow[] =>
+    outstandingAdvances.map((req) => {
+      const res = projResources.find((r) => r.id === req.resourceId);
+      const settled = req.refundedAmount ?? 0;
+      const remaining = Math.max(req.amount - settled, 0);
+      let source = '—';
+      if (req.paidFromFundId) {
+        const f = projectFunds.find((x: any) => x.id === req.paidFromFundId);
+        source = `دفعة${f?.fundNumber ? ` #${f.fundNumber}` : ''}`;
+      } else if (req.paidFromCustodyId) {
+        const c = custodies.find((x: any) => x.id === req.paidFromCustodyId);
+        source = `عهدة${c?.resourceName ? ` (${c.resourceName})` : ''}`;
+      }
+      return {
+        resourceName: res?.name || '—',
+        paidDate: req.paidDate || String(req.createdAt).split('T')[0],
+        originalAmount: req.amount,
+        settledAmount: settled,
+        remainingAmount: remaining,
+        ageDays: advanceAgeDays(req),
+        source,
+        description: req.description,
+      };
+    });
+
+  const buildSettlementEventRows = (): SettlementEventRow[] => {
+    const projReqIds = new Set(projReqs.map((r) => r.id));
+    return settlementEvents
+      .filter((e) => projReqIds.has(e.paymentRequestId))
+      .map((e) => {
+        const req = projReqs.find((r) => r.id === e.paymentRequestId);
+        const res = req ? projResources.find((r) => r.id === req.resourceId) : undefined;
+        let overflowAmount: number | undefined;
+        let overflowSource: string | undefined;
+        if (e.overflowExpenseId) {
+          const exp = expenses.find((x: any) => x.id === e.overflowExpenseId);
+          if (exp) {
+            overflowAmount = Number(exp.amount);
+            if (exp.fundId) {
+              const f = projectFunds.find((x: any) => x.id === exp.fundId);
+              overflowSource = `دفعة${f?.fundNumber ? ` #${f.fundNumber}` : ''}`;
+            } else if (exp.custodyId) {
+              const c = custodies.find((x: any) => x.id === exp.custodyId);
+              overflowSource = `عهدة${c?.resourceName ? ` (${c.resourceName})` : ''}`;
+            }
+          }
+        }
+        return {
+          date: String(e.createdAt).split('T')[0],
+          resourceName: res?.name || '—',
+          eventType: e.eventType,
+          amount: Number(e.amount),
+          overflowAmount,
+          overflowSource,
+          notes: e.notes,
+        };
+      });
+  };
+
+
+
   // ─── Settle advance dialog state ───
   const [settleAdvanceId, setSettleAdvanceId] = useState<string | null>(null);
   const [saType, setSaType] = useState<'documented' | 'cash_refund' | 'payroll_deduction' | 'written_off' | 'compound'>('documented');
