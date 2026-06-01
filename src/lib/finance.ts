@@ -112,7 +112,12 @@ export function getProjectSummary(
 
   // === VAT ===
   const vatRate = (project as any).taxPercent || 0;
-  const contractValueInclVAT = vatRate > 0 ? addVAT(effectiveContractValue, vatRate) : effectiveContractValue;
+  // F2 fix: respect project.vatInclusive — if the stored contract value already
+  // includes VAT, do NOT add VAT on top (was double-counting tax in headline metric).
+  const vatInclusive = (project as any).vatInclusive === true;
+  const contractValueInclVAT = vatRate > 0 && !vatInclusive
+    ? addVAT(effectiveContractValue, vatRate)
+    : effectiveContractValue;
 
   const totalVATOnExpenses = expenses
     .filter(e => (e as any).approvalStatus !== 'rejected' && !(e as any).isOutstandingAdvance && !(e as any).isVatExempt)

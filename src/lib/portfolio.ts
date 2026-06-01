@@ -56,9 +56,12 @@ export function getPortfolioSummary(
     weightedCompleteNum += project.percentComplete * w;
     totalWeight += w;
 
-    // Only projects with actual spending contribute to CPI average
-    if (summary.totalActual > 0 && summary.totalPlanned > 0) {
-      const approxCPI = (project.percentComplete / 100 * summary.totalPlanned) / summary.totalActual;
+    // F3 fix: use proper PMI Earned Value formula. EV = %complete × BAC,
+    // where BAC excludes the Management Reserve (PMBOK 7).
+    // Previously divided %complete×totalPlanned by AC without removing the reserve.
+    if (summary.totalActual > 0 && summary.bacWithoutReserve > 0) {
+      const ev = (project.percentComplete / 100) * summary.bacWithoutReserve;
+      const approxCPI = ev / summary.totalActual;
       weightedCPINum += approxCPI * w;
       cpiWeight += w;
     }
