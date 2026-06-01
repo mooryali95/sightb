@@ -175,17 +175,23 @@ export function getProjectFundsSummary(
   const activeOrAckFunds = projectFunds.filter(
     (f) => f.status === 'transferred' || f.status === 'acknowledged',
   );
+  const activeFundIds = new Set(activeOrAckFunds.map((f) => f.id));
   const activeFundsTotal = activeOrAckFunds.reduce((s, f) => s + f.amount, 0);
   const directSpendOnActive = activeOrAckFunds.reduce(
     (s, f) => s + getFundDirectSpent(f.id, expenses, projectCustodies),
     0,
   );
-  const allCustodyDraw = projectCustodies.reduce((s, c) => s + c.amount, 0);
+  // F1 fix: only subtract custody draws sourced from currently-active funds.
+  // Previously we subtracted ALL custody draws (including ones from settled funds),
+  // which produced a falsely low "cash with manager" and triggered unnecessary fund issuance.
+  const custodyDrawOnActive = projectCustodies
+    .filter((c) => c.sourceFundId && activeFundIds.has(c.sourceFundId))
+    .reduce((s, c) => s + c.amount, 0);
   const advancesOnActive = activeOrAckFunds.reduce(
     (s, f) => s + getFundOutstandingAdvances(f.id, projectPRs),
     0,
   );
-  const cashStillWithManager = activeFundsTotal - directSpendOnActive - allCustodyDraw - advancesOnActive;
+  const cashStillWithManager = activeFundsTotal - directSpendOnActive - custodyDrawOnActive - advancesOnActive;
 
   const unsettledFunds = projectFunds.filter((f) => f.status !== 'settled');
   const activeFund = getActiveFund(projectId, funds);
