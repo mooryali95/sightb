@@ -140,7 +140,7 @@ export default function Dashboard() {
 
   const companyData = companies.map((c) => {
     const compProjects = filteredProjects.filter((p) => p.companyId === c.id);
-    const total = expenses.filter((e) => compProjects.some((p) => p.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
+    const total = expenses.filter((e) => compProjects.some((p) => p.id === e.projectId) && isCountedExpense(e)).reduce((s, e) => s + e.amount, 0);
     return { name: c.name, value: total };
   }).filter((d) => d.value > 0);
 
