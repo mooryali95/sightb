@@ -72,10 +72,22 @@ export function ExecutiveSummary({
     return { planned, actual, diff, label: `شهر ${monthIdx + 1}` };
   }, [selectedMonth, currentMonth, plannedMonthly, actualMonthly, project.durationMonths]);
 
+  // توزيع الموازنة الصحيح:
+  // - المصروف الفعلي (AC)
+  // - الملتزم وغير المصروف = max(0, totalCommitted − totalActual)
+  // - المتاح = max(0, BAC − max(totalCommitted, totalActual))
+  // BAC = خط الأساس بعد أوامر التغيير المعتمدة (totalPlanned يشمل الاحتياطي الإداري)
+  const approvedCOImpact = changeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
+  const bacEffective = summary.totalPlanned + approvedCOImpact;
+  const committedRemaining = Math.max(0, totalCommitted - summary.totalActual);
+  const usedOrCommitted = Math.max(summary.totalActual, totalCommitted);
+  const trulyAvailable = Math.max(0, bacEffective - usedOrCommitted);
+  const overBudget = Math.max(0, usedOrCommitted - bacEffective);
   const budgetPieData = [
     { name: 'مصروف', value: summary.totalActual, fill: 'hsl(0, 72%, 51%)' },
-    { name: 'ملتزم', value: Math.max(0, totalCommitted - summary.totalActual), fill: 'hsl(38, 92%, 50%)' },
-    { name: 'متاح', value: Math.max(0, summary.totalPlanned - totalCommitted), fill: 'hsl(160, 60%, 42%)' },
+    { name: 'ملتزم غير مصروف', value: committedRemaining, fill: 'hsl(38, 92%, 50%)' },
+    { name: 'متاح', value: trulyAvailable, fill: 'hsl(160, 60%, 42%)' },
+    { name: 'تجاوز', value: overBudget, fill: 'hsl(340, 75%, 55%)' },
   ].filter(d => d.value > 0);
 
   const milestoneData = [
