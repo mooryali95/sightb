@@ -432,8 +432,12 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
               <tbody>
                 {projectFundsList.map((f) => {
                   const spent = getFundSpent(f.id, projectExpenses, projectCustodies, projPRs);
-                  const remaining = getFundRemaining(f, projectExpenses, projectCustodies, projPRs);
+                  const calcRemaining = getFundRemaining(f, projectExpenses, projectCustodies, projPRs);
                   const settlement = getSettlementForFund(f.id, fundSettlements);
+                  // إذا تمت تسوية الدفعة واعتمدت → اعرض المتبقي وفق التسوية الفعلية (لا المحسوب)
+                  // هذا يمنع ظهور رصيد وهمي بيد المدير لدفعة مغلقة بسبب سلفة قائمة لم تُسوَّ بعد
+                  const isClosed = f.status === 'settled' || (settlement && settlement.status === 'approved');
+                  const remaining = isClosed ? 0 : calcRemaining;
                   const days = daysBetween(f.acknowledgedAt || f.transferDate);
                   const overdue = (f.status === 'transferred' || f.status === 'acknowledged') && days >= 30;
                   return (
@@ -450,9 +454,11 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                       <td className={cn(
                         'font-mono text-xs',
                         remaining < 0 && 'text-destructive font-semibold',
+                        isClosed && 'text-muted-foreground',
                       )}>
                         {formatCurrency(remaining)}
                       </td>
+
                       <td className={cn(
                         'hidden md:table-cell text-xs',
                         overdue && 'text-destructive font-semibold',
