@@ -99,8 +99,10 @@ export default function Dashboard() {
 
   const visibleProjectIds = useMemo(() => new Set(filteredProjects.map((project) => project.id)), [filteredProjects]);
   const filteredBudgetItems = useMemo(() => budgetItems.filter((b) => visibleProjectIds.has(b.projectId)), [budgetItems, visibleProjectIds]);
-  const filteredExpenses = useMemo(() => expenses.filter((e) => visibleProjectIds.has(e.projectId) && isInRange(e.date, currentRange)), [expenses, visibleProjectIds, isInRange, currentRange]);
-  const filteredAllExpenses = useMemo(() => expenses.filter((e) => visibleProjectIds.has(e.projectId)), [expenses, visibleProjectIds]);
+  // SSOT: exclude rejected expenses and outstanding (unsettled) advances — matches getProjectSummary in finance.ts
+  const isCountedExpense = (e: any) => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance;
+  const filteredExpenses = useMemo(() => expenses.filter((e) => visibleProjectIds.has(e.projectId) && isCountedExpense(e) && isInRange(e.date, currentRange)), [expenses, visibleProjectIds, isInRange, currentRange]);
+  const filteredAllExpenses = useMemo(() => expenses.filter((e) => visibleProjectIds.has(e.projectId) && isCountedExpense(e)), [expenses, visibleProjectIds]);
   const filteredRevenues = useMemo(() => revenues.filter((r) => visibleProjectIds.has(r.projectId) && isInRange(r.date, currentRange)), [revenues, visibleProjectIds, isInRange, currentRange]);
   const filteredAllRevenues = useMemo(() => revenues.filter((r) => visibleProjectIds.has(r.projectId)), [revenues, visibleProjectIds]);
   const filteredChangeOrders = useMemo(() => changeOrders.filter((co) => visibleProjectIds.has(co.projectId)), [changeOrders, visibleProjectIds]);
