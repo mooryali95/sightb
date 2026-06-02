@@ -1,89 +1,147 @@
-## الهدف
-تدقيق احترافي (Financial Audit) لكل رقم/معادلة/حساب في تطبيق "Rouya" للتأكد من صحته الرياضية والمحاسبية، ومطابقته لسياسات المشروع المعتمدة (سياسة التخزين الصافي، فصل VAT، EVM وفق PMI، إغلاق السلف، إلخ).
+## المشاكل المرصودة وخطة المعالجة
 
-## النطاق — الملفات المستهدفة
+### 1. إعادة ترتيب تبويبات صفحة المالية (UX)
 
-### 1) محرّك الحسابات الأساسي (`src/lib/`)
-- `finance.ts` (755 سطر) — EVM, BAC, EV, AC, CPI, SPI, EAC, ETC, VAC, TCPI, الـ VAT (calcVAT/addVAT/removeVAT), getEffectiveContractValue, getTotalPlanned, توزيع التكاليف الشهرية.
-- `funds.ts` — حسابات الدفعات/الأرصدة/الاستهلاك (% spending) للعهد والصناديق.
-- `fund-alerts.ts` — عتبات التنبيه (50%/75%/90%).
-- `resource-payables.ts` — رصيد السلف، outstanding, overflow, aging.
-- `portfolio.ts` — تجميع المحفظة، Health Score, المخاطر، التكاليف غير المباشرة.
-- `validations.ts` — صحة المدخلات الرقمية.
+**الترتيب الحالي:** الموازنة، خط الأساس، التتبع، الإيراد...
+**الترتيب الجديد (وفق أفضل الممارسات PMBOK + IPMA):**
 
-### 2) منطق المتجر (`src/store/`)
-- `helpers.ts` — المُحوِّلات والمشتقات المالية.
-- `slices/budgetSlice.ts`, `baselineSlice.ts`, `budgetAmendmentSlice.ts` — مجاميع الموازنة.
-- `slices/fundSlice.ts` — settlement, total_received/spent/remaining, difference.
-- `slices/resourcePayableSlice.ts` — split settlement, overflow_expense_id, settled_amount.
-- `slices/trackingSlice.ts` — التقدّم، الإنجاز المكتسب (EV) عبر milestones × weight.
+1. **المصروفات** (التاب الافتراضي - مركز العمل اليومي)
+2. **الإيرادات**
+3. **الدفعات والعهد** (التدفق النقدي)
+4. **المستحقات للموارد**
+5. **الالتزامات وأوامر التغيير**
+6. **خط الأساس والموازنة** (مرجعية - تُستخدم في بداية المشروع فقط)
+7. **التحليلات (What-if / EVM)**
 
-### 3) دوال قاعدة البيانات (`supabase/migrations/`)
-- `split_settle_advance`, `reverse_settlement_event`, `has_role`, `protect_pr_with_settlements`, أي trigger يحسب أرصدة.
-- التأكد من الذرّية (atomicity) ومنع الـ double-counting.
+### 2. مرونة ربط المصروف بمصدر التمويل (المشكلة الجوهرية)
 
-### 4) مكوّنات تعرض أرقامًا محسوبة (`src/components/project/` و `dashboard/`)
-- `ExecutiveSummary.tsx`, `BudgetSection.tsx`, `MonthlyBudgetPlan.tsx`, `ChartsSection.tsx`, `WhatIfSection.tsx`, `SmartBudgetAlerts.tsx`, `ResourcePayablesSection.tsx`, `CashLedgerSection.tsx`, `FundsSection.tsx`, `CustodySection.tsx`, `CommitmentsSection.tsx`, `RevenueSection.tsx`, `RisksSection.tsx`, `MilestonesSection.tsx`.
-- `dashboard/HealthMatrix.tsx`, `PortfolioPerformance.tsx`, `DashboardStats.tsx`, `DashboardCharts.tsx`.
-- `BudgetAlerts.tsx`, `SmartNotifications.tsx`.
+**الحالي:** المصروف يُجبر على الربط بالدفعة الأولى.
+**المطلوب:**
 
-### 5) التصدير (`src/lib/export.ts`)
-- التأكد أن الأرقام المصدّرة (PDF/Excel) مطابقة تمامًا للأرقام في الواجهة بعد VAT/Net policy.
+- حقل "مصدر التمويل" يقبل: دفعة محددة | عهدة محددة | عهدتين (مقسوم) | بدون
+- إعادة فتح أي مصروف موجود وتغيير ربطه
+- عند اختيار عهدتين: حقلا مبلغ (مثلاً 800 من عهدة س + 200 من عهدة ع)، مع تحقق أن المجموع = إجمالي المصروف
+- توضيح بصري في جدول المصروفات يُظهر المصدر/المصادر
 
-## منهجية التدقيق
+### 3. تحويل النقد بين المدير والعهد
 
-لكل ملف/معادلة سيتم:
-1. **استخراج الصيغة** كما هي مكتوبة في الكود.
-2. **مقارنتها بالمرجع المعتمد**:
-   - EVM: PMBOK 7 (PV=BAC×%schedule, EV=BAC×%complete, CPI=EV/AC, SPI=EV/PV, EAC=BAC/CPI, ETC=EAC−AC, VAC=BAC−EAC, TCPI=(BAC−EV)/(BAC−AC)).
-   - VAT: سياسة "Net Storage" — التخزين بدون ضريبة، الحساب ديناميكي بـ `tax_percent`.
-   - السلف: outstanding = original − Σ(settled_amount) − Σ(refunded) − Σ(overflow_consumed).
-   - الصناديق: remaining = received − spent ± difference (مع علم بـ legacy_pre_fund).
-   - Health Score: قواعد المشروع (CPI<0.7 critical, Risk≥50% warning).
-3. **رصد المشاكل** المحتملة:
-   - قسمة على صفر بدون حماية.
-   - خلط شامل/صافي للضريبة (double VAT).
-   - استخدام `parseFloat` على أرقام عربية/هندية بدون تطبيع.
-   - تجاهل `approval_status` أو `status='rejected'` في التجميعات.
-   - عدم استبعاد العهد المغلقة أو السلف المسوّاة.
-   - حسابات شهرية تتجاوز `durationMonths` أو تبدأ قبل `startMonth`.
-   - تقريب (rounding) متراكم يسبب فروقات هلليّة.
-   - استخدام `Date.now()` بدل تاريخ المشروع في حسابات العمر.
-   - عدم احتساب Change Orders المعتمدة في BAC/EAC.
-   - إغفال Management Reserve.
-   - تكرار حساب المصاريف المرتبطة بـ payment_request (double count مع expenses).
-4. **التحقق من الاختبارات الموجودة** ومقارنتها بالمعادلات الفعلية.
-5. **تشغيل `bunx vitest run`** للتأكد أن الاختبارات الحالية (47+) تمر.
+إضافة عملية "تحويل نقد بيد المدير → عهدة" (Cash Transfer):
 
-## مخرجات التدقيق
+- لا يُعدّ مصروفاً
+- يُنقص "النقد بيد المدير" ويزيد رصيد العهدة
+- يظهر في سجل العهدة كمصدر التمويل
 
-تقرير منظم في ملف `.lovable/financial-audit.md` يحوي:
+### 4. إصلاح حساب "النقد بيد المدير" للدفعات المغلقة (Bug)
 
+**المشكلة:** الدفعة الثانية مسواة ومغلقة لكن تعرض 13 ألف متبقي بيد المدير، رغم أنها سُحبت كسلفة على مورد.
+**السبب المرجح:** السلف المستحقة (`payment_requests` بنوع advance غير مسواة) لا تُخصم من رصيد الدفعة، أو دالة `cashStillWithManager` لا تقرأ السلف القائمة.
+**الإصلاح:**
+
+- في `funds.ts`: إضافة `outstandingAdvancesOnActive` (السلف غير المسواة المربوطة بدفعات نشطة) إلى المعادلة:
+`cashStillWithManager = activeFundsTotal − directSpend − custodyDraw − outstandingAdvances`
+- التحقق من أن إغلاق الدفعة (settlement) يُصفّر رصيدها فعلياً
+
+### 5. تدفق العهدة المربوطة بالدفعة (التحقق)
+
+مراجعة شاملة:
+
+- العهدة تُخصم مرة واحدة فقط من `source_fund_id`
+- مصروفات العهدة لا تُخصم مرة ثانية من الدفعة
+- إغلاق العهدة يُرجع الفائض للدفعة (وليس للمدير)
+- كتابة اختبارات Vitest تغطي السيناريو الكامل
+
+### 6. مصدر واحد للحقيقة في الداشبورد (Bug)
+
+**المشكلة:** "إجمالي المصروفات" = 57,273 بينما "المصروف الموثق" = 33,423 → تناقض.
+**الإصلاح:**
+
+- توحيد دالة واحدة `getProjectActualSpend(projectId)` تُستخدم في كل المكونات
+- إزالة الفلاتر المختلفة (approval_status، legacy_pre_fund، fund_id IS NULL)
+- إضافة tooltip يشرح ما يُحتسب وما يُستثنى
+- اختبار يضمن تطابق الأرقام بين Dashboard وExecutiveSummary وExpensesSection
+
+### 7. مستحقات الموارد - الدفع والربط
+
+- زر "دفع" بجانب كل مستحق → ينشئ payment_request مرتبط
+- بعد الدفع يُربط تلقائياً بـ expense
+- شارة "مستحق غير مدفوع" واضحة في قائمة المستحقات والداشبورد
+
+### 8. توزيع الموازنة في صفحة الملخص (Bug)
+
+مراجعة معادلة `budgetDistribution` في ExecutiveSummary - يبدو أنها تستخدم `totalPlanned` بدل `bacWithReserve` أو تتجاهل أوامر التغيير المعتمدة.
+
+### 9. الانفوجرافيك (Sankey Diagram)
+
+إضافة مخطط Sankey في تبويب "الدفعات والعهد":
+
+```text
+الدفعة 1 ────┬──> العهدة أ ──> مصروفات (3)
+             ├──> سلفة المورد س
+             └──> مصروف مباشر
+الدفعة 2 ────> سلفة المورد ع (غير مسواة)
 ```
-لكل معادلة:
-- الموقع (file:line)
-- الصيغة الحالية
-- الصيغة المرجعية الصحيحة
-- الحكم: ✅ صحيح | ⚠️ مخاطرة | ❌ خطأ
-- الأثر المالي (إن وجد)
-- التوصية والإصلاح المقترح
-```
 
-مع جدول تنفيذي علوي يلخّص:
-- عدد المعادلات المفحوصة.
-- عدد الأخطاء الحرجة / التحذيرات.
-- قائمة الإصلاحات المرتّبة بالأولوية.
+يوضح بصرياً: من أين جاء كل ريال وأين ذهب.
 
-## ما لن يُغيَّر في هذه المرحلة
-- لن تُجرى تعديلات على الكود — هذه **مرحلة تدقيق فقط**.
-- بعد موافقتك على التقرير، سأقترح خطة إصلاح منفصلة للأخطاء الحرجة أولًا.
+### 10. إعادة تصميم UI صفحة المالية
 
-## الخطوات
-1. قراءة الملفات الستة في `src/lib/` + `helpers.ts` بالكامل.
-2. قراءة slices المالية (`fundSlice`, `resourcePayableSlice`, `trackingSlice`, `budgetSlice`, `baselineSlice`).
-3. قراءة مكوّنات العرض المالي الرئيسية (Executive, Budget, Funds, Custody, Charts).
-4. قراءة آخر migration لدوال SQL (`split_settle_advance`, triggers).
-5. تشغيل `bunx vitest run` لرصد فجوات الاختبارات.
-6. كتابة `.lovable/financial-audit.md`.
+- استبدال التبويبات الأفقية المزدحمة بـ **Sidebar عمودي** أو **Command Palette**
+- بطاقات KPI ملخصة في الأعلى (BAC, AC, EV, CPI)
+- إخفاء التفاصيل الثانوية خلف Disclosure
+- توحيد ألوان الحالات (success/warning/destructive) - لا ألوان tailwind خام
+- استخدام نفس design tokens
 
-هل أبدأ؟
+---
+
+### تفاصيل تقنية
+
+**ملفات ستُعدّل:**
+
+- `src/pages/ProjectDetail.tsx` (ترتيب التبويبات + redesign)
+- `src/components/project/ExpensesSection.tsx` + dialog المصروف (ربط متعدد)
+- `src/components/project/FundsSection.tsx` (Sankey + Cash Transfer)
+- `src/components/project/CustodySection.tsx` (استقبال تحويل من المدير)
+- `src/components/project/ResourcePayablesSection.tsx` (زر دفع)
+- `src/components/project/ExecutiveSummary.tsx` (توزيع الموازنة)
+- `src/components/dashboard/DashboardStats.tsx` (مصدر واحد للحقيقة)
+- `src/lib/funds.ts` (إصلاح cashStillWithManager + outstanding advances)
+- `src/lib/finance.ts` (توحيد getProjectActualSpend)
+
+**Migrations:**
+
+- إضافة جدول `expense_fund_allocations` لربط مصروف بعدة مصادر (expense_id, source_type, source_id, amount)
+- إضافة جدول `cash_transfers` (from_fund_id, to_custody_id, amount, date)
+- أو حقل JSONB `fund_allocations` في expenses (أبسط)
+
+**اختبارات:**
+
+- `funds.test.ts`: سيناريو الدفعة الثانية المغلقة + السلفة المستحقة
+- `expenses.test.ts`: ربط مصروف بعهدتين
+- `dashboard.test.ts`: تطابق إجمالي المصروفات في كل الشاشات
+
+---
+
+### تنفيذ على مراحل
+
+**Mرحلة 1 (Bugs حرجة):** 4، 6، 8 — أرقام خاطئة تؤثر على القرارات
+**مرحلة 2 (مرونة الربط):** 2، 7، 9 — جوهر طلب المستخدم
+**مرحلة 3 (تدفق نقدي):** 3، 5 — تحويلات وتحقق
+**مرحلة 4 (UX):** 1، 10 — إعادة ترتيب وتصميم
+
+---
+
+### سؤال قبل البدء
+
+هل تريد:
+
+- **(أ)** تنفيذ كل المراحل دفعة واحدة (تحديث كبير، يستغرق وقتاً، خطر تعارضات)
+- **(ب)** البدء بالمرحلة 1 فقط (إصلاح الأرقام الخاطئة) ثم المراجعة
+  قم بهذه 
+
+&nbsp;
+
+- **(ج)** ترتيب مختلف للأولويات
+
+كذلك بخصوص ربط المصروف بعدة مصادر: هل تكفي عهدتين كحد أقصى، أم تريد ربط مفتوح (n مصادر)؟
+
+مفتوح
