@@ -203,12 +203,13 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             إجمالي العهد: {formatCurrency(totalAmount)} · المصروف: {formatCurrency(totalSpent)} · المتبقي: {formatCurrency(totalAmount - totalSpent)}
           </p>
         </div>
+        <div className="flex items-center gap-2">
         {!readOnly && (
         <ResponsiveFormDialog
           open={transferOpen}
           onOpenChange={setTransferOpen}
           title="تحويل نقد من المدير إلى عهدة"
-          trigger={<Button size="sm" variant="outline" className="gap-1.5 ml-2"><ArrowDownToLine className="w-3.5 h-3.5" />تحويل نقد</Button>}
+          trigger={<Button size="sm" variant="outline" className="gap-1.5"><ArrowDownToLine className="w-3.5 h-3.5" />تحويل نقد</Button>}
           footer={<FormFooter onCancel={() => setTransferOpen(false)} onSubmit={handleTransfer} submitLabel="تسجيل التحويل" />}
         >
           <div className="space-y-4">
@@ -256,10 +257,8 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
           </div>
         </ResponsiveFormDialog>
         )}
-        </>)}
-        <div className="hidden">
-
         {!readOnly && (
+
         <ResponsiveFormDialog
           open={open}
           onOpenChange={(o) => {
