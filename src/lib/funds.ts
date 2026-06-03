@@ -174,10 +174,12 @@ export function getProjectFundsSummary(
   expenses: Expense[],
   custodies: Custody[] = [],
   paymentRequests: PaymentRequest[] = [],
+  cashTransfers: CashTransfer[] = [],
 ): ProjectFundsSummary {
   const projectFunds = funds.filter((f) => f.projectId === projectId);
   const projectCustodies = custodies.filter((c) => c.projectId === projectId);
   const projectPRs = paymentRequests.filter((p) => p.projectId === projectId);
+  const projectTransfers = cashTransfers.filter((t) => t.projectId === projectId);
 
   const totalTransferred = projectFunds.reduce((s, f) => s + f.amount, 0);
 
@@ -210,9 +212,6 @@ export function getProjectFundsSummary(
     (s, f) => s + getFundDirectSpent(f.id, expenses, projectCustodies),
     0,
   );
-  // F1 fix: only subtract custody draws sourced from currently-active funds.
-  // Previously we subtracted ALL custody draws (including ones from settled funds),
-  // which produced a falsely low "cash with manager" and triggered unnecessary fund issuance.
   const custodyDrawOnActive = projectCustodies
     .filter((c) => c.sourceFundId && activeFundIds.has(c.sourceFundId))
     .reduce((s, c) => s + c.amount, 0);
@@ -220,7 +219,12 @@ export function getProjectFundsSummary(
     (s, f) => s + getFundOutstandingAdvances(f.id, projectPRs),
     0,
   );
-  const cashStillWithManager = activeFundsTotal - directSpendOnActive - custodyDrawOnActive - advancesOnActive;
+  // Cash transfers drain active funds (manager handed cash to a custody).
+  const transfersOutOnActive = projectTransfers
+    .filter((t) => activeFundIds.has(t.fromFundId))
+    .reduce((s, t) => s + t.amount, 0);
+  const cashStillWithManager =
+    activeFundsTotal - directSpendOnActive - custodyDrawOnActive - advancesOnActive - transfersOutOnActive;
 
   const unsettledFunds = projectFunds.filter((f) => f.status !== 'settled');
   const activeFund = getActiveFund(projectId, funds);
