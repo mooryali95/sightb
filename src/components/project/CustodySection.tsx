@@ -138,7 +138,9 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
 
   const enrichedCustodies = custodies.map(c => {
     const spent = expenses.filter((e: any) => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
-    return { ...c, spent, remaining: c.amount - spent };
+    const transfersIn = getCustodyCashTransfersIn(c.id, projTransfers);
+    const effectiveAmount = c.amount + transfersIn;
+    return { ...c, spent, transfersIn, effectiveAmount, remaining: effectiveAmount - spent };
   });
 
   // Auto-close exhausted custodies
@@ -153,8 +155,44 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
     });
   }, [enrichedCustodies.map(c => `${c.id}:${c.remaining}`).join(',')]);
 
-  const totalAmount = enrichedCustodies.reduce((s, c) => s + c.amount, 0);
+  const totalAmount = enrichedCustodies.reduce((s, c) => s + c.effectiveAmount, 0);
   const totalSpent = enrichedCustodies.reduce((s, c) => s + c.spent, 0);
+
+  const openTransfer = (custodyId: string) => {
+    setTransferCustodyId(custodyId);
+    setTransferFundId(availableFunds[0]?.id || '');
+    setTransferAmount('');
+    setTransferDate(new Date().toISOString().split('T')[0]);
+    setTransferNotes('');
+    setTransferOpen(true);
+  };
+
+  const handleTransfer = async () => {
+    const amt = parseFloat(transferAmount);
+    if (!amt || amt <= 0) { toast.error('أدخل مبلغاً صحيحاً'); return; }
+    if (!transferFundId) { toast.error('اختر الدفعة المصدر'); return; }
+    if (!transferCustodyId) { toast.error('اختر العهدة المستهدفة'); return; }
+    const fund = availableFunds.find(f => f.id === transferFundId);
+    if (!fund) { toast.error('الدفعة غير موجودة'); return; }
+    if (amt > fund.remaining) {
+      toast.error(`المبلغ يتجاوز رصيد الدفعة المتاح (${formatCurrency(fund.remaining)})`);
+      return;
+    }
+    try {
+      await createCashTransfer({
+        projectId,
+        fromFundId: transferFundId,
+        toCustodyId: transferCustodyId,
+        amount: amt,
+        transferDate,
+        notes: transferNotes.trim() || undefined,
+      });
+      toast.success('تم تسجيل تحويل النقد');
+      setTransferOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || 'تعذّر تسجيل التحويل');
+    }
+  };
 
   return (
     <div className="stat-card">
