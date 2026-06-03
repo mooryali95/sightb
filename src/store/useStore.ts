@@ -8,13 +8,14 @@ import { createBaselineSlice, BaselineSlice } from './slices/baselineSlice';
 import { createBudgetAmendmentSlice, BudgetAmendmentSlice } from './slices/budgetAmendmentSlice';
 import { createFundSlice, FundSlice } from './slices/fundSlice';
 import { createResourcePayableSlice, ResourcePayableSlice } from './slices/resourcePayableSlice';
+import { createCashTransferSlice, CashTransferSlice } from './slices/cashTransferSlice';
 
 export interface AuditLogEntry {
   id: string; userId: string; action: string; tableName: string;
   recordId: string; recordData: any; projectId?: string; createdAt: string;
 }
 
-export type AppState = LoadSlice & CompanySlice & ProjectSlice & BudgetSlice & TrackingSlice & BaselineSlice & BudgetAmendmentSlice & FundSlice & ResourcePayableSlice;
+export type AppState = LoadSlice & CompanySlice & ProjectSlice & BudgetSlice & TrackingSlice & BaselineSlice & BudgetAmendmentSlice & FundSlice & ResourcePayableSlice & CashTransferSlice;
 
 export const useStore = create<AppState>()((...a) => ({
   ...createLoadSlice(...a),
@@ -26,4 +27,5 @@ export const useStore = create<AppState>()((...a) => ({
   ...createBudgetAmendmentSlice(...a),
   ...createFundSlice(...a),
   ...createResourcePayableSlice(...a),
+  ...createCashTransferSlice(...a),
 }));
