@@ -8,6 +8,7 @@ import type {
   Expense,
   Custody,
   PaymentRequest,
+  CashTransfer,
 } from '@/types/project';
 
 export interface ProjectFundsSummary {
@@ -86,18 +87,45 @@ export function getCustodyOutstandingAdvances(
 }
 
 /**
- * إجمالي ما "خرج" من الدفعة = مصروف مباشر + عهد مسحوبة منها + سلف قائمة عليها.
+ * مجموع التحويلات النقدية الصادرة من دفعة (مدير → عهدة).
+ * هذه التحويلات تُنقص "النقد بيد المدير" المرتبط بالدفعة وتزيد رصيد العهدة.
+ */
+export function getFundCashTransfersOut(
+  fundId: string,
+  cashTransfers: CashTransfer[] = [],
+): number {
+  return cashTransfers
+    .filter((t) => t.fromFundId === fundId)
+    .reduce((s, t) => s + t.amount, 0);
+}
+
+/**
+ * مجموع التحويلات النقدية الواردة لعهدة محددة (إضافة لرصيدها بعد إنشائها).
+ */
+export function getCustodyCashTransfersIn(
+  custodyId: string,
+  cashTransfers: CashTransfer[] = [],
+): number {
+  return cashTransfers
+    .filter((t) => t.toCustodyId === custodyId)
+    .reduce((s, t) => s + t.amount, 0);
+}
+
+/**
+ * إجمالي ما "خرج" من الدفعة = مصروف مباشر + عهد مسحوبة منها + سلف قائمة عليها + تحويلات نقدية صادرة.
  */
 export function getFundSpent(
   fundId: string,
   expenses: Expense[],
   custodies: Custody[] = [],
   paymentRequests: PaymentRequest[] = [],
+  cashTransfers: CashTransfer[] = [],
 ): number {
   return (
     getFundDirectSpent(fundId, expenses, custodies)
     + getFundCustodyDraw(fundId, custodies)
     + getFundOutstandingAdvances(fundId, paymentRequests)
+    + getFundCashTransfersOut(fundId, cashTransfers)
   );
 }
 
@@ -106,8 +134,9 @@ export function getFundRemaining(
   expenses: Expense[],
   custodies: Custody[] = [],
   paymentRequests: PaymentRequest[] = [],
+  cashTransfers: CashTransfer[] = [],
 ): number {
-  return fund.amount - getFundSpent(fund.id, expenses, custodies, paymentRequests);
+  return fund.amount - getFundSpent(fund.id, expenses, custodies, paymentRequests, cashTransfers);
 }
 
 /**
