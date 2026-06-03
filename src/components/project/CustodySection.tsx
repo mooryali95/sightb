@@ -9,11 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, ArrowDownToLine, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { supabase } from '@/integrations/supabase/client';
-import { getFundSpent, getFundCustodyDraw } from '@/lib/funds';
+import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
 
 interface CustodySectionProps {
@@ -25,8 +25,12 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests } = useStore();
+  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests, cashTransfers, createCashTransfer, deleteCashTransfer } = useStore();
   const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
+  const projTransfers = useMemo(
+    () => (cashTransfers || []).filter((t) => t.projectId === projectId),
+    [cashTransfers, projectId],
+  );
   const { isAdminFor } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
@@ -38,16 +42,24 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   const [sourceFundId, setSourceFundId] = useState<string>('none');
   const [unlinkReason, setUnlinkReason] = useState('');
 
+  // ─── Cash transfer dialog state ───
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferCustodyId, setTransferCustodyId] = useState<string>('');
+  const [transferFundId, setTransferFundId] = useState<string>('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
+  const [transferNotes, setTransferNotes] = useState('');
+
   const availableFunds = useMemo(
     () => projectFunds
       .filter((f) => f.projectId === projectId && (f.status === 'transferred' || f.status === 'acknowledged'))
       .map((f) => {
-        const spent = getFundSpent(f.id, expenses, custodies, projPRs);
-        return { ...f, remaining: f.amount - spent };
+        const remaining = getFundRemaining(f, expenses, custodies, projPRs, projTransfers);
+        return { ...f, remaining };
       })
       .filter((f) => f.remaining > 0)
       .sort((a, b) => b.fundNumber - a.fundNumber),
-    [projectFunds, projectId, expenses, custodies, projPRs],
+    [projectFunds, projectId, expenses, custodies, projPRs, projTransfers],
   );
 
   // افتراضياً اختر أحدث دفعة متاحة عند فتح النموذج
