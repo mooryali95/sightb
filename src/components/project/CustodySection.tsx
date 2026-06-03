@@ -205,6 +205,62 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         </div>
         {!readOnly && (
         <ResponsiveFormDialog
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
+          title="تحويل نقد من المدير إلى عهدة"
+          trigger={<Button size="sm" variant="outline" className="gap-1.5 ml-2"><ArrowDownToLine className="w-3.5 h-3.5" />تحويل نقد</Button>}
+          footer={<FormFooter onCancel={() => setTransferOpen(false)} onSubmit={handleTransfer} submitLabel="تسجيل التحويل" />}
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              يحوّل مبلغاً من النقد المتبقي بيد المدير (دفعة مصدر) إلى رصيد عهدة قائمة. لا يُحتسب كمصروف.
+            </p>
+            <div className="space-y-2">
+              <Label>الدفعة المصدر</Label>
+              <Select value={transferFundId} onValueChange={setTransferFundId}>
+                <SelectTrigger><SelectValue placeholder="اختر دفعة" /></SelectTrigger>
+                <SelectContent>
+                  {availableFunds.map(f => (
+                    <SelectItem key={f.id} value={f.id}>
+                      دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>العهدة المستهدفة</Label>
+              <Select value={transferCustodyId} onValueChange={setTransferCustodyId}>
+                <SelectTrigger><SelectValue placeholder="اختر عهدة" /></SelectTrigger>
+                <SelectContent>
+                  {enrichedCustodies.filter(c => c.status === 'active').map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.resourceName} — رصيد {formatCurrency(c.remaining)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>المبلغ</Label>
+              <Input type="number" inputMode="decimal" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0" />
+            </div>
+            <div className="space-y-2">
+              <Label>التاريخ</Label>
+              <Input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>ملاحظات (اختياري)</Label>
+              <Input value={transferNotes} onChange={(e) => setTransferNotes(e.target.value)} placeholder="مثال: تعزيز عهدة المشتريات" />
+            </div>
+          </div>
+        </ResponsiveFormDialog>
+        )}
+        </>)}
+        <div className="hidden">
+
+        {!readOnly && (
+        <ResponsiveFormDialog
           open={open}
           onOpenChange={(o) => {
             setOpen(o);
