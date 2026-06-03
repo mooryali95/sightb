@@ -571,6 +571,23 @@ export interface FundSettlement {
   updatedAt: string;
 }
 
+/**
+ * تحويل نقد من النقد المتبقي بيد المدير (دفعة مصدر) إلى عهدة موجودة.
+ * لا يُعدّ مصروفاً — يُنقص رصيد الدفعة المصدر ويزيد رصيد العهدة المستهدفة.
+ */
+export interface CashTransfer {
+  id: string;
+  projectId: string;
+  fromFundId: string;
+  toCustodyId: string;
+  amount: number;
+  transferDate: string;
+  notes?: string;
+  createdAt: string;
+}
+
+
+
 export interface FundAlert {
   id: string;
   type: 'unsettled_long' | 'low_balance' | 'unsettled_block' | 'expense_unlinked' | 'unexplained_diff';

@@ -9,11 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, ArrowDownToLine, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { supabase } from '@/integrations/supabase/client';
-import { getFundSpent, getFundCustodyDraw } from '@/lib/funds';
+import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
 
 interface CustodySectionProps {
@@ -25,8 +25,12 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests } = useStore();
+  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests, cashTransfers, createCashTransfer, deleteCashTransfer } = useStore();
   const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
+  const projTransfers = useMemo(
+    () => (cashTransfers || []).filter((t) => t.projectId === projectId),
+    [cashTransfers, projectId],
+  );
   const { isAdminFor } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
@@ -38,16 +42,24 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   const [sourceFundId, setSourceFundId] = useState<string>('none');
   const [unlinkReason, setUnlinkReason] = useState('');
 
+  // ─── Cash transfer dialog state ───
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferCustodyId, setTransferCustodyId] = useState<string>('');
+  const [transferFundId, setTransferFundId] = useState<string>('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
+  const [transferNotes, setTransferNotes] = useState('');
+
   const availableFunds = useMemo(
     () => projectFunds
       .filter((f) => f.projectId === projectId && (f.status === 'transferred' || f.status === 'acknowledged'))
       .map((f) => {
-        const spent = getFundSpent(f.id, expenses, custodies, projPRs);
-        return { ...f, remaining: f.amount - spent };
+        const remaining = getFundRemaining(f, expenses, custodies, projPRs, projTransfers);
+        return { ...f, remaining };
       })
       .filter((f) => f.remaining > 0)
       .sort((a, b) => b.fundNumber - a.fundNumber),
-    [projectFunds, projectId, expenses, custodies, projPRs],
+    [projectFunds, projectId, expenses, custodies, projPRs, projTransfers],
   );
 
   // افتراضياً اختر أحدث دفعة متاحة عند فتح النموذج
@@ -126,7 +138,9 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
 
   const enrichedCustodies = custodies.map(c => {
     const spent = expenses.filter((e: any) => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
-    return { ...c, spent, remaining: c.amount - spent };
+    const transfersIn = getCustodyCashTransfersIn(c.id, projTransfers);
+    const effectiveAmount = c.amount + transfersIn;
+    return { ...c, spent, transfersIn, effectiveAmount, remaining: effectiveAmount - spent };
   });
 
   // Auto-close exhausted custodies
@@ -141,8 +155,44 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
     });
   }, [enrichedCustodies.map(c => `${c.id}:${c.remaining}`).join(',')]);
 
-  const totalAmount = enrichedCustodies.reduce((s, c) => s + c.amount, 0);
+  const totalAmount = enrichedCustodies.reduce((s, c) => s + c.effectiveAmount, 0);
   const totalSpent = enrichedCustodies.reduce((s, c) => s + c.spent, 0);
+
+  const openTransfer = (custodyId: string) => {
+    setTransferCustodyId(custodyId);
+    setTransferFundId(availableFunds[0]?.id || '');
+    setTransferAmount('');
+    setTransferDate(new Date().toISOString().split('T')[0]);
+    setTransferNotes('');
+    setTransferOpen(true);
+  };
+
+  const handleTransfer = async () => {
+    const amt = parseFloat(transferAmount);
+    if (!amt || amt <= 0) { toast.error('أدخل مبلغاً صحيحاً'); return; }
+    if (!transferFundId) { toast.error('اختر الدفعة المصدر'); return; }
+    if (!transferCustodyId) { toast.error('اختر العهدة المستهدفة'); return; }
+    const fund = availableFunds.find(f => f.id === transferFundId);
+    if (!fund) { toast.error('الدفعة غير موجودة'); return; }
+    if (amt > fund.remaining) {
+      toast.error(`المبلغ يتجاوز رصيد الدفعة المتاح (${formatCurrency(fund.remaining)})`);
+      return;
+    }
+    try {
+      await createCashTransfer({
+        projectId,
+        fromFundId: transferFundId,
+        toCustodyId: transferCustodyId,
+        amount: amt,
+        transferDate,
+        notes: transferNotes.trim() || undefined,
+      });
+      toast.success('تم تسجيل تحويل النقد');
+      setTransferOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || 'تعذّر تسجيل التحويل');
+    }
+  };
 
   return (
     <div className="stat-card">
@@ -153,7 +203,62 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             إجمالي العهد: {formatCurrency(totalAmount)} · المصروف: {formatCurrency(totalSpent)} · المتبقي: {formatCurrency(totalAmount - totalSpent)}
           </p>
         </div>
+        <div className="flex items-center gap-2">
         {!readOnly && (
+        <ResponsiveFormDialog
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
+          title="تحويل نقد من المدير إلى عهدة"
+          trigger={<Button size="sm" variant="outline" className="gap-1.5"><ArrowDownToLine className="w-3.5 h-3.5" />تحويل نقد</Button>}
+          footer={<FormFooter onCancel={() => setTransferOpen(false)} onSubmit={handleTransfer} submitLabel="تسجيل التحويل" />}
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              يحوّل مبلغاً من النقد المتبقي بيد المدير (دفعة مصدر) إلى رصيد عهدة قائمة. لا يُحتسب كمصروف.
+            </p>
+            <div className="space-y-2">
+              <Label>الدفعة المصدر</Label>
+              <Select value={transferFundId} onValueChange={setTransferFundId}>
+                <SelectTrigger><SelectValue placeholder="اختر دفعة" /></SelectTrigger>
+                <SelectContent>
+                  {availableFunds.map(f => (
+                    <SelectItem key={f.id} value={f.id}>
+                      دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>العهدة المستهدفة</Label>
+              <Select value={transferCustodyId} onValueChange={setTransferCustodyId}>
+                <SelectTrigger><SelectValue placeholder="اختر عهدة" /></SelectTrigger>
+                <SelectContent>
+                  {enrichedCustodies.filter(c => c.status === 'active').map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.resourceName} — رصيد {formatCurrency(c.remaining)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>المبلغ</Label>
+              <Input type="number" inputMode="decimal" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0" />
+            </div>
+            <div className="space-y-2">
+              <Label>التاريخ</Label>
+              <Input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>ملاحظات (اختياري)</Label>
+              <Input value={transferNotes} onChange={(e) => setTransferNotes(e.target.value)} placeholder="مثال: تعزيز عهدة المشتريات" />
+            </div>
+          </div>
+        </ResponsiveFormDialog>
+        )}
+        {!readOnly && (
+
         <ResponsiveFormDialog
           open={open}
           onOpenChange={(o) => {

@@ -243,6 +243,42 @@ export type Database = {
           },
         ]
       }
+      cash_transfers: {
+        Row: {
+          amount: number
+          created_at: string
+          from_fund_id: string
+          id: string
+          notes: string | null
+          project_id: string
+          to_custody_id: string
+          transfer_date: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          from_fund_id: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          to_custody_id: string
+          transfer_date?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          from_fund_id?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          to_custody_id?: string
+          transfer_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       change_orders: {
         Row: {
           amount_impact: number
