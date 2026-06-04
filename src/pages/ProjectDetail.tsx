@@ -256,7 +256,7 @@ export default function ProjectDetail() {
   const tabGroups: { key: TabGroup; label: string; icon: typeof MilestoneIcon; defaultTab: string; badge: number; badgeLevel: 'info' | 'warning' | 'critical'; badgeHint?: string }[] = [
     { key: 'summary', label: 'الملخص', icon: LayoutDashboard, defaultTab: 'overview', badge: 0, badgeLevel: 'info' },
     { key: 'planning', label: 'التخطيط', icon: MilestoneIcon, defaultTab: 'milestones', badge: badges.planning.count, badgeLevel: badges.planning.level, badgeHint: badges.planning.hint },
-    { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'budget', badge: badges.finance.count, badgeLevel: badges.finance.level, badgeHint: badges.finance.hint },
+    { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'expenses', badge: badges.finance.count, badgeLevel: badges.finance.level, badgeHint: badges.finance.hint },
     { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: badges.tracking.count, badgeLevel: badges.tracking.level, badgeHint: badges.tracking.hint },
     { key: 'management', label: 'الإدارة', icon: FileEdit, defaultTab: 'changeorders', badge: badges.management.count, badgeLevel: badges.management.level, badgeHint: badges.management.hint },
   ];
@@ -269,15 +269,17 @@ export default function ProjectDetail() {
       { value: 'milestones', label: 'المراحل', icon: MilestoneIcon },
       { value: 'resources', label: 'الموارد', icon: Users },
     ],
+    // ترتيب وفق أفضل الممارسات: العمل اليومي أولاً (المصروفات/الإيرادات/التدفق النقدي)
+    // ثم الالتزامات والمستحقات، وأخيراً المرجعيات (الموازنة/خط الأساس)
     finance: [
+      { value: 'expenses', label: 'المصروفات', icon: Receipt },
+      { value: 'revenue', label: 'الإيرادات', icon: DollarSign },
+      { value: 'funds', label: 'الدفعات', icon: Banknote },
+      { value: 'custody', label: 'العهد', icon: Wallet },
+      { value: 'payables', label: 'مستحقات الموارد', icon: HandCoins },
+      { value: 'commitments', label: 'الالتزامات', icon: Briefcase },
       { value: 'budget', label: 'الموازنة', icon: PiggyBank },
       { value: 'baseline', label: 'خط الأساس', icon: Baseline },
-      { value: 'expenses', label: 'المصروفات', icon: Receipt },
-      { value: 'funds', label: 'الصرفيات', icon: Banknote },
-      { value: 'commitments', label: 'الالتزامات', icon: Briefcase },
-      { value: 'custody', label: 'العهد', icon: Wallet },
-      { value: 'revenue', label: 'الإيرادات', icon: DollarSign },
-      { value: 'payables', label: 'مستحقات الموارد', icon: HandCoins },
     ],
     tracking: [
       { value: 'charts', label: 'التحليلات', icon: BarChart3 },
