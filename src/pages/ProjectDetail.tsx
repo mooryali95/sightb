@@ -791,6 +791,16 @@ export default function ProjectDetail() {
                   return (
                     <div className="space-y-4">
                       <CashLedgerSection projectId={project.id} funds={projectFunds} settlements={fundSettlements} expenses={pExpenses} custodies={pCustodies} />
+                      <CashFlowSankey
+                        projectId={project.id}
+                        funds={projectFunds}
+                        expenses={pExpenses}
+                        custodies={pCustodies}
+                        paymentRequests={paymentRequests}
+                        cashTransfers={cashTransfers || []}
+                        resources={pResources}
+                        currency={project.currency}
+                      />
                       <FundsSection projectId={project.id} expenses={pExpenses} readOnly={isReadOnly} />
                     </div>
                   );
