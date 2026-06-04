@@ -64,7 +64,7 @@ export default function ProjectDetail() {
   const {
     projects, companies, portfolios, budgetItems, expenses, revenues, resources, custodies,
     milestones, changeOrders, risks, baselines, commitments,
-    projectFunds, fundSettlements,
+    projectFunds, fundSettlements, paymentRequests, cashTransfers,
     loadAll, updateProject, archiveProject, deleteProject,
   } = useStore();
 
