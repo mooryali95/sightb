@@ -329,9 +329,11 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         </ResponsiveFormDialog>
         )}
         <p className="text-xs text-muted-foreground mt-2">العهدة مرتبطة بالمصروفات — عند إضافة مصروف يمكن ربطه بعهدة ليُخصم منها تلقائياً</p>
+        </div>
       </div>
 
       {enrichedCustodies.length === 0 ? (
+
         <p className="text-sm text-muted-foreground text-center py-8">لا توجد عهد مسجلة بعد</p>
       ) : (
         <div className="overflow-x-auto">
