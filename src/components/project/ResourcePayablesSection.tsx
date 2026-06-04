@@ -830,11 +830,36 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                       </td>
                       <td className="py-2">{bal.pendingPaymentRequests}</td>
                       <td className="py-2">
-                        {canEdit && bal.outstandingBalance > 0 && (
-                          <Button size="sm" variant="outline" onClick={() => openSettlement(res.id)}>
-                            مخالصة
-                          </Button>
-                        )}
+                        <div className="flex gap-2 flex-wrap">
+                          {canEdit && bal.outstandingBalance > 0 && (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                const eligible = projReimbs.filter(
+                                  (r) => r.resourceId === res.id && r.status === 'approved',
+                                );
+                                if (eligible.length === 0) {
+                                  toast.info('لا توجد استردادات معتمدة قابلة للدفع لهذا المورد');
+                                  return;
+                                }
+                                setPResourceId(res.id);
+                                setPType('reimbursement');
+                                setPSelectedReimbs(eligible.map((r) => r.id));
+                                setPDescription(`دفع مستحقات ${res.name}`);
+                                setPPriority('normal');
+                                setReqOpen(true);
+                              }}
+                            >
+                              <HandCoins className="h-4 w-4 ml-1" />
+                              دفع المستحقات
+                            </Button>
+                          )}
+                          {canEdit && bal.outstandingBalance > 0 && (
+                            <Button size="sm" variant="outline" onClick={() => openSettlement(res.id)}>
+                              مخالصة
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
