@@ -12,7 +12,7 @@ import { FormFooter } from '@/components/FormFooter';
 import { Plus, Pencil, ArrowDownToLine, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
-import { supabase } from '@/integrations/supabase/client';
+
 import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
 
