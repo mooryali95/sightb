@@ -34,7 +34,7 @@ interface ExpensesSectionProps {
 }
 
 export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15, projectStatus }: ExpensesSectionProps) {
-  const { addExpense, deleteExpense, updateExpense, projectFunds, acknowledgeFund } = useStore();
+  const { addExpense, deleteExpense, updateExpense, projectFunds, acknowledgeFund, updateProject } = useStore();
   const { isAdminFor } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
@@ -61,9 +61,14 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   );
   const fundIsRequired = !!activeFund;
   const paymentRequests = useStore((s) => s.paymentRequests);
+  const cashTransfers = useStore((s) => s.cashTransfers);
   const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
+  const projTransfers = useMemo(
+    () => (cashTransfers || []).filter((t) => t.projectId === projectId),
+    [cashTransfers, projectId],
+  );
   const activeFundRemaining = activeFund
-    ? getFundRemaining(activeFund, expenses, custodies, projPRs)
+    ? getFundRemaining(activeFund, expenses, custodies, projPRs, projTransfers)
     : 0;
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -224,7 +229,6 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
 
         // Auto-activate project on first expense
         if (projectStatus && ['planning', 'approved', 'pending_approval'].includes(projectStatus)) {
-          const { updateProject } = useStore.getState();
           await updateProject(projectId, { status: 'active' });
           toast.info('المشروع تحوّل لحالة "نشط" تلقائياً');
         }

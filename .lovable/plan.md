@@ -1,147 +1,66 @@
-## المشاكل المرصودة وخطة المعالجة
 
-### 1. إعادة ترتيب تبويبات صفحة المالية (UX)
+# خطة إصلاح شاملة (مرقّمة بالأولوية)
 
-**الترتيب الحالي:** الموازنة، خط الأساس، التتبع، الإيراد...
-**الترتيب الجديد (وفق أفضل الممارسات PMBOK + IPMA):**
-
-1. **المصروفات** (التاب الافتراضي - مركز العمل اليومي)
-2. **الإيرادات**
-3. **الدفعات والعهد** (التدفق النقدي)
-4. **المستحقات للموارد**
-5. **الالتزامات وأوامر التغيير**
-6. **خط الأساس والموازنة** (مرجعية - تُستخدم في بداية المشروع فقط)
-7. **التحليلات (What-if / EVM)**
-
-### 2. مرونة ربط المصروف بمصدر التمويل (المشكلة الجوهرية)
-
-**الحالي:** المصروف يُجبر على الربط بالدفعة الأولى.
-**المطلوب:**
-
-- حقل "مصدر التمويل" يقبل: دفعة محددة | عهدة محددة | عهدتين (مقسوم) | بدون
-- إعادة فتح أي مصروف موجود وتغيير ربطه
-- عند اختيار عهدتين: حقلا مبلغ (مثلاً 800 من عهدة س + 200 من عهدة ع)، مع تحقق أن المجموع = إجمالي المصروف
-- توضيح بصري في جدول المصروفات يُظهر المصدر/المصادر
-
-### 3. تحويل النقد بين المدير والعهد
-
-إضافة عملية "تحويل نقد بيد المدير → عهدة" (Cash Transfer):
-
-- لا يُعدّ مصروفاً
-- يُنقص "النقد بيد المدير" ويزيد رصيد العهدة
-- يظهر في سجل العهدة كمصدر التمويل
-
-### 4. إصلاح حساب "النقد بيد المدير" للدفعات المغلقة (Bug)
-
-**المشكلة:** الدفعة الثانية مسواة ومغلقة لكن تعرض 13 ألف متبقي بيد المدير، رغم أنها سُحبت كسلفة على مورد.
-**السبب المرجح:** السلف المستحقة (`payment_requests` بنوع advance غير مسواة) لا تُخصم من رصيد الدفعة، أو دالة `cashStillWithManager` لا تقرأ السلف القائمة.
-**الإصلاح:**
-
-- في `funds.ts`: إضافة `outstandingAdvancesOnActive` (السلف غير المسواة المربوطة بدفعات نشطة) إلى المعادلة:
-`cashStillWithManager = activeFundsTotal − directSpend − custodyDraw − outstandingAdvances`
-- التحقق من أن إغلاق الدفعة (settlement) يُصفّر رصيدها فعلياً
-
-### 5. تدفق العهدة المربوطة بالدفعة (التحقق)
-
-مراجعة شاملة:
-
-- العهدة تُخصم مرة واحدة فقط من `source_fund_id`
-- مصروفات العهدة لا تُخصم مرة ثانية من الدفعة
-- إغلاق العهدة يُرجع الفائض للدفعة (وليس للمدير)
-- كتابة اختبارات Vitest تغطي السيناريو الكامل
-
-### 6. مصدر واحد للحقيقة في الداشبورد (Bug)
-
-**المشكلة:** "إجمالي المصروفات" = 57,273 بينما "المصروف الموثق" = 33,423 → تناقض.
-**الإصلاح:**
-
-- توحيد دالة واحدة `getProjectActualSpend(projectId)` تُستخدم في كل المكونات
-- إزالة الفلاتر المختلفة (approval_status، legacy_pre_fund، fund_id IS NULL)
-- إضافة tooltip يشرح ما يُحتسب وما يُستثنى
-- اختبار يضمن تطابق الأرقام بين Dashboard وExecutiveSummary وExpensesSection
-
-### 7. مستحقات الموارد - الدفع والربط
-
-- زر "دفع" بجانب كل مستحق → ينشئ payment_request مرتبط
-- بعد الدفع يُربط تلقائياً بـ expense
-- شارة "مستحق غير مدفوع" واضحة في قائمة المستحقات والداشبورد
-
-### 8. توزيع الموازنة في صفحة الملخص (Bug)
-
-مراجعة معادلة `budgetDistribution` في ExecutiveSummary - يبدو أنها تستخدم `totalPlanned` بدل `bacWithReserve` أو تتجاهل أوامر التغيير المعتمدة.
-
-### 9. الانفوجرافيك (Sankey Diagram)
-
-إضافة مخطط Sankey في تبويب "الدفعات والعهد":
-
-```text
-الدفعة 1 ────┬──> العهدة أ ──> مصروفات (3)
-             ├──> سلفة المورد س
-             └──> مصروف مباشر
-الدفعة 2 ────> سلفة المورد ع (غير مسواة)
-```
-
-يوضح بصرياً: من أين جاء كل ريال وأين ذهب.
-
-### 10. إعادة تصميم UI صفحة المالية
-
-- استبدال التبويبات الأفقية المزدحمة بـ **Sidebar عمودي** أو **Command Palette**
-- بطاقات KPI ملخصة في الأعلى (BAC, AC, EV, CPI)
-- إخفاء التفاصيل الثانوية خلف Disclosure
-- توحيد ألوان الحالات (success/warning/destructive) - لا ألوان tailwind خام
-- استخدام نفس design tokens
+تم تشغيل الاختبارات (81/81 ✅) ثم إجراء تدقيق آلي مزدوج على الوحدة المالية وصفحة المشروع والداشبورد. النتائج أدناه. التنفيذ بعد موافقتك. الإصلاحات frontend فقط (لا تغييرات DB).
 
 ---
 
-### تفاصيل تقنية
+## 🔴 المرحلة 1 — حرج (أرقام خاطئة تظهر للمستخدم)
 
-**ملفات ستُعدّل:**
+1. **`FundsSection.tsx:438` — تمرير `cashTransfers` المفقود إلى `getFundSpent`/`getFundRemaining`** (المتبقي من الدفعة مُضخّم عند وجود تحويلات نقدية).
+2. **`CashLedgerSection.tsx:62` — تمرير `cashTransfers` إلى `getProjectFundsSummary`** (لمنع تعارض "بيد المدير" بين بطاقتين على نفس التبويب).
+3. **`ExpensesSection.tsx:66` — تمرير `cashTransfers` في حارس رصيد الدفعة** (الإنذار ⚠️ يظهر متأخراً).
+4. **`ResourcePayablesSection.tsx:239` — إضافة `getCustodyCashTransfersIn` إلى رصيد العهدة المتاح** (دفعات مشروعة تُحجب حالياً).
+5. **`CashLedgerSection.tsx:429` — تطبيق نفس الإصلاح على عرض رصيد العهدة في الـ Overview**.
+6. **`CustodySection.tsx:356` — قسمة شريط نسبة الصرف على `c.effectiveAmount` بدلاً من `c.amount`** (يظهر >100% بعد التعبئة).
+7. **`Dashboard.tsx:222-248` — تمرير المصفوفات المفلترة** (`filteredAllExpenses/BudgetItems/Revenues/ChangeOrders`) إلى `HealthMatrix`, `AttentionProjects`, `ProjectCards`, `ProjectsTable` (الفلاتر لا تؤثر عليها الآن).
+8. **`PortfolioDetail.tsx:52` — إزالة حارس `detailsLoaded` العام** (يمنع تحميل بقية مشاريع المحفظة) واستدعاء `loadProjectData` لكل مشروع.
 
-- `src/pages/ProjectDetail.tsx` (ترتيب التبويبات + redesign)
-- `src/components/project/ExpensesSection.tsx` + dialog المصروف (ربط متعدد)
-- `src/components/project/FundsSection.tsx` (Sankey + Cash Transfer)
-- `src/components/project/CustodySection.tsx` (استقبال تحويل من المدير)
-- `src/components/project/ResourcePayablesSection.tsx` (زر دفع)
-- `src/components/project/ExecutiveSummary.tsx` (توزيع الموازنة)
-- `src/components/dashboard/DashboardStats.tsx` (مصدر واحد للحقيقة)
-- `src/lib/funds.ts` (إصلاح cashStillWithManager + outstanding advances)
-- `src/lib/finance.ts` (توحيد getProjectActualSpend)
+## 🟠 المرحلة 2 — مهم (تكرارات + سلوك خاطئ)
 
-**Migrations:**
+9. **تبويب "الدفعات" يكرّر البطاقات** — `CashLedgerSection` و`FundsSection` يعرضان نفس بطاقات الملخص + جدول الدفعات. **الحل:** `CashLedgerSection` = ملخص فقط، `FundsSection` = جدول وأزرار فقط.
+10. **`RevenueSection.tsx:243` — بطاقة "ذمم مدينة" تطابق "مُفوتر" حرفياً.** استبدالها بـ "غير محصّل / قيمة العقد %" أو حذفها.
+11. **`ProjectDetail.tsx:891` — `MobileFAB` للـ tracking يشير إلى تبويب `risks` الموجود في `management`**. تصحيح الـ group.
+12. **تبويب EVM مكرّر** — EAC/TCPI كـ StatCards في رأس `ProjectDetail` ثم قسم EVM كامل في `ExecutiveSummary`. **الحل:** الإبقاء على القسم في `ExecutiveSummary` وإزالة StatCards المكررة من الرأس.
+13. **زر "إقرار الاستلام" مكرر** بين `FundsSection` وداخل دايلوج المصروفات في `ExpensesSection`. إزالة النسخة المضمّنة.
+14. **`FundsSection.tsx:204` — زر "حفظ مسودة" يصمت بلا رسالة** قبل إقرار الاستلام. إضافة `toast.error` وتعطيل الزر.
+15. **`FundsSection.tsx:536` — زر الحذف يتجاهل `readOnly`.** إضافة الشرط.
+16. **`CustodySection.tsx:147` — إغلاق العهدة التلقائي يكتب مباشرة لـ Supabase ويتجاوز Zustand** → استخدام `updateCustody` من المتجر.
+17. **`ExpensesSection.tsx:227` — استدعاء `useStore.getState()` داخل handler** → إضافة `updateProject` للـ destructure.
+18. **`BudgetAlerts` مستورد ولا يُعرض أبداً في `ProjectDetail.tsx:30`.** قرار: حذف الاستيراد (تم استبداله بـ `SmartBudgetAlerts`).
+19. **`WhatIfSection.tsx:162` — مقارنة EAC تستخدم `contractValue` الأصلي بدل `scenario.newContract`.**
+20. **`WhatIfSection.tsx:51` — EV يُحسب من `projectedTotal` فيُلغي تأثير expense delta على CPI.** استخدام `totalPlanned` الأصلي كـ BAC.
+21. **`ProjectDetail.tsx:859` — `Accordion onValueChange` يحفظ `vals[0]` فقط في URL.** تتبّع آخر عنصر مفتوح.
 
-- إضافة جدول `expense_fund_allocations` لربط مصروف بعدة مصادر (expense_id, source_type, source_id, amount)
-- إضافة جدول `cash_transfers` (from_fund_id, to_custody_id, amount, date)
-- أو حقل JSONB `fund_allocations` في expenses (أبسط)
+## 🟡 المرحلة 3 — تجميل وتنظيف
 
-**اختبارات:**
-
-- `funds.test.ts`: سيناريو الدفعة الثانية المغلقة + السلفة المستحقة
-- `expenses.test.ts`: ربط مصروف بعهدتين
-- `dashboard.test.ts`: تطابق إجمالي المصروفات في كل الشاشات
+22. حذف استيرادات ميتة: `Sparkles`, `DialogTrigger` في `ProjectDetail.tsx`؛ `getHealthScore`, `BarChart3`, `detailsLoading` في `PortfolioDetail.tsx`.
+23. **`PortfolioDetail.tsx:318` — أيقونة `TrendingUp` للمصروفات** → تبديلها بـ `TrendingDown`.
+24. **`AuditLogSection.tsx:153` — `toLocaleString('en-US')`** يُنتج أرقاماً غربية وسط واجهة عربية → استخدام `formatCurrency` أو `'ar-EG'`.
+   *(ملاحظة: قاعدة التطبيق تستخدم أرقاماً إنجليزية في كل مكان، لذا سنُبقي en-US ولكن نوحّد التنسيق.)*
+25. **`ExecutiveSummary.tsx:278` — رموز يونيكود `■ □ ○`** → استبدالها بـ `<span>` ملوّنة.
+26. **`CashFlowSankey.tsx:59` — السلف المسدّدة نقداً (cash_refund) لا تظهر في المخطط** → إضافة حلقة منفصلة.
+27. **`resource-payables.ts:108` vs `getResourceBalance:46` — صيغ "outstanding" مختلفة** → توحيدها مع اختبار وحدة.
+28. **`PortfolioDetail.tsx:160` — `loading || !portfolio` يستبدل الصفحة بسبينر** عند الـ refresh الخلفي → `if (!portfolio)` فقط.
 
 ---
 
-### تنفيذ على مراحل
+## التحقق بعد التنفيذ
 
-**Mرحلة 1 (Bugs حرجة):** 4، 6، 8 — أرقام خاطئة تؤثر على القرارات
-**مرحلة 2 (مرونة الربط):** 2، 7، 9 — جوهر طلب المستخدم
-**مرحلة 3 (تدفق نقدي):** 3، 5 — تحويلات وتحقق
-**مرحلة 4 (UX):** 1، 10 — إعادة ترتيب وتصميم
+- تشغيل `vitest run` (يجب بقاء 81/81).
+- إضافة اختبارات وحدة جديدة لـ:
+  - `getFundRemaining` مع `cashTransfers`.
+  - `getCustodyEffectiveAmount` (الرصيد بعد التعبئة).
+  - توحيد صيغة "outstanding" في `resource-payables`.
+- مراجعة بصرية لتبويب "الدفعات" بعد إزالة التكرار.
+- اختبار `MobileFAB` على viewport 393px.
 
 ---
 
-### سؤال قبل البدء
+## خيارات التنفيذ
 
-هل تريد:
+- **أ) تنفيذ كل المراحل (1+2+3) في دفعة واحدة** — تقدير: 28 تعديل، أغلبها صغير ومركّز.
+- **ب) تنفيذ المرحلة 1 (الحرج) فقط الآن** ثم المراجعة قبل المتابعة.
+- **ج) اختيار بنود محددة تريد استبعادها.**
 
-- **(أ)** تنفيذ كل المراحل دفعة واحدة (تحديث كبير، يستغرق وقتاً، خطر تعارضات)
-- **(ب)** البدء بالمرحلة 1 فقط (إصلاح الأرقام الخاطئة) ثم المراجعة
-  قم بهذه 
-
-&nbsp;
-
-- **(ج)** ترتيب مختلف للأولويات
-
-كذلك بخصوص ربط المصروف بعدة مصادر: هل تكفي عهدتين كحد أقصى، أم تريد ربط مفتوح (n مصادر)؟
-
-مفتوح
+أوصي بـ **(أ)** لأن البنود مستقلة ومركّزة. أخبرني أيها تريد.

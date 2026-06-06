@@ -12,7 +12,7 @@ import { FormFooter } from '@/components/FormFooter';
 import { Plus, Pencil, ArrowDownToLine, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
-import { supabase } from '@/integrations/supabase/client';
+
 import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
 
@@ -143,14 +143,16 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
     return { ...c, spent, transfersIn, effectiveAmount, remaining: effectiveAmount - spent };
   });
 
-  // Auto-close exhausted custodies
+  // Auto-close exhausted custodies (via Zustand updateCustody — keeps state in sync)
   useEffect(() => {
     enrichedCustodies.forEach(async (c) => {
       if (c.remaining <= 0 && c.status === 'active' && !c.closedDate) {
-        await (supabase as any).from('custodies').update({
-          status: 'closed',
-          closed_date: new Date().toISOString().split('T')[0],
-        }).eq('id', c.id);
+        try {
+          await updateCustody(c.id, {
+            status: 'closed',
+            closedDate: new Date().toISOString().split('T')[0],
+          } as any);
+        } catch { /* silent — background close */ }
       }
     });
   }, [enrichedCustodies.map(c => `${c.id}:${c.remaining}`).join(',')]);
@@ -353,7 +355,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             </thead>
             <tbody>
               {enrichedCustodies.map((c) => {
-                const pct = c.amount > 0 ? (c.spent / c.amount) * 100 : 0;
+                const pct = c.effectiveAmount > 0 ? (c.spent / c.effectiveAmount) * 100 : 0;
                 return (
                   <tr key={c.id} className={pct > 100 ? 'bg-destructive/5' : ''}>
                     <td className="font-medium">

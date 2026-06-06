@@ -181,36 +181,7 @@ export function ExecutiveSummary({
         )}
       </SectionCard>
 
-      {/* ═══ 2. EVM ═══ */}
-      {evm && (
-        <SectionCard>
-          <SectionTitle icon={BarChart3}>مؤشرات الأداء (EVM)</SectionTitle>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="text-center p-3 rounded-lg bg-muted/40">
-              <p className="text-xs text-muted-foreground">أداء التكلفة (CPI)</p>
-              <p className={`text-lg font-mono font-bold ${evm.cpi >= 1 ? 'text-emerald-600' : evm.cpi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.cpi.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">{evm.cpi >= 1 ? 'ضمن الميزانية' : 'تجاوز'}</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/40">
-              <p className="text-xs text-muted-foreground">أداء الجدول (SPI)</p>
-              <p className={`text-lg font-mono font-bold ${evm.spi >= 1 ? 'text-emerald-600' : evm.spi >= 0.9 ? 'text-amber-600' : 'text-destructive'}`}>{evm.spi.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">{evm.spi >= 1 ? 'في الموعد' : 'متأخر'}</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/40">
-              <p className="text-xs text-muted-foreground">التكلفة المتوقعة (EAC)</p>
-              <p className="text-sm font-mono font-bold">{formatCurrency(evm.eac)}</p>
-              <p className={`text-xs ${evm.vac >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                {evm.vac >= 0 ? `وفر: ${formatCurrency(evm.vac)}` : `تجاوز: ${formatCurrency(Math.abs(evm.vac))}`}
-              </p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/40">
-              <p className="text-xs text-muted-foreground">الأداء المطلوب (TCPI)</p>
-              <p className="text-lg font-mono font-bold">{evm.tcpiBAC.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">{evm.tcpiBAC <= 1.0 ? 'مريح' : evm.tcpiBAC <= 1.2 ? 'يحتاج تحسين' : 'راجع الخطة'}</p>
-            </div>
-          </div>
-        </SectionCard>
-      )}
+      {/* قسم EVM المفصّل أُزيل لتفادي تكرار CPI/SPI/EAC/TCPI المعروضة في رأس الصفحة */}
 
       {/* ═══ 3. الموازنة + المراحل ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -274,10 +245,10 @@ export function ExecutiveSummary({
           <Progress value={collectedPct} className="h-2" />
           {summary.accountsReceivable > 0 && <Progress value={(summary.collectedRevenue + summary.accountsReceivable) / summary.effectiveContractValue * 100} className="h-1 opacity-40" />}
         </div>
-        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-          <span>■ محصّل {collectedPct.toFixed(0)}%</span>
-          <span>□ مفوتر</span>
-          <span>○ لم يُفوتر</span>
+        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> محصّل {collectedPct.toFixed(0)}%</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block" /> مفوتر</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm border border-muted-foreground/50 inline-block" /> لم يُفوتر</span>
         </div>
       </SectionCard>
 

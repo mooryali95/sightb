@@ -47,8 +47,8 @@ export function WhatIfSection({
     const monthlyBurnRate = newDuration > 0 ? projectedTotal / newDuration : 0;
     const monthsRemaining = monthlyBurnRate > 0 ? budgetRemaining / monthlyBurnRate : 0;
 
-    // EVM indicators — EV = BAC × %Complete (PMI standard)
-    const bac = projectedTotal; // BAC = الميزانية المخططة (ليست قيمة العقد)
+    // EVM — BAC هو الموازنة الأصلية (لا تتأثر بسلايدر المصروفات حتى يبقى CPI ذا معنى)
+    const bac = totalPlanned;
     const ev = bac * (percentComplete / 100);
     const cpi = newExpenses > 0 ? ev / newExpenses : 1;
     const eac = cpi > 0 ? projectedTotal / cpi : projectedTotal;
@@ -159,7 +159,7 @@ export function WhatIfSection({
           title="التكلفة المقدرة (EAC)"
           value={formatCurrency(scenario.eac, currency)}
           subtitle="تقدير التكلفة عند الإنجاز"
-          trend={scenario.eac <= contractValue ? 'up' : 'down'}
+          trend={scenario.eac <= scenario.newContract ? 'up' : 'down'}
         />
       </div>
 

@@ -204,7 +204,10 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const handleSaveDraft = async () => {
     if (!settleFor) return;
     const existing = getSettlementForFund(settleFor.id, fundSettlements);
-    if (!existing) return;
+    if (!existing) {
+      toast.error('لا توجد مسودة لحفظها — اضغط "إرسال للاعتماد" لإنشاء التسوية أولاً.');
+      return;
+    }
     try {
       await updateSettlementDraft(existing.id, {
         remainingCash: parseFloat(remainingCash) || 0,
@@ -269,49 +272,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
         </div>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="p-4 rounded-xl">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <Wallet className="w-3.5 h-3.5" /> إجمالي المحوّل
-          </div>
-          <p className="text-lg font-mono font-semibold">{formatCurrency(summary.totalTransferred)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{summary.fundCount} دفعة</p>
-        </Card>
-        <Card className="p-4 rounded-xl">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <FileText className="w-3.5 h-3.5" /> المصروف الموثق
-          </div>
-          <p className="text-lg font-mono font-semibold">{formatCurrency(summary.totalDocumentedSpend)}</p>
-        </Card>
-        <Card className="p-4 rounded-xl">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> المسوّى
-          </div>
-          <p className="text-lg font-mono font-semibold">{formatCurrency(summary.totalSettled)}</p>
-        </Card>
-        <Card className={cn(
-          'p-4 rounded-xl border-2',
-          remainingStatus === 'critical' && 'border-destructive/40 bg-destructive/5',
-          remainingStatus === 'watch' && 'border-amber-400/40 bg-amber-50/50 dark:bg-amber-900/10',
-          remainingStatus === 'healthy' && 'border-emerald-400/30 bg-emerald-50/50 dark:bg-emerald-900/10',
-        )}>
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-            <Wallet className="w-3.5 h-3.5" /> في يد المدير
-          </div>
-          <p className={cn(
-            'text-lg font-mono font-semibold',
-            remainingStatus === 'critical' && 'text-destructive',
-            remainingStatus === 'watch' && 'text-amber-700 dark:text-amber-400',
-            remainingStatus === 'healthy' && 'text-emerald-700 dark:text-emerald-400',
-          )}>
-            {formatCurrency(summary.remainingInManagerHand)}
-          </p>
-          {summary.activeFund && (
-            <p className="text-xs text-muted-foreground mt-1">دفعة نشطة #{summary.activeFund.fundNumber}</p>
-          )}
-        </Card>
-      </div>
+      {/* بطاقات الملخّص أُزيلت من هنا — الملخّص الموحّد يُعرض في CashLedgerSection بأعلى نفس التبويب */}
 
       {/* Header + Create */}
       <div className="stat-card">
@@ -435,8 +396,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
               </thead>
               <tbody>
                 {projectFundsList.map((f) => {
-                  const spent = getFundSpent(f.id, projectExpenses, projectCustodies, projPRs);
-                  const calcRemaining = getFundRemaining(f, projectExpenses, projectCustodies, projPRs);
+                  const spent = getFundSpent(f.id, projectExpenses, projectCustodies, projPRs, projTransfers);
+                  const calcRemaining = getFundRemaining(f, projectExpenses, projectCustodies, projPRs, projTransfers);
                   const settlement = getSettlementForFund(f.id, fundSettlements);
                   // إذا تمت تسوية الدفعة واعتمدت → اعرض المتبقي وفق التسوية الفعلية (لا المحسوب)
                   // هذا يمنع ظهور رصيد وهمي بيد المدير لدفعة مغلقة بسبب سلفة قائمة لم تُسوَّ بعد
@@ -533,7 +494,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               عرض
                             </Button>
                           )}
-                          {(isOwner || isAdmin) && f.status !== 'settled' && (
+                          {(isOwner || isAdmin) && f.status !== 'settled' && !readOnly && (
                             <ConfirmDeleteDialog
                               title="حذف الدفعة"
                               description={(() => {

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -23,11 +23,10 @@ import {
   DollarSign, TrendingUp, TrendingDown, Target, Users, Wallet, History,
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
-  Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, Sparkles, HandCoins,
+  Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, HandCoins,
   MoreHorizontal, Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { BudgetAlerts } from '@/components/BudgetAlerts';
 import { exportToExcel, exportToPDF } from '@/lib/export';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { MobileFAB } from '@/components/MobileFAB';
@@ -856,7 +855,10 @@ export default function ProjectDetail() {
                   <Accordion
                     type="multiple"
                     defaultValue={defaultOpen}
-                    onValueChange={(vals) => { if (vals[0]) setActiveTab(vals[0]); }}
+                    onValueChange={(vals) => {
+                      // اعتبر آخر عنصر مفتوح (الأحدث) هو التبويب النشط، ليس الأول
+                      if (vals.length > 0) setActiveTab(vals[vals.length - 1]);
+                    }}
                     className="space-y-2"
                   >
                     {sections.map((s) => {
@@ -888,8 +890,8 @@ export default function ProjectDetail() {
         const fabMap: Record<string, { label: string; tab: string; group: TabGroup }> = {
           finance: { label: 'إضافة مصروف', tab: 'expenses', group: 'finance' },
           planning: { label: 'إضافة مرحلة', tab: 'milestones', group: 'planning' },
-          tracking: { label: 'إضافة خطر', tab: 'risks', group: 'tracking' },
-          management: { label: 'أمر تغيير', tab: 'changeorders', group: 'management' },
+          tracking: { label: 'تحليل ما-إذا', tab: 'whatif', group: 'tracking' },
+          management: { label: 'إضافة خطر', tab: 'risks', group: 'management' },
         };
         const fab = fabMap[activeGroup];
         if (!fab) return null;
