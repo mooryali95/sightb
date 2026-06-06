@@ -47,10 +47,16 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
   const paymentRequests = useStore((s) => s.paymentRequests);
   const resourceSettlements = useStore((s) => s.resourceSettlements);
   const resources = useStore((s) => s.resources);
+  const cashTransfers = useStore((s) => s.cashTransfers);
 
   const projectPayReqs = useMemo(
     () => paymentRequests.filter((p) => p.projectId === projectId),
     [paymentRequests, projectId],
+  );
+
+  const projectTransfers = useMemo(
+    () => (cashTransfers || []).filter((t) => t.projectId === projectId),
+    [cashTransfers, projectId],
   );
 
   const projectExpenses = useMemo(
@@ -59,8 +65,8 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
   );
 
   const summary = useMemo(
-    () => getProjectFundsSummary(projectId, funds, settlements, projectExpenses, custodies, projectPayReqs),
-    [projectId, funds, settlements, projectExpenses, custodies, projectPayReqs],
+    () => getProjectFundsSummary(projectId, funds, settlements, projectExpenses, custodies, projectPayReqs, projectTransfers),
+    [projectId, funds, settlements, projectExpenses, custodies, projectPayReqs, projectTransfers],
   );
 
   const projectFundsList = useMemo(

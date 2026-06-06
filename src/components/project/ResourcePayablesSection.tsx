@@ -212,6 +212,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     [projReqs, payDialogId],
   );
 
+  const cashTransfers = useStore((s) => s.cashTransfers);
+  const projTransfers = useMemo(
+    () => (cashTransfers || []).filter((t) => t.projectId === projectId),
+    [cashTransfers, projectId],
+  );
+
   // Active funds (transferred/acknowledged) with remaining balance
   const availableFunds = useMemo(() => {
     return projectFunds
@@ -223,12 +229,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           expenses.filter((e) => e.projectId === projectId),
           custodies.filter((c) => c.projectId === projectId),
           projReqs,
+          projTransfers,
         ),
       }))
       .filter((x) => x.remaining > 0);
-  }, [projectFunds, expenses, custodies, projectId, projReqs]);
+  }, [projectFunds, expenses, custodies, projectId, projReqs, projTransfers]);
 
-  // Active custodies with remaining balance
+  // Active custodies with remaining balance (يشمل التحويلات النقدية الواردة)
   const availableCustodies = useMemo(() => {
     return custodies
       .filter((c) => c.projectId === projectId && c.status === 'active')
@@ -236,10 +243,11 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         const spent = expenses
           .filter((e) => e.custodyId === c.id)
           .reduce((s, e) => s + e.amount, 0);
-        return { custody: c, remaining: c.amount - spent };
+        const transfersIn = getCustodyCashTransfersIn(c.id, projTransfers);
+        return { custody: c, remaining: (c.amount + transfersIn) - spent };
       })
       .filter((x) => x.remaining > 0);
-  }, [custodies, expenses, projectId]);
+  }, [custodies, expenses, projectId, projTransfers]);
 
   const openPayDialog = (reqId: string, scheduledDate?: string) => {
     setPayDialogId(reqId);

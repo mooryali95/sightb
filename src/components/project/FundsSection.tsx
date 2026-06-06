@@ -435,8 +435,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
               </thead>
               <tbody>
                 {projectFundsList.map((f) => {
-                  const spent = getFundSpent(f.id, projectExpenses, projectCustodies, projPRs);
-                  const calcRemaining = getFundRemaining(f, projectExpenses, projectCustodies, projPRs);
+                  const spent = getFundSpent(f.id, projectExpenses, projectCustodies, projPRs, projTransfers);
+                  const calcRemaining = getFundRemaining(f, projectExpenses, projectCustodies, projPRs, projTransfers);
                   const settlement = getSettlementForFund(f.id, fundSettlements);
                   // إذا تمت تسوية الدفعة واعتمدت → اعرض المتبقي وفق التسوية الفعلية (لا المحسوب)
                   // هذا يمنع ظهور رصيد وهمي بيد المدير لدفعة مغلقة بسبب سلفة قائمة لم تُسوَّ بعد
