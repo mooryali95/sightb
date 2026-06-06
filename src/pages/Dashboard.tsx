@@ -219,8 +219,8 @@ export default function Dashboard() {
             />
 
             <HealthMatrix
-              filteredProjects={filteredProjects} expenses={expenses}
-              budgetItems={budgetItems} revenues={revenues} changeOrders={changeOrders}
+              filteredProjects={filteredProjects} expenses={filteredAllExpenses}
+              budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
             />
 
             <SnapshotControls
@@ -231,20 +231,20 @@ export default function Dashboard() {
             />
 
             <AttentionProjects
-              filteredProjects={filteredProjects} expenses={expenses}
-              budgetItems={budgetItems} revenues={revenues} changeOrders={changeOrders}
+              filteredProjects={filteredProjects} expenses={filteredAllExpenses}
+              budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
               risks={risks} projects={projects} portfolios={portfolios}
             />
 
             <ProjectCards
-              filteredProjects={filteredProjects} expenses={expenses}
-              budgetItems={budgetItems} revenues={revenues} changeOrders={changeOrders}
+              filteredProjects={filteredProjects} expenses={filteredAllExpenses}
+              budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
               companies={companies}
             />
 
             <ProjectsTable
-              filteredProjects={filteredProjects} expenses={expenses}
-              budgetItems={budgetItems} revenues={revenues} changeOrders={changeOrders}
+              filteredProjects={filteredProjects} expenses={filteredAllExpenses}
+              budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
               companies={companies} hasActiveFilters={hasActiveFilters} clearFilters={clearFilters}
             />
 

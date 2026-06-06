@@ -239,8 +239,8 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
             <p className="text-xs font-mono font-bold">{formatCurrency(collectedTotal)}</p>
           </div>
           <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
-            <p className="text-xs text-muted-foreground">ذمم مدينة</p>
-            <p className="text-xs font-mono font-bold">{formatCurrency(invoicedTotal)}</p>
+            <p className="text-xs text-muted-foreground">غير محصّل</p>
+            <p className="text-xs font-mono font-bold">{formatCurrency(Math.max(0, invoicedTotal - collectedTotal))}</p>
           </div>
         </div>
       )}

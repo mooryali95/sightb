@@ -5,7 +5,7 @@ import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
-import { getPortfolioSummary, getHealthScore } from '@/lib/portfolio';
+import { getPortfolioSummary } from '@/lib/portfolio';
 import { getProjectSummary, getCashFlowForecast } from '@/lib/finance';
 import { exportPortfolioToExcel, exportPortfolioToPDF } from '@/lib/export';
 import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, RISK_PROBABILITY_LABELS, RISK_STATUS_LABELS, type ProjectStatus } from '@/types/project';
@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { motion } from 'framer-motion';
 import {
-  DollarSign, TrendingUp, Target, BarChart3,
+  DollarSign, TrendingUp, TrendingDown, Target,
   FileSpreadsheet, ArrowLeft, AlertTriangle,
   FolderKanban, Pencil, Trash2,
 } from 'lucide-react';
@@ -42,17 +42,15 @@ export default function PortfolioDetail() {
     updatePortfolio, deletePortfolio,
   } = useStore();
 
-  const { detailsLoaded, detailsLoading, loadProjectData } = useStore();
-  
-  useEffect(() => { loadAll(); }, []);
-  
-  // Load project data for all portfolio projects
+  const { loadProjectData } = useStore();
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  // Load project data for all portfolio projects (idempotent per project)
   const earlyPortfolioProjects = useMemo(() => projects.filter(p => p.portfolioId === id), [projects, id]);
   useEffect(() => {
-    if (!detailsLoaded && earlyPortfolioProjects.length > 0) {
-      earlyPortfolioProjects.forEach(p => loadProjectData(p.id));
-    }
-  }, [detailsLoaded, earlyPortfolioProjects.length]);
+    earlyPortfolioProjects.forEach(p => loadProjectData(p.id));
+  }, [earlyPortfolioProjects, loadProjectData]);
 
   const portfolio = portfolios.find(p => p.id === id);
   const company = portfolio ? companies.find(c => c.id === portfolio.companyId) : null;
@@ -157,7 +155,7 @@ export default function PortfolioDetail() {
     );
   }, [portfolio, portfolioProjects, risks]);
 
-  if (loading || !portfolio) {
+  if (!portfolio) {
     return (
       <AppLayout>
         {loading ? (
@@ -315,7 +313,7 @@ export default function PortfolioDetail() {
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard title="إجمالي قيمة العقود" value={formatCurrency(summary.totalEffectiveValue)} icon={<DollarSign className="w-4 h-4" />} />
-          <StatCard title="إجمالي المصروفات" value={formatCurrency(summary.totalActual)} icon={<TrendingUp className="w-4 h-4" />} trend="down" />
+          <StatCard title="إجمالي المصروفات" value={formatCurrency(summary.totalActual)} icon={<TrendingDown className="w-4 h-4" />} trend="down" />
           <StatCard title="الربح المخطط الإجمالي" value={formatCurrency(summary.aggregatePlannedProfit)} icon={<TrendingUp className="w-4 h-4" />} trend={summary.aggregatePlannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.aggregatePlannedMargin.toFixed(1)}%`} />
           <StatCard title="الإنجاز المرجّح" value={`${summary.weightedPercentComplete.toFixed(1)}%`} icon={<Target className="w-4 h-4" />} subtitle={`${summary.projectCount} مشروع`} />
         </div>

@@ -63,6 +63,20 @@ export function CashFlowSankey({
         if (fund) addLink(`دفعة ${fund.fundNumber}`, `سلفة: ${res?.name || 'مورد'}`, Number(pr.amount));
       }
     }
+    // ردود سلف نقدية → عودة للدفعة/العهدة
+    for (const pr of projPRs) {
+      if (pr.requestType === 'advance' && (pr.refundedAmount ?? 0) > 0) {
+        const res = resources.find(r => r.id === pr.resourceId);
+        const fromLabel = `سلفة: ${res?.name || 'مورد'}`;
+        if (pr.refundToFundId) {
+          const fund = projFunds.find(f => f.id === pr.refundToFundId);
+          if (fund) addLink(fromLabel, `دفعة ${fund.fundNumber}`, Number(pr.refundedAmount));
+        } else if (pr.refundToCustodyId) {
+          const cu = projCustodies.find(c => c.id === pr.refundToCustodyId);
+          if (cu) addLink(fromLabel, `عهدة: ${cu.resourceName}`, Number(pr.refundedAmount));
+        }
+      }
+    }
     // الدفعات → مصروف مباشر (بدون عهدة)
     for (const e of projExpenses) {
       if (!e.fundId) continue;
