@@ -12,7 +12,7 @@ import {
   SETTLEMENT_STATUS_COLORS,
   PAYMENT_REQUEST_TYPE_LABELS,
 } from '@/types/project';
-import { getProjectFundsSummary, getSettlementForFund } from '@/lib/funds';
+import { getProjectFundsSummary, getSettlementForFund, getFundRemaining, getFundOutstandingAdvances, getFundCashTransfersOut } from '@/lib/funds';
 import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
