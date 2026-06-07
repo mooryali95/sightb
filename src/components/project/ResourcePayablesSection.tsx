@@ -1423,6 +1423,11 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                   </Label>
                 </div>
               </RadioGroup>
+              {availableFunds.length === 0 && availableCustodies.length === 0 && paySource !== 'none' && (
+                <p className="text-xs text-destructive">
+                  لا يوجد مصدر سيولة كافٍ. حرّر سلفة قائمة، أو سجّل دفعة جديدة، أو اختر "خارج النظام".
+                </p>
+              )}
             </div>
 
             <p className="text-xs text-muted-foreground">
@@ -1431,8 +1436,9 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPayDialogId(null)}>إلغاء</Button>
-            <Button onClick={handlePay}>تأكيد الدفع</Button>
+            <Button onClick={handlePay} disabled={paySource === 'fund' ? !paySourceFundId : paySource === 'custody' ? !paySourceCustodyId : false}>تأكيد الدفع</Button>
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
 
