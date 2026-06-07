@@ -51,7 +51,7 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { getFundRemaining, getCustodyCashTransfersIn } from '@/lib/funds';
+import { getFundRemaining, getCustodyCashTransfersIn, getCustodyOutstandingAdvances } from '@/lib/funds';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import {
   Plus, HandCoins, CheckCircle2, XCircle, FileText, Send, Clock,
@@ -84,9 +84,10 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
     payPaymentRequest, cancelPaymentRequest, deletePaymentRequest, settleAdvance,
-    reverseSettlementEvent,
+    reverseSettlementEvent, updatePaymentRequest,
     createResourceSettlement, signResourceSettlement,
   } = useStore();
+
 
   const projBudgetItems = useMemo(
     () => budgetItems.filter((b: any) => b.projectId === projectId),
@@ -198,6 +199,54 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
   };
 
+  // ─── Edit links dialog (re-link reimbursements to existing payment request) ───
+  const [editLinksId, setEditLinksId] = useState<string | null>(null);
+  const [editLinkedIds, setEditLinkedIds] = useState<string[]>([]);
+  const [editDescription, setEditDescription] = useState('');
+  const editingReq = useMemo(
+    () => projReqs.find((r) => r.id === editLinksId),
+    [projReqs, editLinksId],
+  );
+  const editEligibleReimbs = useMemo(() => {
+    if (!editingReq) return [];
+    // Show approved reimbursements for the same resource, plus already-linked ones (even if not approved)
+    return projReimbs.filter(
+      (r) => r.resourceId === editingReq.resourceId
+        && (r.status === 'approved' || editLinkedIds.includes(r.id) || (editingReq.linkedReimbursementIds || []).includes(r.id)),
+    );
+  }, [editingReq, projReimbs, editLinkedIds]);
+
+  const openEditLinks = (reqId: string) => {
+    const req = projReqs.find((r) => r.id === reqId);
+    if (!req) return;
+    setEditLinksId(reqId);
+    setEditLinkedIds([...(req.linkedReimbursementIds || [])]);
+    setEditDescription(req.description || '');
+  };
+
+  const handleSaveEditLinks = async () => {
+    if (!editLinksId || !editingReq) return;
+    try {
+      const updates: any = {
+        linkedReimbursementIds: editLinkedIds,
+        description: editDescription.trim() || editingReq.description,
+      };
+      // If reimbursement type and not yet paid, recompute amount from linked items
+      if (editingReq.requestType === 'reimbursement' && editingReq.status !== 'paid') {
+        const newAmount = projReimbs
+          .filter((r) => editLinkedIds.includes(r.id))
+          .reduce((s, r) => s + r.amount, 0);
+        if (newAmount > 0) updates.amount = newAmount;
+      }
+      await updatePaymentRequest(editLinksId, updates);
+      toast.success('تم تحديث ربط البنود');
+      setEditLinksId(null);
+    } catch (e: any) {
+      toast.error(e.message || 'فشل التحديث');
+    }
+  };
+
+
   // ─── Payment dialog ───
   const [payDialogId, setPayDialogId] = useState<string | null>(null);
   const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
@@ -235,7 +284,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       .filter((x) => x.remaining > 0);
   }, [projectFunds, expenses, custodies, projectId, projReqs, projTransfers]);
 
-  // Active custodies with remaining balance (يشمل التحويلات النقدية الواردة)
+  // Active custodies with remaining balance (يشمل التحويلات الواردة ويخصم السلف القائمة) — توحيد مع availableFunds
   const availableCustodies = useMemo(() => {
     return custodies
       .filter((c) => c.projectId === projectId && c.status === 'active')
@@ -244,10 +293,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           .filter((e) => e.custodyId === c.id)
           .reduce((s, e) => s + e.amount, 0);
         const transfersIn = getCustodyCashTransfersIn(c.id, projTransfers);
-        return { custody: c, remaining: (c.amount + transfersIn) - spent };
+        const outstandingAdv = getCustodyOutstandingAdvances(c.id, projReqs);
+        return { custody: c, remaining: (c.amount + transfersIn) - spent - outstandingAdv };
       })
       .filter((x) => x.remaining > 0);
-  }, [custodies, expenses, projectId, projTransfers]);
+  }, [custodies, expenses, projectId, projTransfers, projReqs]);
+
 
   const openPayDialog = (reqId: string, scheduledDate?: string) => {
     setPayDialogId(reqId);
@@ -1223,7 +1274,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             onClick={() => setRejectId({ id: req.id, kind: 'req' })}>رفض</Button>
                         </>
                       )}
-                      {isAdmin && req.status === 'approved' && (
+                      {(canEdit || isAdmin) && req.status === 'approved' && (
                         <>
                           <Button size="sm" variant="outline"
                             onClick={async () => {
@@ -1240,12 +1291,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           </Button>
                         </>
                       )}
-                      {isAdmin && req.status === 'scheduled' && (
+                      {(canEdit || isAdmin) && req.status === 'scheduled' && (
                         <Button size="sm"
                           onClick={() => openPayDialog(req.id, req.scheduledDate)}>
                           تأكيد الدفع
                         </Button>
                       )}
+
                       {canEdit && req.status === 'paid' && req.requestType === 'advance' && req.isAdvanceOutstanding && (
                         <Button size="sm" variant="default"
                           onClick={() => openSettleAdvance(req.id)}>
@@ -1267,6 +1319,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             catch (e: any) { toast.error(e.message); }
                           }}>إلغاء</Button>
                       )}
+                      {/* تعديل الربط — مسموح في كل الحالات لـ canEdit (في draft) أو admin (بعد الاعتماد) */}
+                      {((canEdit && req.status === 'draft') || (isAdmin && req.status !== 'cancelled' && req.status !== 'rejected')) && (
+                        <Button size="sm" variant="outline" onClick={() => openEditLinks(req.id)}>
+                          تعديل الربط
+                        </Button>
+                      )}
+
                       {isAdmin && (req.status === 'draft' || req.status === 'cancelled' || req.status === 'rejected') && (
                         <ConfirmDeleteDialog
                           title="حذف طلب الصرف"
@@ -1420,6 +1479,11 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                   </Label>
                 </div>
               </RadioGroup>
+              {availableFunds.length === 0 && availableCustodies.length === 0 && paySource !== 'none' && (
+                <p className="text-xs text-destructive">
+                  لا يوجد مصدر سيولة كافٍ. حرّر سلفة قائمة، أو سجّل دفعة جديدة، أو اختر "خارج النظام".
+                </p>
+              )}
             </div>
 
             <p className="text-xs text-muted-foreground">
@@ -1428,10 +1492,82 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPayDialogId(null)}>إلغاء</Button>
-            <Button onClick={handlePay}>تأكيد الدفع</Button>
+            <Button onClick={handlePay} disabled={paySource === 'fund' ? !paySourceFundId : paySource === 'custody' ? !paySourceCustodyId : false}>تأكيد الدفع</Button>
+          </DialogFooter>
+
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Edit links dialog ─── */}
+      <Dialog open={!!editLinksId} onOpenChange={(o) => { if (!o) setEditLinksId(null); }}>
+        <DialogContent dir="rtl" className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>تعديل ربط البنود</DialogTitle>
+          </DialogHeader>
+          {editingReq && (
+            <div className="space-y-3">
+              <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+                <p>طلب الصرف: <strong>{editingReq.description}</strong></p>
+                <p>الحالة: <Badge variant="outline" className="text-xs">{PAYMENT_REQUEST_STATUS_LABELS[editingReq.status]}</Badge></p>
+                {editingReq.status === 'paid' && (
+                  <p className="text-amber-600 mt-1">⚠ المبلغ ثابت لأن الطلب مدفوع — فقط الربط والوصف قابلان للتعديل.</p>
+                )}
+              </div>
+              <div>
+                <Label>الوصف</Label>
+                <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+              </div>
+              {editingReq.requestType === 'reimbursement' && (
+                <div>
+                  <Label>البنود المرتبطة (مستحقات)</Label>
+                  <div className="border rounded-lg p-2 max-h-64 overflow-y-auto space-y-1.5 mt-1.5">
+                    {editEligibleReimbs.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-3">لا توجد مستحقات معتمدة قابلة للربط</p>
+                    ) : (
+                      editEligibleReimbs.map((r) => {
+                        const checked = editLinkedIds.includes(r.id);
+                        const linkedElsewhere = r.paymentRequestId && r.paymentRequestId !== editLinksId;
+                        return (
+                          <label key={r.id} className={cn('flex items-start gap-2 p-1.5 rounded cursor-pointer hover:bg-muted/50', linkedElsewhere && 'opacity-60')}>
+                            <input
+                              type="checkbox"
+                              className="mt-1"
+                              checked={checked}
+                              disabled={linkedElsewhere && !checked}
+                              onChange={(e) => {
+                                setEditLinkedIds((prev) =>
+                                  e.target.checked ? [...prev, r.id] : prev.filter((x) => x !== r.id),
+                                );
+                              }}
+                            />
+                            <div className="flex-1 text-xs">
+                              <div className="font-medium">{r.description}</div>
+                              <div className="text-muted-foreground flex gap-2">
+                                <span>{formatCurrency(r.amount)}</span>
+                                <span>· {r.expenseDate}</span>
+                                {linkedElsewhere && <span className="text-amber-600">· مربوط بطلب آخر</span>}
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    المجموع الجديد: <strong>{formatCurrency(projReimbs.filter((r) => editLinkedIds.includes(r.id)).reduce((s, r) => s + r.amount, 0))}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditLinksId(null)}>إلغاء</Button>
+            <Button onClick={handleSaveEditLinks}>حفظ</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
 
       {/* Reject reason dialog */}
       <Dialog open={!!rejectId} onOpenChange={(o) => { if (!o) { setRejectId(null); setRejectReason(''); } }}>

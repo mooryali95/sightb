@@ -432,8 +432,9 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     try { await get().loadResourcePayablesForProject(req.projectId); } catch (e) { console.warn(e); }
     if (req.autoCreatedExpenseId) {
       try {
-        const { data: exp } = await (supabase as any)
+        const { data: exp, error: expErr } = await (supabase as any)
           .from('expenses').select('*').eq('id', req.autoCreatedExpenseId).maybeSingle();
+        if (expErr) throw expErr;
         if (exp) {
           const { mapExpense } = await import('@/store/helpers');
           const mapped = mapExpense(exp);
@@ -441,8 +442,12 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
             expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)],
           }));
         }
-      } catch (e) { console.warn(e); }
+      } catch (e: any) {
+        console.error('Failed to load auto-created expense:', e);
+        throw new Error('تم تسجيل الدفع لكن فشل تحميل المصروف التلقائي: ' + (e?.message || 'خطأ غير معروف'));
+      }
     }
+
   },
 
   cancelPaymentRequest: async (id) => {

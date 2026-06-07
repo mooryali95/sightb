@@ -188,6 +188,34 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       return;
     }
 
+    // Hard UI guard: overflow on custody — guide user to split instead of silent DB fail
+    if (!editingId && hasCustody) {
+      const c = custodies.find((x: any) => x.id === custodyId);
+      if (c) {
+        const spent = expenses.filter((e: any) => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
+        const remaining = c.amount - spent;
+        if (finalAmount > remaining) {
+          toast.error(
+            `المبلغ (${formatCurrency(finalAmount)}) يتجاوز المتبقي في العهدة (${formatCurrency(remaining)}). قسّم المصروف لجزأين: الأول من هذه العهدة بالمبلغ المتاح، والباقي من عهدة/دفعة أخرى.`,
+            { duration: 8000 },
+          );
+          return;
+        }
+      }
+    }
+    // Hard UI guard: overflow on fund (when not via custody)
+    if (!editingId && !hasCustody && effectiveFundId) {
+      const f = (window as any).__projectFunds || null; // not available — rely on activeFundRemaining
+      if (effectiveFundId === activeFund?.id && finalAmount > activeFundRemaining) {
+        toast.error(
+          `المبلغ (${formatCurrency(finalAmount)}) يتجاوز المتبقي في الدفعة #${activeFund!.fundNumber} (${formatCurrency(activeFundRemaining)}). قسّم المصروف، أو سجّل دفعة جديدة، أو حرّر سلفة قائمة.`,
+          { duration: 8000 },
+        );
+        return;
+      }
+    }
+
+
     try {
       if (editingId) {
         await updateExpense(editingId, {
@@ -558,9 +586,11 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                           </p>
                           {parsedAmount > 0 && parsedAmount > selectedCustody.remaining && (
                             <p className="text-xs text-destructive">
-                              ⚠️ المبلغ ({formatCurrency(parsedAmount)}) يتجاوز المتبقي ({formatCurrency(selectedCustody.remaining)})
+                              ⚠️ المبلغ ({formatCurrency(parsedAmount)}) يتجاوز المتبقي ({formatCurrency(selectedCustody.remaining)}).
+                              قسّم المصروف: سجّل {formatCurrency(selectedCustody.remaining)} من هذه العهدة، والباقي من عهدة/دفعة أخرى.
                             </p>
                           )}
+
                         </div>
                       );
                     })()}
