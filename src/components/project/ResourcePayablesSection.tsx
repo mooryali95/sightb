@@ -1319,6 +1319,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             catch (e: any) { toast.error(e.message); }
                           }}>إلغاء</Button>
                       )}
+                      {/* تعديل الربط — مسموح في كل الحالات لـ canEdit (في draft) أو admin (بعد الاعتماد) */}
+                      {((canEdit && req.status === 'draft') || (isAdmin && req.status !== 'cancelled' && req.status !== 'rejected')) && (
+                        <Button size="sm" variant="outline" onClick={() => openEditLinks(req.id)}>
+                          تعديل الربط
+                        </Button>
+                      )}
+
                       {isAdmin && (req.status === 'draft' || req.status === 'cancelled' || req.status === 'rejected') && (
                         <ConfirmDeleteDialog
                           title="حذف طلب الصرف"
