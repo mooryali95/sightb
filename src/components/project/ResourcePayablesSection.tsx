@@ -199,6 +199,54 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
   };
 
+  // ─── Edit links dialog (re-link reimbursements to existing payment request) ───
+  const [editLinksId, setEditLinksId] = useState<string | null>(null);
+  const [editLinkedIds, setEditLinkedIds] = useState<string[]>([]);
+  const [editDescription, setEditDescription] = useState('');
+  const editingReq = useMemo(
+    () => projReqs.find((r) => r.id === editLinksId),
+    [projReqs, editLinksId],
+  );
+  const editEligibleReimbs = useMemo(() => {
+    if (!editingReq) return [];
+    // Show approved reimbursements for the same resource, plus already-linked ones (even if not approved)
+    return projReimbs.filter(
+      (r) => r.resourceId === editingReq.resourceId
+        && (r.status === 'approved' || editLinkedIds.includes(r.id) || (editingReq.linkedReimbursementIds || []).includes(r.id)),
+    );
+  }, [editingReq, projReimbs, editLinkedIds]);
+
+  const openEditLinks = (reqId: string) => {
+    const req = projReqs.find((r) => r.id === reqId);
+    if (!req) return;
+    setEditLinksId(reqId);
+    setEditLinkedIds([...(req.linkedReimbursementIds || [])]);
+    setEditDescription(req.description || '');
+  };
+
+  const handleSaveEditLinks = async () => {
+    if (!editLinksId || !editingReq) return;
+    try {
+      const updates: any = {
+        linkedReimbursementIds: editLinkedIds,
+        description: editDescription.trim() || editingReq.description,
+      };
+      // If reimbursement type and not yet paid, recompute amount from linked items
+      if (editingReq.requestType === 'reimbursement' && editingReq.status !== 'paid') {
+        const newAmount = projReimbs
+          .filter((r) => editLinkedIds.includes(r.id))
+          .reduce((s, r) => s + r.amount, 0);
+        if (newAmount > 0) updates.amount = newAmount;
+      }
+      await updatePaymentRequest(editLinksId, updates);
+      toast.success('تم تحديث ربط البنود');
+      setEditLinksId(null);
+    } catch (e: any) {
+      toast.error(e.message || 'فشل التحديث');
+    }
+  };
+
+
   // ─── Payment dialog ───
   const [payDialogId, setPayDialogId] = useState<string | null>(null);
   const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
