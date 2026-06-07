@@ -586,9 +586,11 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                           </p>
                           {parsedAmount > 0 && parsedAmount > selectedCustody.remaining && (
                             <p className="text-xs text-destructive">
-                              ⚠️ المبلغ ({formatCurrency(parsedAmount)}) يتجاوز المتبقي ({formatCurrency(selectedCustody.remaining)})
+                              ⚠️ المبلغ ({formatCurrency(parsedAmount)}) يتجاوز المتبقي ({formatCurrency(selectedCustody.remaining)}).
+                              قسّم المصروف: سجّل {formatCurrency(selectedCustody.remaining)} من هذه العهدة، والباقي من عهدة/دفعة أخرى.
                             </p>
                           )}
+
                         </div>
                       );
                     })()}
