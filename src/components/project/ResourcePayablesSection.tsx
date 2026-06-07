@@ -1225,7 +1225,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             onClick={() => setRejectId({ id: req.id, kind: 'req' })}>رفض</Button>
                         </>
                       )}
-                      {isAdmin && req.status === 'approved' && (
+                      {(canEdit || isAdmin) && req.status === 'approved' && (
                         <>
                           <Button size="sm" variant="outline"
                             onClick={async () => {
@@ -1242,12 +1242,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                           </Button>
                         </>
                       )}
-                      {isAdmin && req.status === 'scheduled' && (
+                      {(canEdit || isAdmin) && req.status === 'scheduled' && (
                         <Button size="sm"
                           onClick={() => openPayDialog(req.id, req.scheduledDate)}>
                           تأكيد الدفع
                         </Button>
                       )}
+
                       {canEdit && req.status === 'paid' && req.requestType === 'advance' && req.isAdvanceOutstanding && (
                         <Button size="sm" variant="default"
                           onClick={() => openSettleAdvance(req.id)}>
