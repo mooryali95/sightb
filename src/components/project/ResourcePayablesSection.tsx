@@ -1498,6 +1498,77 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         </DialogContent>
       </Dialog>
 
+      {/* ─── Edit links dialog ─── */}
+      <Dialog open={!!editLinksId} onOpenChange={(o) => { if (!o) setEditLinksId(null); }}>
+        <DialogContent dir="rtl" className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>تعديل ربط البنود</DialogTitle>
+          </DialogHeader>
+          {editingReq && (
+            <div className="space-y-3">
+              <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+                <p>طلب الصرف: <strong>{editingReq.description}</strong></p>
+                <p>الحالة: <Badge variant="outline" className="text-xs">{PAYMENT_REQUEST_STATUS_LABELS[editingReq.status]}</Badge></p>
+                {editingReq.status === 'paid' && (
+                  <p className="text-amber-600 mt-1">⚠ المبلغ ثابت لأن الطلب مدفوع — فقط الربط والوصف قابلان للتعديل.</p>
+                )}
+              </div>
+              <div>
+                <Label>الوصف</Label>
+                <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+              </div>
+              {editingReq.requestType === 'reimbursement' && (
+                <div>
+                  <Label>البنود المرتبطة (مستحقات)</Label>
+                  <div className="border rounded-lg p-2 max-h-64 overflow-y-auto space-y-1.5 mt-1.5">
+                    {editEligibleReimbs.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-3">لا توجد مستحقات معتمدة قابلة للربط</p>
+                    ) : (
+                      editEligibleReimbs.map((r) => {
+                        const checked = editLinkedIds.includes(r.id);
+                        const linkedElsewhere = r.paymentRequestId && r.paymentRequestId !== editLinksId;
+                        return (
+                          <label key={r.id} className={cn('flex items-start gap-2 p-1.5 rounded cursor-pointer hover:bg-muted/50', linkedElsewhere && 'opacity-60')}>
+                            <input
+                              type="checkbox"
+                              className="mt-1"
+                              checked={checked}
+                              disabled={linkedElsewhere && !checked}
+                              onChange={(e) => {
+                                setEditLinkedIds((prev) =>
+                                  e.target.checked ? [...prev, r.id] : prev.filter((x) => x !== r.id),
+                                );
+                              }}
+                            />
+                            <div className="flex-1 text-xs">
+                              <div className="font-medium">{r.description}</div>
+                              <div className="text-muted-foreground flex gap-2">
+                                <span>{formatCurrency(r.amount)}</span>
+                                <span>· {r.expenseDate}</span>
+                                {linkedElsewhere && <span className="text-amber-600">· مربوط بطلب آخر</span>}
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    المجموع الجديد: <strong>{formatCurrency(projReimbs.filter((r) => editLinkedIds.includes(r.id)).reduce((s, r) => s + r.amount, 0))}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditLinksId(null)}>إلغاء</Button>
+            <Button onClick={handleSaveEditLinks}>حفظ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
+
       {/* Reject reason dialog */}
       <Dialog open={!!rejectId} onOpenChange={(o) => { if (!o) { setRejectId(null); setRejectReason(''); } }}>
         <DialogContent dir="rtl">
