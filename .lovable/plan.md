@@ -1,66 +1,72 @@
+# خطة إصلاح الأعطال المالية (4 بنود)
 
-# خطة إصلاح شاملة (مرقّمة بالأولوية)
+## 1) زر "تأكيد الدفع" في مستحقات الموارد لا يعمل
 
-تم تشغيل الاختبارات (81/81 ✅) ثم إجراء تدقيق آلي مزدوج على الوحدة المالية وصفحة المشروع والداشبورد. النتائج أدناه. التنفيذ بعد موافقتك. الإصلاحات frontend فقط (لا تغييرات DB).
+**السبب الجذري:**
 
----
+- الزر مخفي عن `canEdit` غير الـ `admin` (سطر 1226/1241 في `ResourcePayablesSection.tsx`).
+- `openPayDialog` يضع `paySource='none'` بصمت عندما لا توجد دفعة/عهدة بها رصيد كافٍ بعد خصم السلف العالقة → ثم يفشل الـ trigger في قاعدة البيانات ويُبتلع الخطأ في `resourcePayableSlice.ts:444`.
+- `availableCustodies` لا يخصم السلف العالقة بينما `availableFunds` يخصمها (تناقض).
 
-## 🔴 المرحلة 1 — حرج (أرقام خاطئة تظهر للمستخدم)
+**الإصلاح:**
 
-1. **`FundsSection.tsx:438` — تمرير `cashTransfers` المفقود إلى `getFundSpent`/`getFundRemaining`** (المتبقي من الدفعة مُضخّم عند وجود تحويلات نقدية).
-2. **`CashLedgerSection.tsx:62` — تمرير `cashTransfers` إلى `getProjectFundsSummary`** (لمنع تعارض "بيد المدير" بين بطاقتين على نفس التبويب).
-3. **`ExpensesSection.tsx:66` — تمرير `cashTransfers` في حارس رصيد الدفعة** (الإنذار ⚠️ يظهر متأخراً).
-4. **`ResourcePayablesSection.tsx:239` — إضافة `getCustodyCashTransfersIn` إلى رصيد العهدة المتاح** (دفعات مشروعة تُحجب حالياً).
-5. **`CashLedgerSection.tsx:429` — تطبيق نفس الإصلاح على عرض رصيد العهدة في الـ Overview**.
-6. **`CustodySection.tsx:356` — قسمة شريط نسبة الصرف على `c.effectiveAmount` بدلاً من `c.amount`** (يظهر >100% بعد التعبئة).
-7. **`Dashboard.tsx:222-248` — تمرير المصفوفات المفلترة** (`filteredAllExpenses/BudgetItems/Revenues/ChangeOrders`) إلى `HealthMatrix`, `AttentionProjects`, `ProjectCards`, `ProjectsTable` (الفلاتر لا تؤثر عليها الآن).
-8. **`PortfolioDetail.tsx:52` — إزالة حارس `detailsLoaded` العام** (يمنع تحميل بقية مشاريع المحفظة) واستدعاء `loadProjectData` لكل مشروع.
+1. توسيع شرط الزر إلى `canEdit` (مع إبقاء التحقق من الدور للحماية في الـ store).
+2. عندما `paySource==='none'` → عرض رسالة واضحة في الـ Dialog ("لا يوجد مصدر سيولة كافٍ — حرّر سلفة عالقة أو سجّل دفعة جديدة") وتعطيل زر التأكيد.
+3. توحيد حساب `availableCustodies` ليطرح السلف العالقة بنفس منطق `availableFunds`.
+4. إظهار خطأ المستخدم بدل `console.warn` عند فشل إنشاء المصروف المرتبط (سطر 444).
 
-## 🟠 المرحلة 2 — مهم (تكرارات + سلوك خاطئ)
+## 2) لا يمكن تسجيل مصروف يتجاوز العهدة/بند الموازنة + لا يوجد تحويل من موازنة لعهدة + لا يوجد توزيع على عهدتين
 
-9. **تبويب "الدفعات" يكرّر البطاقات** — `CashLedgerSection` و`FundsSection` يعرضان نفس بطاقات الملخص + جدول الدفعات. **الحل:** `CashLedgerSection` = ملخص فقط، `FundsSection` = جدول وأزرار فقط.
-10. **`RevenueSection.tsx:243` — بطاقة "ذمم مدينة" تطابق "مُفوتر" حرفياً.** استبدالها بـ "غير محصّل / قيمة العقد %" أو حذفها.
-11. **`ProjectDetail.tsx:891` — `MobileFAB` للـ tracking يشير إلى تبويب `risks` الموجود في `management`**. تصحيح الـ group.
-12. **تبويب EVM مكرّر** — EAC/TCPI كـ StatCards في رأس `ProjectDetail` ثم قسم EVM كامل في `ExecutiveSummary`. **الحل:** الإبقاء على القسم في `ExecutiveSummary` وإزالة StatCards المكررة من الرأس.
-13. **زر "إقرار الاستلام" مكرر** بين `FundsSection` وداخل دايلوج المصروفات في `ExpensesSection`. إزالة النسخة المضمّنة.
-14. **`FundsSection.tsx:204` — زر "حفظ مسودة" يصمت بلا رسالة** قبل إقرار الاستلام. إضافة `toast.error` وتعطيل الزر.
-15. **`FundsSection.tsx:536` — زر الحذف يتجاهل `readOnly`.** إضافة الشرط.
-16. **`CustodySection.tsx:147` — إغلاق العهدة التلقائي يكتب مباشرة لـ Supabase ويتجاوز Zustand** → استخدام `updateCustody` من المتجر.
-17. **`ExpensesSection.tsx:227` — استدعاء `useStore.getState()` داخل handler** → إضافة `updateProject` للـ destructure.
-18. **`BudgetAlerts` مستورد ولا يُعرض أبداً في `ProjectDetail.tsx:30`.** قرار: حذف الاستيراد (تم استبداله بـ `SmartBudgetAlerts`).
-19. **`WhatIfSection.tsx:162` — مقارنة EAC تستخدم `contractValue` الأصلي بدل `scenario.newContract`.**
-20. **`WhatIfSection.tsx:51` — EV يُحسب من `projectedTotal` فيُلغي تأثير expense delta على CPI.** استخدام `totalPlanned` الأصلي كـ BAC.
-21. **`ProjectDetail.tsx:859` — `Accordion onValueChange` يحفظ `vals[0]` فقط في URL.** تتبّع آخر عنصر مفتوح.
+**الوضع الحالي:** كل التحقق في `ExpensesSection.tsx` تحذيري فقط (سطور 547–566، 425–429)، الحظر الفعلي من DB trigger بدون مخرج. لا يوجد override، ولا multi-custody.
 
-## 🟡 المرحلة 3 — تجميل وتنظيف
+**الإصلاح:**
 
-22. حذف استيرادات ميتة: `Sparkles`, `DialogTrigger` في `ProjectDetail.tsx`؛ `getHealthScore`, `BarChart3`, `detailsLoading` في `PortfolioDetail.tsx`.
-23. **`PortfolioDetail.tsx:318` — أيقونة `TrendingUp` للمصروفات** → تبديلها بـ `TrendingDown`.
-24. **`AuditLogSection.tsx:153` — `toLocaleString('en-US')`** يُنتج أرقاماً غربية وسط واجهة عربية → استخدام `formatCurrency` أو `'ar-EG'`.
-   *(ملاحظة: قاعدة التطبيق تستخدم أرقاماً إنجليزية في كل مكان، لذا سنُبقي en-US ولكن نوحّد التنسيق.)*
-25. **`ExecutiveSummary.tsx:278` — رموز يونيكود `■ □ ○`** → استبدالها بـ `<span>` ملوّنة.
-26. **`CashFlowSankey.tsx:59` — السلف المسدّدة نقداً (cash_refund) لا تظهر في المخطط** → إضافة حلقة منفصلة.
-27. **`resource-payables.ts:108` vs `getResourceBalance:46` — صيغ "outstanding" مختلفة** → توحيدها مع اختبار وحدة.
-28. **`PortfolioDetail.tsx:160` — `loading || !portfolio` يستبدل الصفحة بسبينر** عند الـ refresh الخلفي → `if (!portfolio)` فقط.
+1. **تجاوز محسوب (Overflow Split)**: عند `amount > selectedCustody.remaining` أظهر قسم "توزيع الفائض" يتيح اختيار **عهدة ثانية** أو **صرف مباشر من دفعة** لتغطية الفرق. عند الإرسال يُنشأ سجلّا مصروف مرتبطان بنفس الفاتورة عبر `parentExpenseId` (أو `groupId`).
+2. **تجاوز بند الموازنة**: إذا `amount > budgetItem.remaining` → فتح modal يقترح إنشاء **Change Order تلقائي** (إن كان للمستخدم صلاحية) أو رفع طلب أمر تغيير، بدل الحظر الصامت.
+3. **تحويل متبقي الموازنة إلى عهدة**: غير مدعوم منطقياً (الموازنة تخطيط لا سيولة). البديل: زر "إنشاء عهدة من دفعة" موجود فعلاً — سنُبرزه في تبويب الموازنة مع نص توضيحي: "لا تُحوَّل الموازنة مباشرةً إلى عهدة؛ حوّل من **دفعة نشطة** بالمبلغ المطلوب".
+4. في كل الحالات: نقل التحقق من DB إلى الواجهة (hard guard في `handleSubmit`) حتى لا يبتلع الخطأ.
+
+## 3) تعديل الدفعة #2 لإعادة ربط بنود محذوفة (السلفة مرتبطة بها)
+
+**الوضع الحالي:** لا توجد واجهة تعديل لطلب الدفع بعد الإرسال. `updatePaymentRequest` في الـ store موجود لكنه غير موصول بواجهة.
+
+**الإصلاح:**
+
+1. إضافة زر **"تعديل"** في صف طلب الدفع، مرئي عند:
+  - `status === 'draft'` لكل من له `canEdit`.
+  - `status in ('submitted','approved','scheduled')` للـ admin فقط (مع تسجيل في سجل التدقيق).
+2. الـ Dialog يعيد استخدام نفس نموذج الإنشاء مع التركيز على حقل **"البنود المرتبطة (مستحقات/سلف)"** ليُعاد ربط البنود السابقة.
+3. حماية: لا يُسمح بتعديل المبلغ إذا `status === 'paid'`؛ فقط حقل الربط لتصحيح الأثر التاريخي.
+4. كتابة سطر في `audit_log` بكل تعديل بعد الاعتماد.
+
+## 4) تناقض "بيد المدير": 0 في الكارت العلوي مقابل 2,000 في صف الدفعة #1
+
+**السبب الجذري (مؤكد):** في `CashLedgerSection.tsx:321–332` الصيغة المضمّنة لصف الدفعة هي فقط:
+
+```
+remaining = fund.amount − directSpent − custodyDraw
+```
+
+بينما `getProjectFundsSummary` (في `funds.ts`) يطرح أيضاً:
+
+- `outstandingAdvances` (سلف مدفوعة عالقة)
+- `cashTransfersOut` (تحويلات نقد من المدير لعهدة)
+
+**الإصلاح:**
+
+- استبدال الصيغة المضمّنة في `CashLedgerSection.tsx:321–332` باستدعاء `getFundRemaining(f, projectExpenses, projectCustodies, projPRs, projTransfers)` الموجودة فعلاً في `funds.ts:132` والتي تطبّق الصيغة الكاملة الصحيحة.
+- نفس الإصلاح يُراجَع في `FundsSection.tsx` لو وُجد عرض مشابه، لضمان تطابق كل صفوف الدفعات مع الكارت العلوي.
+- إضافة اختبار وحدة في `funds.test.ts` يُمرّر سلفة عالقة 2,000 ويتأكد أن `getFundRemaining` و `getProjectFundsSummary.remainingInManagerHand` يتطابقان.
 
 ---
 
 ## التحقق بعد التنفيذ
 
-- تشغيل `vitest run` (يجب بقاء 81/81).
-- إضافة اختبارات وحدة جديدة لـ:
-  - `getFundRemaining` مع `cashTransfers`.
-  - `getCustodyEffectiveAmount` (الرصيد بعد التعبئة).
-  - توحيد صيغة "outstanding" في `resource-payables`.
-- مراجعة بصرية لتبويب "الدفعات" بعد إزالة التكرار.
-- اختبار `MobileFAB` على viewport 393px.
+- `vitest run` يظل 81/81 + 3 اختبارات جديدة (overflow split، sync بين الصف والكارت، حماية تعديل الدفعة بعد الدفع).
+- اختبار يدوي على نفس المشروع في اللقطة: التحقق أن "بيد المدير" يساوي صفر في الموضعين.
 
----
+## الموافقة
 
-## خيارات التنفيذ
-
-- **أ) تنفيذ كل المراحل (1+2+3) في دفعة واحدة** — تقدير: 28 تعديل، أغلبها صغير ومركّز.
-- **ب) تنفيذ المرحلة 1 (الحرج) فقط الآن** ثم المراجعة قبل المتابعة.
-- **ج) اختيار بنود محددة تريد استبعادها.**
-
-أوصي بـ **(أ)** لأن البنود مستقلة ومركّزة. أخبرني أيها تريد.
+- &nbsp;
+- **ب)** تنفيذ #4 و#1 أولاً (الأخطر/الأسرع)، ثم #2 و#3.
+- &nbsp;
