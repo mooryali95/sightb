@@ -328,8 +328,11 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                       .reduce((s, e) => s + e.amount, 0);
                     const fundCustodies = projectCustodies.filter((c) => c.sourceFundId === f.id);
                     const custodyDraw = fundCustodies.reduce((s, c) => s + c.amount, 0);
-                    const spent = directSpent + custodyDraw;
-                    const remaining = f.amount - spent;
+                    const outstandingAdvances = getFundOutstandingAdvances(f.id, projectPayReqs);
+                    const cashTransfersOut = getFundCashTransfersOut(f.id, projectTransfers);
+                    const spent = directSpent + custodyDraw + outstandingAdvances + cashTransfersOut;
+                    // متبقي بيد المدير = نفس صيغة getFundRemaining (تتطابق مع الكارت العلوي)
+                    const remaining = getFundRemaining(f, projectExpenses, projectCustodies, projectPayReqs, projectTransfers);
                     const settlement = getSettlementForFund(f.id, settlements);
                     const linked = projectExpenses.filter((e) => e.fundId === f.id && (!e.custodyId || projectCustodies.find(c => c.id === e.custodyId)?.sourceFundId !== f.id));
                     const isOpen = openFunds.has(f.id);
@@ -364,10 +367,13 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                             <p className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
                               <span>مباشر: {formatCurrency(directSpent)}</span>
                               {custodyDraw > 0 && <span className="text-amber-600">عُهد: {formatCurrency(custodyDraw)}</span>}
+                              {outstandingAdvances > 0 && <span className="text-blue-600">سلف قائمة: {formatCurrency(outstandingAdvances)}</span>}
+                              {cashTransfersOut > 0 && <span className="text-purple-600">تحويلات نقد: {formatCurrency(cashTransfersOut)}</span>}
                               <span className={cn(remaining < 0 && 'text-destructive')}>متبقي بيد المدير: {formatCurrency(remaining)}</span>
                             </p>
                           </div>
                         </button>
+
                         {isOpen && (
                           <div className="border-t border-border bg-muted/30 p-2 space-y-2">
                             {fundCustodies.length > 0 && (
