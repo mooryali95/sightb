@@ -235,7 +235,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       .filter((x) => x.remaining > 0);
   }, [projectFunds, expenses, custodies, projectId, projReqs, projTransfers]);
 
-  // Active custodies with remaining balance (يشمل التحويلات النقدية الواردة)
+  // Active custodies with remaining balance (يشمل التحويلات الواردة ويخصم السلف القائمة) — توحيد مع availableFunds
   const availableCustodies = useMemo(() => {
     return custodies
       .filter((c) => c.projectId === projectId && c.status === 'active')
@@ -244,10 +244,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           .filter((e) => e.custodyId === c.id)
           .reduce((s, e) => s + e.amount, 0);
         const transfersIn = getCustodyCashTransfersIn(c.id, projTransfers);
-        return { custody: c, remaining: (c.amount + transfersIn) - spent };
+        const outstandingAdv = getCustodyOutstandingAdvances(c.id, projReqs);
+        return { custody: c, remaining: (c.amount + transfersIn) - spent - outstandingAdv };
       })
       .filter((x) => x.remaining > 0);
-  }, [custodies, expenses, projectId, projTransfers]);
+  }, [custodies, expenses, projectId, projTransfers, projReqs]);
+
 
   const openPayDialog = (reqId: string, scheduledDate?: string) => {
     setPayDialogId(reqId);
