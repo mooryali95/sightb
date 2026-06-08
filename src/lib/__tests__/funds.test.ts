@@ -292,3 +292,35 @@ describe('settlement spent includes advances and cash transfers', () => {
   });
 });
 
+describe('getFundOpenItems & auditFundFinancialLinks', () => {
+  it('returns empty open items when no custodies/advances/transfers exist', () => {
+    const open = getFundOpenItems('f1', [], [], [], []);
+    expect(open.openCustodies).toHaveLength(0);
+    expect(open.outstandingAdvances).toHaveLength(0);
+    expect(open.cashTransfersOut).toHaveLength(0);
+    expect(open.totalOpen).toBe(0);
+  });
+
+  it('detects expense double-linked to fund and custody', () => {
+    const expenses: Expense[] = [
+      makeExpense({ id: 'e-bad', fundId: 'f1', custodyId: 'c1' }),
+      makeExpense({ id: 'e-ok', fundId: 'f1' }),
+    ];
+    const violations = auditFundFinancialLinks('f1', expenses, []);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].id).toBe('e-bad');
+    expect(violations[0].kind).toBe('expense_double_link');
+  });
+
+  it('detects payment_request double-linked source', () => {
+    const prs: any[] = [
+      { id: 'pr-bad', description: 'x', amount: 100, paidFromFundId: 'f1', paidFromCustodyId: 'c1' },
+      { id: 'pr-ok', description: 'y', amount: 200, paidFromFundId: 'f1', paidFromCustodyId: null },
+    ];
+    const violations = auditFundFinancialLinks('f1', [], prs);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].kind).toBe('payment_request_double_link');
+  });
+});
+
+
