@@ -317,6 +317,11 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   const handlePay = async () => {
     if (!payDialogId || !payingReq) return;
+    // XOR Guard: مصدر الدفع واحد فقط (دفعة أو عهدة)، ليس الاثنين وليس صفر
+    if (paySource !== 'fund' && paySource !== 'custody') {
+      toast.error('اختر مصدر الدفع: دفعة أو عهدة.');
+      return;
+    }
     // Balance check
     if (paySource === 'fund') {
       if (!paySourceFundId) { toast.error('اختر الدفعة المصدر'); return; }
