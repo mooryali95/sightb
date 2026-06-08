@@ -193,6 +193,16 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
 
   const handleSubmitSettlement = async () => {
     if (!settleFor) return;
+    // Pre-validation: لا تسوية مع وجود روابط مزدوجة (عهدة + دفعة على نفس البند)
+    const violations = auditFundFinancialLinks(settleFor.id, projectExpenses, projPRs);
+    if (violations.length > 0) {
+      const sample = violations.slice(0, 3).map((v) => `• ${v.description} (${formatCurrency(v.amount)})`).join('\n');
+      toast.error(
+        `لا يمكن إرسال التسوية: ${violations.length} بند مربوط بعهدة ودفعة معاً. صحّح الروابط أولاً.\n${sample}`,
+        { duration: 9000 },
+      );
+      return;
+    }
     const cash = parseFloat(remainingCash) || 0;
     if (Math.abs(settlementDiff) > 1 && !diffReason.trim()) {
       toast.error('يجب توضيح سبب الفرق');
