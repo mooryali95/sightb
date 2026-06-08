@@ -161,7 +161,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   };
 
   const settlementSpent = settleFor
-    ? getFundSpent(settleFor.id, projectExpenses, projectCustodies)
+    ? getFundSpent(settleFor.id, projectExpenses, projectCustodies, projPRs, projTransfers)
     : 0;
   const settlementDiff = settleFor
     ? calculateSettlementDifference(
