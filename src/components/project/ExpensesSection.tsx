@@ -716,7 +716,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                               </Button>
                             </>
                           )}
-                          {!exp.fundId && activeFund && (
+                          {!exp.fundId && !exp.custodyId && activeFund && (
                             <Button
                               variant="ghost"
                               size="icon"
