@@ -187,6 +187,11 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       toast.error('يجب ربط المصروف بالدفعة النشطة أو اختيار عهدة');
       return;
     }
+    // XOR Guard: لا يجوز ربط المصروف بعهدة ودفعة معاً (العهدة نفسها مسحوبة من دفعة)
+    if (hasCustody && fundId && fundId !== 'none') {
+      toast.error('لا يمكن ربط المصروف بعهدة ودفعة في آن واحد. اختر مصدراً واحداً فقط.');
+      return;
+    }
 
     // Hard UI guard: overflow on custody — guide user to split instead of silent DB fail
     if (!editingId && hasCustody) {
