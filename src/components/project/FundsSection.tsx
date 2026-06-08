@@ -5,6 +5,10 @@ import { formatCurrency } from '@/lib/finance';
 import {
   getProjectFundsSummary,
   getFundSpent,
+  getFundDirectSpent,
+  getFundCustodyDraw,
+  getFundOutstandingAdvances,
+  getFundCashTransfersOut,
   getFundRemaining,
   getRemainingStatus,
   calculateSettlementDifference,
