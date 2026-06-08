@@ -243,6 +243,97 @@ export function getProjectFundsSummary(
 }
 
 /**
+ * يجمع البنود غير المسوّاة لدفعة معيّنة (عهد مفتوحة، سلف قائمة، تحويلات نقدية صادرة).
+ * تُستخدم لتفسير "المتبقي" في نافذة التسوية.
+ */
+export interface FundOpenItems {
+  openCustodies: Array<{ id: string; resourceName: string; amount: number; remaining: number }>;
+  outstandingAdvances: Array<{ id: string; description: string; amount: number; refunded: number; remaining: number }>;
+  cashTransfersOut: Array<{ id: string; toCustodyId: string; amount: number }>;
+  totalOpen: number;
+}
+
+export function getFundOpenItems(
+  fundId: string,
+  custodies: Custody[] = [],
+  paymentRequests: PaymentRequest[] = [],
+  cashTransfers: CashTransfer[] = [],
+  expenses: Expense[] = [],
+): FundOpenItems {
+  const openCustodies = custodies
+    .filter((c) => c.sourceFundId === fundId && c.status !== 'closed')
+    .map((c) => {
+      const spent = expenses.filter((e) => e.custodyId === c.id).reduce((s, e) => s + e.amount, 0);
+      return { id: c.id, resourceName: c.resourceName, amount: c.amount, remaining: c.amount - spent };
+    });
+
+  const outstandingAdvances = paymentRequests
+    .filter((p) =>
+      p.paidFromFundId === fundId
+      && p.requestType === 'advance'
+      && p.status === 'paid'
+      && p.isAdvanceOutstanding === true,
+    )
+    .map((p) => ({
+      id: p.id,
+      description: p.description,
+      amount: p.amount,
+      refunded: p.refundedAmount ?? 0,
+      remaining: Math.max(p.amount - (p.refundedAmount ?? 0), 0),
+    }));
+
+  const cashTransfersOut = cashTransfers
+    .filter((t) => t.fromFundId === fundId)
+    .map((t) => ({ id: t.id, toCustodyId: t.toCustodyId, amount: t.amount }));
+
+  const totalOpen =
+    openCustodies.reduce((s, c) => s + c.remaining, 0)
+    + outstandingAdvances.reduce((s, a) => s + a.remaining, 0);
+
+  return { openCustodies, outstandingAdvances, cashTransfersOut, totalOpen };
+}
+
+/**
+ * يدقق بنود دفعة قبل التسوية ويُرجع قائمة بالمخالفات (روابط مزدوجة).
+ * عودة فارغة = الدفعة متسقة.
+ */
+export interface FundLinkViolation {
+  kind: 'expense_double_link' | 'payment_request_double_link';
+  id: string;
+  description: string;
+  amount: number;
+}
+
+export function auditFundFinancialLinks(
+  fundId: string,
+  expenses: Expense[],
+  paymentRequests: PaymentRequest[],
+): FundLinkViolation[] {
+  const violations: FundLinkViolation[] = [];
+  expenses
+    .filter((e) => e.fundId === fundId && e.custodyId)
+    .forEach((e) =>
+      violations.push({
+        kind: 'expense_double_link',
+        id: e.id,
+        description: e.description,
+        amount: e.amount,
+      }),
+    );
+  paymentRequests
+    .filter((p) => p.paidFromFundId === fundId && p.paidFromCustodyId)
+    .forEach((p) =>
+      violations.push({
+        kind: 'payment_request_double_link',
+        id: p.id,
+        description: p.description,
+        amount: p.amount,
+      }),
+    );
+  return violations;
+}
+
+/**
  * حالة لون الرصيد المتبقي مقارنة بآخر دفعة.
  */
 export function getRemainingStatus(

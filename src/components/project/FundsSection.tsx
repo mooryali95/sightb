@@ -14,6 +14,8 @@ import {
   calculateSettlementDifference,
   daysBetween,
   getSettlementForFund,
+  getFundOpenItems,
+  auditFundFinancialLinks,
 } from '@/lib/funds';
 import { generateFundAlerts, canCreateNewFund } from '@/lib/fund-alerts';
 import {
@@ -191,6 +193,16 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
 
   const handleSubmitSettlement = async () => {
     if (!settleFor) return;
+    // Pre-validation: لا تسوية مع وجود روابط مزدوجة (عهدة + دفعة على نفس البند)
+    const violations = auditFundFinancialLinks(settleFor.id, projectExpenses, projPRs);
+    if (violations.length > 0) {
+      const sample = violations.slice(0, 3).map((v) => `• ${v.description} (${formatCurrency(v.amount)})`).join('\n');
+      toast.error(
+        `لا يمكن إرسال التسوية: ${violations.length} بند مربوط بعهدة ودفعة معاً. صحّح الروابط أولاً.\n${sample}`,
+        { duration: 9000 },
+      );
+      return;
+    }
     const cash = parseFloat(remainingCash) || 0;
     if (Math.abs(settlementDiff) > 1 && !diffReason.trim()) {
       toast.error('يجب توضيح سبب الفرق');
@@ -592,8 +604,25 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
 
               </div>
 
-              <div>
-                <Label>المتبقي النقدي المُعاد</Label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>المتبقي النقدي المُعاد</Label>
+                  {(() => {
+                    const open = getFundOpenItems(settleFor.id, projectCustodies, projPRs, projTransfers, projectExpenses);
+                    const computedRemaining = getFundRemaining(settleFor, projectExpenses, projectCustodies, projPRs, projTransfers);
+                    const existing = getSettlementForFund(settleFor.id, fundSettlements);
+                    const editable = !existing || existing.status === 'draft' || existing.status === 'rejected';
+                    if (!editable) return null;
+                    return (
+                      <Button
+                        type="button" size="sm" variant="outline"
+                        onClick={() => setRemainingCash(String(Math.max(computedRemaining, 0)))}
+                      >
+                        احتسب تلقائياً
+                      </Button>
+                    );
+                  })()}
+                </div>
                 <Input
                   type="number"
                   value={remainingCash}
@@ -602,6 +631,43 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                     getSettlementForFund(settleFor.id, fundSettlements)!.status !== 'draft' &&
                     getSettlementForFund(settleFor.id, fundSettlements)!.status !== 'rejected'}
                 />
+                {/* تفسير المتبقي: قائمة البنود غير المسوّاة */}
+                {(() => {
+                  const open = getFundOpenItems(settleFor.id, projectCustodies, projPRs, projTransfers, projectExpenses);
+                  const hasOpen = open.openCustodies.length > 0 || open.outstandingAdvances.length > 0;
+                  if (!hasOpen) {
+                    return (
+                      <div className="text-xs p-2 rounded-md bg-success/10 text-success border border-success/20">
+                        ✓ كل مكونات الدفعة موثّقة. لا توجد عهد مفتوحة أو سلف قائمة — المتبقي = 0 يعني الإقفال الكامل.
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="text-xs p-2 rounded-md bg-warning/10 border border-warning/20 space-y-1.5">
+                      <p className="font-semibold text-warning-foreground">بنود غير مسوّاة تمنع إقفال المتبقي عند 0:</p>
+                      {open.openCustodies.length > 0 && (
+                        <div>
+                          <p className="text-muted-foreground">عهد مفتوحة من هذه الدفعة:</p>
+                          <ul className="list-disc pr-4 mt-0.5">
+                            {open.openCustodies.map((c) => (
+                              <li key={c.id}>{c.resourceName} — متبقي فيها: <span className="font-mono">{formatCurrency(c.remaining)}</span></li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {open.outstandingAdvances.length > 0 && (
+                        <div>
+                          <p className="text-muted-foreground">سلف قائمة على موردين:</p>
+                          <ul className="list-disc pr-4 mt-0.5">
+                            {open.outstandingAdvances.map((a) => (
+                              <li key={a.id}>{a.description} — <span className="font-mono">{formatCurrency(a.remaining)}</span></li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {Math.abs(settlementDiff) > 1 && (
