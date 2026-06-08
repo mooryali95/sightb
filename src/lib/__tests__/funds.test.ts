@@ -267,3 +267,26 @@ describe('generateFundAlerts', () => {
     }
   });
 });
+
+describe('settlement spent includes advances and cash transfers', () => {
+  it('getFundSpent equals row "spent" when advances + transfers exist (no phantom diff)', () => {
+    const fund = makeFund({ id: 'f1', amount: 67000, status: 'acknowledged' });
+    // 65,000 expensed directly + 2,000 outstanding advance
+    const expenses = [makeExpense({ id: 'e1', amount: 65000, fundId: 'f1' })];
+    const prs: any = [{
+      id: 'pr1',
+      projectId: PID,
+      paidFromFundId: 'f1',
+      requestType: 'advance',
+      status: 'paid',
+      isAdvanceOutstanding: true,
+      amount: 2000,
+      refundedAmount: 0,
+    }];
+    const spent = getFundSpent('f1', expenses, [], prs, []);
+    expect(spent).toBe(67000);
+    expect(getFundRemaining(fund, expenses, [], prs, [])).toBe(0);
+    expect(calculateSettlementDifference(fund.amount, spent, 0)).toBe(0);
+  });
+});
+

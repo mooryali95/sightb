@@ -5,6 +5,10 @@ import { formatCurrency } from '@/lib/finance';
 import {
   getProjectFundsSummary,
   getFundSpent,
+  getFundDirectSpent,
+  getFundCustodyDraw,
+  getFundOutstandingAdvances,
+  getFundCashTransfersOut,
   getFundRemaining,
   getRemainingStatus,
   calculateSettlementDifference,
@@ -161,7 +165,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   };
 
   const settlementSpent = settleFor
-    ? getFundSpent(settleFor.id, projectExpenses, projectCustodies)
+    ? getFundSpent(settleFor.id, projectExpenses, projectCustodies, projPRs, projTransfers)
     : 0;
   const settlementDiff = settleFor
     ? calculateSettlementDifference(
@@ -568,7 +572,24 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                       ⚠️ فرق كبير — يتطلب توضيحاً مفصّلاً
                     </p>
                   )}
-                </div>
+              </div>
+
+              {/* تفصيل مكوّنات المصروف الموثق */}
+              {settleFor && (() => {
+                const direct = getFundDirectSpent(settleFor.id, projectExpenses, projectCustodies);
+                const custDraw = getFundCustodyDraw(settleFor.id, projectCustodies);
+                const advances = getFundOutstandingAdvances(settleFor.id, projPRs);
+                const transOut = getFundCashTransfersOut(settleFor.id, projTransfers);
+                return (
+                  <div className="text-xs text-muted-foreground bg-muted/30 rounded-md p-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div>مصروف مباشر: <span className="font-mono text-foreground">{formatCurrency(direct)}</span></div>
+                    <div>عهد مسحوبة: <span className="font-mono text-foreground">{formatCurrency(custDraw)}</span></div>
+                    <div>سلف قائمة: <span className="font-mono text-foreground">{formatCurrency(advances)}</span></div>
+                    <div>تحويلات نقدية: <span className="font-mono text-foreground">{formatCurrency(transOut)}</span></div>
+                  </div>
+                );
+              })()}
+
               </div>
 
               <div>
