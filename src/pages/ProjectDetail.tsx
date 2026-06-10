@@ -24,7 +24,7 @@ import {
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
   Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, HandCoins,
-  MoreHorizontal, Download,
+  MoreHorizontal, Download, GitCompare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportToExcel, exportToPDF } from '@/lib/export';
@@ -52,6 +52,7 @@ import { CashLedgerSection } from '@/components/project/CashLedgerSection';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
+import { PerformanceComparisonSection } from '@/components/project/PerformanceComparisonSection';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 import { Progress } from '@/components/ui/progress';
 
@@ -282,6 +283,7 @@ export default function ProjectDetail() {
       { value: 'baseline', label: 'خط الأساس', icon: Baseline },
     ],
     tracking: [
+      { value: 'performance', label: 'مقارنة الأداء', icon: GitCompare },
       { value: 'charts', label: 'التحليلات', icon: BarChart3 },
       { value: 'whatif', label: 'ما-إذا', icon: FlaskConical },
     ],
@@ -816,6 +818,16 @@ export default function ProjectDetail() {
                   return <ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} />;
                 case 'risks':
                   return <RisksSection projectId={project.id} risks={pRisks} readOnly={isReadOnly} />;
+                case 'performance':
+                  return (
+                    <PerformanceComparisonSection
+                      budgetItems={pBudget}
+                      expenses={pExpenses}
+                      durationMonths={project.durationMonths}
+                      startDate={project.startDate}
+                      currency={project.currency}
+                    />
+                  );
                 case 'charts':
                   return <ChartsSection pieData={pieData} barData={barData} expenses={pExpenses} totalPlanned={summary.totalPlanned} durationMonths={project.durationMonths} budgetItems={pBudget} />;
                 case 'whatif':
