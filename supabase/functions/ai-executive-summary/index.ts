@@ -171,7 +171,7 @@ ${ctx.daysRemaining !== null ? `- الأيام المتبقية: ${ctx.daysRemai
   } catch (err) {
     console.error("[ai-executive-summary] fatal", err);
     return new Response(
-      JSON.stringify({ error: (err as Error).message }),
+      JSON.stringify({ error: "حدث خطأ داخلي" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
