@@ -170,7 +170,8 @@ Deno.serve(async (req) => {
     );
 
     const sendInviteEmail = async () => {
-      const redirectUrl = `${getAllowedOrigin(req)}/reset-password`;
+      // Hardcoded production URL to prevent open-redirect via Origin header manipulation.
+      const redirectUrl = `https://sight.basserh.com/reset-password`;
 
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
