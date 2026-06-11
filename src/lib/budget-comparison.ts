@@ -138,13 +138,14 @@ function buildItemComparison(
   item: BudgetItem,
   expenses: Expense[],
   durationMonths: number,
-  currentMonth: number,
+  fromMonth: number,
+  toMonth: number,
 ): ItemComparison {
-  // Total planned: for recurring items the stored amount is monthly — sum the distribution
+  // Total planned (BAC): for recurring items the stored amount is monthly — sum the distribution
   const dist = distributeBudgetItem(item, durationMonths);
   const planned = dist.reduce((s, v) => s + v, 0);
-  const plannedToDate = getPlannedToDate(item, durationMonths, currentMonth);
-  const actual = getActualForBudgetItem(item.id, expenses);
+  const plannedToDate = getPlannedInRange(item, durationMonths, fromMonth, toMonth);
+  const actual = getActualInRange(item.id, expenses, fromMonth, toMonth);
   const variance = actual - plannedToDate;
   const variancePct = plannedToDate > 0 ? variance / plannedToDate : (actual > 0 ? 1 : 0);
   const consumptionPct = planned > 0 ? actual / planned : 0;
@@ -159,23 +160,25 @@ function buildItemComparison(
     variancePct,
     consumptionPct,
     severity: classifyVariance(variancePct),
-    remaining: planned - actual,
+    remaining: plannedToDate - actual,
   };
 }
 
 /**
  * Group budget items by category and compute aggregated totals.
  * Returns categories sorted by total planned amount (desc).
+ * If toMonth is omitted, defaults to currentMonth-style behavior (caller passes it).
  */
 export function groupByCategory(
   budgetItems: BudgetItem[],
   expenses: Expense[],
   durationMonths: number,
-  currentMonth: number,
+  toMonth: number,
+  fromMonth: number = 1,
 ): CategoryGroup[] {
   const map = new Map<ExpenseCategory, ItemComparison[]>();
   for (const bi of budgetItems) {
-    const comp = buildItemComparison(bi, expenses, durationMonths, currentMonth);
+    const comp = buildItemComparison(bi, expenses, durationMonths, fromMonth, toMonth);
     const arr = map.get(bi.category) || [];
     arr.push(comp);
     map.set(bi.category, arr);
@@ -196,7 +199,7 @@ export function groupByCategory(
       variance,
       variancePct,
       consumptionPct: planned > 0 ? actual / planned : 0,
-      remaining: planned - actual,
+      remaining: plannedToDate - actual,
       severity: classifyVariance(variancePct),
       items: items.sort((a, b) => b.planned - a.planned),
     });
@@ -210,5 +213,6 @@ export function summarizeGroups(groups: CategoryGroup[]) {
   const actual = groups.reduce((s, g) => s + g.actual, 0);
   const variance = actual - plannedToDate;
   const variancePct = plannedToDate > 0 ? variance / plannedToDate : 0;
-  return { planned, plannedToDate, actual, variance, variancePct, remaining: planned - actual };
+  return { planned, plannedToDate, actual, variance, variancePct, remaining: plannedToDate - actual };
 }
+
