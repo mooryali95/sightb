@@ -75,10 +75,21 @@ export function getPlannedToDate(
   durationMonths: number,
   currentMonth: number,
 ): number {
+  return getPlannedInRange(item, durationMonths, 1, currentMonth);
+}
+
+/** Planned value within an inclusive [fromMonth, toMonth] window. */
+export function getPlannedInRange(
+  item: Pick<BudgetItem, 'plannedAmount' | 'costType' | 'startMonth' | 'endMonth' | 'month'>,
+  durationMonths: number,
+  fromMonth: number,
+  toMonth: number,
+): number {
   const dist = distributeBudgetItem(item, durationMonths);
+  const from = Math.max(1, Math.min(durationMonths, fromMonth));
+  const to = Math.max(0, Math.min(durationMonths, toMonth));
   let total = 0;
-  const upto = Math.max(0, Math.min(durationMonths, currentMonth));
-  for (let m = 1; m <= upto; m++) total += dist[m];
+  for (let m = from; m <= to; m++) total += dist[m] || 0;
   return total;
 }
 
@@ -89,6 +100,31 @@ export function getActualForBudgetItem(itemId: string, expenses: Expense[]): num
     .filter(e => e.approvalStatus !== 'rejected')
     .filter(e => !e.isOutstandingAdvance)
     .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+}
+
+/** Same as getActualForBudgetItem but constrained to expenses whose month falls in [from,to]. */
+export function getActualInRange(
+  itemId: string, expenses: Expense[], fromMonth: number, toMonth: number,
+): number {
+  return expenses
+    .filter(e => e.budgetItemId === itemId)
+    .filter(e => e.approvalStatus !== 'rejected')
+    .filter(e => !e.isOutstandingAdvance)
+    .filter(e => (e.month ?? 0) >= fromMonth && (e.month ?? 0) <= toMonth)
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+}
+
+/** Return the linked expense rows for an item, sorted by date. Excludes rejected + outstanding advances. */
+export function getExpensesForBudgetItem(
+  itemId: string, expenses: Expense[], fromMonth?: number, toMonth?: number,
+): Expense[] {
+  return expenses
+    .filter(e => e.budgetItemId === itemId)
+    .filter(e => e.approvalStatus !== 'rejected')
+    .filter(e => !e.isOutstandingAdvance)
+    .filter(e => fromMonth == null || (e.month ?? 0) >= fromMonth)
+    .filter(e => toMonth == null || (e.month ?? 0) <= toMonth)
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 }
 
 function classifyVariance(variancePct: number): 'good' | 'warning' | 'critical' {
