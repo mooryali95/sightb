@@ -1,92 +1,95 @@
-## الهدف
+# خطة مراجعة وتصحيح الأخطاء — 3 مراحل
 
-إضافة تاب جديد باسم **"مقارنة الأداء"** داخل صفحة المشروع يعرض جدولاً هرمياً (الفئة الأم ← البنود الفرعية) يقارن في نظرة واحدة:
+## الوضع الحالي (المسح الشامل)
 
-- **الموازنة المعتمدة** (Budget) — السقف المالي لكل بند.
-- **المخطط للفترة الحالية** (Planned-to-Date / Earned Value Budget) — كم كان يجب أن يُصرف حتى اليوم وفق التوزيع الشهري.
-- **الفعلي المصروف** (Actual) — مجموع المصروفات الفعلية للبند.
-- **المتبقي** و**نسبة الاستهلاك** و**الانحراف** (الفعلي − المخطط).
+| المصدر | النتيجة |
+|---|---|
+| Runtime Errors | لا توجد أخطاء وقت التشغيل |
+| Console Logs | تحذير واحد: `fetchPriority` على `<img>` في `Landing.tsx:64` |
+| Vitest (91 اختبار) | جميعها تنجح ✅ |
+| Security Scans (Wiz / Supabase / Connector / Agent) | لا توجد ثغرات مفتوحة ✅ |
+| Supabase Linter | 76 تحذير من نوعين فقط: <br>• 38× `0028_anon_security_definer_function_executable` <br>• 38× `0029_authenticated_security_definer_function_executable` |
 
-كل سطر يحمل شريط تقدم متعدد الطبقات: شريط رمادي للموازنة، شريط ملوّن للفعلي، وعلامة "▼" تشير إلى الموضع المخطط للوقت الحالي — ليُرى الانحراف بصرياً قبل قراءة الأرقام.
+كل تحذيرات Linter من فئة **SECURITY DEFINER functions قابلة للتنفيذ من العموم/المسجّلين** — كل دوال `public.*` التي تستخدم `SECURITY DEFINER` (مثل `has_role`, `is_admin`, مساعدات RBAC، triggers helpers) ممنوحة `EXECUTE` افتراضياً لكل من `anon` و `authenticated`.
 
-## مكان الإضافة
+---
 
-- تاب جديد مستقل في `src/pages/ProjectDetail.tsx` بعد تاب "الموازنة" مباشرة بعنوان **"مقارنة الأداء"** وأيقونة `GitCompare`.
-- لا يستبدل أي تاب موجود، ولا يتعارض مع "الملخص التنفيذي".
+## التصنيف
 
-## التصميم البصري (هرمي)
+### 1) أخطاء الكود (Code)
+- **C1**: تحذير React: `fetchPriority` بصيغة camelCase على عنصر DOM في `src/pages/Landing.tsx` (صورة الـ hero). يجب أن يكون `fetchpriority` lowercase (أو استخدام `loading="eager"` فقط).
 
-```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│ ▼ رواتب موظفين                  150,000 │ 90,000 │ 110,000 │  +20,000 ▲    │
-│   ████████████████████░░░░░  73%   ▼مخطط 60%                               │
-├────────────────────────────────────────────────────────────────────────────┤
-│     • أحمد (مدير مشروع)         60,000 │ 36,000 │  40,000 │   +4,000 ▲    │
-│       ██████████████░░░░░░   66%   ▼60%                                    │
-│     • سارة (محاسبة)             50,000 │ 30,000 │  45,000 │  +15,000 ▲▲   │
-│       ████████████████████░  90%   ▼60%                                    │
-│     • محمد (مهندس)              40,000 │ 24,000 │  25,000 │   +1,000 ▬    │
-│       ████████████░░░░░░░░   62%   ▼60%                                    │
-├────────────────────────────────────────────────────────────────────────────┤
-│ ▶ سفر وتنقل                      40,000 │ 24,000 │  18,000 │   -6,000 ▼    │
-│   ███████████░░░░░░░░░░░░░  45%   ▼60%                                    │
-└────────────────────────────────────────────────────────────────────────────┘
-   البند            موازنة │ مخطط حتى │ فعلي │ الانحراف ولونه
-```
+### 2) أخطاء تقنية / أمنية (Technical & Security)
+- **T1**: 76 تحذير Supabase Linter — `SECURITY DEFINER` بدون `REVOKE EXECUTE FROM PUBLIC`.
+  - يجب على كل دالة في `public` أن تُصنَّف:
+    - دوال يستدعيها العميل عبر RPC (مثل `has_role` إن استُخدمت من العميل) → تبقى لكن مع `REVOKE FROM PUBLIC, anon` ومنح `EXECUTE` لـ `authenticated` فقط.
+    - دوال داخلية (triggers helpers، audit helpers، email enqueue) → `REVOKE EXECUTE FROM PUBLIC, anon, authenticated` ومنح `service_role` فقط.
 
-- **رأس الفئة** = مجموع كل بنودها الفرعية، قابل للطيّ/الفتح بالضغط.
-- **شريط التقدم** ملوّن حسب الحالة:
-  - `health-good` (أخضر) عندما الانحراف ≤ 5٪
-  - `health-warning` (كهرماني) عندما 5–15٪
-  - `health-critical` (أحمر) عندما > 15٪
-- علامة "▼" على الشريط تُظهر الموضع المخطط للوقت الحالي (Planned-to-Date) لمقارنة فورية بصرية.
-- شارة الانحراف تعرض المبلغ والسهم (▲ تجاوز، ▼ أقل، ▬ ضمن الحدود).
+### 3) الهيكل (Structure)
+- لا توجد مشاكل هيكلية في الكود (لا أخطاء build، لا اختبارات فاشلة، لا runtime errors).
+- نقطة مراجعة فقط: تأكيد عدم وجود دوال SECURITY DEFINER قديمة غير مستخدمة (orphans) يمكن حذفها بدل تعديل صلاحياتها.
 
-## أعلى الصفحة — لوحة مؤشرات
+### 4) البيانات (Data)
+- لا توجد جداول بدون RLS، ولا policies مفتوحة، ولا أعمدة حساسة مكشوفة (Security scan نظيف).
+- لا تغييرات schema مطلوبة.
 
-أربع بطاقات `StatCard` في صف واحد:
+### 5) الإدارة (Management / Ops)
+- تحديث ملف `@security-memory` ليُوثِّق سياسة الـ EXECUTE الجديدة، حتى لا تعاد المشكلة في migrations لاحقة.
+- إضافة قاعدة في `mem://` (Core) تُلزم كل `CREATE FUNCTION ... SECURITY DEFINER` بـ `REVOKE EXECUTE FROM PUBLIC` ومنح صريح للأدوار المطلوبة فقط.
 
-1. **إجمالي الموازنة**
-2. **المخطط حتى تاريخه** (مجموع PV)
-3. **الفعلي حتى تاريخه** (مجموع AC)
-4. **الانحراف الكلي** بلون ديناميكي + CPI/SPI مختصرين
+---
 
-## الفلاتر والأدوات
+## المراحل الثلاث
 
-- بحث نصي عن اسم البند.
-- فلتر "إظهار فقط البنود المنحرفة" (toggle).
-- فلتر شهر/فترة (افتراضي: حتى الشهر الحالي).
-- زر تصدير Excel + PDF لنفس الجدول (reuse `exportToExcel/PDF`).
+### 🔹 المرحلة 1 — إصلاحات سريعة (Code + Quick Wins)
+**الهدف**: تنظيف Console وتحديث التوثيق. لا تغييرات DB.
 
-## الاحتساب (المنطق)
+1. **C1**: تصحيح `fetchPriority` → `fetchpriority` في `src/pages/Landing.tsx:64` (أو إزالتها والاكتفاء بـ `loading="eager"`).
+2. فحص أي تحذيرات camelCase مشابهة في باقي الصفحات (`grep -r fetchPriority src/`).
+3. تشغيل `bunx vitest run` للتأكد من بقاء 91/91 ✅.
 
-ملف جديد `src/lib/budget-comparison.ts` يحوي:
+**الناتج**: console نظيف، لا regressions.
 
-- `getPlannedToDate(item, currentMonth)`: يوزّع `plannedAmount` على الأشهر حسب `costType` (`fixed` يقسم بالتساوي، `recurring` شهري ثابت، `one_time` كاملاً في `month`). يُرجع المجموع التراكمي حتى الشهر الحالي.
-- `getActualForBudgetItem(item, expenses)`: مجموع `expenses.amount` المرتبطة بـ `budgetItemId`.
-- `groupByCategory(items, expenses, currentMonth)`: يرجع شجرة `{category, planned, plannedToDate, actual, variance, items: [...]}`.
-- يستخدم `getCurrentMonth(startDate)` الموجود في `src/lib/finance.ts`.
+---
 
-## الملفات المطلوبة
+### 🔹 المرحلة 2 — تصلب الأمان (Technical / DB Security)
+**الهدف**: إغلاق 76 تحذير Linter بدون كسر التطبيق.
 
-1. **جديد** `src/components/project/PerformanceComparisonSection.tsx` — المكوّن الرئيسي.
-2. **جديد** `src/lib/budget-comparison.ts` — منطق الحسابات + types.
-3. **جديد** `src/lib/__tests__/budget-comparison.test.ts` — اختبارات Vitest للتوزيع الشهري وحساب الانحراف.
-4. **تعديل** `src/pages/ProjectDetail.tsx` — إضافة `<TabsTrigger value="performance">` و`<TabsContent>` الجديدين.
-5. **تعديل** `src/hooks/useTabBadges.ts` — شارة تحذير صغيرة على التاب إذا وجد بنود حرجة (>15٪ تجاوز).
+1. استعلام كل دوال `public` ذات `SECURITY DEFINER`:
+   ```sql
+   SELECT p.proname, pg_get_function_identity_arguments(p.oid)
+   FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+   WHERE n.nspname='public' AND p.prosecdef=true;
+   ```
+2. تصنيف كل دالة (مَن يستدعيها فعلياً: client RPC؟ trigger داخلي؟ edge function؟).
+3. Migration واحدة:
+   - `REVOKE EXECUTE ON FUNCTION public.<fn>(...) FROM PUBLIC, anon, authenticated;`
+   - `GRANT EXECUTE ON FUNCTION public.<fn>(...) TO <only-needed-roles>;`
+   - مثال: `has_role` → `GRANT EXECUTE ... TO authenticated;`
+   - مثال: helpers الـ triggers و enqueue_email → `GRANT EXECUTE ... TO service_role;` فقط.
+4. إعادة تشغيل `supabase--linter` للتأكد أن العدد = 0.
+5. اختبار يدوي في الواجهة: تسجيل دخول، تحميل dashboard، تنفيذ عملية كتابة (expense) للتحقق من عدم كسر RBAC.
 
-## التفاصيل التقنية
+**الناتج**: 0 تحذيرات Linter، RBAC يعمل كما هو.
 
-- يحترم RBAC: `readOnly` للمشاهد، لا حقول قابلة للتعديل في هذا التاب (للقراءة فقط — مقارنة فقط).
-- أرقام إنجليزية + `formatCurrency` للعرض.
-- يستخدم `Accordion` من shadcn للطيّ، `Progress` المخصّص بطبقات (سنبني واحداً بسيطاً بـ div + tailwind لأن `Progress` الحالي طبقة واحدة).
-- Motion: `framer-motion` لانزلاق فتح/طيّ الفئة فقط (350ms ease-out) — بدون مبالغة.
-- Mobile: يتحول الجدول إلى بطاقات مكدّسة عند `< md` لكل بند، الفئة تبقى رأساً مطوياً.
-- يحترم الـ Budget Lock: لا تأثير عليه (للقراءة فقط).
+---
 
-## ما لن يحدث
+### 🔹 المرحلة 3 — الحَوكمة والتوثيق (Management)
+**الهدف**: منع تكرار المشاكل في migrations مستقبلية.
 
-- لا تغيير في schema قاعدة البيانات.
-- لا تعديل على منطق الموازنة/المصروفات/التسويات الموجود.
-- لا إضافة edge functions.
+1. تحديث `@security-memory` بسياسة:
+   > كل `CREATE FUNCTION ... SECURITY DEFINER` في schema `public` يجب أن يتبعه فوراً `REVOKE EXECUTE FROM PUBLIC` ثم `GRANT EXECUTE` صريح للأدوار المطلوبة فقط (`authenticated` أو `service_role`).
+2. إضافة قاعدة Core في `mem://index.md` بنفس المضمون.
+3. تحديث `.lovable/plan.md` بسجل ما تم في المراحل 1+2.
+4. (اختياري) إضافة سكربت فحص بسيط في `scripts/` يقرأ الـ migrations الأخيرة ويُحذِّر إذا وجد `SECURITY DEFINER` بدون `REVOKE`.
 
+**الناتج**: ذاكرة محدّثة + توثيق + (اختيارياً) حارس استباقي.
+
+---
+
+## ملاحظات
+
+- لا توجد أخطاء runtime، ولا اختبارات فاشلة، ولا ثغرات في security scans — هذه الخطة وقائية بالأساس + إصلاح تحذير واحد UI + إغلاق تحذيرات Linter.
+- لن تُلمس ملفات Supabase auto-gen (`client.ts`, `types.ts`, `.env`).
+- لن تُعدَّل أي policies RLS قائمة — فقط صلاحيات `EXECUTE` على الدوال.
+- بعد موافقتك سأبدأ بالمرحلة 1، وأنتظر تأكيدك قبل الانتقال للمرحلة 2.
