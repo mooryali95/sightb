@@ -693,9 +693,11 @@ export default function ProjectDetail() {
 
         {/* Export actions live in the header ⋯ menu */}
 
-        {/* 5 main tabs — sections inside each tab use Accordion */}
+        {/* 5 main tabs — mobile: horizontal scroll snap; desktop: even 5-col grid */}
         <Tabs value={activeGroup} onValueChange={(v) => handleGroupChange(v as TabGroup)} className="space-y-4">
-          <TabsList className="grid grid-cols-5 w-full h-auto p-1 gap-1 bg-muted/50 sticky top-[57px] z-10">
+          <TabsList
+            className="sticky top-[57px] z-10 bg-muted/50 backdrop-blur-sm h-auto w-full p-1 gap-1 flex md:grid md:grid-cols-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory no-scrollbar"
+          >
             {tabGroups.map((group) => {
               const Icon = group.icon;
               const badgeColor =
@@ -706,12 +708,12 @@ export default function ProjectDetail() {
                 <TabsTrigger
                   key={group.key}
                   value={group.key}
-                  className="relative flex flex-col md:flex-row items-center gap-1 md:gap-1.5 py-2.5 px-1 md:px-3 text-[11px] md:text-xs min-h-[48px]"
+                  className="relative shrink-0 snap-start flex items-center gap-2 min-h-[44px] px-3.5 md:px-3 py-2 text-xs md:text-[13px] font-medium data-[state=active]:shadow-sm"
                 >
                   <Icon className="w-4 h-4 shrink-0" />
-                  <span className="truncate leading-tight">{group.label}</span>
+                  <span className="leading-tight whitespace-nowrap">{group.label}</span>
                   {group.badge > 0 && (
-                    <span className={`absolute -top-1 -left-1 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center px-1 ${badgeColor}`}>
+                    <span className={`min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center px-1 ${badgeColor}`}>
                       {group.badge}
                     </span>
                   )}

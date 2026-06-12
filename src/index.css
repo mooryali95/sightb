@@ -332,4 +332,8 @@
   .motion-fast    { transition-duration: var(--duration-fast); transition-timing-function: var(--ease-out); }
   .motion-base    { transition-duration: var(--duration-base); transition-timing-function: var(--ease-out); }
   .motion-slow    { transition-duration: var(--duration-slow); transition-timing-function: var(--ease-in-out); }
+
+  /* Hide scrollbar but keep scroll behavior (used by swipeable tab rows) */
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 }
