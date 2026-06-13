@@ -29,6 +29,7 @@ import {
   ResponsiveContainer, LineChart, Line, Legend,
 } from 'recharts';
 import { RisksSection } from '@/components/project/RisksSection';
+import { PageHeader } from '@/components/ui/page-header';
 
 const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)', 'hsl(200, 70%, 50%)'];
 
@@ -177,106 +178,113 @@ export default function PortfolioDetail() {
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header with Purple Theme */}
-        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-to-l from-violet-500/10 via-purple-500/5 to-transparent">
-          <div className="p-6">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-              <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
-              <span>←</span>
-              {company && <button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-primary transition-colors">{company.name}</button>}
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center">
-                  <FolderKanban className="w-6 h-6 text-violet-600 dark:text-violet-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-xl font-bold">{portfolio.name}</h1>
-                    <Badge className={`text-xs ${HEALTH_STATUS_COLORS[summary.healthStatus]}`}>
-                      {HEALTH_STATUS_LABELS[summary.healthStatus]}
-                    </Badge>
-                  </div>
-                  {portfolio.fiscalYear && <p className="text-xs text-muted-foreground mt-0.5">السنة المالية: {portfolio.fiscalYear}</p>}
-                  <p className="text-xs text-muted-foreground">{summary.projectCount} مشروع</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {(isAdmin || canEdit('company', portfolio.companyId)) && (
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
-                    <Pencil className="w-3.5 h-3.5" />تعديل
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                  exportPortfolioToExcel({
-                    portfolioName: portfolio.name,
-                    summary: { ...summary },
-                    projectSummaries: projectSummaries.map(ps => ({
-                      name: ps.project.name,
-                      contractValue: ps.summary.effectiveContractValue,
-                      planned: ps.summary.totalPlanned,
-                      actual: ps.summary.totalActual,
-                      plannedProfit: ps.summary.plannedProfit,
-                      percentComplete: ps.project.percentComplete,
-                      health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
-                    })),
-                    risks: portfolioRisks.map(r => ({
-                      title: r.title,
-                      project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
-                      probability: RISK_PROBABILITY_LABELS[r.probability],
-                      impact: r.impact,
-                      financialImpact: r.financialImpact,
-                      status: RISK_STATUS_LABELS[r.status],
-                    })),
-                  });
-                  toast.success('تم تصدير تقرير المحفظة');
-                }}>
-                  <FileSpreadsheet className="w-3.5 h-3.5" />Excel
+        <PageHeader
+          eyebrow={
+            <span className="flex items-center gap-1.5">
+              <button onClick={() => navigate('/')} className="hover:text-foreground transition-colors">لوحة التحكم</button>
+              {company && (
+                <>
+                  <span aria-hidden>←</span>
+                  <button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-foreground transition-colors">{company.name}</button>
+                </>
+              )}
+            </span>
+          }
+          title={
+            <span className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center shrink-0">
+                <FolderKanban className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+              </span>
+              <span>{portfolio.name}</span>
+            </span>
+          }
+          subtitle={
+            <span>
+              {summary.projectCount} مشروع
+              {portfolio.fiscalYear && <> · السنة المالية {portfolio.fiscalYear}</>}
+            </span>
+          }
+          meta={
+            <Badge className={`text-xs ${HEALTH_STATUS_COLORS[summary.healthStatus]}`}>
+              {HEALTH_STATUS_LABELS[summary.healthStatus]}
+            </Badge>
+          }
+          actions={
+            <>
+              {(isAdmin || canEdit('company', portfolio.companyId)) && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
+                  <Pencil className="w-3.5 h-3.5" />تعديل
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                  exportPortfolioToPDF({
-                    portfolioName: portfolio.name,
-                    summary: { ...summary },
-                    projectSummaries: projectSummaries.map(ps => ({
-                      name: ps.project.name,
-                      contractValue: ps.summary.effectiveContractValue,
-                      planned: ps.summary.totalPlanned,
-                      actual: ps.summary.totalActual,
-                      plannedProfit: ps.summary.plannedProfit,
-                      percentComplete: ps.project.percentComplete,
-                      health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
-                    })),
-                    risks: portfolioRisks.map(r => ({
-                      title: r.title,
-                      project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
-                      probability: RISK_PROBABILITY_LABELS[r.probability],
-                      impact: r.impact,
-                      financialImpact: r.financialImpact,
-                      status: RISK_STATUS_LABELS[r.status],
-                    })),
-                  });
-                  toast.success('تم تصدير تقرير PDF');
-                }}>
-                  <FileSpreadsheet className="w-3.5 h-3.5" />PDF
-                </Button>
-                {isAdmin && (
-                  <ConfirmDeleteDialog
-                    title="حذف المحفظة"
-                    description={`هل أنت متأكد من حذف "${portfolio.name}"؟ ستصبح المشاريع بدون محفظة.`}
-                    onConfirm={async () => {
-                      try { await deletePortfolio(id!); toast.success('تم الحذف'); navigate('/'); } catch { toast.error('فشل الحذف'); }
-                    }}
-                    trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+              )}
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                exportPortfolioToExcel({
+                  portfolioName: portfolio.name,
+                  summary: { ...summary },
+                  projectSummaries: projectSummaries.map(ps => ({
+                    name: ps.project.name,
+                    contractValue: ps.summary.effectiveContractValue,
+                    planned: ps.summary.totalPlanned,
+                    actual: ps.summary.totalActual,
+                    plannedProfit: ps.summary.plannedProfit,
+                    percentComplete: ps.project.percentComplete,
+                    health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
+                  })),
+                  risks: portfolioRisks.map(r => ({
+                    title: r.title,
+                    project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
+                    probability: RISK_PROBABILITY_LABELS[r.probability],
+                    impact: r.impact,
+                    financialImpact: r.financialImpact,
+                    status: RISK_STATUS_LABELS[r.status],
+                  })),
+                });
+                toast.success('تم تصدير تقرير المحفظة');
+              }}>
+                <FileSpreadsheet className="w-3.5 h-3.5" />Excel
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                exportPortfolioToPDF({
+                  portfolioName: portfolio.name,
+                  summary: { ...summary },
+                  projectSummaries: projectSummaries.map(ps => ({
+                    name: ps.project.name,
+                    contractValue: ps.summary.effectiveContractValue,
+                    planned: ps.summary.totalPlanned,
+                    actual: ps.summary.totalActual,
+                    plannedProfit: ps.summary.plannedProfit,
+                    percentComplete: ps.project.percentComplete,
+                    health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
+                  })),
+                  risks: portfolioRisks.map(r => ({
+                    title: r.title,
+                    project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
+                    probability: RISK_PROBABILITY_LABELS[r.probability],
+                    impact: r.impact,
+                    financialImpact: r.financialImpact,
+                    status: RISK_STATUS_LABELS[r.status],
+                  })),
+                });
+                toast.success('تم تصدير تقرير PDF');
+              }}>
+                <FileSpreadsheet className="w-3.5 h-3.5" />PDF
+              </Button>
+              {isAdmin && (
+                <ConfirmDeleteDialog
+                  title="حذف المحفظة"
+                  description={`هل أنت متأكد من حذف "${portfolio.name}"؟ ستصبح المشاريع بدون محفظة.`}
+                  onConfirm={async () => {
+                    try { await deletePortfolio(id!); toast.success('تم الحذف'); navigate('/'); } catch { toast.error('فشل الحذف'); }
+                  }}
+                  trigger={
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  }
+                />
+              )}
+            </>
+          }
+        />
 
         {/* Edit Dialog */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
