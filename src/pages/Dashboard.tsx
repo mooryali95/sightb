@@ -24,6 +24,7 @@ import { ProjectsTable } from '@/components/dashboard/ProjectsTable';
 import { CompanyManagement } from '@/components/dashboard/CompanyManagement';
 import { SnapshotControls } from '@/components/dashboard/SnapshotControls';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
@@ -158,19 +159,16 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="page-header flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="page-title">لوحة التحكم</h1>
-            <p className="page-subtitle">نظرة شاملة على جميع المحافظ والمشاريع</p>
-          </div>
-          {isAdmin && (
+        <PageHeader
+          eyebrow="نظرة عامة"
+          title="لوحة التحكم"
+          subtitle="نظرة شاملة على جميع المحافظ والمشاريع"
+          actions={isAdmin && (
             <Button onClick={() => navigate('/companies/new')} className="gap-2">
               <Plus className="w-4 h-4" /> شركة جديدة
             </Button>
           )}
-        </motion.div>
+        />
 
         {!hasData ? (
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.2 }}
