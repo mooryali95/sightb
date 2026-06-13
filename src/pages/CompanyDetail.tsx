@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -161,131 +162,130 @@ export default function CompanyDetail() {
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header with Blue Theme */}
-        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-to-l from-primary/10 via-primary/5 to-transparent">
-          <div className="p-6">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-              <button onClick={() => navigate('/')} className="hover:text-primary transition-colors">لوحة التحكم</button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-xl font-bold">{company.name}</h1>
-                    <Badge variant={company.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                      {company.status === 'active' ? 'نشطة' : 'مؤرشفة'}
-                    </Badge>
-                  </div>
-                  {company.description && (
-                    <p className="text-sm text-muted-foreground mt-0.5">{company.description}</p>
+        <PageHeader
+          eyebrow={
+            <button onClick={() => navigate('/')} className="hover:text-foreground transition-colors">لوحة التحكم</button>
+          }
+          title={
+            <span className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
+                <Building2 className="w-5 h-5 text-primary" />
+              </span>
+              <span>{company.name}</span>
+            </span>
+          }
+          subtitle={
+            <>
+              {company.description && <span className="block">{company.description}</span>}
+              <span className="text-xs">
+                {compPortfolios.length} محفظة · {visibleCompanyProjects.length} مشروع
+                {inactiveCount > 0 && !showInactive && (
+                  <span className="text-muted-foreground/60"> ({inactiveCount} منتهي)</span>
+                )}
+              </span>
+            </>
+          }
+          meta={
+            <Badge variant={company.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+              {company.status === 'active' ? 'نشطة' : 'مؤرشفة'}
+            </Badge>
+          }
+          actions={
+            <>
+              {inactiveCount > 0 && (
+                <Button
+                  variant={showInactive ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowInactive(!showInactive)}
+                  className="gap-1.5 text-xs"
+                >
+                  {showInactive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {showInactive ? 'إخفاء المنتهية' : 'عرض المنتهية'}
+                </Button>
+              )}
+              {(isAdmin || canEdit('company', id!)) && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
+                  <Pencil className="w-3.5 h-3.5" />تعديل
+                </Button>
+              )}
+              {summary && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                  exportCompanyToExcel({
+                    companyName: company.name,
+                    summary,
+                    portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
+                      name: ps.portfolioName,
+                      projects: ps.projectCount,
+                      contractValue: ps.totalEffectiveValue,
+                      actual: ps.totalActual,
+                      profit: ps.aggregatePlannedProfit,
+                      completion: ps.weightedPercentComplete,
+                      health: HEALTH_STATUS_LABELS[ps.healthStatus],
+                    })),
+                    indirectCosts: compIndirectCosts.map(ic => ({
+                      category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
+                      description: ic.description,
+                      amount: ic.amount,
+                      month: ic.month,
+                    })),
+                  });
+                  toast.success('تم تصدير تقرير الشركة');
+                }}>
+                  <FileSpreadsheet className="w-3.5 h-3.5" />Excel
+                </Button>
+              )}
+              {summary && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                  exportCompanyToPDF({
+                    companyName: company.name,
+                    summary,
+                    portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
+                      name: ps.portfolioName,
+                      projects: ps.projectCount,
+                      contractValue: ps.totalEffectiveValue,
+                      actual: ps.totalActual,
+                      profit: ps.aggregatePlannedProfit,
+                      completion: ps.weightedPercentComplete,
+                      health: HEALTH_STATUS_LABELS[ps.healthStatus],
+                    })),
+                    indirectCosts: compIndirectCosts.map(ic => ({
+                      category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
+                      description: ic.description,
+                      amount: ic.amount,
+                      month: ic.month,
+                    })),
+                  });
+                  toast.success('تم تصدير تقرير PDF');
+                }}>
+                  <FileSpreadsheet className="w-3.5 h-3.5" />PDF
+                </Button>
+              )}
+              {isAdmin && (
+                <>
+                  {company.status === 'active' && (
+                    <Button variant="outline" size="sm" className="gap-1.5 text-muted-foreground" onClick={async () => {
+                      try { await archiveCompany(id!); toast.success('تم الأرشفة'); } catch { toast.error('فشل'); }
+                    }}>
+                      <Archive className="w-3.5 h-3.5" />أرشفة
+                    </Button>
                   )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {compPortfolios.length} محفظة · {visibleCompanyProjects.length} مشروع
-                    {inactiveCount > 0 && !showInactive && (
-                      <span className="text-muted-foreground/60"> ({inactiveCount} منتهي)</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {inactiveCount > 0 && (
-                  <Button
-                    variant={showInactive ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setShowInactive(!showInactive)}
-                    className="gap-1.5 text-xs"
-                  >
-                    {showInactive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    {showInactive ? 'إخفاء المنتهية' : 'عرض المنتهية'}
-                  </Button>
-                )}
-                {(isAdmin || canEdit('company', id!)) && (
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
-                    <Pencil className="w-3.5 h-3.5" />تعديل
-                  </Button>
-                )}
-                {summary && (
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                    exportCompanyToExcel({
-                      companyName: company.name,
-                      summary,
-                      portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
-                        name: ps.portfolioName,
-                        projects: ps.projectCount,
-                        contractValue: ps.totalEffectiveValue,
-                        actual: ps.totalActual,
-                        profit: ps.aggregatePlannedProfit,
-                        completion: ps.weightedPercentComplete,
-                        health: HEALTH_STATUS_LABELS[ps.healthStatus],
-                      })),
-                      indirectCosts: compIndirectCosts.map(ic => ({
-                        category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
-                        description: ic.description,
-                        amount: ic.amount,
-                        month: ic.month,
-                      })),
-                    });
-                    toast.success('تم تصدير تقرير الشركة');
-                  }}>
-                    <FileSpreadsheet className="w-3.5 h-3.5" />Excel
-                  </Button>
-                )}
-                {summary && (
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                    exportCompanyToPDF({
-                      companyName: company.name,
-                      summary,
-                      portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
-                        name: ps.portfolioName,
-                        projects: ps.projectCount,
-                        contractValue: ps.totalEffectiveValue,
-                        actual: ps.totalActual,
-                        profit: ps.aggregatePlannedProfit,
-                        completion: ps.weightedPercentComplete,
-                        health: HEALTH_STATUS_LABELS[ps.healthStatus],
-                      })),
-                      indirectCosts: compIndirectCosts.map(ic => ({
-                        category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
-                        description: ic.description,
-                        amount: ic.amount,
-                        month: ic.month,
-                      })),
-                    });
-                    toast.success('تم تصدير تقرير PDF');
-                  }}>
-                    <FileSpreadsheet className="w-3.5 h-3.5" />PDF
-                  </Button>
-                )}
-                {isAdmin && (
-                  <>
-                    {company.status === 'active' && (
-                      <Button variant="outline" size="sm" className="gap-1.5 text-muted-foreground" onClick={async () => {
-                        try { await archiveCompany(id!); toast.success('تم الأرشفة'); } catch { toast.error('فشل'); }
-                      }}>
-                        <Archive className="w-3.5 h-3.5" />أرشفة
+                  <ConfirmDeleteDialog
+                    title="حذف الشركة"
+                    description={`هل أنت متأكد من حذف "${company.name}"؟ سيتم حذف جميع البيانات المرتبطة.`}
+                    onConfirm={async () => {
+                      try { await deleteCompany(id!); toast.success('تم الحذف'); navigate('/'); } catch { toast.error('فشل الحذف'); }
+                    }}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
                       </Button>
-                    )}
-                    <ConfirmDeleteDialog
-                      title="حذف الشركة"
-                      description={`هل أنت متأكد من حذف "${company.name}"؟ سيتم حذف جميع البيانات المرتبطة.`}
-                      onConfirm={async () => {
-                        try { await deleteCompany(id!); toast.success('تم الحذف'); navigate('/'); } catch { toast.error('فشل الحذف'); }
-                      }}
-                      trigger={
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      }
-                    />
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+                    }
+                  />
+                </>
+              )}
+            </>
+          }
+        />
 
         {/* Edit Dialog */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
