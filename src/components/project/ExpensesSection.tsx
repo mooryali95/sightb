@@ -15,9 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
-import { Plus, Pencil, Check, X, AlertCircle, Wallet } from 'lucide-react';
+import { Plus, Pencil, Check, X, AlertCircle, Wallet, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 
 interface ExpensesSectionProps {
   projectId: string;
@@ -39,6 +40,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const isAdmin = isAdminFor('project', projectId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [category, setCategory] = useState<ExpenseCategory>('salary');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -708,37 +710,42 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                       <td className="hidden md:table-cell text-xs">{resource?.name || '—'}</td>
                       <td className="text-muted-foreground hidden lg:table-cell">{exp.responsible || '—'}</td>
                       <td className="hidden lg:table-cell text-xs">{custody?.resourceName || '—'}</td>
-                      {!readOnly && (
                       <td>
                         <div className="flex items-center gap-0.5">
-                          {status === 'pending' && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setInspectorId(exp.id)} title="عرض التفاصيل">
+                            <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                          </Button>
+                          {!readOnly && (
                             <>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleApprove(exp.id)} title="اعتماد">
-                                <Check className="w-3.5 h-3.5 text-green-600" />
+                              {status === 'pending' && (
+                                <>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleApprove(exp.id)} title="اعتماد">
+                                    <Check className="w-3.5 h-3.5 text-green-600" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReject(exp.id)} title="رفض">
+                                    <X className="w-3.5 h-3.5 text-destructive" />
+                                  </Button>
+                                </>
+                              )}
+                              {!exp.fundId && !exp.custodyId && activeFund && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  title={`ربط بالدفعة #${activeFund.fundNumber}`}
+                                  onClick={() => handleQuickLinkFund(exp.id)}
+                                >
+                                  <Wallet className="w-3.5 h-3.5 text-amber-600" />
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="icon" onClick={() => openEdit(exp)}>
+                                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReject(exp.id)} title="رفض">
-                                <X className="w-3.5 h-3.5 text-destructive" />
-                              </Button>
+                              <ConfirmDeleteDialog title="حذف المصروف" description="هل أنت متأكد من حذف هذا المصروف؟" onConfirm={() => deleteExpense(exp.id)} />
                             </>
                           )}
-                          {!exp.fundId && !exp.custodyId && activeFund && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              title={`ربط بالدفعة #${activeFund.fundNumber}`}
-                              onClick={() => handleQuickLinkFund(exp.id)}
-                            >
-                              <Wallet className="w-3.5 h-3.5 text-amber-600" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(exp)}>
-                            <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                          </Button>
-                          <ConfirmDeleteDialog title="حذف المصروف" description="هل أنت متأكد من حذف هذا المصروف؟" onConfirm={() => deleteExpense(exp.id)} />
                         </div>
                       </td>
-                      )}
                     </tr>
                   );
                 })}
