@@ -665,7 +665,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                   <th className="hidden md:table-cell">المورد</th>
                   <th className="hidden lg:table-cell">المسؤول</th>
                   <th className="hidden lg:table-cell">العهدة</th>
-                  {!readOnly && <th></th>}
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
