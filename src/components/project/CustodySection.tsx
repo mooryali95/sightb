@@ -42,6 +42,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
   const [sourceFundId, setSourceFundId] = useState<string>('none');
   const [unlinkReason, setUnlinkReason] = useState('');
+  const [inspectorId, setInspectorId] = useState<string | null>(null);
 
   // ─── Cash transfer dialog state ───
   const [transferOpen, setTransferOpen] = useState(false);
