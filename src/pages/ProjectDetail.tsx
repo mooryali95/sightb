@@ -55,6 +55,7 @@ import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { PerformanceComparisonSection } from '@/components/project/PerformanceComparisonSection';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 import { Progress } from '@/components/ui/progress';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
