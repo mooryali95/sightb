@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
-import { Plus, Pencil, ArrowDownToLine, Trash2 } from 'lucide-react';
+import { Plus, Pencil, ArrowDownToLine, Trash2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 
 import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
@@ -41,6 +42,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
   const [sourceFundId, setSourceFundId] = useState<string>('none');
   const [unlinkReason, setUnlinkReason] = useState('');
+  const [inspectorId, setInspectorId] = useState<string | null>(null);
 
   // ─── Cash transfer dialog state ───
   const [transferOpen, setTransferOpen] = useState(false);
@@ -350,7 +352,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 <th>الاستلام</th>
                 <th>الحالة</th>
                 <th className="hidden md:table-cell">ملاحظات</th>
-                {!readOnly && <th></th>}
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -403,47 +405,52 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                       )}
                     </td>
                     <td className="text-muted-foreground text-xs hidden md:table-cell">{c.notes || '—'}</td>
-                    {!readOnly && (
-                      <td>
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {!c.sourceFundId && isAdmin && availableFunds.length > 0 && (
-                            <Select
-                              value=""
-                              onValueChange={async (fid) => {
-                                if (!fid) return;
-                                const f = availableFunds.find(x => x.id === fid);
-                                if (!f) return;
-                                if (f.remaining < c.amount - c.spent) {
-                                  toast.error(`رصيد الدفعة لا يكفي. المتاح: ${formatCurrency(f.remaining)}, المطلوب: ${formatCurrency(c.amount - c.spent)}`);
-                                  return;
-                                }
-                                try {
-                                  await updateCustody(c.id, { sourceFundId: fid } as any);
-                                  toast.success(`تم ربط العهدة بالدفعة #${f.fundNumber}`);
-                                } catch (e: any) {
-                                  toast.error(e.message || 'تعذّر الربط');
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-7 w-[140px] text-xs">
-                                <SelectValue placeholder="ربط بدفعة" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableFunds.map(f => (
-                                  <SelectItem key={f.id} value={f.id} className="text-xs">
-                                    دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(c)} title="تعديل العهدة">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <ConfirmDeleteDialog title="حذف العهدة" description={c.spent > 0 ? `⚠️ هذه العهدة عليها ${formatCurrency(c.spent)} من المصروفات. الحذف سيُسقط الربط مع تلك المصروفات. متابعة؟` : 'هل أنت متأكد من حذف هذه العهدة؟'} onConfirm={() => deleteCustody(c.id)} />
-                        </div>
-                      </td>
-                    )}
+                    <td>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setInspectorId(c.id)} title="عرض التفاصيل">
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+                        {!readOnly && (
+                          <>
+                            {!c.sourceFundId && isAdmin && availableFunds.length > 0 && (
+                              <Select
+                                value=""
+                                onValueChange={async (fid) => {
+                                  if (!fid) return;
+                                  const f = availableFunds.find(x => x.id === fid);
+                                  if (!f) return;
+                                  if (f.remaining < c.amount - c.spent) {
+                                    toast.error(`رصيد الدفعة لا يكفي. المتاح: ${formatCurrency(f.remaining)}, المطلوب: ${formatCurrency(c.amount - c.spent)}`);
+                                    return;
+                                  }
+                                  try {
+                                    await updateCustody(c.id, { sourceFundId: fid } as any);
+                                    toast.success(`تم ربط العهدة بالدفعة #${f.fundNumber}`);
+                                  } catch (e: any) {
+                                    toast.error(e.message || 'تعذّر الربط');
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="h-7 w-[140px] text-xs">
+                                  <SelectValue placeholder="ربط بدفعة" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableFunds.map(f => (
+                                    <SelectItem key={f.id} value={f.id} className="text-xs">
+                                      دفعة #{f.fundNumber} — متاح {formatCurrency(f.remaining)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(c)} title="تعديل العهدة">
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <ConfirmDeleteDialog title="حذف العهدة" description={c.spent > 0 ? `⚠️ هذه العهدة عليها ${formatCurrency(c.spent)} من المصروفات. الحذف سيُسقط الربط مع تلك المصروفات. متابعة؟` : 'هل أنت متأكد من حذف هذه العهدة؟'} onConfirm={() => deleteCustody(c.id)} />
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -451,6 +458,88 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
           </table>
         </div>
       )}
+
+      {(() => {
+        const c = inspectorId ? enrichedCustodies.find(x => x.id === inspectorId) : null;
+        if (!c) return null;
+        const sf = c.sourceFundId ? projectFunds.find(f => f.id === c.sourceFundId) : null;
+        const linkedExpenses = expenses.filter((e: any) => e.custodyId === c.id);
+        const pct = c.effectiveAmount > 0 ? (c.spent / c.effectiveAmount) * 100 : 0;
+        return (
+          <InspectorPanel
+            open={!!inspectorId}
+            onOpenChange={(o) => !o && setInspectorId(null)}
+            title={c.resourceName}
+            description="تفاصيل العهدة والمصروفات المرتبطة بها"
+            meta={c.remaining <= 0
+              ? <Badge variant="outline" className="text-[10px] bg-muted">مُغلقة</Badge>
+              : <Badge variant="outline" className="text-[10px] bg-success/10 text-success border-success/20">نشطة</Badge>}
+            width="lg"
+            footer={!readOnly && (
+              <Button size="sm" onClick={() => { openEdit(c); setInspectorId(null); }}>
+                <Pencil className="w-3.5 h-3.5 ml-1" /> تعديل
+              </Button>
+            )}
+          >
+            <InspectorKpiStrip
+              items={[
+                { label: 'مبلغ العهدة', value: formatCurrency(c.amount) },
+                { label: 'تحويلات واردة', value: formatCurrency(c.transfersIn), tone: c.transfersIn > 0 ? 'info' : 'default' },
+                { label: 'المصروف', value: formatCurrency(c.spent), tone: 'warning' },
+                { label: 'المتبقي', value: formatCurrency(c.remaining), tone: c.remaining > 0 ? 'success' : 'destructive' },
+              ]}
+            />
+
+            <InspectorSection title="نسبة الصرف">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(pct, 100)}%`,
+                      backgroundColor: pct > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',
+                    }}
+                  />
+                </div>
+                <span className="text-sm font-semibold tabular-nums">{pct.toFixed(0)}%</span>
+              </div>
+            </InspectorSection>
+
+            <InspectorSection title="المصدر">
+              <InspectorField
+                label="الدفعة المصدر"
+                value={sf ? `دفعة #${sf.fundNumber}` : <span className="text-destructive">غير مرتبطة</span>}
+              />
+              <InspectorField label="تاريخ الاستلام" value={c.receivedDate || '—'} mono />
+              {c.closedDate && <InspectorField label="تاريخ الإغلاق" value={c.closedDate} mono />}
+            </InspectorSection>
+
+            {c.notes && (
+              <InspectorSection title="ملاحظات">
+                <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{c.notes}</p>
+              </InspectorSection>
+            )}
+
+            <InspectorSection title={`المصروفات المرتبطة (${linkedExpenses.length})`}>
+              {linkedExpenses.length === 0 ? (
+                <p className="text-xs text-muted-foreground">لا توجد مصروفات مرتبطة بهذه العهدة بعد.</p>
+              ) : (
+                <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                  {linkedExpenses.slice(0, 50).map((e: any) => (
+                    <div key={e.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-md border border-border/50 bg-muted/30">
+                      <div className="min-w-0">
+                        <div className="text-sm truncate">{e.description || e.category || 'مصروف'}</div>
+                        <div className="text-[10px] text-muted-foreground tabular-nums">{e.date || '—'}</div>
+                      </div>
+                      <div className="text-sm font-semibold tabular-nums shrink-0">{formatCurrency(e.amount)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </InspectorSection>
+          </InspectorPanel>
+        );
+      })()}
     </div>
   );
 }
