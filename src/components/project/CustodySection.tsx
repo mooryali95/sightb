@@ -352,7 +352,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 <th>الاستلام</th>
                 <th>الحالة</th>
                 <th className="hidden md:table-cell">ملاحظات</th>
-                {!readOnly && <th></th>}
+                <th></th>
               </tr>
             </thead>
             <tbody>
