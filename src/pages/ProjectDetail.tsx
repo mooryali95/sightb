@@ -55,6 +55,7 @@ import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { PerformanceComparisonSection } from '@/components/project/PerformanceComparisonSection';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 import { Progress } from '@/components/ui/progress';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -300,187 +301,187 @@ export default function ProjectDetail() {
     if (firstTab) setActiveTab(firstTab);
   };
 
+  const breadcrumbEyebrow = (
+    <span className="flex items-center gap-1.5 normal-case tracking-normal text-muted-foreground">
+      <button onClick={() => navigate('/')} className="hover:text-accent transition-colors">لوحة التحكم</button>
+      {company && (<><span className="opacity-50">←</span><button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-accent transition-colors">{company.name}</button></>)}
+      {portfolio && (<><span className="opacity-50">←</span><button onClick={() => navigate(`/portfolio/${portfolio.id}`)} className="hover:text-accent transition-colors">{portfolio.name}</button></>)}
+    </span>
+  );
+
+  const headerActions = !isReadOnly ? (
+    <>
+      <Select
+        value={project.status}
+        onValueChange={(val) => {
+          updateProject(project.id, { status: val as ProjectStatus });
+          toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
+        }}
+      >
+        <SelectTrigger className="w-[140px] h-9 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+            <SelectItem key={key} value={key}>{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" className="h-9 w-9" title="إجراءات">
+            <MoreHorizontal className="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuLabel>إجراءات المشروع</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+            <Pencil className="w-4 h-4 ml-2" />تعديل البيانات
+          </DropdownMenuItem>
+          {(isAdmin || canEditRole('project', project.id)) && (
+            <>
+              <DropdownMenuItem onSelect={() => {
+                exportToExcel({
+                  projectName: project.name, contractValue: summary.effectiveContractValue,
+                  budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                  expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                  totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                  totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                  vatRate: project.taxPercent,
+                  contractValueInclVAT: summary.contractValueInclVAT,
+                  totalVATOnExpenses: summary.totalVATOnExpenses,
+                  totalVATOnRevenues: summary.totalVATOnRevenues,
+                  netVATPayable: summary.netVATPayable,
+                });
+                toast.success('تم تصدير التقرير إلى Excel');
+              }}>
+                <FileSpreadsheet className="w-4 h-4 ml-2" />تصدير Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => {
+                exportToPDF({
+                  projectName: project.name, contractValue: summary.effectiveContractValue,
+                  budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
+                  expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
+                  totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
+                  totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
+                  plannedProfit: summary.plannedProfit,
+                });
+                toast.success('تم تصدير التقرير إلى PDF');
+              }}>
+                <FileText className="w-4 h-4 ml-2" />تصدير PDF
+              </DropdownMenuItem>
+            </>
+          )}
+          {isAdmin && project.status !== 'archived' && (
+            <>
+              <DropdownMenuSeparator />
+              <ConfirmDeleteDialog
+                title="أرشفة المشروع"
+                description={`سيتم نقل مشروع "${project.name}" إلى الأرشيف. يمكنك استعادته أو حذفه نهائياً لاحقاً.`}
+                confirmLabel="أرشفة"
+                onConfirm={handleArchiveProject}
+                trigger={
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-warning focus:text-warning">
+                    <Archive className="w-4 h-4 ml-2" />أرشفة المشروع
+                  </DropdownMenuItem>
+                }
+              />
+            </>
+          )}
+          {isSystemAdmin && project.status === 'archived' && (
+            <ConfirmDeleteDialog
+              title="حذف نهائي للمشروع"
+              description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
+              confirmLabel="حذف نهائي"
+              onConfirm={handleDeleteProject}
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                  <Trash2 className="w-4 h-4 ml-2" />حذف نهائي
+                </DropdownMenuItem>
+              }
+            />
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  ) : null;
+
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header — clean hierarchy: breadcrumb → title → meta → actions */}
-        <div className="relative mb-6 rounded-xl overflow-hidden border border-border bg-gradient-gold-soft">
-          <div className="p-4 md:p-6">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-              <button onClick={() => navigate('/')} className="hover:text-primary motion-fast transition-colors">لوحة التحكم</button>
-              {company && (<><span>←</span><button onClick={() => navigate(`/company/${company.id}`)} className="hover:text-primary motion-fast transition-colors">{company.name}</button></>)}
-              {portfolio && (<><span>←</span><button onClick={() => navigate(`/portfolio/${portfolio.id}`)} className="hover:text-primary motion-fast transition-colors">{portfolio.name}</button></>)}
-            </div>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                  <div className="w-11 h-11 md:w-14 md:h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                    <Briefcase className="w-5 h-5 md:w-7 md:h-7 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h1 className="text-xl md:text-3xl font-bold tracking-tight truncate">{project.name}</h1>
-                      <Badge className={`text-xs shrink-0 ${PROJECT_STATUS_COLORS[project.status]}`}>
-                        {PROJECT_STATUS_LABELS[project.status]}
-                      </Badge>
-                    </div>
-                    <p className="text-xs md:text-sm text-muted-foreground mt-1 truncate">
-                      {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
-                      {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
-                    </p>
-                  </div>
+        <PageHeader
+          eyebrow={breadcrumbEyebrow}
+          title={
+            <span className="flex items-center gap-3">
+              <span className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+                <Briefcase className="w-5 h-5 md:w-6 md:h-6 text-accent" />
+              </span>
+              <span className="truncate">{project.name}</span>
+            </span>
+          }
+          meta={
+            <Badge className={`text-xs ${PROJECT_STATUS_COLORS[project.status]}`}>
+              {PROJECT_STATUS_LABELS[project.status]}
+            </Badge>
+          }
+          subtitle={
+            <>
+              {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
+              {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
+            </>
+          }
+          actions={headerActions}
+        />
+
+        {/* Edit dialog (portal — placement is layout-agnostic) */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="max-w-md" dir="rtl">
+            <DialogHeader>
+              <DialogTitle>تعديل بيانات المشروع</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <Label>اسم المشروع</Label>
+                <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} maxLength={200} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>قيمة العقد</Label>
+                  <Input type="number" min={0} value={editForm.contractValue} onChange={e => setEditForm(f => ({ ...f, contractValue: Number(e.target.value) }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>المدة (أشهر)</Label>
+                  <Input type="number" min={1} max={120} value={editForm.durationMonths} onChange={e => setEditForm(f => ({ ...f, durationMonths: Number(e.target.value) }))} />
                 </div>
               </div>
-              {/* Unified action menu — quick status select + ⋯ for the rest */}
-              {!isReadOnly && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <Select
-                  value={project.status}
-                  onValueChange={(val) => {
-                    updateProject(project.id, { status: val as ProjectStatus });
-                    toast.success(`تم تغيير الحالة إلى: ${PROJECT_STATUS_LABELS[val as ProjectStatus]}`);
-                  }}
-                >
-                  <SelectTrigger className="w-[140px] h-9 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-9 w-9" title="إجراءات">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    <DropdownMenuLabel>إجراءات المشروع</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => setEditOpen(true)}>
-                      <Pencil className="w-4 h-4 ml-2" />تعديل البيانات
-                    </DropdownMenuItem>
-                    {(isAdmin || canEditRole('project', project.id)) && (
-                      <>
-                        <DropdownMenuItem onSelect={() => {
-                          exportToExcel({
-                            projectName: project.name, contractValue: summary.effectiveContractValue,
-                            budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-                            expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-                            totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-                            totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-                            vatRate: project.taxPercent,
-                            contractValueInclVAT: summary.contractValueInclVAT,
-                            totalVATOnExpenses: summary.totalVATOnExpenses,
-                            totalVATOnRevenues: summary.totalVATOnRevenues,
-                            netVATPayable: summary.netVATPayable,
-                          });
-                          toast.success('تم تصدير التقرير إلى Excel');
-                        }}>
-                          <FileSpreadsheet className="w-4 h-4 ml-2" />تصدير Excel
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => {
-                          exportToPDF({
-                            projectName: project.name, contractValue: summary.effectiveContractValue,
-                            budgetItems: pBudget.map(b => ({ ...b, actual: getActualForItem(b) })),
-                            expenses: pExpenses, revenues: pRevenues, changeOrders: pChangeOrders,
-                            totalPlanned: summary.totalPlanned, totalActual: summary.totalActual,
-                            totalRevenue: totalAllRevenue, durationMonths: project.durationMonths,
-                            plannedProfit: summary.plannedProfit,
-                          });
-                          toast.success('تم تصدير التقرير إلى PDF');
-                        }}>
-                          <FileText className="w-4 h-4 ml-2" />تصدير PDF
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {isAdmin && project.status !== 'archived' && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <ConfirmDeleteDialog
-                          title="أرشفة المشروع"
-                          description={`سيتم نقل مشروع "${project.name}" إلى الأرشيف. يمكنك استعادته أو حذفه نهائياً لاحقاً.`}
-                          confirmLabel="أرشفة"
-                          onConfirm={handleArchiveProject}
-                          trigger={
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-warning focus:text-warning">
-                              <Archive className="w-4 h-4 ml-2" />أرشفة المشروع
-                            </DropdownMenuItem>
-                          }
-                        />
-                      </>
-                    )}
-                    {isSystemAdmin && project.status === 'archived' && (
-                      <ConfirmDeleteDialog
-                        title="حذف نهائي للمشروع"
-                        description={`سيتم حذف مشروع "${project.name}" وجميع بياناته نهائياً. لا يمكن التراجع.`}
-                        confirmLabel="حذف نهائي"
-                        onConfirm={handleDeleteProject}
-                        trigger={
-                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                            <Trash2 className="w-4 h-4 ml-2" />حذف نهائي
-                          </DropdownMenuItem>
-                        }
-                      />
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Edit dialog kept separately so the menu item can open it */}
-                <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                  <DialogContent className="max-w-md" dir="rtl">
-                    <DialogHeader>
-                      <DialogTitle>تعديل بيانات المشروع</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 pt-2">
-                      <div className="space-y-1.5">
-                        <Label>اسم المشروع</Label>
-                        <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} maxLength={200} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label>قيمة العقد</Label>
-                          <Input type="number" min={0} value={editForm.contractValue} onChange={e => setEditForm(f => ({ ...f, contractValue: Number(e.target.value) }))} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>المدة (أشهر)</Label>
-                          <Input type="number" min={1} max={120} value={editForm.durationMonths} onChange={e => setEditForm(f => ({ ...f, durationMonths: Number(e.target.value) }))} />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label>نسبة الإنجاز %</Label>
-                          <Input type="number" min={0} max={100} value={editForm.percentComplete} onChange={e => setEditForm(f => ({ ...f, percentComplete: Number(e.target.value) }))} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>نسبة الحجز %</Label>
-                          <Input type="number" min={0} max={100} value={editForm.retentionPercent} onChange={e => setEditForm(f => ({ ...f, retentionPercent: Number(e.target.value) }))} />
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>الاحتياطي الإداري</Label>
-                        <Input type="number" min={0} value={editForm.managementReserve} onChange={e => setEditForm(f => ({ ...f, managementReserve: Number(e.target.value) }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>نسبة الضريبة (VAT) %</Label>
-                        <Input type="number" min={0} max={100} step={0.1} value={editForm.taxPercent} onChange={e => setEditForm(f => ({ ...f, taxPercent: Number(e.target.value) }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>الوصف</Label>
-                        <Textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} maxLength={500} rows={2} />
-                      </div>
-                      <Button onClick={handleSaveEdit} className="w-full">حفظ التعديلات</Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>نسبة الإنجاز %</Label>
+                  <Input type="number" min={0} max={100} value={editForm.percentComplete} onChange={e => setEditForm(f => ({ ...f, percentComplete: Number(e.target.value) }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>نسبة الحجز %</Label>
+                  <Input type="number" min={0} max={100} value={editForm.retentionPercent} onChange={e => setEditForm(f => ({ ...f, retentionPercent: Number(e.target.value) }))} />
+                </div>
               </div>
-              )}
+              <div className="space-y-1.5">
+                <Label>الاحتياطي الإداري</Label>
+                <Input type="number" min={0} value={editForm.managementReserve} onChange={e => setEditForm(f => ({ ...f, managementReserve: Number(e.target.value) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>نسبة الضريبة (VAT) %</Label>
+                <Input type="number" min={0} max={100} step={0.1} value={editForm.taxPercent} onChange={e => setEditForm(f => ({ ...f, taxPercent: Number(e.target.value) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>الوصف</Label>
+                <Textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} maxLength={500} rows={2} />
+              </div>
+              <Button onClick={handleSaveEdit} className="w-full">حفظ التعديلات</Button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
 
         {/* ══════ شريط الحالة السريع ══════ */}
         <div className={`flex flex-wrap items-center gap-2 text-xs p-2.5 rounded-lg border mb-4 ${healthScore.bg}`}>

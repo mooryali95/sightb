@@ -13,9 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 
 interface RevenueSectionProps {
   projectId: string;
@@ -45,6 +46,11 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [inspectorId, setInspectorId] = useState<string | null>(null);
+  const inspected = inspectorId ? revenues.find((r: any) => r.id === inspectorId) : null;
+  const inspectedMilestone = inspected?.milestoneId && milestones
+    ? milestones.find((m: any) => m.id === inspected.milestoneId)
+    : null;
 
   const resetForm = () => {
     setEditingId(null); setDescription(''); setAmount(''); setMonth('1');
@@ -290,6 +296,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                 {milestones && milestones.length > 0 && <th>التسليمة</th>}
                 <th>الشهر</th>
                 <th>التاريخ</th>
+                <th></th>
                 {!readOnly && <th></th>}
               </tr>
             </thead>
@@ -322,6 +329,11 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   )}
                   <td>شهر {r.month}</td>
                   <td className="text-muted-foreground text-sm">{r.date}</td>
+                  <td>
+                    <Button variant="ghost" size="icon" onClick={() => setInspectorId(r.id)} title="عرض التفاصيل">
+                      <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Button>
+                  </td>
                   {!readOnly && (
                   <td>
                     <div className="flex items-center gap-0.5">
@@ -338,6 +350,67 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
           </table>
         </div>
       )}
+
+      {/* Inspector — slide-over with full revenue detail */}
+      <InspectorPanel
+        open={!!inspected}
+        onOpenChange={(o) => { if (!o) setInspectorId(null); }}
+        title={inspected?.description || 'تفاصيل الإيراد'}
+        description={inspected ? `${REVENUE_TYPE_LABELS[inspected.revenueType as RevenueType] || inspected.revenueType} · شهر ${inspected.month}` : undefined}
+        meta={inspected ? (
+          <Badge className={`text-xs ${REVENUE_STATUS_COLORS[inspected.status as RevenueStatus] || ''}`}>
+            {REVENUE_STATUS_LABELS[inspected.status as RevenueStatus] || inspected.status}
+          </Badge>
+        ) : null}
+        width="md"
+        footer={!readOnly && inspected ? (
+          <>
+            <Button variant="outline" size="sm" onClick={() => setInspectorId(null)}>إغلاق</Button>
+            <Button size="sm" onClick={() => { openEdit(inspected); setInspectorId(null); }}>
+              <Pencil className="w-3.5 h-3.5 ml-1.5" />تعديل
+            </Button>
+          </>
+        ) : null}
+      >
+        {inspected && (
+          <>
+            <InspectorKpiStrip items={[
+              { label: 'المبلغ', value: formatCurrency(inspected.amount) },
+              ...(showVAT ? [
+                { label: `ضريبة ${taxPercent}%`, value: formatCurrency(calcVAT(inspected.amount, taxPercent)), tone: 'info' as const },
+                { label: 'شامل الضريبة', value: formatCurrency(addVAT(inspected.amount, taxPercent)) },
+              ] : []),
+              { label: 'الشهر', value: `شهر ${inspected.month}` },
+            ]} />
+
+            <InspectorSection title="بيانات الفاتورة">
+              <InspectorField label="رقم الفاتورة" value={inspected.invoiceNumber || '—'} mono />
+              <InspectorField label="تاريخ الفاتورة" value={inspected.invoiceDate || '—'} mono />
+              <InspectorField label="تاريخ التحصيل" value={inspected.collectionDate || '—'} mono />
+              <InspectorField label="تاريخ التسجيل" value={inspected.date || '—'} mono />
+            </InspectorSection>
+
+            {inspectedMilestone && (
+              <InspectorSection title="التسليمة المرتبطة">
+                <InspectorField
+                  label={inspectedMilestone.name}
+                  value={
+                    <Badge className={`text-xs ${MILESTONE_STATUS_COLORS[inspectedMilestone.status as MilestoneStatus] || ''}`}>
+                      {MILESTONE_STATUS_LABELS[inspectedMilestone.status as MilestoneStatus]}
+                    </Badge>
+                  }
+                />
+                <InspectorField label="الوزن" value={`${(inspectedMilestone.weight * 100).toFixed(0)}%`} mono />
+              </InspectorSection>
+            )}
+
+            <InspectorSection title="بيانات وصفية">
+              <InspectorField label="النوع" value={REVENUE_TYPE_LABELS[inspected.revenueType as RevenueType] || inspected.revenueType} />
+              <InspectorField label="الحالة" value={REVENUE_STATUS_LABELS[inspected.status as RevenueStatus] || inspected.status} />
+            </InspectorSection>
+          </>
+        )}
+      </InspectorPanel>
     </div>
   );
 }
