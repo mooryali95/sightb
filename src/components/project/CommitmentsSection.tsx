@@ -203,7 +203,7 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
                 <th>المصروف</th>
                 <th>المتبقي</th>
                 <th>الحالة</th>
-                {!readOnly && <th></th>}
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -222,16 +222,21 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
                         {COMMITMENT_STATUS_LABELS[c.status]}
                       </span>
                     </td>
-                    {!readOnly && (
-                      <td>
-                        <div className="flex items-center gap-0.5">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
-                            <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                          </Button>
-                          <ConfirmDeleteDialog title="حذف الالتزام" description="هل أنت متأكد من حذف هذا الالتزام؟" onConfirm={() => deleteCommitment(c.id)} />
-                        </div>
-                      </td>
-                    )}
+                    <td>
+                      <div className="flex items-center gap-0.5">
+                        <Button variant="ghost" size="icon" aria-label="عرض التفاصيل" onClick={() => setInspectorId(c.id)}>
+                          <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
+                        {!readOnly && (
+                          <>
+                            <Button variant="ghost" size="icon" aria-label="تعديل" onClick={() => openEdit(c)}>
+                              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                            </Button>
+                            <ConfirmDeleteDialog title="حذف الالتزام" description="هل أنت متأكد من حذف هذا الالتزام؟" onConfirm={() => deleteCommitment(c.id)} />
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -239,6 +244,56 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
           </table>
         </div>
       )}
+
+      {/* Inspector Panel */}
+      {(() => {
+        const inspected = inspectorId ? commitments.find(c => c.id === inspectorId) : null;
+        if (!inspected) return null;
+        const remaining = inspected.totalAmount - inspected.spentAmount;
+        const spentRatio = inspected.totalAmount > 0 ? (inspected.spentAmount / inspected.totalAmount) * 100 : 0;
+        return (
+          <InspectorPanel
+            open={!!inspectorId}
+            onOpenChange={(v) => { if (!v) setInspectorId(null); }}
+            title={inspected.description}
+            description={inspected.vendorName ? `المورّد: ${inspected.vendorName}` : undefined}
+            meta={
+              <span className={`text-xs px-2 py-1 rounded-full ${COMMITMENT_STATUS_COLORS[inspected.status]}`}>
+                {COMMITMENT_STATUS_LABELS[inspected.status]}
+              </span>
+            }
+            footer={!readOnly ? (
+              <Button size="sm" onClick={() => { openEdit(inspected); setInspectorId(null); }}>
+                <Pencil className="w-3.5 h-3.5 ml-1.5" /> تعديل
+              </Button>
+            ) : undefined}
+          >
+            <InspectorKpiStrip
+              items={[
+                { label: 'إجمالي', value: formatCurrency(inspected.totalAmount) },
+                { label: 'مصروف', value: formatCurrency(inspected.spentAmount) },
+                { label: 'متبقي', value: formatCurrency(remaining), tone: remaining >= 0 ? 'success' : 'destructive' },
+                { label: 'نسبة الصرف', value: `${spentRatio.toFixed(1)}%`, tone: spentRatio >= 90 ? 'warning' : 'default' },
+              ]}
+            />
+            <InspectorSection title="الصرف">
+              <Progress value={Math.min(spentRatio, 100)} className="h-2" />
+              <p className="text-[11px] text-muted-foreground mt-1 tabular-nums">
+                {formatCurrency(inspected.spentAmount)} من {formatCurrency(inspected.totalAmount)}
+              </p>
+            </InspectorSection>
+            <InspectorSection title="بيانات العقد">
+              <InspectorField label="المورّد" value={inspected.vendorName || '—'} />
+              <InspectorField label="مرجع العقد" value={inspected.contractRef || '—'} mono />
+            </InspectorSection>
+            {inspected.notes && (
+              <InspectorSection title="ملاحظات">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{inspected.notes}</p>
+              </InspectorSection>
+            )}
+          </InspectorPanel>
+        );
+      })()}
     </div>
   );
 }
