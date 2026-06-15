@@ -462,6 +462,15 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                       </td>
                       <td>
                         <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={() => setInspectorId(f.id)}
+                            title="عرض التفاصيل"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
                           {f.status === 'transferred' && !readOnly && (
                             <Button
                               size="sm"
