@@ -28,6 +28,7 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
   const { addCommitment, updateCommitment, deleteCommitment } = useStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [vendorName, setVendorName] = useState('');
   const [contractRef, setContractRef] = useState('');
