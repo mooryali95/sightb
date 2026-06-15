@@ -243,6 +243,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   // ───── Approve/Reject ─────
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [inspectorId, setInspectorId] = useState<string | null>(null);
 
   const handleApprove = async (settlementId: string) => {
     try {
