@@ -854,9 +854,6 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                 {f.acknowledgedAt && (
                   <InspectorField label="تاريخ الاستلام" value={f.acknowledgedAt.split('T')[0]} />
                 )}
-                {f.emergency && (
-                  <InspectorField label="استثنائية" value={f.emergencyReason || '—'} />
-                )}
                 {f.notes && <InspectorField label="ملاحظات" value={f.notes} />}
               </InspectorSection>
 
