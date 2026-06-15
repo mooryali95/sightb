@@ -33,13 +33,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip,
+} from '@/components/ui/inspector-panel';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import {
   Plus, Wallet, CheckCircle2, AlertTriangle, FileText, Send,
-  ThumbsUp, ThumbsDown, Paperclip, Trash2, X,
+  ThumbsUp, ThumbsDown, Paperclip, Trash2, X, Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
