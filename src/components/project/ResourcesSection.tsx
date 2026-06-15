@@ -125,7 +125,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                 <th>إجمالي الصرف</th>
                 <th>الانحراف</th>
                 <th>نسبة الصرف</th>
-                {!readOnly && <th></th>}
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -167,16 +167,21 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                         <span className="text-amber-600">صرف بدون خطة</span>
                       ) : '—'}
                     </td>
-                    {!readOnly && (
                     <td>
                       <div className="flex items-center gap-0.5">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
-                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Button variant="ghost" size="icon" onClick={() => setInspectorId(r.id)} title="عرض التفاصيل">
+                          <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
-                        <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />
+                        {!readOnly && (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
+                              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                            </Button>
+                            <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />
+                          </>
+                        )}
                       </div>
                     </td>
-                    )}
                   </tr>
                 );
               })}
