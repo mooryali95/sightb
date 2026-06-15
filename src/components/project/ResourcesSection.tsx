@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
+import { Progress } from '@/components/ui/progress';
 
 interface ResourcesSectionProps {
   projectId: string;
@@ -26,6 +28,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [monthlyCost, setMonthlyCost] = useState('');
+  const [inspectorId, setInspectorId] = useState<string | null>(null);
 
   // Budget prompt
   const [budgetPrompt, setBudgetPrompt] = useState<{ resourceId: string; name: string; role: string; monthlyCost: number } | null>(null);
@@ -122,7 +125,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                 <th>إجمالي الصرف</th>
                 <th>الانحراف</th>
                 <th>نسبة الصرف</th>
-                {!readOnly && <th></th>}
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -164,16 +167,21 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                         <span className="text-amber-600">صرف بدون خطة</span>
                       ) : '—'}
                     </td>
-                    {!readOnly && (
                     <td>
                       <div className="flex items-center gap-0.5">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
-                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Button variant="ghost" size="icon" onClick={() => setInspectorId(r.id)} title="عرض التفاصيل">
+                          <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
-                        <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />
+                        {!readOnly && (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
+                              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                            </Button>
+                            <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />
+                          </>
+                        )}
                       </div>
                     </td>
-                    )}
                   </tr>
                 );
               })}
@@ -184,6 +192,77 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
           )}
         </div>
       )}
+
+      {/* Inspector Panel */}
+      {(() => {
+        const r = resources.find(x => x.id === inspectorId);
+        if (!r) return null;
+        const linkedExpenses = pExpenses.filter(e => e.resourceId === r.id);
+        const totalSpent = linkedExpenses.reduce((s, e) => s + e.amount, 0);
+        const linkedBudget = budgetItems.filter(b => b.resourceId === r.id);
+        const plannedForResource = linkedBudget.length > 0
+          ? getTotalPlanned(linkedBudget)
+          : r.monthlyCost * (durationMonths || 1);
+        const isEstimated = linkedBudget.length === 0 && r.monthlyCost > 0;
+        const variance = plannedForResource - totalSpent;
+        const spentPct = plannedForResource > 0 ? (totalSpent / plannedForResource) * 100 : 0;
+        return (
+          <InspectorPanel
+            open={!!inspectorId}
+            onOpenChange={(v) => { if (!v) setInspectorId(null); }}
+            title={r.name}
+            description={r.role || 'بدون مسمى وظيفي'}
+            width="md"
+            footer={!readOnly ? (
+              <Button size="sm" onClick={() => { setInspectorId(null); openEdit(r); }} className="gap-1.5">
+                <Pencil className="w-3.5 h-3.5" /> تعديل
+              </Button>
+            ) : undefined}
+          >
+            <InspectorKpiStrip items={[
+              { label: 'شهرية', value: formatCurrency(r.monthlyCost) },
+              { label: 'مخطط', value: plannedForResource > 0 ? formatCurrency(plannedForResource) : '—' },
+              { label: 'مصروف', value: formatCurrency(totalSpent), tone: 'info' },
+              { label: 'انحراف', value: plannedForResource > 0 ? formatCurrency(variance) : '—', tone: variance >= 0 ? 'success' : 'destructive' },
+            ]} />
+
+            {plannedForResource > 0 && (
+              <InspectorSection title="نسبة الصرف">
+                <Progress value={Math.min(spentPct, 100)} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-1 tabular-nums">{spentPct.toFixed(1)}% من المخطط</p>
+              </InspectorSection>
+            )}
+
+            <InspectorSection title="البيانات">
+              <InspectorField label="المدة المعتمدة" value={`${durationMonths || 0} شهر`} mono />
+              <InspectorField label="بنود الموازنة المرتبطة" value={linkedBudget.length} mono />
+              {isEstimated && (
+                <p className="text-[11px] text-warning mt-1">* المخطط محسوب تقديرياً — لم يُربط ببند موازنة بعد.</p>
+              )}
+            </InspectorSection>
+
+            <InspectorSection title={`المصروفات (${linkedExpenses.length})`}>
+              {linkedExpenses.length === 0 ? (
+                <p className="text-xs text-muted-foreground">لا توجد مصروفات مرتبطة بهذا المورد.</p>
+              ) : (
+                <div className="rounded-lg border border-border divide-y divide-border max-h-[280px] overflow-y-auto">
+                  {linkedExpenses.slice(0, 50).map((e) => (
+                    <div key={e.id} className="flex items-center justify-between px-3 py-2 text-xs">
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium">{e.description || '—'}</p>
+                        <p className="text-muted-foreground text-[10px] tabular-nums">{e.date}</p>
+                      </div>
+                      <span className="tabular-nums font-medium">{formatCurrency(e.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </InspectorSection>
+          </InspectorPanel>
+        );
+      })()}
+
+
 
       {/* Budget auto-generate dialog */}
       <Dialog open={!!budgetPrompt} onOpenChange={(v) => { if (!v) setBudgetPrompt(null); }}>
