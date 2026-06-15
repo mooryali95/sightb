@@ -11,9 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
+import { Progress } from '@/components/ui/progress';
 
 interface Props {
   projectId: string;
