@@ -16,6 +16,8 @@ import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } f
 
 import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
+import { TableDensityToggle } from '@/components/ui/table-density-toggle';
+import { useTableDensity } from '@/hooks/useTableDensity';
 
 interface CustodySectionProps {
   projectId: string;
@@ -340,8 +342,10 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
 
         <p className="text-sm text-muted-foreground text-center py-8">لا توجد عهد مسجلة بعد</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="data-table">
+        <>
+        <div className="flex justify-end mb-2"><TableDensityToggle /></div>
+        <div className="data-table-wrapper data-table-wrapper--scroll">
+          <table className="data-table" data-density={density}>
             <thead>
               <tr>
                 <th>المستلم</th>

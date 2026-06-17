@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 import { Progress } from '@/components/ui/progress';
+import { TableDensityToggle } from '@/components/ui/table-density-toggle';
+import { useTableDensity } from '@/hooks/useTableDensity';
 
 interface ResourcesSectionProps {
   projectId: string;
@@ -114,8 +116,10 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
           <p className="text-xs text-muted-foreground">ابدأ بتسجيل الموارد البشرية ← ثم أضف بنود الموازنة</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="data-table">
+        <>
+        <div className="flex justify-end mb-2"><TableDensityToggle /></div>
+        <div className="data-table-wrapper data-table-wrapper--scroll">
+          <table className="data-table" data-density={density}>
             <thead>
               <tr>
                 <th>الاسم</th>

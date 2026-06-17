@@ -19,6 +19,8 @@ import { Plus, Pencil, Check, X, AlertCircle, Wallet, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
+import { TableDensityToggle } from '@/components/ui/table-density-toggle';
+import { useTableDensity } from '@/hooks/useTableDensity';
 
 interface ExpensesSectionProps {
   projectId: string;
@@ -651,8 +653,10 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         ) : filteredExpenses.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">لا توجد نتائج مطابقة للبحث</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
+          <>
+          <div className="flex justify-end mb-2"><TableDensityToggle /></div>
+          <div className="data-table-wrapper data-table-wrapper--scroll">
+            <table className="data-table" data-density={density}>
               <thead>
                 <tr>
                   <th>الفئة</th>

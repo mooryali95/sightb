@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 import { Progress } from '@/components/ui/progress';
+import { TableDensityToggle } from '@/components/ui/table-density-toggle';
+import { useTableDensity } from '@/hooks/useTableDensity';
 
 interface Props {
   projectId: string;
@@ -192,8 +194,10 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
           <p className="text-sm text-muted-foreground">لا توجد التزامات تعاقدية بعد</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="data-table">
+        <>
+        <div className="flex justify-end mb-2"><TableDensityToggle /></div>
+        <div className="data-table-wrapper data-table-wrapper--scroll">
+          <table className="data-table" data-density={density}>
             <thead>
               <tr>
                 <th>الوصف</th>
