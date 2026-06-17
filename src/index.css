@@ -219,8 +219,12 @@
 
   /* ============= Tables ============= */
   .data-table-wrapper {
-    @apply relative overflow-x-auto;
+    @apply relative overflow-x-auto rounded-md border border-border/60;
     -webkit-overflow-scrolling: touch;
+  }
+  /* Vertical scroll container enables sticky header */
+  .data-table-wrapper--scroll {
+    @apply max-h-[70vh] overflow-y-auto;
   }
   .data-table-wrapper::after {
     content: '';
@@ -239,9 +243,24 @@
     letter-spacing: 0.04em;
   }
 
+  /* Sticky header — sits at top of the scroll container */
+  .data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+
   .data-table td {
     @apply px-4 py-3 border-b border-border/50 text-sm;
     text-align: right !important;
+  }
+
+  /* Density: compact rows */
+  .data-table[data-density="compact"] th {
+    @apply px-3 py-1.5;
+  }
+  .data-table[data-density="compact"] td {
+    @apply px-3 py-1.5 text-xs;
   }
 
   /* Row striping for long tables */

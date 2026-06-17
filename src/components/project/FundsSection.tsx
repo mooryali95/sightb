@@ -47,6 +47,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { TableDensityToggle } from '@/components/ui/table-density-toggle';
+import { useTableDensity } from '@/hooks/useTableDensity';
 
 interface FundsSectionProps {
   projectId: string;
@@ -244,6 +246,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [inspectorId, setInspectorId] = useState<string | null>(null);
+  const [density] = useTableDensity();
 
   const handleApprove = async (settlementId: string) => {
     try {
@@ -400,8 +403,10 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
             لا توجد دفعات بعد. {showCreate ? 'ابدأ بإنشاء الدفعة الأولى.' : ''}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
+          <>
+          <div className="flex justify-end mb-2"><TableDensityToggle /></div>
+          <div className="data-table-wrapper data-table-wrapper--scroll">
+            <table className="data-table" data-density={density}>
               <thead>
                 <tr>
                   <th className="w-12">#</th>
@@ -552,6 +557,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
