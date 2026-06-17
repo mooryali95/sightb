@@ -272,6 +272,56 @@
     @apply bg-muted/40;
   }
 
+  /* ============= Mobile card view for tables ============= */
+  @media (max-width: 767px) {
+    .data-table--mobile-cards thead {
+      display: none;
+    }
+    .data-table--mobile-cards,
+    .data-table--mobile-cards tbody,
+    .data-table--mobile-cards tr,
+    .data-table--mobile-cards td {
+      display: block;
+      width: 100%;
+    }
+    .data-table--mobile-cards tbody tr {
+      @apply mb-3 rounded-md border border-border/60 bg-card overflow-hidden;
+    }
+    .data-table--mobile-cards tbody tr:nth-child(even) td,
+    .data-table--mobile-cards tbody tr:hover td {
+      background: transparent;
+    }
+    .data-table--mobile-cards td {
+      @apply flex items-start justify-between gap-3 px-3 py-2 border-b border-border/40 text-sm;
+      text-align: left !important;
+    }
+    .data-table--mobile-cards td:last-child {
+      border-bottom: 0;
+    }
+    .data-table--mobile-cards td::before {
+      content: attr(data-label);
+      @apply text-xs font-semibold text-muted-foreground shrink-0;
+      text-align: right;
+      min-width: 35%;
+    }
+    .data-table--mobile-cards td:empty,
+    .data-table--mobile-cards td[data-label=""] {
+      display: none;
+    }
+    /* Action cells span full width */
+    .data-table--mobile-cards td[data-cell="actions"] {
+      @apply justify-end bg-muted/30;
+    }
+    .data-table--mobile-cards td[data-cell="actions"]::before {
+      display: none;
+    }
+    /* Disable vertical sticky scroll on mobile cards (cards already stack) */
+    .data-table-wrapper--scroll:has(.data-table--mobile-cards) {
+      max-height: none;
+      overflow-y: visible;
+    }
+  }
+
   /* ============= Page header ============= */
   .page-header {
     @apply mb-8;

@@ -21,6 +21,7 @@ import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
+import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 
 interface ExpensesSectionProps {
   projectId: string;
@@ -44,6 +45,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const [editingId, setEditingId] = useState<string | null>(null);
   const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [density] = useTableDensity();
+  const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
   const [category, setCategory] = useState<ExpenseCategory>('salary');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -657,7 +659,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
           <>
           <div className="flex justify-end mb-2"><TableDensityToggle /></div>
           <div className="data-table-wrapper data-table-wrapper--scroll">
-            <table className="data-table" data-density={density}>
+            <table ref={mobileTableRef} className="data-table data-table--mobile-cards" data-density={density}>
               <thead>
                 <tr>
                   <th>الفئة</th>

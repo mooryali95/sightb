@@ -18,6 +18,7 @@ import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRem
 import { useRole } from '@/hooks/useRole';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
+import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 
 interface CustodySectionProps {
   projectId: string;
@@ -46,6 +47,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   const [unlinkReason, setUnlinkReason] = useState('');
   const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [density] = useTableDensity();
+  const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
 
   // ─── Cash transfer dialog state ───
   const [transferOpen, setTransferOpen] = useState(false);
@@ -346,7 +348,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         <>
         <div className="flex justify-end mb-2"><TableDensityToggle /></div>
         <div className="data-table-wrapper data-table-wrapper--scroll">
-          <table className="data-table" data-density={density}>
+          <table ref={mobileTableRef} className="data-table data-table--mobile-cards" data-density={density}>
             <thead>
               <tr>
                 <th>المستلم</th>

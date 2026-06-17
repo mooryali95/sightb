@@ -13,6 +13,7 @@ import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } f
 import { Progress } from '@/components/ui/progress';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
+import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 
 interface ResourcesSectionProps {
   projectId: string;
@@ -32,6 +33,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
   const [monthlyCost, setMonthlyCost] = useState('');
   const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [density] = useTableDensity();
+  const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
 
   // Budget prompt
   const [budgetPrompt, setBudgetPrompt] = useState<{ resourceId: string; name: string; role: string; monthlyCost: number } | null>(null);
@@ -120,7 +122,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
         <>
         <div className="flex justify-end mb-2"><TableDensityToggle /></div>
         <div className="data-table-wrapper data-table-wrapper--scroll">
-          <table className="data-table" data-density={density}>
+          <table ref={mobileTableRef} className="data-table data-table--mobile-cards" data-density={density}>
             <thead>
               <tr>
                 <th>الاسم</th>
