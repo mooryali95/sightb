@@ -248,6 +248,7 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Inspector Panel */}

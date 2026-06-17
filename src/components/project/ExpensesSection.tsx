@@ -757,6 +757,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

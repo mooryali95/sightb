@@ -557,6 +557,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

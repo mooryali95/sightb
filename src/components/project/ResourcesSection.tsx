@@ -196,6 +196,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
             <p className="text-xs text-muted-foreground mt-2">* تقديري = التكلفة الشهرية × مدة المشروع — لم يُربط ببند موازنة بعد</p>
           )}
         </div>
+        </>
       )}
 
       {/* Inspector Panel */}

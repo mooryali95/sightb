@@ -462,6 +462,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {(() => {
