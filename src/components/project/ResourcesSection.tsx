@@ -33,6 +33,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
   const [monthlyCost, setMonthlyCost] = useState('');
   const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [density] = useTableDensity();
+  const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
 
   // Budget prompt
   const [budgetPrompt, setBudgetPrompt] = useState<{ resourceId: string; name: string; role: string; monthlyCost: number } | null>(null);

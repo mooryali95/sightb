@@ -33,6 +33,7 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
   const [editingId, setEditingId] = useState<string | null>(null);
   const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [density] = useTableDensity();
+  const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
   const [description, setDescription] = useState('');
   const [vendorName, setVendorName] = useState('');
   const [contractRef, setContractRef] = useState('');

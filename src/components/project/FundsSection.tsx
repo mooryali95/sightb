@@ -248,6 +248,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const [rejectReason, setRejectReason] = useState('');
   const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [density] = useTableDensity();
+  const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
 
   const handleApprove = async (settlementId: string) => {
     try {

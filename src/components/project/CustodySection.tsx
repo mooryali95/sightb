@@ -47,6 +47,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   const [unlinkReason, setUnlinkReason] = useState('');
   const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [density] = useTableDensity();
+  const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
 
   // ─── Cash transfer dialog state ───
   const [transferOpen, setTransferOpen] = useState(false);
