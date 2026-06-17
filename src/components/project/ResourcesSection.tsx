@@ -13,6 +13,7 @@ import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } f
 import { Progress } from '@/components/ui/progress';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
+import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 
 interface ResourcesSectionProps {
   projectId: string;

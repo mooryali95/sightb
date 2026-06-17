@@ -21,6 +21,7 @@ import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
+import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 
 interface ExpensesSectionProps {
   projectId: string;

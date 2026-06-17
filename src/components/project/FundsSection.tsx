@@ -49,6 +49,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
+import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 
 interface FundsSectionProps {
   projectId: string;

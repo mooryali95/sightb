@@ -18,6 +18,7 @@ import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRem
 import { useRole } from '@/hooks/useRole';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
+import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 
 interface CustodySectionProps {
   projectId: string;
