@@ -12,10 +12,12 @@ import { useEffect, useRef } from 'react';
  * as a full-width action bar without a label.
  */
 export function useResponsiveTableLabels<T extends HTMLTableElement = HTMLTableElement>(
-  deps: ReadonlyArray<unknown> = [],
+  deps?: ReadonlyArray<unknown>,
 ) {
   const ref = useRef<T | null>(null);
 
+  // Intentionally run on every render when no deps are supplied — the work is
+  // idempotent and ensures newly rendered rows get labels.
   useEffect(() => {
     const table = ref.current;
     if (!table) return;
