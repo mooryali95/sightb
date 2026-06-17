@@ -246,6 +246,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [inspectorId, setInspectorId] = useState<string | null>(null);
+  const [density] = useTableDensity();
 
   const handleApprove = async (settlementId: string) => {
     try {

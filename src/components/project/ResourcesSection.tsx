@@ -31,6 +31,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
   const [role, setRole] = useState('');
   const [monthlyCost, setMonthlyCost] = useState('');
   const [inspectorId, setInspectorId] = useState<string | null>(null);
+  const [density] = useTableDensity();
 
   // Budget prompt
   const [budgetPrompt, setBudgetPrompt] = useState<{ resourceId: string; name: string; role: string; monthlyCost: number } | null>(null);

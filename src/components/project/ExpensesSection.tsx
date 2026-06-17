@@ -43,6 +43,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [inspectorId, setInspectorId] = useState<string | null>(null);
+  const [density] = useTableDensity();
   const [category, setCategory] = useState<ExpenseCategory>('salary');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
