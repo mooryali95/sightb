@@ -346,7 +346,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         <>
         <div className="flex justify-end mb-2"><TableDensityToggle /></div>
         <div className="data-table-wrapper data-table-wrapper--scroll">
-          <table className="data-table" data-density={density}>
+          <table ref={mobileTableRef} className="data-table data-table--mobile-cards" data-density={density}>
             <thead>
               <tr>
                 <th>المستلم</th>
