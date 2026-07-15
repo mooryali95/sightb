@@ -94,7 +94,11 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
     projectExpenses.filter((e) => e.custodyId === id).reduce((s, e) => s + e.amount, 0);
 
   const activeCustodies = projectCustodies.filter((c) => c.status === 'active');
-  const activeCustodyAmount = activeCustodies.reduce((s, c) => s + c.amount, 0);
+  // ★ effectiveAmount = c.amount + Σ cash_transfers_in — يجب أن يعكس النقد الوارد للعهدة
+  const activeCustodyAmount = activeCustodies.reduce(
+    (s, c) => s + c.amount + getCustodyCashTransfersIn(c.id, projectTransfers),
+    0,
+  );
   const activeCustodySpent = activeCustodies.reduce((s, c) => s + custodySpent(c.id), 0);
   const inHandsOfHolders = activeCustodyAmount - activeCustodySpent;
 
