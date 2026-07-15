@@ -323,4 +323,43 @@ describe('getFundOpenItems & auditFundFinancialLinks', () => {
   });
 });
 
+describe('Cash transfers — single source of truth', () => {
+  it('cash transfer from fund drains manager cash and shows on custody side', () => {
+    const fund = makeFund({ id: 'f1', amount: 5000, status: 'acknowledged' });
+    const custody: any = {
+      id: 'c1', projectId: PID, resourceName: 'X', amount: 0,
+      status: 'active', receivedDate: '2026-01-02', createdAt: '2026-01-02',
+    };
+    const transfer: any = {
+      id: 't1', projectId: PID, fromFundId: 'f1', toCustodyId: 'c1',
+      amount: 5000, transferDate: '2026-01-03', createdAt: '2026-01-03',
+    };
+    const summary = getProjectFundsSummary(PID, [fund], [], [], [custody], [], [transfer]);
+    expect(summary.totalTransferred).toBe(5000);
+    expect(summary.remainingInManagerHand).toBe(0);
+    // fund remaining should also be 0 (drained by the transfer)
+    expect(getFundRemaining(fund, [], [custody], [], [transfer])).toBe(0);
+  });
+
+  it('conservation: sum of buckets equals totalTransferred', () => {
+    const fund = makeFund({ id: 'f1', amount: 10000, status: 'acknowledged' });
+    const custody: any = {
+      id: 'c1', projectId: PID, resourceName: 'X', amount: 2000,
+      sourceFundId: 'f1', status: 'active', receivedDate: '2026-01-02', createdAt: '2026-01-02',
+    };
+    const transfer: any = {
+      id: 't1', projectId: PID, fromFundId: 'f1', toCustodyId: 'c1',
+      amount: 3000, transferDate: '2026-01-03', createdAt: '2026-01-03',
+    };
+    const directExpense = makeExpense({ id: 'e1', fundId: 'f1', amount: 1000 });
+    const summary = getProjectFundsSummary(PID, [fund], [], [directExpense], [custody], [], [transfer]);
+    // buckets: direct spent + custody draw + cash-in-holders + manager hand
+    const custodyHolders = custody.amount + transfer.amount; // 5000 (nothing spent on custody)
+    const total = summary.totalDocumentedSpend + custodyHolders + summary.remainingInManagerHand;
+    expect(total).toBe(fund.amount); // 1000 + 5000 + 4000 = 10000
+    expect(summary.remainingInManagerHand).toBe(4000);
+  });
+});
+
+
 
