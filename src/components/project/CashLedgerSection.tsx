@@ -12,7 +12,7 @@ import {
   SETTLEMENT_STATUS_COLORS,
   PAYMENT_REQUEST_TYPE_LABELS,
 } from '@/types/project';
-import { getProjectFundsSummary, getSettlementForFund, getFundRemaining, getFundOutstandingAdvances, getFundCashTransfersOut } from '@/lib/funds';
+import { getProjectFundsSummary, getSettlementForFund, getFundRemaining, getFundOutstandingAdvances, getFundCashTransfersOut, getCustodyCashTransfersIn } from '@/lib/funds';
 import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -94,7 +94,11 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
     projectExpenses.filter((e) => e.custodyId === id).reduce((s, e) => s + e.amount, 0);
 
   const activeCustodies = projectCustodies.filter((c) => c.status === 'active');
-  const activeCustodyAmount = activeCustodies.reduce((s, c) => s + c.amount, 0);
+  // ★ effectiveAmount = c.amount + Σ cash_transfers_in — يجب أن يعكس النقد الوارد للعهدة
+  const activeCustodyAmount = activeCustodies.reduce(
+    (s, c) => s + c.amount + getCustodyCashTransfersIn(c.id, projectTransfers),
+    0,
+  );
   const activeCustodySpent = activeCustodies.reduce((s, c) => s + custodySpent(c.id), 0);
   const inHandsOfHolders = activeCustodyAmount - activeCustodySpent;
 
