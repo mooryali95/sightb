@@ -24,7 +24,7 @@ import {
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
   Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, HandCoins,
-  MoreHorizontal, Download, GitCompare,
+  MoreHorizontal, Download, GitCompare, Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportToExcel, exportToPDF } from '@/lib/export';
@@ -52,6 +52,7 @@ import { CashLedgerSection } from '@/components/project/CashLedgerSection';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
+import { SourceOfTruthSection } from '@/components/project/SourceOfTruthSection';
 import { PerformanceComparisonSection } from '@/components/project/PerformanceComparisonSection';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 import { Progress } from '@/components/ui/progress';
@@ -91,7 +92,7 @@ export default function ProjectDetail() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0, taxPercent: 15 });
-  type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management';
+  type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management' | 'ssot';
   // Persist active tab in URL (?tab=...) so refresh keeps context
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab') || 'overview';
@@ -261,6 +262,7 @@ export default function ProjectDetail() {
     { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'expenses', badge: badges.finance.count, badgeLevel: badges.finance.level, badgeHint: badges.finance.hint },
     { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: badges.tracking.count, badgeLevel: badges.tracking.level, badgeHint: badges.tracking.hint },
     { key: 'management', label: 'الإدارة', icon: FileEdit, defaultTab: 'changeorders', badge: badges.management.count, badgeLevel: badges.management.level, badgeHint: badges.management.hint },
+    { key: 'ssot', label: 'مصدر الحقيقة', icon: Info, defaultTab: 'ssot', badge: 0, badgeLevel: 'info' },
   ];
 
   const subTabs: Record<TabGroup, { value: string; label: string; icon: typeof MilestoneIcon }[]> = {
@@ -292,6 +294,9 @@ export default function ProjectDetail() {
       { value: 'changeorders', label: 'أوامر التغيير', icon: FileEdit },
       { value: 'risks', label: 'المخاطر', icon: AlertTriangle },
       ...(isAdmin ? [{ value: 'auditlog', label: 'السجل', icon: History }] : []),
+    ],
+    ssot: [
+      { value: 'ssot', label: 'تفسير الحسابات', icon: Info },
     ],
   };
 
@@ -847,6 +852,23 @@ export default function ProjectDetail() {
                   );
                 case 'auditlog':
                   return isAdmin ? <AuditLogSection projectId={project.id} /> : null;
+                case 'ssot':
+                  return (
+                    <SourceOfTruthSection
+                      project={project}
+                      summary={summary}
+                      evm={evm}
+                      budgetItems={pBudget}
+                      expenses={pExpenses}
+                      revenues={pRevenues}
+                      changeOrders={pChangeOrders}
+                      funds={projectFunds.filter((f) => f.projectId === project.id)}
+                      settlements={fundSettlements.filter((s) => s.projectId === project.id)}
+                      custodies={pCustodies}
+                      paymentRequests={paymentRequests.filter((p) => p.projectId === project.id)}
+                      cashTransfers={(cashTransfers || []).filter((t) => t.projectId === project.id)}
+                    />
+                  );
                 default:
                   return null;
               }
