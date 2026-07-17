@@ -206,8 +206,8 @@ export function SourceOfTruthSection({
               currency={currency}
             />
             <Row
-              label="الربح الفعلي (مُقدَّر)"
-              value={summary.actualProfit}
+              label="الربح المحقق (Realized)"
+              value={summary.realizedProfit}
               formula="collectedRevenue − totalActual"
               sources={[{ kind: 'fn', label: 'getProjectSummary()' }]}
               currency={currency}
