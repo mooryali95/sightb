@@ -852,6 +852,23 @@ export default function ProjectDetail() {
                   );
                 case 'auditlog':
                   return isAdmin ? <AuditLogSection projectId={project.id} /> : null;
+                case 'ssot':
+                  return (
+                    <SourceOfTruthSection
+                      project={project}
+                      summary={summary}
+                      evm={evm}
+                      budgetItems={pBudget}
+                      expenses={pExpenses}
+                      revenues={pRevenues}
+                      changeOrders={pChangeOrders}
+                      funds={projectFunds.filter((f) => f.projectId === project.id)}
+                      settlements={fundSettlements.filter((s) => s.projectId === project.id)}
+                      custodies={pCustodies}
+                      paymentRequests={paymentRequests.filter((p) => p.projectId === project.id)}
+                      cashTransfers={(cashTransfers || []).filter((t) => t.projectId === project.id)}
+                    />
+                  );
                 default:
                   return null;
               }
