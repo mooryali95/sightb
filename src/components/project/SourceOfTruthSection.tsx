@@ -92,8 +92,8 @@ export function SourceOfTruthSection({
   const approvedCO = changeOrders.filter((c) => c.status === 'approved');
   const approvedCOImpact = approvedCO.reduce((s, c) => s + c.amountImpact, 0);
 
-  const collectedRevenue = revenues.filter((r) => r.status === 'received').reduce((s, r) => s + r.amount, 0);
-  const invoicedRevenue = revenues.filter((r) => r.status === 'invoiced' || r.status === 'received').reduce((s, r) => s + r.amount, 0);
+  const collectedRevenue = revenues.filter((r) => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
+  const invoicedRevenue = revenues.filter((r) => r.status === 'invoiced' || r.status === 'collected').reduce((s, r) => s + r.amount, 0);
 
   const rejectedExpenses = expenses.filter((e) => e.approvalStatus === 'rejected').reduce((s, e) => s + e.amount, 0);
   const outstandingAdvancesAll = paymentRequests
