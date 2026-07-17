@@ -92,7 +92,7 @@ export default function ProjectDetail() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', contractValue: 0, durationMonths: 0, description: '', retentionPercent: 0, managementReserve: 0, percentComplete: 0, taxPercent: 15 });
-  type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management';
+  type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management' | 'ssot';
   // Persist active tab in URL (?tab=...) so refresh keeps context
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab') || 'overview';
