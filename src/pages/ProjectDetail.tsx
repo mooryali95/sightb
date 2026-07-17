@@ -262,6 +262,7 @@ export default function ProjectDetail() {
     { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'expenses', badge: badges.finance.count, badgeLevel: badges.finance.level, badgeHint: badges.finance.hint },
     { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: badges.tracking.count, badgeLevel: badges.tracking.level, badgeHint: badges.tracking.hint },
     { key: 'management', label: 'الإدارة', icon: FileEdit, defaultTab: 'changeorders', badge: badges.management.count, badgeLevel: badges.management.level, badgeHint: badges.management.hint },
+    { key: 'ssot', label: 'مصدر الحقيقة', icon: Info, defaultTab: 'ssot', badge: 0, badgeLevel: 'info' },
   ];
 
   const subTabs: Record<TabGroup, { value: string; label: string; icon: typeof MilestoneIcon }[]> = {
