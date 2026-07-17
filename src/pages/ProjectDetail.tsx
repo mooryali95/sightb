@@ -24,7 +24,7 @@ import {
   BarChart3, Receipt, PiggyBank, Baseline,
   FileSpreadsheet, FileText, Milestone as MilestoneIcon, FileEdit, AlertTriangle, Trash2,
   Briefcase, Pencil, FlaskConical, LayoutDashboard, Clock, Shield, Banknote, Archive, HandCoins,
-  MoreHorizontal, Download, GitCompare,
+  MoreHorizontal, Download, GitCompare, Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportToExcel, exportToPDF } from '@/lib/export';
