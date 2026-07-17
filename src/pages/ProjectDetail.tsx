@@ -295,6 +295,9 @@ export default function ProjectDetail() {
       { value: 'risks', label: 'المخاطر', icon: AlertTriangle },
       ...(isAdmin ? [{ value: 'auditlog', label: 'السجل', icon: History }] : []),
     ],
+    ssot: [
+      { value: 'ssot', label: 'تفسير الحسابات', icon: Info },
+    ],
   };
 
   const handleGroupChange = (group: TabGroup) => {
