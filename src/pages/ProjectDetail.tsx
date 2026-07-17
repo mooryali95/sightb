@@ -52,6 +52,7 @@ import { CashLedgerSection } from '@/components/project/CashLedgerSection';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
+import { SourceOfTruthSection } from '@/components/project/SourceOfTruthSection';
 import { PerformanceComparisonSection } from '@/components/project/PerformanceComparisonSection';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 import { Progress } from '@/components/ui/progress';
