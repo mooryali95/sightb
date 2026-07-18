@@ -298,6 +298,9 @@ export function SourceOfTruthSection({
                 { kind: 'db', label: 'recalc_fund_settlement_spent()' },
               ]}
               currency={currency}
+              ssotKey="settled_amount" projectId={project.id}
+            />
+
             />
           </AccordionContent>
         </AccordionItem>
