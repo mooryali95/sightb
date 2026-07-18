@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:ssot": "bash scripts/run-ssot-tests.sh",
     "test:watch": "vitest"
   },
   "dependencies": {
