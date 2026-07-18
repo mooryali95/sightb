@@ -20,6 +20,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Info, FunctionSquare, Database, Calculator } from 'lucide-react';
 import type { ProjectSummary, EVMMetrics } from '@/types/project';
+import { SsotExplainButton } from './SsotExplainButton';
+
 
 interface Props {
   project: Project;
