@@ -52,17 +52,24 @@ function SourceBadge({ kind, label }: { kind: 'fn' | 'db' | 'calc'; label: strin
 }
 
 function Row({
-  label, value, formula, sources, currency,
+  label, value, formula, sources, currency, ssotKey, projectId,
 }: {
   label: string;
   value: number;
   formula?: string;
   sources: { kind: 'fn' | 'db' | 'calc'; label: string }[];
   currency: string;
+  ssotKey?: string;
+  projectId?: string;
 }) {
   return (
     <div className="grid grid-cols-12 gap-2 py-2 items-start border-b border-border/40 last:border-b-0">
-      <div className="col-span-6 md:col-span-5 text-sm text-foreground">{label}</div>
+      <div className="col-span-6 md:col-span-5 text-sm text-foreground flex items-center gap-2">
+        <span>{label}</span>
+        {ssotKey && projectId && (
+          <SsotExplainButton ssotKey={ssotKey} label={label} projectId={projectId} currency={currency} />
+        )}
+      </div>
       <div className="col-span-6 md:col-span-3 text-sm font-mono font-semibold text-left" dir="ltr">
         {formatCurrency(value, currency)}
       </div>
@@ -77,6 +84,7 @@ function Row({
     </div>
   );
 }
+
 
 export function SourceOfTruthSection({
   project, summary, evm, budgetItems, expenses, revenues, changeOrders,
