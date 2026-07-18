@@ -198,6 +198,7 @@ export function SourceOfTruthSection({
                 { kind: 'db', label: 'expenses' },
               ]}
               currency={currency}
+              ssotKey="total_actual_expenses" projectId={project.id}
             />
             <Row
               label="المصروفات المرفوضة (مستبعدة)"
@@ -211,7 +212,9 @@ export function SourceOfTruthSection({
               formula="Σ (amount − refunded) WHERE type='advance' AND status='paid' AND is_advance_outstanding"
               sources={[{ kind: 'db', label: 'payment_requests' }]}
               currency={currency}
+              ssotKey="outstanding_advances" projectId={project.id}
             />
+
             <Row
               label="الربح المُخطَّط"
               value={summary.plannedProfit}
