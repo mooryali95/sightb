@@ -140,6 +140,7 @@ export function SourceOfTruthSection({
               value={project.contractValue}
               sources={[{ kind: 'db', label: 'projects.contract_value' }]}
               currency={currency}
+              ssotKey="contract_value" projectId={project.id}
             />
             <Row
               label={`أثر أوامر التغيير المعتمدة (${approvedCO.length})`}
@@ -147,6 +148,7 @@ export function SourceOfTruthSection({
               formula="Σ change_orders.amount_impact WHERE status = 'approved'"
               sources={[{ kind: 'db', label: 'change_orders' }]}
               currency={currency}
+              ssotKey="approved_change_orders" projectId={project.id}
             />
             <Row
               label="قيمة العقد الفعلية"
@@ -161,7 +163,9 @@ export function SourceOfTruthSection({
               formula="Σ revenues.amount WHERE status = 'received'"
               sources={[{ kind: 'db', label: 'revenues' }]}
               currency={currency}
+              ssotKey="collected_revenue" projectId={project.id}
             />
+
             <Row
               label="الإيرادات المُفوترة (شاملة المحصَّل)"
               value={invoicedRevenue}
