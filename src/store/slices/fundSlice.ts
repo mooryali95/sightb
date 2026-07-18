@@ -195,26 +195,8 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
 
     const mapped = mapFund(data);
 
-    // سجل تدقيق للدفعات الاستثنائية
-    if (isEmergency) {
-      try {
-        await (supabase as any).from('system_audit_log').insert({
-          user_id: userId,
-          action: 'emergency_fund_create',
-          entity_type: 'project_fund',
-          entity_id: mapped.id,
-          entity_name: `دفعة #${mapped.fundNumber} — ${amount.toLocaleString('en-US')}`,
-          details: {
-            project_id: projectId,
-            amount,
-            blocking_fund_number: unsettled?.fundNumber ?? null,
-            reason: emergencyReason,
-          },
-        });
-      } catch (e) {
-        console.warn('فشل تسجيل سجل التدقيق للدفعة الاستثنائية', e);
-      }
-    }
+    // ملاحظة: تسجيل الدفعات الاستثنائية يتم تلقائياً على مستوى قاعدة البيانات
+    // عبر trigger `trg_audit_emergency_fund_create` (SECURITY DEFINER) لضمان عدم تجاوز الحدث.
 
     set((s) => ({ projectFunds: [...s.projectFunds, mapped] }));
     return mapped.id;
