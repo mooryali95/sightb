@@ -301,7 +301,7 @@ export function SourceOfTruthSection({
               ssotKey="settled_amount" projectId={project.id}
             />
 
-            />
+
           </AccordionContent>
         </AccordionItem>
 
