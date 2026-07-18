@@ -1923,6 +1923,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ssot_explain: {
+        Args: { _key: string; _project_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       advance_settlement_type:

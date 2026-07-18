@@ -20,6 +20,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Info, FunctionSquare, Database, Calculator } from 'lucide-react';
 import type { ProjectSummary, EVMMetrics } from '@/types/project';
+import { SsotExplainButton } from './SsotExplainButton';
+
 
 interface Props {
   project: Project;
@@ -50,17 +52,24 @@ function SourceBadge({ kind, label }: { kind: 'fn' | 'db' | 'calc'; label: strin
 }
 
 function Row({
-  label, value, formula, sources, currency,
+  label, value, formula, sources, currency, ssotKey, projectId,
 }: {
   label: string;
   value: number;
   formula?: string;
   sources: { kind: 'fn' | 'db' | 'calc'; label: string }[];
   currency: string;
+  ssotKey?: string;
+  projectId?: string;
 }) {
   return (
     <div className="grid grid-cols-12 gap-2 py-2 items-start border-b border-border/40 last:border-b-0">
-      <div className="col-span-6 md:col-span-5 text-sm text-foreground">{label}</div>
+      <div className="col-span-6 md:col-span-5 text-sm text-foreground flex items-center gap-2">
+        <span>{label}</span>
+        {ssotKey && projectId && (
+          <SsotExplainButton ssotKey={ssotKey} label={label} projectId={projectId} currency={currency} />
+        )}
+      </div>
       <div className="col-span-6 md:col-span-3 text-sm font-mono font-semibold text-left" dir="ltr">
         {formatCurrency(value, currency)}
       </div>
@@ -75,6 +84,7 @@ function Row({
     </div>
   );
 }
+
 
 export function SourceOfTruthSection({
   project, summary, evm, budgetItems, expenses, revenues, changeOrders,
@@ -130,6 +140,7 @@ export function SourceOfTruthSection({
               value={project.contractValue}
               sources={[{ kind: 'db', label: 'projects.contract_value' }]}
               currency={currency}
+              ssotKey="contract_value" projectId={project.id}
             />
             <Row
               label={`أثر أوامر التغيير المعتمدة (${approvedCO.length})`}
@@ -137,6 +148,7 @@ export function SourceOfTruthSection({
               formula="Σ change_orders.amount_impact WHERE status = 'approved'"
               sources={[{ kind: 'db', label: 'change_orders' }]}
               currency={currency}
+              ssotKey="approved_change_orders" projectId={project.id}
             />
             <Row
               label="قيمة العقد الفعلية"
@@ -151,7 +163,9 @@ export function SourceOfTruthSection({
               formula="Σ revenues.amount WHERE status = 'received'"
               sources={[{ kind: 'db', label: 'revenues' }]}
               currency={currency}
+              ssotKey="collected_revenue" projectId={project.id}
             />
+
             <Row
               label="الإيرادات المُفوترة (شاملة المحصَّل)"
               value={invoicedRevenue}
@@ -184,6 +198,7 @@ export function SourceOfTruthSection({
                 { kind: 'db', label: 'expenses' },
               ]}
               currency={currency}
+              ssotKey="total_actual_expenses" projectId={project.id}
             />
             <Row
               label="المصروفات المرفوضة (مستبعدة)"
@@ -197,7 +212,9 @@ export function SourceOfTruthSection({
               formula="Σ (amount − refunded) WHERE type='advance' AND status='paid' AND is_advance_outstanding"
               sources={[{ kind: 'db', label: 'payment_requests' }]}
               currency={currency}
+              ssotKey="outstanding_advances" projectId={project.id}
             />
+
             <Row
               label="الربح المُخطَّط"
               value={summary.plannedProfit}
@@ -227,7 +244,9 @@ export function SourceOfTruthSection({
               formula="Σ project_funds.amount WHERE project_id = ?"
               sources={[{ kind: 'db', label: 'project_funds' }]}
               currency={currency}
+              ssotKey="total_transferred_funds" projectId={project.id}
             />
+
 
             <div className="mt-3 mb-2 text-xs font-semibold text-muted-foreground">
               تفصيل الاستنزاف للدفعات النشطة ({activeOrAck.length}):
@@ -279,7 +298,10 @@ export function SourceOfTruthSection({
                 { kind: 'db', label: 'recalc_fund_settlement_spent()' },
               ]}
               currency={currency}
+              ssotKey="settled_amount" projectId={project.id}
             />
+
+
           </AccordionContent>
         </AccordionItem>
 
