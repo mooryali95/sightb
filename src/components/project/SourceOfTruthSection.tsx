@@ -244,7 +244,9 @@ export function SourceOfTruthSection({
               formula="Σ project_funds.amount WHERE project_id = ?"
               sources={[{ kind: 'db', label: 'project_funds' }]}
               currency={currency}
+              ssotKey="total_transferred_funds" projectId={project.id}
             />
+
 
             <div className="mt-3 mb-2 text-xs font-semibold text-muted-foreground">
               تفصيل الاستنزاف للدفعات النشطة ({activeOrAck.length}):
