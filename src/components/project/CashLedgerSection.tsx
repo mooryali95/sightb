@@ -12,7 +12,9 @@ import {
   SETTLEMENT_STATUS_COLORS,
   PAYMENT_REQUEST_TYPE_LABELS,
 } from '@/types/project';
-import { getProjectFundsSummary, getSettlementForFund, getFundRemaining, getFundOutstandingAdvances, getFundCashTransfersOut, getCustodyCashTransfersIn } from '@/lib/funds';
+import { getProjectFundsSummary, getSettlementForFund, getFundRemainingBreakdown, getCustodyCashTransfersIn } from '@/lib/funds';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
