@@ -129,6 +129,43 @@ export function getFundSpent(
   );
 }
 
+/**
+ * SSOT: تفصيل الرصيد المتبقي للدفعة — يطابق بالضبط منطق DB trigger `check_fund_balance`.
+ * كل جهة تعرض "متبقي" يجب أن تستهلك هذا الكائن (لا حسابات محلية).
+ */
+export interface FundRemainingBreakdown {
+  amount: number;
+  direct: number;
+  custodyDraw: number;
+  outstandingAdvances: number;
+  cashTransfersOut: number;
+  spent: number;
+  remaining: number;
+}
+
+export function getFundRemainingBreakdown(
+  fund: ProjectFund,
+  expenses: Expense[],
+  custodies: Custody[] = [],
+  paymentRequests: PaymentRequest[] = [],
+  cashTransfers: CashTransfer[] = [],
+): FundRemainingBreakdown {
+  const direct = getFundDirectSpent(fund.id, expenses, custodies);
+  const custodyDraw = getFundCustodyDraw(fund.id, custodies);
+  const outstandingAdvances = getFundOutstandingAdvances(fund.id, paymentRequests);
+  const cashTransfersOut = getFundCashTransfersOut(fund.id, cashTransfers);
+  const spent = direct + custodyDraw + outstandingAdvances + cashTransfersOut;
+  return {
+    amount: fund.amount,
+    direct,
+    custodyDraw,
+    outstandingAdvances,
+    cashTransfersOut,
+    spent,
+    remaining: fund.amount - spent,
+  };
+}
+
 export function getFundRemaining(
   fund: ProjectFund,
   expenses: Expense[],
