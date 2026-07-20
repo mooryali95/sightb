@@ -359,7 +359,10 @@ describe('Cash transfers — single source of truth', () => {
     const total = summary.totalDocumentedSpend + custodyHolders + summary.remainingInManagerHand;
     expect(total).toBe(fund.amount); // 1000 + 5000 + 4000 = 10000
     expect(summary.remainingInManagerHand).toBe(4000);
+  });
 });
+
+
 
 describe('getFundRemainingBreakdown — SSOT unification', () => {
   it('breakdown.remaining === fund.amount − Σ(direct + custodyDraw + advances + cashOut)', () => {
