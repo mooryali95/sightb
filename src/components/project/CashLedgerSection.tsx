@@ -324,21 +324,9 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
               ) : (
                 <div className="space-y-2">
                   {projectFundsList.map((f) => {
-                    const directSpent = projectExpenses
-                      .filter((e) => e.fundId === f.id)
-                      .filter((e) => {
-                        if (!e.custodyId) return true;
-                        const cu = projectCustodies.find((c) => c.id === e.custodyId);
-                        return cu?.sourceFundId !== f.id;
-                      })
-                      .reduce((s, e) => s + e.amount, 0);
+                    const bd = getFundRemainingBreakdown(f, projectExpenses, projectCustodies, projectPayReqs, projectTransfers);
+                    const { direct: directSpent, custodyDraw, outstandingAdvances, cashTransfersOut, spent, remaining } = bd;
                     const fundCustodies = projectCustodies.filter((c) => c.sourceFundId === f.id);
-                    const custodyDraw = fundCustodies.reduce((s, c) => s + c.amount, 0);
-                    const outstandingAdvances = getFundOutstandingAdvances(f.id, projectPayReqs);
-                    const cashTransfersOut = getFundCashTransfersOut(f.id, projectTransfers);
-                    const spent = directSpent + custodyDraw + outstandingAdvances + cashTransfersOut;
-                    // متبقي بيد المدير = نفس صيغة getFundRemaining (تتطابق مع الكارت العلوي)
-                    const remaining = getFundRemaining(f, projectExpenses, projectCustodies, projectPayReqs, projectTransfers);
                     const settlement = getSettlementForFund(f.id, settlements);
                     const linked = projectExpenses.filter((e) => e.fundId === f.id && (!e.custodyId || projectCustodies.find(c => c.id === e.custodyId)?.sourceFundId !== f.id));
                     const isOpen = openFunds.has(f.id);
@@ -369,16 +357,37 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                             <div className="mt-1.5 h-1.5 w-full bg-muted rounded-full overflow-hidden flex">
                               <div className="h-full bg-primary" style={{ width: `${Math.min(100, (directSpent / Math.max(1, f.amount)) * 100)}%` }} />
                               <div className="h-full bg-amber-500" style={{ width: `${Math.min(100 - (directSpent / Math.max(1, f.amount)) * 100, (custodyDraw / Math.max(1, f.amount)) * 100)}%` }} />
+                              <div className="h-full bg-purple-500" style={{ width: `${Math.min(Math.max(0, 100 - ((directSpent + custodyDraw) / Math.max(1, f.amount)) * 100), (cashTransfersOut / Math.max(1, f.amount)) * 100)}%` }} />
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                            <p className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3">
                               <span>مباشر: {formatCurrency(directSpent)}</span>
                               {custodyDraw > 0 && <span className="text-amber-600">عُهد: {formatCurrency(custodyDraw)}</span>}
                               {outstandingAdvances > 0 && <span className="text-blue-600">سلف قائمة: {formatCurrency(outstandingAdvances)}</span>}
                               {cashTransfersOut > 0 && <span className="text-purple-600">تحويلات نقد: {formatCurrency(cashTransfersOut)}</span>}
-                              <span className={cn(remaining < 0 && 'text-destructive')}>متبقي بيد المدير: {formatCurrency(remaining)}</span>
+                              <span className={cn('flex items-center gap-1', remaining <= 0 && 'text-destructive font-semibold')}>
+                                متبقي بيد المدير: {formatCurrency(remaining)}
+                                <TooltipProvider delayDuration={100}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="w-3 h-3 opacity-60" onClick={(e) => e.stopPropagation()} />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">
+                                      <div className="space-y-0.5 font-mono">
+                                        <div>المبلغ الأصلي: {formatCurrency(bd.amount)}</div>
+                                        <div>− مباشر: {formatCurrency(bd.direct)}</div>
+                                        <div>− عُهد مسحوبة: {formatCurrency(bd.custodyDraw)}</div>
+                                        <div>− سلف قائمة: {formatCurrency(bd.outstandingAdvances)}</div>
+                                        <div>− تحويلات نقد صادرة: {formatCurrency(bd.cashTransfersOut)}</div>
+                                        <div className="border-t border-border pt-0.5">= المتبقي: {formatCurrency(bd.remaining)}</div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </span>
                             </p>
                           </div>
                         </button>
+
 
                         {isOpen && (
                           <div className="border-t border-border bg-muted/30 p-2 space-y-2">
