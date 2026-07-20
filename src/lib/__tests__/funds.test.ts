@@ -359,8 +359,29 @@ describe('Cash transfers — single source of truth', () => {
     const total = summary.totalDocumentedSpend + custodyHolders + summary.remainingInManagerHand;
     expect(total).toBe(fund.amount); // 1000 + 5000 + 4000 = 10000
     expect(summary.remainingInManagerHand).toBe(4000);
+});
+
+describe('getFundRemainingBreakdown — SSOT unification', () => {
+  it('breakdown.remaining === fund.amount − Σ(direct + custodyDraw + advances + cashOut)', () => {
+    const fund = makeFund({ id: 'f1', amount: 5000 });
+    const custody = { id: 'cu1', projectId: PID, resourceId: 'r1', resourceName: 'R', amount: 0, sourceFundId: 'f1', createdAt: '', status: 'active', spentAmount: 0 } as any;
+    const transfer = { id: 't1', projectId: PID, fromFundId: 'f1', toCustodyId: 'cu1', amount: 5000, transferDate: '2026-01-02', createdAt: '' } as any;
+    const bd = getFundRemainingBreakdown(fund, [], [custody], [], [transfer]);
+    expect(bd.direct).toBe(0);
+    expect(bd.custodyDraw).toBe(0); // custody amount is 0
+    expect(bd.cashTransfersOut).toBe(5000);
+    expect(bd.spent).toBe(5000);
+    expect(bd.remaining).toBe(0); // ★ الحالة الحرجة في الصور
+  });
+
+  it('matches getFundRemaining exactly', () => {
+    const fund = makeFund({ amount: 10000 });
+    const e = makeExpense({ fundId: fund.id, amount: 2000 });
+    const bd = getFundRemainingBreakdown(fund, [e], [], [], []);
+    expect(bd.remaining).toBe(getFundRemaining(fund, [e], [], [], []));
   });
 });
+
 
 
 
