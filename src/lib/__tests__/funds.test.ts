@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getFundSpent,
   getFundRemaining,
+  getFundRemainingBreakdown,
   getActiveFund,
   getProjectFundsSummary,
   getRemainingStatus,
