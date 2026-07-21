@@ -144,6 +144,8 @@ export interface Expense {
   commitmentId?: string;
   /** مصروف ناتج عن تسوية سلفة — يُشير إلى طلب الصرف الأصلي. */
   sourcePaymentRequestId?: string;
+  /** مصروف يُسدِّد ذمة مدينة (Vendor Payable) — يُقفلها تلقائياً في DB. */
+  reimbursesPayableId?: string;
 }
 
 export type RevenueType = 'advance' | 'milestone' | 'final' | 'retention' | 'variation' | 'deduction';
