@@ -76,13 +76,17 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
       invoice_ref: e.invoiceRef || null,
       is_vat_exempt: e.isVatExempt ?? false,
       fund_id: e.fundId || null,
+      reimburses_payable_id: (e as any).reimbursesPayableId || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapExpense(data);
     set((s) => ({ expenses: [mapped, ...s.expenses] }));
-    // Reload fund settlements so DB-trigger-updated totals reflect in UI
+    // Reload fund settlements + payables so DB-trigger-updated totals reflect in UI
     if (mapped.fundId) {
       try { await (get() as any).loadFundsForProject?.(e.projectId); } catch {}
+    }
+    if (mapped.reimbursesPayableId) {
+      try { await (get() as any).loadResourcePayablesForProject?.(e.projectId); } catch {}
     }
     return mapped.id;
   },
