@@ -623,10 +623,14 @@ export interface ReceiptAttachment {
   uploadedAt?: string;
 }
 
+export type ReimbursementSourceKind = 'resource' | 'vendor';
+
 export interface ResourceReimbursement {
   id: string;
   projectId: string;
-  resourceId: string;
+  resourceId?: string; // مطلوب إذا sourceKind = 'resource'
+  sourceKind: ReimbursementSourceKind;
+  vendorName?: string; // مطلوب إذا sourceKind = 'vendor'
   category: ExpenseCategory | string;
   description: string;
   amount: number;
@@ -639,6 +643,8 @@ export interface ResourceReimbursement {
   approvedBy?: string;
   approvedAt?: string;
   paymentRequestId?: string;
+  settledExpenseId?: string;
+  settledAt?: string;
   createdAt: string;
   updatedAt: string;
 }
