@@ -821,7 +821,12 @@ export default function ProjectDetail() {
                 case 'revenue':
                   return <RevenueSection projectId={project.id} revenues={pRevenues} durationMonths={project.durationMonths} readOnly={isReadOnly} taxPercent={project.taxPercent} milestones={pMilestones} />;
                 case 'payables':
-                  return <ResourcePayablesSection projectId={project.id} projectName={project.name} readOnly={isReadOnly} />;
+                  return (
+                    <div className="space-y-4">
+                      <ResourcePayablesSection projectId={project.id} projectName={project.name} readOnly={isReadOnly} />
+                      <VendorPayablesPanel projectId={project.id} readOnly={isReadOnly} />
+                    </div>
+                  );
                 case 'changeorders':
                   return <ChangeOrdersSection projectId={project.id} changeOrders={pChangeOrders} contractValue={project.contractValue} readOnly={isReadOnly} />;
                 case 'risks':
