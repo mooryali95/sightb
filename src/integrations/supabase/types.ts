@@ -651,6 +651,7 @@ export type Database = {
           ocr_extracted_data: Json | null
           project_id: string
           receipt_attachments: Json
+          reimburses_payable_id: string | null
           resource_id: string | null
           responsible: string | null
           source_payment_request_id: string | null
@@ -678,6 +679,7 @@ export type Database = {
           ocr_extracted_data?: Json | null
           project_id: string
           receipt_attachments?: Json
+          reimburses_payable_id?: string | null
           resource_id?: string | null
           responsible?: string | null
           source_payment_request_id?: string | null
@@ -705,6 +707,7 @@ export type Database = {
           ocr_extracted_data?: Json | null
           project_id?: string
           receipt_attachments?: Json
+          reimburses_payable_id?: string | null
           resource_id?: string | null
           responsible?: string | null
           source_payment_request_id?: string | null
@@ -731,6 +734,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_reimburses_payable_id_fkey"
+            columns: ["reimburses_payable_id"]
+            isOneToOne: false
+            referencedRelation: "resource_reimbursements"
             referencedColumns: ["id"]
           },
           {
@@ -1319,10 +1329,14 @@ export type Database = {
           project_id: string
           receipt_attachments: Json
           rejection_reason: string | null
-          resource_id: string
+          resource_id: string | null
+          settled_at: string | null
+          settled_expense_id: string | null
+          source_kind: string
           status: Database["public"]["Enums"]["reimbursement_status"]
           updated_at: string
           user_id: string
+          vendor_name: string | null
         }
         Insert: {
           amount?: number
@@ -1339,10 +1353,14 @@ export type Database = {
           project_id: string
           receipt_attachments?: Json
           rejection_reason?: string | null
-          resource_id: string
+          resource_id?: string | null
+          settled_at?: string | null
+          settled_expense_id?: string | null
+          source_kind?: string
           status?: Database["public"]["Enums"]["reimbursement_status"]
           updated_at?: string
           user_id: string
+          vendor_name?: string | null
         }
         Update: {
           amount?: number
@@ -1359,12 +1377,24 @@ export type Database = {
           project_id?: string
           receipt_attachments?: Json
           rejection_reason?: string | null
-          resource_id?: string
+          resource_id?: string | null
+          settled_at?: string | null
+          settled_expense_id?: string | null
+          source_kind?: string
           status?: Database["public"]["Enums"]["reimbursement_status"]
           updated_at?: string
           user_id?: string
+          vendor_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "resource_reimbursements_settled_expense_id_fkey"
+            columns: ["settled_expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       resource_settlements: {
         Row: {
