@@ -25,8 +25,8 @@ interface Props {
 }
 
 export function VendorPayablesPanel({ projectId, readOnly }: Props) {
-  const { role } = useRole();
-  const canEdit = !readOnly && (role === 'admin' || role === 'editor' || role === 'owner');
+  const { canEdit: canEditFn } = useRole();
+  const canEdit = !readOnly && canEditFn('project', projectId);
 
   const {
     reimbursements, createReimbursement,
