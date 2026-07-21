@@ -29,7 +29,9 @@ export interface ResourcePayableSlice {
   // Reimbursements
   createReimbursement: (input: {
     projectId: string;
-    resourceId: string;
+    resourceId?: string;
+    sourceKind?: 'resource' | 'vendor';
+    vendorName?: string;
     category: string;
     description: string;
     amount: number;
@@ -37,6 +39,7 @@ export interface ResourcePayableSlice {
     receiptAttachments?: ReceiptAttachment[];
     budgetItemId?: string;
     notes?: string;
+    autoApprove?: boolean;
   }) => Promise<string>;
   updateReimbursement: (id: string, updates: Partial<ResourceReimbursement>) => Promise<void>;
   approveReimbursement: (id: string) => Promise<void>;
@@ -130,7 +133,9 @@ function mapReimb(d: any): ResourceReimbursement {
   return {
     id: d.id,
     projectId: d.project_id,
-    resourceId: d.resource_id,
+    resourceId: d.resource_id || undefined,
+    sourceKind: (d.source_kind as any) || 'resource',
+    vendorName: d.vendor_name || undefined,
     category: d.category,
     description: d.description,
     amount: Number(d.amount),
@@ -143,6 +148,8 @@ function mapReimb(d: any): ResourceReimbursement {
     approvedBy: d.approved_by || undefined,
     approvedAt: d.approved_at || undefined,
     paymentRequestId: d.payment_request_id || undefined,
+    settledExpenseId: d.settled_expense_id || undefined,
+    settledAt: d.settled_at || undefined,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
   };
@@ -253,11 +260,16 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
   // ─── Reimbursements ───
   createReimbursement: async (input) => {
     const userId = await getUserId();
+    const kind = input.sourceKind || 'resource';
+    if (kind === 'resource' && !input.resourceId) throw new Error('resourceId required');
+    if (kind === 'vendor' && !input.vendorName?.trim()) throw new Error('vendorName required');
     const { data, error } = await (supabase as any)
       .from('resource_reimbursements')
       .insert({
         project_id: input.projectId,
-        resource_id: input.resourceId,
+        resource_id: kind === 'resource' ? input.resourceId : null,
+        source_kind: kind,
+        vendor_name: kind === 'vendor' ? input.vendorName!.trim() : null,
         category: input.category,
         description: input.description.trim(),
         amount: input.amount,
@@ -266,7 +278,9 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
         budget_item_id: input.budgetItemId || null,
         notes: input.notes?.trim() || null,
         user_id: userId,
-        status: 'pending_review',
+        status: input.autoApprove ? 'approved' : 'pending_review',
+        approved_by: input.autoApprove ? userId : null,
+        approved_at: input.autoApprove ? new Date().toISOString() : null,
       })
       .select()
       .single();

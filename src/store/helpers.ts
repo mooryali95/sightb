@@ -88,6 +88,7 @@ export function mapExpense(d: any): Expense {
     isOutstandingAdvance: false,
     commitmentId: d.commitment_id || undefined,
     sourcePaymentRequestId: d.source_payment_request_id || undefined,
+    reimbursesPayableId: d.reimburses_payable_id || undefined,
   };
 }
 
