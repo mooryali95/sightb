@@ -29,7 +29,9 @@ export interface ResourcePayableSlice {
   // Reimbursements
   createReimbursement: (input: {
     projectId: string;
-    resourceId: string;
+    resourceId?: string;
+    sourceKind?: 'resource' | 'vendor';
+    vendorName?: string;
     category: string;
     description: string;
     amount: number;
@@ -37,6 +39,7 @@ export interface ResourcePayableSlice {
     receiptAttachments?: ReceiptAttachment[];
     budgetItemId?: string;
     notes?: string;
+    autoApprove?: boolean;
   }) => Promise<string>;
   updateReimbursement: (id: string, updates: Partial<ResourceReimbursement>) => Promise<void>;
   approveReimbursement: (id: string) => Promise<void>;
