@@ -260,11 +260,16 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
   // ─── Reimbursements ───
   createReimbursement: async (input) => {
     const userId = await getUserId();
+    const kind = input.sourceKind || 'resource';
+    if (kind === 'resource' && !input.resourceId) throw new Error('resourceId required');
+    if (kind === 'vendor' && !input.vendorName?.trim()) throw new Error('vendorName required');
     const { data, error } = await (supabase as any)
       .from('resource_reimbursements')
       .insert({
         project_id: input.projectId,
-        resource_id: input.resourceId,
+        resource_id: kind === 'resource' ? input.resourceId : null,
+        source_kind: kind,
+        vendor_name: kind === 'vendor' ? input.vendorName!.trim() : null,
         category: input.category,
         description: input.description.trim(),
         amount: input.amount,
@@ -273,7 +278,9 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
         budget_item_id: input.budgetItemId || null,
         notes: input.notes?.trim() || null,
         user_id: userId,
-        status: 'pending_review',
+        status: input.autoApprove ? 'approved' : 'pending_review',
+        approved_by: input.autoApprove ? userId : null,
+        approved_at: input.autoApprove ? new Date().toISOString() : null,
       })
       .select()
       .single();
