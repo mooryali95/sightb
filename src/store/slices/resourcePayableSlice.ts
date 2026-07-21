@@ -130,7 +130,9 @@ function mapReimb(d: any): ResourceReimbursement {
   return {
     id: d.id,
     projectId: d.project_id,
-    resourceId: d.resource_id,
+    resourceId: d.resource_id || undefined,
+    sourceKind: (d.source_kind as any) || 'resource',
+    vendorName: d.vendor_name || undefined,
     category: d.category,
     description: d.description,
     amount: Number(d.amount),
@@ -143,6 +145,8 @@ function mapReimb(d: any): ResourceReimbursement {
     approvedBy: d.approved_by || undefined,
     approvedAt: d.approved_at || undefined,
     paymentRequestId: d.payment_request_id || undefined,
+    settledExpenseId: d.settled_expense_id || undefined,
+    settledAt: d.settled_at || undefined,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
   };
