@@ -21,6 +21,7 @@ const baseReimb = (over: Partial<ResourceReimbursement> = {}): ResourceReimburse
   id: 'rb-' + Math.random(),
   projectId: PID,
   resourceId: RID,
+  sourceKind: 'resource',
   category: 'equipment',
   description: 'lap',
   amount: 100,
