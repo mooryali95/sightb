@@ -85,7 +85,10 @@ export function getProjectPayablesSummary(
   paymentRequests: PaymentRequest[],
   settlements: ResourceSettlement[],
 ): ProjectPayablesSummary {
-  const projReimbs = reimbursements.filter((r) => r.projectId === projectId);
+  // Only include resource-type reimbursements; vendor payables are tracked separately.
+  const projReimbs = reimbursements.filter(
+    (r) => r.projectId === projectId && (r.sourceKind ?? 'resource') === 'resource',
+  );
   const projReqs = paymentRequests.filter((p) => p.projectId === projectId);
   const projResources = resources.filter((r) => r.projectId === projectId);
 
