@@ -578,49 +578,31 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
       throw new Error('قيمة الفاتورة لا تتجاوز المتبقي — استخدم التسوية العادية');
     }
     const overflow = input.invoiceAmount - outstanding;
-    const fundId = input.overflowSource.fundId || null;
-    const custodyId = input.overflowSource.custodyId || null;
-    if (!fundId && !custodyId) {
-      throw new Error('اختر دفعة أو عهدة لتغطية الجزء الفائض من الفاتورة');
-    }
 
-    const today = new Date();
-    const { data, error } = await (supabase as any).rpc('split_settle_advance', {
-      _payment_request_id: id,
-      _settle_amount: outstanding,
-      _overflow_amount: overflow,
-      _overflow_source: custodyId ? 'custody' : 'fund',
-      _overflow_fund_id: custodyId ? null : fundId,
-      _overflow_custody_id: custodyId,
-      _category: input.expenseCategory,
-      _description: 'فائض فاتورة سلفة: ' + cur.description,
-      _date: today.toISOString().split('T')[0],
-      _month: today.getMonth() + 1,
-      _budget_item_id: input.expenseBudgetItemId ?? cur.budgetItemId ?? null,
-      _notes: input.notes ?? null,
+    // Delegate to the advance settlement service (SSOT for the RPC).
+    const { advanceSettlementService, paymentRequestService } = await import('@/services');
+    const result = await advanceSettlementService.splitSettle({
+      paymentRequestId: id,
+      settleAmount: outstanding,
+      overflowAmount: overflow,
+      overflowSource: {
+        fundId: input.overflowSource.fundId || null,
+        custodyId: input.overflowSource.custodyId || null,
+      },
+      expenseCategory: input.expenseCategory,
+      description: 'فائض فاتورة سلفة: ' + cur.description,
+      budgetItemId: input.expenseBudgetItemId ?? cur.budgetItemId ?? null,
+      notes: input.notes ?? null,
     });
-    if (error) {
-      const msg = (error.message || '').toLowerCase();
-      if (msg.includes('insufficient_permission')) throw new Error('لا تملك صلاحية التسوية');
-      if (msg.includes('advance_not_outstanding')) throw new Error('السلفة مسوّاة بالفعل');
-      if (msg.includes('invalid_amounts') || msg.includes('settle_exceeds_outstanding'))
-        throw new Error('مبلغ التسوية غير صحيح');
-      if (msg.includes('يتجاوز رصيد') || msg.includes('يتجاوز الرصيد'))
-        throw new Error(error.message);
-      throw error;
-    }
 
-    // Refresh PR + expense + events
-    const expenseId = (data as any)?.expense_id as string | undefined;
-    const { data: refreshed } = await (supabase as any)
-      .from('payment_requests').select('*').eq('id', id).single();
+    // Refresh PR + overflow expense + events through the service layer.
+    const refreshed = await paymentRequestService.getPaymentRequestRaw(id);
     if (refreshed) {
       const req = mapReq(refreshed);
       set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
     }
-    if (expenseId) {
-      const { data: exp } = await (supabase as any)
-        .from('expenses').select('*').eq('id', expenseId).maybeSingle();
+    if (result.expenseId) {
+      const exp = await paymentRequestService.getExpenseRaw(result.expenseId);
       if (exp) {
         const { mapExpense } = await import('@/store/helpers');
         const mapped = mapExpense(exp);
