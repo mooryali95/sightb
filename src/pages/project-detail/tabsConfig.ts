@@ -1,7 +1,7 @@
 import {
   Users, Wallet, History, BarChart3, Receipt, PiggyBank, Baseline,
   Milestone as MilestoneIcon, FileEdit, AlertTriangle, DollarSign,
-  FlaskConical, LayoutDashboard, Banknote, HandCoins, GitCompare, Info,
+  FlaskConical, LayoutDashboard, Banknote, HandCoins, GitCompare, Info, Briefcase,
 } from 'lucide-react';
 
 export type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management' | 'ssot';
