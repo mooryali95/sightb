@@ -20,6 +20,7 @@ import {
   buildTimeline,
   defaultSettlementText,
   calcSettlementTotals,
+  filterResourceReimbursements,
 } from '@/lib/resource-payables';
 import {
   EXPENSE_CATEGORY_LABELS,
