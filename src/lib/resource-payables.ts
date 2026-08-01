@@ -5,6 +5,27 @@ import type {
   Resource,
 } from '@/types/project';
 
+/**
+ * Employee/resource reimbursements vs vendor payables are two distinct
+ * ledgers stored in the same table. Every aggregate MUST declare which
+ * one it means — never mix them silently.
+ */
+export function isResourceReimbursement(r: ResourceReimbursement): boolean {
+  return (r.sourceKind ?? 'resource') === 'resource';
+}
+
+export function isVendorReimbursement(r: ResourceReimbursement): boolean {
+  return (r.sourceKind ?? 'resource') === 'vendor';
+}
+
+export function filterResourceReimbursements(rs: ResourceReimbursement[]): ResourceReimbursement[] {
+  return rs.filter(isResourceReimbursement);
+}
+
+export function filterVendorReimbursements(rs: ResourceReimbursement[]): ResourceReimbursement[] {
+  return rs.filter(isVendorReimbursement);
+}
+
 export interface ResourceBalance {
   resourceId: string;
   totalApprovedReimbursements: number;
@@ -17,7 +38,8 @@ export interface ResourceBalance {
 }
 
 /**
- * يحسب الرصيد المستحق لكل مورد بشري في مشروع معين
+ * يحسب الرصيد المستحق لكل مورد بشري في مشروع معين.
+ * يستثني مستحقات الموردين الخارجيين (vendor) صراحةً.
  */
 export function getResourceBalance(
   resourceId: string,
@@ -25,7 +47,9 @@ export function getResourceBalance(
   paymentRequests: PaymentRequest[],
   settlements: ResourceSettlement[],
 ): ResourceBalance {
-  const myReimbs = reimbursements.filter((r) => r.resourceId === resourceId);
+  const myReimbs = reimbursements.filter(
+    (r) => r.resourceId === resourceId && isResourceReimbursement(r),
+  );
 
   const totalApproved = myReimbs
     .filter((r) => r.status === 'approved' || r.status === 'reimbursed')
@@ -44,6 +68,7 @@ export function getResourceBalance(
     .reduce((s, r) => s + r.amount, 0);
 
   const outstanding = Math.max(0, totalApproved - totalPaid);
+
 
   const pendingReqs = paymentRequests.filter(
     (p) => p.resourceId === resourceId
