@@ -1,5 +1,7 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import * as svc from '@/services/resourcePayableService';
+import * as paymentRequestService from '@/services/paymentRequestService';
+import * as advanceSettlementService from '@/services/advanceSettlementService';
 import type {
   ResourceReimbursement,
   PaymentRequest,
