@@ -98,10 +98,17 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     () => resources.filter((r) => r.projectId === projectId),
     [resources, projectId],
   );
-  const projReimbs = useMemo(
+  // Vendor payables live in their own panel — this section is strictly
+  // the employee/resource ledger, so every aggregate below excludes them.
+  const projAllReimbs = useMemo(
     () => reimbursements.filter((r) => r.projectId === projectId),
     [reimbursements, projectId],
   );
+  const projReimbs = useMemo(
+    () => filterResourceReimbursements(projAllReimbs),
+    [projAllReimbs],
+  );
+
   const projReqs = useMemo(
     () => paymentRequests.filter((p) => p.projectId === projectId),
     [paymentRequests, projectId],
