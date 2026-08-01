@@ -5,6 +5,27 @@ import type {
   Resource,
 } from '@/types/project';
 
+/**
+ * Employee/resource reimbursements vs vendor payables are two distinct
+ * ledgers stored in the same table. Every aggregate MUST declare which
+ * one it means — never mix them silently.
+ */
+export function isResourceReimbursement(r: ResourceReimbursement): boolean {
+  return (r.sourceKind ?? 'resource') === 'resource';
+}
+
+export function isVendorReimbursement(r: ResourceReimbursement): boolean {
+  return (r.sourceKind ?? 'resource') === 'vendor';
+}
+
+export function filterResourceReimbursements(rs: ResourceReimbursement[]): ResourceReimbursement[] {
+  return rs.filter(isResourceReimbursement);
+}
+
+export function filterVendorReimbursements(rs: ResourceReimbursement[]): ResourceReimbursement[] {
+  return rs.filter(isVendorReimbursement);
+}
+
 export interface ResourceBalance {
   resourceId: string;
   totalApprovedReimbursements: number;
@@ -17,7 +38,8 @@ export interface ResourceBalance {
 }
 
 /**
- * يحسب الرصيد المستحق لكل مورد بشري في مشروع معين
+ * يحسب الرصيد المستحق لكل مورد بشري في مشروع معين.
+ * يستثني مستحقات الموردين الخارجيين (vendor) صراحةً.
  */
 export function getResourceBalance(
   resourceId: string,
@@ -25,7 +47,9 @@ export function getResourceBalance(
   paymentRequests: PaymentRequest[],
   settlements: ResourceSettlement[],
 ): ResourceBalance {
-  const myReimbs = reimbursements.filter((r) => r.resourceId === resourceId);
+  const myReimbs = reimbursements.filter(
+    (r) => r.resourceId === resourceId && isResourceReimbursement(r),
+  );
 
   const totalApproved = myReimbs
     .filter((r) => r.status === 'approved' || r.status === 'reimbursed')
@@ -44,6 +68,7 @@ export function getResourceBalance(
     .reduce((s, r) => s + r.amount, 0);
 
   const outstanding = Math.max(0, totalApproved - totalPaid);
+
 
   const pendingReqs = paymentRequests.filter(
     (p) => p.resourceId === resourceId
@@ -68,6 +93,8 @@ export function getResourceBalance(
 }
 
 export interface ProjectPayablesSummary {
+  /** Which ledger these numbers describe — never mixed. */
+  scope: 'resource' | 'vendor';
   totalReimbursementsCount: number;
   totalApprovedAmount: number;
   totalPaidAmount: number;
@@ -78,6 +105,28 @@ export interface ProjectPayablesSummary {
   resourcesWithBalance: number;
 }
 
+function summarizeReimbursements(rs: ResourceReimbursement[]) {
+  return {
+    totalReimbursementsCount: rs.length,
+    totalApprovedAmount: rs
+      .filter((r) => r.status === 'approved' || r.status === 'reimbursed')
+      .reduce((s, r) => s + r.amount, 0),
+    totalPaidAmount: rs
+      .filter((r) => r.status === 'reimbursed')
+      .reduce((s, r) => s + r.amount, 0),
+    totalOutstandingAmount: rs
+      .filter((r) => r.status === 'approved')
+      .reduce((s, r) => s + r.amount, 0),
+    totalPendingReview: rs
+      .filter((r) => r.status === 'pending_review')
+      .reduce((s, r) => s + r.amount, 0),
+  };
+}
+
+/**
+ * ملخص مستحقات الفريق (الموارد البشرية) فقط.
+ * مستحقات الموردين الخارجيين لها `getVendorPayablesSummary`.
+ */
 export function getProjectPayablesSummary(
   projectId: string,
   resources: Resource[],
@@ -85,9 +134,8 @@ export function getProjectPayablesSummary(
   paymentRequests: PaymentRequest[],
   settlements: ResourceSettlement[],
 ): ProjectPayablesSummary {
-  // Only include resource-type reimbursements; vendor payables are tracked separately.
-  const projReimbs = reimbursements.filter(
-    (r) => r.projectId === projectId && (r.sourceKind ?? 'resource') === 'resource',
+  const projReimbs = filterResourceReimbursements(
+    reimbursements.filter((r) => r.projectId === projectId),
   );
   const projReqs = paymentRequests.filter((p) => p.projectId === projectId);
   const projResources = resources.filter((r) => r.projectId === projectId);
@@ -99,19 +147,8 @@ export function getProjectPayablesSummary(
   }
 
   return {
-    totalReimbursementsCount: projReimbs.length,
-    totalApprovedAmount: projReimbs
-      .filter((r) => r.status === 'approved' || r.status === 'reimbursed')
-      .reduce((s, r) => s + r.amount, 0),
-    totalPaidAmount: projReimbs
-      .filter((r) => r.status === 'reimbursed')
-      .reduce((s, r) => s + r.amount, 0),
-    totalOutstandingAmount: projReimbs
-      .filter((r) => r.status === 'approved')
-      .reduce((s, r) => s + r.amount, 0),
-    totalPendingReview: projReimbs
-      .filter((r) => r.status === 'pending_review')
-      .reduce((s, r) => s + r.amount, 0),
+    scope: 'resource',
+    ...summarizeReimbursements(projReimbs),
     pendingRequestsCount: projReqs.filter(
       (p) => p.status === 'submitted' || p.status === 'under_review'
         || p.status === 'approved' || p.status === 'scheduled',
@@ -120,6 +157,24 @@ export function getProjectPayablesSummary(
     resourcesWithBalance,
   };
 }
+
+/** ملخص مستحقات الموردين الخارجيين (vendor payables) فقط. */
+export function getVendorPayablesSummary(
+  projectId: string,
+  reimbursements: ResourceReimbursement[],
+): ProjectPayablesSummary {
+  const vendorReimbs = filterVendorReimbursements(
+    reimbursements.filter((r) => r.projectId === projectId),
+  );
+  return {
+    scope: 'vendor',
+    ...summarizeReimbursements(vendorReimbs),
+    pendingRequestsCount: 0,
+    paidRequestsCount: 0,
+    resourcesWithBalance: 0,
+  };
+}
+
 
 export interface PaymentRequestTimelineStep {
   key: string;

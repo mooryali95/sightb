@@ -5,6 +5,9 @@ import {
   buildTimeline,
   calcSettlementTotals,
   defaultSettlementText,
+  getVendorPayablesSummary,
+  filterResourceReimbursements,
+  filterVendorReimbursements,
 } from '../resource-payables';
 import type {
   ResourceReimbursement,
@@ -194,5 +197,61 @@ describe('defaultSettlementText', () => {
     expect(txt).toContain('Basserh');
     expect(txt).toContain('مشروع 1');
     expect(txt).toContain('4,500');
+  });
+});
+
+describe('vendor vs resource isolation', () => {
+  const resources: Resource[] = [
+    { id: RID, projectId: PID, name: 'omar', monthlyCost: 0, createdAt: '' },
+  ];
+
+  const resourceLedger = [
+    baseReimb({ resourceId: RID, status: 'approved', amount: 100 }),
+    baseReimb({ resourceId: RID, status: 'reimbursed', amount: 40 }),
+    baseReimb({ resourceId: RID, status: 'pending_review', amount: 10 }),
+  ];
+
+  const vendorLedger = [
+    baseReimb({ sourceKind: 'vendor', resourceId: undefined, vendorName: 'شركة أ', status: 'approved', amount: 5000 }),
+    baseReimb({ sourceKind: 'vendor', resourceId: undefined, vendorName: 'شركة ب', status: 'reimbursed', amount: 2000 }),
+    baseReimb({ sourceKind: 'vendor', resourceId: undefined, vendorName: 'شركة ج', status: 'pending_review', amount: 700 }),
+  ];
+
+  it('recording vendor payables does not change resource summary numbers', () => {
+    const before = getProjectPayablesSummary(PID, resources, resourceLedger, [], []);
+    const after = getProjectPayablesSummary(PID, resources, [...resourceLedger, ...vendorLedger], [], []);
+    expect(after).toEqual(before);
+    expect(after.scope).toBe('resource');
+    expect(after.totalApprovedAmount).toBe(140);
+    expect(after.totalOutstandingAmount).toBe(100);
+    expect(after.totalPaidAmount).toBe(40);
+    expect(after.totalPendingReview).toBe(10);
+    expect(after.totalReimbursementsCount).toBe(3);
+  });
+
+  it('resource balance ignores vendor rows sharing the resource id', () => {
+    const mixed = [
+      ...resourceLedger,
+      baseReimb({ sourceKind: 'vendor', resourceId: RID, status: 'approved', amount: 9999 }),
+    ];
+    const b = getResourceBalance(RID, mixed, [], []);
+    expect(b.totalApprovedReimbursements).toBe(140);
+    expect(b.outstandingBalance).toBe(100);
+  });
+
+  it('vendor summary reports only vendor amounts', () => {
+    const v = getVendorPayablesSummary(PID, [...resourceLedger, ...vendorLedger]);
+    expect(v.scope).toBe('vendor');
+    expect(v.totalReimbursementsCount).toBe(3);
+    expect(v.totalApprovedAmount).toBe(7000);
+    expect(v.totalPaidAmount).toBe(2000);
+    expect(v.totalOutstandingAmount).toBe(5000);
+    expect(v.totalPendingReview).toBe(700);
+  });
+
+  it('filters split a mixed ledger without loss', () => {
+    const all = [...resourceLedger, ...vendorLedger];
+    expect(filterResourceReimbursements(all)).toHaveLength(3);
+    expect(filterVendorReimbursements(all)).toHaveLength(3);
   });
 });
