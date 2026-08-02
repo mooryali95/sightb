@@ -1095,7 +1095,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                     return (
                       <tr key={r.id} className="border-b hover:bg-muted/30">
                         <td className="py-2">{r.expenseDate}</td>
-                        <td className="py-2">{res?.name || '—'}</td>
+                        <td className="py-2">{(r.sourceKind ?? 'resource') === 'vendor' ? (r.vendorName || '—') : (res?.name || '—')}</td>
                         <td className="py-2">{EXPENSE_CATEGORY_LABELS[r.category as ExpenseCategory] || r.category}</td>
                         <td className="py-2">{r.description}</td>
                         <td className="py-2 font-medium">{formatCurrency(r.amount)}</td>
