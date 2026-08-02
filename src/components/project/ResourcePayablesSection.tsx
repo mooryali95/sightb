@@ -1073,7 +1073,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
             )}
           </div>
 
-          {projReimbs.length === 0 ? (
+          {scopedReimbs.length === 0 ? (
             <p className="text-sm text-muted-foreground p-6 text-center">لا توجد استردادات مسجلة.</p>
           ) : (
             <div className="overflow-x-auto">
@@ -1081,7 +1081,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                 <thead>
                   <tr className="border-b text-muted-foreground">
                     <th className="text-right py-2">التاريخ</th>
-                    <th className="text-right py-2">المورد</th>
+                    <th className="text-right py-2">{scope === 'resource' ? 'المورد' : 'المورّد الخارجي'}</th>
                     <th className="text-right py-2">الفئة</th>
                     <th className="text-right py-2">الوصف</th>
                     <th className="text-right py-2">المبلغ</th>
@@ -1090,7 +1090,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                   </tr>
                 </thead>
                 <tbody>
-                  {projReimbs.map((r) => {
+                  {scopedReimbs.map((r) => {
                     const res = projResources.find((x) => x.id === r.resourceId);
                     return (
                       <tr key={r.id} className="border-b hover:bg-muted/30">
