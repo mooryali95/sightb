@@ -1004,7 +1004,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
       <Tabs defaultValue="reimbursements" className="w-full">
         <TabsList>
-          <TabsTrigger value="reimbursements">الاستردادات ({projReimbs.length})</TabsTrigger>
+          <TabsTrigger value="reimbursements">الاستردادات ({scopedReimbs.length})</TabsTrigger>
           <TabsTrigger value="requests">طلبات الصرف ({projReqs.length})</TabsTrigger>
           <TabsTrigger value="settlements">المخالصات ({projSettles.length})</TabsTrigger>
         </TabsList>
