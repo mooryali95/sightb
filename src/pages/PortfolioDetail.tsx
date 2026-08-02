@@ -429,6 +429,12 @@ export default function PortfolioDetail() {
           </div>
         )}
 
+        {/* Payables across the portfolio */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold mb-4">المستحقات مقابل التسويات والمدفوعات المتوقعة</h3>
+          <PortfolioPayablesSection projects={portfolioProjects} />
+        </div>
+
         {/* Risks */}
         <div className="stat-card mb-6">
           <h3 className="text-sm font-semibold mb-4">المخاطر</h3>
