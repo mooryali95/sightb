@@ -792,8 +792,52 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   return (
     <div className="space-y-6" dir="rtl">
+      {/* Scope filter + CSV export */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex rounded-lg border p-1 bg-muted/40">
+          <button
+            type="button"
+            onClick={() => setScope('resource')}
+            className={cn(
+              'px-3 py-1.5 text-sm rounded-md transition-colors',
+              scope === 'resource' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground',
+            )}
+          >
+            مستحقات الفريق ({projReimbs.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setScope('vendor')}
+            className={cn(
+              'px-3 py-1.5 text-sm rounded-md transition-colors',
+              scope === 'vendor' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground',
+            )}
+          >
+            مستحقات الموردين ({projVendorReimbs.length})
+          </button>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5"
+          onClick={() => exportPayablesSummaryCSV({
+            projectId,
+            projectName: projectName || 'Project',
+            resources: projResources,
+            reimbursements: projAllReimbs,
+            paymentRequests: projReqs,
+            settlements: projSettles,
+          })}
+        >
+          <Download className="h-4 w-4" /> تصدير CSV (فريق + موردون)
+        </Button>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="col-span-2 md:col-span-5 text-xs text-muted-foreground">
+          الأرقام أدناه تخص: <strong>{scope === 'resource' ? 'دفتر مستحقات الفريق' : 'دفتر مستحقات الموردين'}</strong> فقط.
+        </div>
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
             <HandCoins className="h-4 w-4" /> إجمالي المعتمد
