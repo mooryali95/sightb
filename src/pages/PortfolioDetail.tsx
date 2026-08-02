@@ -29,6 +29,7 @@ import {
   ResponsiveContainer, LineChart, Line, Legend,
 } from 'recharts';
 import { RisksSection } from '@/components/project/RisksSection';
+import { PortfolioPayablesSection } from '@/components/portfolio/PortfolioPayablesSection';
 import { PageHeader } from '@/components/ui/page-header';
 
 const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)', 'hsl(200, 70%, 50%)'];
