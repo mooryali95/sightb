@@ -109,6 +109,10 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     () => filterResourceReimbursements(projAllReimbs),
     [projAllReimbs],
   );
+  const projVendorReimbs = useMemo(
+    () => filterVendorReimbursements(projAllReimbs),
+    [projAllReimbs],
+  );
 
   const projReqs = useMemo(
     () => paymentRequests.filter((p) => p.projectId === projectId),
@@ -119,10 +123,19 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     [resourceSettlements, projectId],
   );
 
-  const summary = useMemo(
+  // نطاق العرض: دفتر الفريق أو دفتر الموردين — الأرقام تتبدل معه بالكامل
+  const [scope, setScope] = useState<'resource' | 'vendor'>('resource');
+
+  const resourceSummary = useMemo(
     () => getProjectPayablesSummary(projectId, projResources, projReimbs, projReqs, projSettles),
     [projectId, projResources, projReimbs, projReqs, projSettles],
   );
+  const vendorSummary = useMemo(
+    () => getVendorPayablesSummary(projectId, projVendorReimbs),
+    [projectId, projVendorReimbs],
+  );
+  const summary = scope === 'resource' ? resourceSummary : vendorSummary;
+  const scopedReimbs = scope === 'resource' ? projReimbs : projVendorReimbs;
 
   // ─── Reimbursement dialog state ───
   const [reimbOpen, setReimbOpen] = useState(false);
