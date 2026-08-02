@@ -16,12 +16,15 @@ import { useRole } from '@/hooks/useRole';
 import { formatCurrency } from '@/lib/finance';
 import {
   getProjectPayablesSummary,
+  getVendorPayablesSummary,
   getResourceBalance,
   buildTimeline,
   defaultSettlementText,
   calcSettlementTotals,
   filterResourceReimbursements,
+  filterVendorReimbursements,
 } from '@/lib/resource-payables';
+import { exportPayablesSummaryCSV } from '@/lib/payables-export';
 import {
   EXPENSE_CATEGORY_LABELS,
   REIMBURSEMENT_STATUS_LABELS,
@@ -109,6 +112,10 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     () => filterResourceReimbursements(projAllReimbs),
     [projAllReimbs],
   );
+  const projVendorReimbs = useMemo(
+    () => filterVendorReimbursements(projAllReimbs),
+    [projAllReimbs],
+  );
 
   const projReqs = useMemo(
     () => paymentRequests.filter((p) => p.projectId === projectId),
@@ -119,10 +126,19 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     [resourceSettlements, projectId],
   );
 
-  const summary = useMemo(
+  // نطاق العرض: دفتر الفريق أو دفتر الموردين — الأرقام تتبدل معه بالكامل
+  const [scope, setScope] = useState<'resource' | 'vendor'>('resource');
+
+  const resourceSummary = useMemo(
     () => getProjectPayablesSummary(projectId, projResources, projReimbs, projReqs, projSettles),
     [projectId, projResources, projReimbs, projReqs, projSettles],
   );
+  const vendorSummary = useMemo(
+    () => getVendorPayablesSummary(projectId, projVendorReimbs),
+    [projectId, projVendorReimbs],
+  );
+  const summary = scope === 'resource' ? resourceSummary : vendorSummary;
+  const scopedReimbs = scope === 'resource' ? projReimbs : projVendorReimbs;
 
   // ─── Reimbursement dialog state ───
   const [reimbOpen, setReimbOpen] = useState(false);
@@ -776,8 +792,52 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   return (
     <div className="space-y-6" dir="rtl">
+      {/* Scope filter + CSV export */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex rounded-lg border p-1 bg-muted/40">
+          <button
+            type="button"
+            onClick={() => setScope('resource')}
+            className={cn(
+              'px-3 py-1.5 text-sm rounded-md transition-colors',
+              scope === 'resource' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground',
+            )}
+          >
+            مستحقات الفريق ({projReimbs.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setScope('vendor')}
+            className={cn(
+              'px-3 py-1.5 text-sm rounded-md transition-colors',
+              scope === 'vendor' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground',
+            )}
+          >
+            مستحقات الموردين ({projVendorReimbs.length})
+          </button>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5"
+          onClick={() => exportPayablesSummaryCSV({
+            projectId,
+            projectName: projectName || 'Project',
+            resources: projResources,
+            reimbursements: projAllReimbs,
+            paymentRequests: projReqs,
+            settlements: projSettles,
+          })}
+        >
+          <Download className="h-4 w-4" /> تصدير CSV (فريق + موردون)
+        </Button>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="col-span-2 md:col-span-5 text-xs text-muted-foreground">
+          الأرقام أدناه تخص: <strong>{scope === 'resource' ? 'دفتر مستحقات الفريق' : 'دفتر مستحقات الموردين'}</strong> فقط.
+        </div>
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
             <HandCoins className="h-4 w-4" /> إجمالي المعتمد
@@ -944,7 +1004,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
       <Tabs defaultValue="reimbursements" className="w-full">
         <TabsList>
-          <TabsTrigger value="reimbursements">الاستردادات ({projReimbs.length})</TabsTrigger>
+          <TabsTrigger value="reimbursements">الاستردادات ({scopedReimbs.length})</TabsTrigger>
           <TabsTrigger value="requests">طلبات الصرف ({projReqs.length})</TabsTrigger>
           <TabsTrigger value="settlements">المخالصات ({projSettles.length})</TabsTrigger>
         </TabsList>
@@ -1013,7 +1073,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
             )}
           </div>
 
-          {projReimbs.length === 0 ? (
+          {scopedReimbs.length === 0 ? (
             <p className="text-sm text-muted-foreground p-6 text-center">لا توجد استردادات مسجلة.</p>
           ) : (
             <div className="overflow-x-auto">
@@ -1021,7 +1081,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                 <thead>
                   <tr className="border-b text-muted-foreground">
                     <th className="text-right py-2">التاريخ</th>
-                    <th className="text-right py-2">المورد</th>
+                    <th className="text-right py-2">{scope === 'resource' ? 'المورد' : 'المورّد الخارجي'}</th>
                     <th className="text-right py-2">الفئة</th>
                     <th className="text-right py-2">الوصف</th>
                     <th className="text-right py-2">المبلغ</th>
@@ -1030,12 +1090,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                   </tr>
                 </thead>
                 <tbody>
-                  {projReimbs.map((r) => {
+                  {scopedReimbs.map((r) => {
                     const res = projResources.find((x) => x.id === r.resourceId);
                     return (
                       <tr key={r.id} className="border-b hover:bg-muted/30">
                         <td className="py-2">{r.expenseDate}</td>
-                        <td className="py-2">{res?.name || '—'}</td>
+                        <td className="py-2">{(r.sourceKind ?? 'resource') === 'vendor' ? (r.vendorName || '—') : (res?.name || '—')}</td>
                         <td className="py-2">{EXPENSE_CATEGORY_LABELS[r.category as ExpenseCategory] || r.category}</td>
                         <td className="py-2">{r.description}</td>
                         <td className="py-2 font-medium">{formatCurrency(r.amount)}</td>
