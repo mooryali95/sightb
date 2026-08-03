@@ -57,7 +57,7 @@ export const createBaselineSlice: StateCreator<AppState, [], [], BaselineSlice> 
       cost_type: b.costType || 'fixed',
     }));
 
-    const { data: items, error: itemsErr } = await supabase
+    const { data: items, error: itemsErr } = await db
       .from('baseline_items').insert(itemsToInsert).select();
     if (itemsErr) throw itemsErr;
 
@@ -90,7 +90,7 @@ export const createBaselineSlice: StateCreator<AppState, [], [], BaselineSlice> 
   },
 
   loadBaselines: async (projectId) => {
-    const { data: bls, error } = await supabase
+    const { data: bls, error } = await db
       .from('cost_baselines').select('*').eq('project_id', projectId).order('version', { ascending: false });
     if (error) throw error;
 

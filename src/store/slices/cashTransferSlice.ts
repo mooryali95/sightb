@@ -35,7 +35,7 @@ export const createCashTransferSlice: StateCreator<AppState, [], [], CashTransfe
   cashTransfers: [],
 
   loadCashTransfersForProject: async (projectId) => {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await db
       .from('cash_transfers')
       .select('*')
       .eq('project_id', projectId)
@@ -52,7 +52,7 @@ export const createCashTransferSlice: StateCreator<AppState, [], [], CashTransfe
 
   createCashTransfer: async (input) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any)
+    const { data, error } = await db
       .from('cash_transfers')
       .insert({
         project_id: input.projectId,
@@ -72,7 +72,7 @@ export const createCashTransferSlice: StateCreator<AppState, [], [], CashTransfe
   },
 
   deleteCashTransfer: async (id) => {
-    const { error } = await (supabase as any)
+    const { error } = await db
       .from('cash_transfers')
       .delete()
       .eq('id', id);

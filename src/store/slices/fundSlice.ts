@@ -97,12 +97,12 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
 
   loadFundsForProject: async (projectId) => {
     const [fundsRes, settlementsRes] = await Promise.all([
-      (supabase as any)
+      db
         .from('project_funds')
         .select('*')
         .eq('project_id', projectId)
         .order('fund_number', { ascending: true }),
-      (supabase as any)
+      db
         .from('fund_settlements')
         .select('*')
         .eq('project_id', projectId)
@@ -148,7 +148,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
 
     // احسب nextNumber من DB مباشرة (مصدر الحقيقة)
     const computeNext = async (): Promise<number> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await db
         .from('project_funds')
         .select('fund_number')
         .eq('project_id', projectId)
@@ -164,7 +164,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
       : (notes?.trim() || null);
 
     const tryInsert = async (n: number) => {
-      return await (supabase as any)
+      return await db
         .from('project_funds')
         .insert({
           project_id: projectId,
@@ -211,7 +211,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     }
 
     const now = new Date().toISOString();
-    const { data: fundData, error: fundErr } = await (supabase as any)
+    const { data: fundData, error: fundErr } = await db
       .from('project_funds')
       .update({
         status: 'acknowledged',
@@ -224,7 +224,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     if (fundErr) throw fundErr;
 
     // إنشاء تسوية مسودة تلقائياً
-    const { data: stData, error: stErr } = await (supabase as any)
+    const { data: stData, error: stErr } = await db
       .from('fund_settlements')
       .insert({
         fund_id: fundId,
@@ -254,7 +254,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
       payload.difference_reason = updates.differenceReason || null;
     }
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await db
       .from('fund_settlements')
       .update(payload)
       .eq('id', settlementId)
@@ -273,7 +273,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     const settlement = get().fundSettlements.find((st) => st.fundId === fundId);
     if (!settlement) throw new Error('التسوية غير موجودة');
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await db
       .from('fund_settlements')
       .update({
         remaining_cash: remainingCash,
@@ -304,7 +304,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
 
     const now = new Date().toISOString();
     const [stRes, fundRes] = await Promise.all([
-      (supabase as any)
+      db
         .from('fund_settlements')
         .update({
           status: 'approved',
@@ -314,7 +314,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
         .eq('id', settlementId)
         .select()
         .single(),
-      (supabase as any)
+      db
         .from('project_funds')
         .update({ status: 'settled' })
         .eq('id', settlement.fundId)
@@ -340,7 +340,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     if (!reason.trim()) throw new Error('يجب كتابة سبب الرفض');
 
     const [stRes, fundRes] = await Promise.all([
-      (supabase as any)
+      db
         .from('fund_settlements')
         .update({
           status: 'rejected',
@@ -349,7 +349,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
         .eq('id', settlementId)
         .select()
         .single(),
-      (supabase as any)
+      db
         .from('project_funds')
         .update({ status: 'acknowledged' })
         .eq('id', settlement.fundId)
@@ -371,20 +371,20 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
 
   deleteFund: async (fundId) => {
     // فك ربط المصروفات أولاً (لئلا تبقى fund_id يتيمة)
-    const { error: unlinkErr } = await (supabase as any)
+    const { error: unlinkErr } = await db
       .from('expenses')
       .update({ fund_id: null })
       .eq('fund_id', fundId);
     if (unlinkErr) throw unlinkErr;
 
     // فك ربط العهد المرتبطة بالدفعة
-    const { error: unlinkCust } = await (supabase as any)
+    const { error: unlinkCust } = await db
       .from('custodies')
       .update({ source_fund_id: null })
       .eq('source_fund_id', fundId);
     if (unlinkCust) throw unlinkCust;
 
-    const { error } = await (supabase as any)
+    const { error } = await db
       .from('project_funds')
       .delete()
       .eq('id', fundId);

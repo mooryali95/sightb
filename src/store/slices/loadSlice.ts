@@ -200,7 +200,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
 
   loadAuditLog: async (projectId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('audit_log').select('*')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
