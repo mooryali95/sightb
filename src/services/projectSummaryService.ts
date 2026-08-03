@@ -72,8 +72,10 @@ const ERROR_MAP: Record<string, string> = {
 export async function fetchProjectFinancialSummary(projectId: string): Promise<ServerProjectSummary> {
   const { data, error } = await db.rpc('project_financial_summary', { _project_id: projectId });
   if (error) {
-    const key = Object.keys(ERROR_MAP).find((k) => error.message?.includes(k));
-    throw new Error(key ? ERROR_MAP[key] : (error.message || 'تعذّر حساب الملخص المالي.'));
+    const message = (error as { message?: string })?.message ?? '';
+    const key = Object.keys(ERROR_MAP).find((k) => message.includes(k));
+    throw new Error(key ? ERROR_MAP[key] : (message || 'تعذّر حساب الملخص المالي.'));
   }
   return mapSummary((data ?? {}) as Record<string, unknown>);
 }
+
