@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import { Portfolio, Project } from '@/types/project';
 import { getUserId, logDeletion, mapPortfolio, mapProject } from '../helpers';
 import type { AppState } from '../useStore';
@@ -23,7 +23,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
 
   addPortfolio: async (p) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any).from('portfolios').insert({
+    const { data, error } = await db.from('portfolios').insert({
       user_id: userId, company_id: p.companyId, name: p.name,
       description: p.description || null,
       target_revenue: p.targetRevenue || 0,
@@ -46,13 +46,13 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     if (p.targetMargin !== undefined) updates.target_margin = p.targetMargin;
     if (p.fiscalYear !== undefined) updates.fiscal_year = p.fiscalYear;
     if (p.notes !== undefined) updates.notes = p.notes;
-    const { error } = await (supabase as any).from('portfolios').update(updates).eq('id', id);
+    const { error } = await db.from('portfolios').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ portfolios: s.portfolios.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
   },
 
   deletePortfolio: async (id) => {
-    const { error } = await supabase.from('portfolios').delete().eq('id', id);
+    const { error } = await db.from('portfolios').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
       portfolios: s.portfolios.filter((x) => x.id !== id),
@@ -62,7 +62,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
 
   addProject: async (p) => {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('projects').insert({
+    const { data, error } = await db.from('projects').insert({
       user_id: userId, company_id: p.companyId,
       portfolio_id: p.portfolioId === 'none' ? null : (p.portfolioId || null),
       name: p.name, description: p.description || null,
@@ -101,19 +101,19 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     if (p.managementReserve !== undefined) updates.management_reserve = p.managementReserve;
     if (p.taxPercent !== undefined) updates.tax_percent = p.taxPercent;
     if (p.vatInclusive !== undefined) updates.vat_inclusive = p.vatInclusive;
-    const { error } = await (supabase as any).from('projects').update(updates).eq('id', id);
+    const { error } = await db.from('projects').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
   },
 
   archiveProject: async (id) => {
-    const { error } = await (supabase as any).from('projects').update({ status: 'archived' }).eq('id', id);
+    const { error } = await db.from('projects').update({ status: 'archived' }).eq('id', id);
     if (error) throw error;
     set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, status: 'archived' as const } : x)) }));
   },
 
   unarchiveProject: async (id) => {
-    const { error } = await (supabase as any).from('projects').update({ status: 'active' }).eq('id', id);
+    const { error } = await db.from('projects').update({ status: 'active' }).eq('id', id);
     if (error) throw error;
     set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, status: 'active' as const } : x)) }));
   },
@@ -126,10 +126,10 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     }
     const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies', 'commitments'] as const;
     for (const table of tables) {
-      await (supabase as any).from(table).delete().eq('project_id', id);
+      await db.from(table).delete().eq('project_id', id);
     }
-    await supabase.from('cost_baselines').delete().eq('project_id', id);
-    const { error } = await supabase.from('projects').delete().eq('id', id);
+    await db.from('cost_baselines').delete().eq('project_id', id);
+    const { error } = await db.from('projects').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
       projects: s.projects.filter((x) => x.id !== id),
