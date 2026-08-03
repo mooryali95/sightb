@@ -63,7 +63,10 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
 
   addExpense: async (e) => {
     const userId = await getUserId();
-    const { data, error } = await db.from('expenses').insert({
+    // Field expenses are the most offline-prone write in the app: we mint the id
+    // client-side so the optimistic row and the replayed row share a primary key.
+    const row = {
+      id: crypto.randomUUID(),
       user_id: userId, project_id: e.projectId,
       budget_item_id: e.budgetItemId || null,
       category: e.category, description: e.description,
@@ -77,10 +80,12 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
       is_vat_exempt: e.isVatExempt ?? false,
       fund_id: e.fundId || null,
       reimburses_payable_id: (e as any).reimbursesPayableId || null,
-    }).select().single();
-    if (error) throw error;
-    const mapped = mapExpense(data);
+    };
+    const res: any = await db.from('expenses', { offline: true }).insert(row).select();
+    if (res.error) throw res.error;
+    const mapped = mapExpense(res.queuedOffline ? row : (res.data?.[0] ?? row));
     set((s) => ({ expenses: [mapped, ...s.expenses] }));
+    if (res.queuedOffline) return mapped.id;
     // Reload fund settlements + payables so DB-trigger-updated totals reflect in UI
     if (mapped.fundId) {
       try { await (get() as any).loadFundsForProject?.(e.projectId); } catch {}
@@ -90,6 +95,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     }
     return mapped.id;
   },
+
 
   updateExpense: async (id, e) => {
     const updates: Record<string, unknown> = {};
