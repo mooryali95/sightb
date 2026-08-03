@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import { Company } from '@/types/project';
 import { getUserId, logDeletion, mapCompany } from '../helpers';
 import type { AppState } from '../useStore';
@@ -18,7 +18,7 @@ export const createCompanySlice: StateCreator<AppState, [], [], CompanySlice> = 
 
   addCompany: async (c) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any).from('companies').insert({
+    const { data, error } = await db.from('companies').insert({
       user_id: userId, name: c.name, description: c.description || null, logo: c.logo || null, status: 'active',
     }).select().single();
     if (error) throw error;
@@ -33,7 +33,7 @@ export const createCompanySlice: StateCreator<AppState, [], [], CompanySlice> = 
     if (c.description !== undefined) updates.description = c.description;
     if (c.logo !== undefined) updates.logo = c.logo;
     if (c.status !== undefined) updates.status = c.status;
-    const { error } = await (supabase as any).from('companies').update(updates).eq('id', id);
+    const { error } = await db.from('companies').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ companies: s.companies.map((x) => (x.id === id ? { ...x, ...c } : x)) }));
   },
@@ -43,10 +43,10 @@ export const createCompanySlice: StateCreator<AppState, [], [], CompanySlice> = 
     for (const project of compProjects) {
       await get().deleteProject(project.id);
     }
-    await supabase.from('portfolios').delete().eq('company_id', id);
-    await (supabase as any).from('indirect_costs').delete().eq('company_id', id);
-    await supabase.from('custodies').delete().eq('company_id', id);
-    const { error } = await supabase.from('companies').delete().eq('id', id);
+    await db.from('portfolios').delete().eq('company_id', id);
+    await db.from('indirect_costs').delete().eq('company_id', id);
+    await db.from('custodies').delete().eq('company_id', id);
+    const { error } = await db.from('companies').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({
       companies: s.companies.filter((x) => x.id !== id),
@@ -57,13 +57,13 @@ export const createCompanySlice: StateCreator<AppState, [], [], CompanySlice> = 
   },
 
   archiveCompany: async (id) => {
-    const { error } = await (supabase as any).from('companies').update({ status: 'archived' }).eq('id', id);
+    const { error } = await db.from('companies').update({ status: 'archived' }).eq('id', id);
     if (error) throw error;
     set((s) => ({ companies: s.companies.map((x) => (x.id === id ? { ...x, status: 'archived' as const } : x)) }));
   },
 
   unarchiveCompany: async (id) => {
-    const { error } = await (supabase as any).from('companies').update({ status: 'active' }).eq('id', id);
+    const { error } = await db.from('companies').update({ status: 'active' }).eq('id', id);
     if (error) throw error;
     set((s) => ({ companies: s.companies.map((x) => (x.id === id ? { ...x, status: 'active' as const } : x)) }));
   },

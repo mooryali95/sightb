@@ -12,7 +12,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(10);
+SELECT plan(18);
 
 -- ── Fixture lookups ────────────────────────────────────────────────────────
 DO $$
@@ -158,6 +158,166 @@ SELECT ok(
 
 -- 10) has_role SECURITY DEFINER function exists and is stable
 SELECT has_function('public'::name, 'has_role'::name, ARRAY['uuid','app_role']);
+
+
+-- ══════════════════════════════════════════════════════════════════════════
+-- End-to-end cash path:
+--   fund → cash transfer → custody → expense → advance → settlement → payable
+-- Each step asserts that the SSOT figures stay reconciled after the write.
+-- ══════════════════════════════════════════════════════════════════════════
+
+DO $$
+DECLARE
+  _p uuid; _uid uuid; _cid uuid; _f uuid; _cu uuid; _pr uuid; _pay uuid;
+BEGIN
+  SELECT id, user_id, company_id INTO _p, _uid, _cid
+    FROM public.projects WHERE name = 'SSOT Project A';
+
+  -- Dedicated fund so the earlier assertions stay untouched.
+  INSERT INTO public.project_funds(project_id, fund_number, amount, transfer_date, status, created_by)
+  VALUES (_p, 90, 100000, '2026-03-01', 'transferred', _uid)
+  RETURNING id INTO _f;
+
+  INSERT INTO public.custodies(project_id, company_id, user_id, resource_name, amount,
+                               received_date, status, source_fund_id)
+  VALUES (_p, _cid, _uid, 'E2E Custodian', 20000, '2026-03-02', 'active', _f)
+  RETURNING id INTO _cu;
+
+  INSERT INTO public.cash_transfers(project_id, from_fund_id, to_custody_id, amount, transfer_date, user_id)
+  VALUES (_p, _f, _cu, 5000, '2026-03-03', _uid);
+
+  INSERT INTO public.expenses(user_id, project_id, category, description, amount, date, month,
+                              approval_status, custody_id, is_vat_exempt)
+  VALUES (_uid, _p, 'other', 'E2E custody spend', 12000, '2026-03-04', 3, 'approved', _cu, false);
+
+  -- Ensure a resource exists for the advance (payment_requests.resource_id is NOT NULL).
+  INSERT INTO public.resources(project_id, user_id, name, role, monthly_cost)
+  SELECT _p, _uid, 'E2E Resource', 'engineer', 0
+   WHERE NOT EXISTS (SELECT 1 FROM public.resources WHERE project_id = _p);
+
+  INSERT INTO public.payment_requests(project_id, resource_id, request_type, amount, currency,
+                                      description, status, requested_by, user_id,
+                                      paid_from_fund_id, paid_date)
+  VALUES (_p, (SELECT id FROM public.resources WHERE project_id = _p LIMIT 1),
+          'advance', 8000, 'SAR', 'E2E advance', 'paid', _uid, _uid, _f, '2026-03-05')
+  RETURNING id INTO _pr;
+
+  INSERT INTO public.resource_reimbursements(project_id, category, description, amount, expense_date,
+                                             status, user_id, source_kind, vendor_name)
+  VALUES (_p, 'other', 'E2E vendor payable', 3000, '2026-03-06', 'approved', _uid, 'vendor', 'E2E Vendor')
+  RETURNING id INTO _pay;
+
+  PERFORM set_config('ssot.e2e_f',   _f::text,   false);
+  PERFORM set_config('ssot.e2e_cu',  _cu::text,  false);
+  PERFORM set_config('ssot.e2e_pr',  _pr::text,  false);
+  PERFORM set_config('ssot.e2e_pay', _pay::text, false);
+  PERFORM set_config('ssot.e2e_p',   _p::text,   false);
+END $$;
+
+-- 11) Advance marked outstanding by mark_advance_outstanding_on_paid
+SELECT is(
+  (SELECT is_advance_outstanding FROM public.payment_requests
+     WHERE id = current_setting('ssot.e2e_pr')::uuid),
+  true,
+  'E2E: paid advance is flagged outstanding'
+);
+
+-- 12) Advances never auto-create an expense (they are receivables)
+SELECT is(
+  (SELECT auto_created_expense_id FROM public.payment_requests
+     WHERE id = current_setting('ssot.e2e_pr')::uuid),
+  NULL::uuid,
+  'E2E: advance does not create an expense before settlement'
+);
+
+-- 13) Custody balance = amount + cash_in − spent
+SELECT is(
+  (SELECT cu.amount
+     + COALESCE((SELECT SUM(amount) FROM public.cash_transfers
+                   WHERE to_custody_id = cu.id), 0)
+     - COALESCE((SELECT SUM(amount) FROM public.expenses
+                   WHERE custody_id = cu.id), 0)
+     FROM public.custodies cu WHERE cu.id = current_setting('ssot.e2e_cu')::uuid)::numeric,
+  13000::numeric,
+  'E2E: custody balance = 20k + 5k transferred − 12k spent'
+);
+
+-- 14) Fund balance drains by custody draw + cash transfer + outstanding advance
+SELECT is(
+  (SELECT pf.amount
+     - COALESCE((SELECT SUM(amount) FROM public.custodies
+                   WHERE source_fund_id = pf.id), 0)
+     - COALESCE((SELECT SUM(amount) FROM public.cash_transfers
+                   WHERE from_fund_id = pf.id), 0)
+     - COALESCE((SELECT SUM(GREATEST(amount - COALESCE(refunded_amount,0), 0))
+                   FROM public.payment_requests
+                   WHERE paid_from_fund_id = pf.id AND request_type = 'advance'
+                     AND status = 'paid' AND is_advance_outstanding), 0)
+     FROM public.project_funds pf WHERE pf.id = current_setting('ssot.e2e_f')::uuid)::numeric,
+  67000::numeric,
+  'E2E: fund balance = 100k − 20k custody − 5k cash − 8k advance'
+);
+
+-- 15) Settling the advance via cash refund clears the outstanding flag
+DO $$
+DECLARE _pr uuid := current_setting('ssot.e2e_pr')::uuid;
+BEGIN
+  INSERT INTO public.settlement_events(payment_request_id, project_id, event_type, amount,
+                                       refund_to_fund_id, created_by)
+  VALUES (_pr, current_setting('ssot.e2e_p')::uuid, 'cash_refund', 8000,
+          current_setting('ssot.e2e_f')::uuid,
+          (SELECT user_id FROM public.projects WHERE id = current_setting('ssot.e2e_p')::uuid));
+END $$;
+
+SELECT is(
+  (SELECT is_advance_outstanding FROM public.payment_requests
+     WHERE id = current_setting('ssot.e2e_pr')::uuid),
+  false,
+  'E2E: full cash refund closes the advance'
+);
+
+-- 16) refunded_amount recomputed from settlement_events by the trigger
+SELECT is(
+  (SELECT refunded_amount FROM public.payment_requests
+     WHERE id = current_setting('ssot.e2e_pr')::uuid)::numeric,
+  8000::numeric,
+  'E2E: refunded_amount mirrors the settlement events ledger'
+);
+
+-- 17) Settling a vendor payable through an expense closes the payable
+DO $$
+DECLARE _eid uuid;
+BEGIN
+  INSERT INTO public.expenses(user_id, project_id, category, description, amount, date, month,
+                              approval_status, custody_id, is_vat_exempt, reimburses_payable_id)
+  VALUES ((SELECT user_id FROM public.projects WHERE id = current_setting('ssot.e2e_p')::uuid),
+          current_setting('ssot.e2e_p')::uuid, 'other', 'E2E payable settlement', 3000,
+          '2026-03-07', 3, 'approved', current_setting('ssot.e2e_cu')::uuid, false,
+          current_setting('ssot.e2e_pay')::uuid)
+  RETURNING id INTO _eid;
+  PERFORM set_config('ssot.e2e_settle_exp', _eid::text, false);
+END $$;
+
+SELECT is(
+  (SELECT status::text FROM public.resource_reimbursements
+     WHERE id = current_setting('ssot.e2e_pay')::uuid),
+  'reimbursed',
+  'E2E: expense linked to a payable settles it via settle_payable_on_expense'
+);
+
+-- 18) Deleting that expense reopens the payable (no silent data loss)
+DO $$
+BEGIN
+  DELETE FROM public.expenses WHERE id = current_setting('ssot.e2e_settle_exp')::uuid;
+END $$;
+
+SELECT is(
+  (SELECT status::text FROM public.resource_reimbursements
+     WHERE id = current_setting('ssot.e2e_pay')::uuid),
+  'approved',
+  'E2E: deleting the settling expense reopens the payable'
+);
+
 
 SELECT * FROM finish();
 

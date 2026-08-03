@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import { BudgetItem, Expense, Revenue } from '@/types/project';
 import { getUserId, mapBudgetItem, mapExpense, mapRevenue } from '../helpers';
 import type { AppState } from '../useStore';
@@ -26,7 +26,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
 
   addBudgetItem: async (b) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any).from('budget_items').insert({
+    const { data, error } = await db.from('budget_items').insert({
       user_id: userId, project_id: b.projectId, category: b.category,
       description: b.description, planned_amount: b.plannedAmount,
       month: b.month || null, resource_id: b.resourceId || null,
@@ -50,20 +50,23 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (b.costType !== undefined) updates.cost_type = b.costType;
     if (b.costClass !== undefined) updates.cost_class = b.costClass;
     if (b.resourceId !== undefined) updates.resource_id = b.resourceId;
-    const { error } = await (supabase as any).from('budget_items').update(updates).eq('id', id);
+    const { error } = await db.from('budget_items').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ budgetItems: s.budgetItems.map((x) => (x.id === id ? { ...x, ...b } : x)) }));
   },
 
   deleteBudgetItem: async (id) => {
-    const { error } = await supabase.from('budget_items').delete().eq('id', id);
+    const { error } = await db.from('budget_items').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ budgetItems: s.budgetItems.filter((x) => x.id !== id) }));
   },
 
   addExpense: async (e) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any).from('expenses').insert({
+    // Field expenses are the most offline-prone write in the app: we mint the id
+    // client-side so the optimistic row and the replayed row share a primary key.
+    const row = {
+      id: crypto.randomUUID(),
       user_id: userId, project_id: e.projectId,
       budget_item_id: e.budgetItemId || null,
       category: e.category, description: e.description,
@@ -77,10 +80,12 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
       is_vat_exempt: e.isVatExempt ?? false,
       fund_id: e.fundId || null,
       reimburses_payable_id: (e as any).reimbursesPayableId || null,
-    }).select().single();
-    if (error) throw error;
-    const mapped = mapExpense(data);
+    };
+    const res: any = await db.from('expenses', { offline: true }).insert(row).select();
+    if (res.error) throw res.error;
+    const mapped = mapExpense(res.queuedOffline ? row : (res.data?.[0] ?? row));
     set((s) => ({ expenses: [mapped, ...s.expenses] }));
+    if (res.queuedOffline) return mapped.id;
     // Reload fund settlements + payables so DB-trigger-updated totals reflect in UI
     if (mapped.fundId) {
       try { await (get() as any).loadFundsForProject?.(e.projectId); } catch {}
@@ -90,6 +95,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     }
     return mapped.id;
   },
+
 
   updateExpense: async (id, e) => {
     const updates: Record<string, unknown> = {};
@@ -109,7 +115,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (e.invoiceRef !== undefined) updates.invoice_ref = e.invoiceRef;
     if (e.isVatExempt !== undefined) updates.is_vat_exempt = e.isVatExempt;
     if (e.fundId !== undefined) updates.fund_id = e.fundId || null;
-    const { error } = await (supabase as any).from('expenses').update(updates).eq('id', id);
+    const { error } = await db.from('expenses').update(updates).eq('id', id);
     if (error) throw error;
     const existing = get().expenses.find((x) => x.id === id);
     set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...e } : x)) }));
@@ -121,7 +127,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
 
   deleteExpense: async (id) => {
     const existing = get().expenses.find((x) => x.id === id);
-    const { error } = await supabase.from('expenses').delete().eq('id', id);
+    const { error } = await db.from('expenses').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) }));
     if (existing?.fundId && existing?.projectId) {
@@ -131,7 +137,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
 
   addRevenue: async (r) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any).from('revenues').insert({
+    const { data, error } = await db.from('revenues').insert({
       user_id: userId, project_id: r.projectId,
       description: r.description, amount: r.amount, date: r.date, month: r.month,
       revenue_type: r.revenueType || 'milestone',
@@ -159,13 +165,13 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (r.invoiceNumber !== undefined) updates.invoice_number = r.invoiceNumber;
     if (r.invoiceDate !== undefined) updates.invoice_date = r.invoiceDate;
     if (r.collectionDate !== undefined) updates.collection_date = r.collectionDate;
-    const { error } = await (supabase as any).from('revenues').update(updates).eq('id', id);
+    const { error } = await db.from('revenues').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ revenues: s.revenues.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
   },
 
   deleteRevenue: async (id) => {
-    const { error } = await supabase.from('revenues').delete().eq('id', id);
+    const { error } = await db.from('revenues').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ revenues: s.revenues.filter((x) => x.id !== id) }));
   },

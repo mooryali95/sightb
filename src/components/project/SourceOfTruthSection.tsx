@@ -21,6 +21,8 @@ import { Badge } from '@/components/ui/badge';
 import { Info, FunctionSquare, Database, Calculator } from 'lucide-react';
 import type { ProjectSummary, EVMMetrics } from '@/types/project';
 import { SsotExplainButton } from './SsotExplainButton';
+import { ServerTruthCard } from './ServerTruthCard';
+
 
 
 interface Props {
@@ -127,6 +129,27 @@ export function SourceOfTruthSection({
           </div>
         </div>
       </div>
+
+      <ServerTruthCard
+        projectId={project.id}
+        currency={currency}
+        client={{
+          totalActualExpenses: expenses
+            .filter((e) => e.projectId === project.id && e.approvalStatus !== 'rejected')
+            .reduce((s, e) => s + e.amount, 0),
+          totalTransferredFunds: fundsSummary.totalTransferred,
+          outstandingAdvances: fundsSummary.totalOutstandingAdvances,
+          totalCustodyDraw: fundsSummary.totalCustodyDraw,
+          remainingFunds: fundsSummary.remainingInManagerHand,
+          profit:
+            project.contractValue + approvedCOImpact -
+            expenses
+              .filter((e) => e.projectId === project.id && e.approvalStatus !== 'rejected')
+              .reduce((s, e) => s + e.amount, 0),
+        }}
+      />
+
+
 
       <Accordion type="multiple" defaultValue={['contract', 'funds', 'evm']} className="space-y-2">
         {/* عقد + إيرادات */}

@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import {
   CostBaseline,
 } from '@/types/project';
@@ -37,7 +37,7 @@ async function fetchAll(
   let from = 0;
   const all: any[] = [];
   while (true) {
-    let q = (supabase as any).from(table).select('*')
+    let q = db.from(table).select('*')
       .order(orderCol, { ascending })
       .range(from, from + PAGE - 1);
     if (filters) {
@@ -67,9 +67,9 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
     try {
       set({ loading: true });
       const [companies, portfolios, projects] = await Promise.all([
-        supabase.from('companies').select('*').order('created_at', { ascending: false }),
-        supabase.from('portfolios').select('*').order('created_at', { ascending: false }),
-        supabase.from('projects').select('*').order('created_at', { ascending: false }),
+        db.from('companies').select('*').order('created_at', { ascending: false }),
+        db.from('portfolios').select('*').order('created_at', { ascending: false }),
+        db.from('projects').select('*').order('created_at', { ascending: false }),
       ]);
 
       if (companies.error) throw companies.error;
@@ -183,7 +183,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
     try {
       const companyProjects = get().projects.filter(p => p.companyId === companyId);
       const [indirectCosts] = await Promise.all([
-        supabase.from('indirect_costs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
+        db.from('indirect_costs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
       ]);
       set((s) => ({
         indirectCosts: [...s.indirectCosts.filter(ic => ic.companyId !== companyId), ...(indirectCosts.data || []).map(mapIndirectCost)],
@@ -199,7 +199,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
 
   loadAuditLog: async (projectId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('audit_log').select('*')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
@@ -229,7 +229,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
       change_orders: { key: 'changeOrders', map: mapChangeOrder },
     };
 
-    const channel = supabase
+    const channel = db.raw
       .channel(`project-${projectId}`)
       .on('postgres_changes', {
         event: '*',
@@ -256,6 +256,6 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { db.raw.removeChannel(channel); };
   },
 });

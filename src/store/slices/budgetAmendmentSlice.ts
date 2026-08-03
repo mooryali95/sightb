@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import {
   BudgetAmendment,
   BudgetAmendmentSnapshotItem,
@@ -69,7 +69,7 @@ export const createBudgetAmendmentSlice: StateCreator<AppState, [], [], BudgetAm
     const snapshot = snapshotFromBudgetItems(currentBudget);
     const totalBefore = totalOfSnapshot(snapshot);
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await db
       .from('budget_amendments')
       .insert({
         user_id: userId,
@@ -89,7 +89,7 @@ export const createBudgetAmendmentSlice: StateCreator<AppState, [], [], BudgetAm
   },
 
   cancelBudgetAmendment: async (amendmentId) => {
-    const { error } = await (supabase as any)
+    const { error } = await db
       .from('budget_amendments')
       .update({ status: 'cancelled' })
       .eq('id', amendmentId);
@@ -109,7 +109,7 @@ export const createBudgetAmendmentSlice: StateCreator<AppState, [], [], BudgetAm
     const snapshotAfter = snapshotFromBudgetItems(currentBudget);
     const totalAfter = totalOfSnapshot(snapshotAfter);
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await db
       .from('budget_amendments')
       .update({
         snapshot_after: snapshotAfter,
@@ -130,7 +130,7 @@ export const createBudgetAmendmentSlice: StateCreator<AppState, [], [], BudgetAm
   },
 
   loadBudgetAmendments: async (projectId) => {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await db
       .from('budget_amendments')
       .select('*')
       .eq('project_id', projectId)

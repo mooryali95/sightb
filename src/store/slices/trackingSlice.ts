@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import { Milestone, ChangeOrder, Risk, Resource, Custody, Commitment } from '@/types/project';
 import {
   getUserId, logDeletion,
@@ -46,7 +46,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   // ---- Milestone ----
   addMilestone: async (m) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any).from('milestones').insert({
+    const { data, error } = await db.from('milestones').insert({
       project_id: m.projectId, user_id: userId, name: m.name,
       description: m.description || null, sort_order: m.sortOrder || 0,
       planned_start: m.plannedStart || null, planned_end: m.plannedEnd || null,
@@ -73,7 +73,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (m.weight !== undefined) updates.weight = m.weight;
     if (m.status !== undefined) updates.status = m.status;
     if (m.linkedRevenueId !== undefined) updates.linked_revenue_id = m.linkedRevenueId;
-    const { error } = await (supabase as any).from('milestones').update(updates).eq('id', id);
+    const { error } = await db.from('milestones').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ milestones: s.milestones.map((x) => (x.id === id ? { ...x, ...m } : x)) }));
   },
@@ -81,7 +81,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   deleteMilestone: async (id) => {
     const ms = get().milestones.find(m => m.id === id);
     if (ms) await logDeletion('milestones', id, ms, ms.projectId);
-    const { error } = await (supabase as any).from('milestones').delete().eq('id', id);
+    const { error } = await db.from('milestones').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ milestones: s.milestones.filter((x) => x.id !== id) }));
   },
@@ -89,7 +89,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   // ---- ChangeOrder ----
   addChangeOrder: async (co) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any).from('change_orders').insert({
+    const { data, error } = await db.from('change_orders').insert({
       project_id: co.projectId, user_id: userId, description: co.description,
       change_type: co.changeType || 'scope_addition',
       amount_impact: co.amountImpact || 0, duration_impact: co.durationImpact || 0,
@@ -120,7 +120,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (co.approvedDate !== undefined) updates.approved_date = co.approvedDate;
     if (co.budgetItems !== undefined) updates.budget_items_json = JSON.stringify(co.budgetItems);
     if (co.autoRebaseline !== undefined) updates.auto_rebaseline = co.autoRebaseline;
-    const { error } = await (supabase as any).from('change_orders').update(updates).eq('id', id);
+    const { error } = await db.from('change_orders').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ changeOrders: s.changeOrders.map((x) => (x.id === id ? { ...x, ...co } : x)) }));
     if (co.status === 'approved') {
@@ -134,7 +134,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   deleteChangeOrder: async (id) => {
     const co = get().changeOrders.find(c => c.id === id);
     if (co) await logDeletion('change_orders', id, co, co.projectId);
-    const { error } = await (supabase as any).from('change_orders').delete().eq('id', id);
+    const { error } = await db.from('change_orders').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ changeOrders: s.changeOrders.filter((x) => x.id !== id) }));
   },
@@ -170,7 +170,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   // ---- Risk ----
   addRisk: async (r) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any).from('risks').insert({
+    const { data, error } = await db.from('risks').insert({
       user_id: userId,
       project_id: r.projectId || null,
       portfolio_id: r.portfolioId || null,
@@ -206,7 +206,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (r.identifiedDate !== undefined) updates.identified_date = r.identifiedDate;
     if (r.identifiedDate !== undefined) updates.identified_date = r.identifiedDate;
     if (r.closedDate !== undefined) updates.closed_date = r.closedDate;
-    const { error } = await (supabase as any).from('risks').update(updates).eq('id', id);
+    const { error } = await db.from('risks').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ risks: s.risks.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
   },
@@ -214,7 +214,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   deleteRisk: async (id) => {
     const risk = get().risks.find(r => r.id === id);
     if (risk) await logDeletion('risks', id, risk, risk.projectId);
-    const { error } = await (supabase as any).from('risks').delete().eq('id', id);
+    const { error } = await db.from('risks').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ risks: s.risks.filter((x) => x.id !== id) }));
   },
@@ -222,7 +222,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   // ---- Resource ----
   addResource: async (r) => {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('resources').insert({
+    const { data, error } = await db.from('resources').insert({
       user_id: userId, project_id: r.projectId,
       name: r.name, role: r.role || null, monthly_cost: r.monthlyCost,
     }).select().single();
@@ -231,7 +231,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     set((s) => ({ resources: [mapped, ...s.resources] }));
     // Update resource_count on project
     const newCount = get().resources.filter(res => res.projectId === r.projectId).length;
-    await supabase.from('projects').update({ resource_count: newCount }).eq('id', r.projectId);
+    await db.from('projects').update({ resource_count: newCount }).eq('id', r.projectId);
     set((s) => ({ projects: s.projects.map(p => p.id === r.projectId ? { ...p, resourceCount: newCount } : p) }));
     return mapped.id;
   },
@@ -241,20 +241,20 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (r.name !== undefined) updates.name = r.name;
     if (r.role !== undefined) updates.role = r.role;
     if (r.monthlyCost !== undefined) updates.monthly_cost = r.monthlyCost;
-    const { error } = await supabase.from('resources').update(updates).eq('id', id);
+    const { error } = await db.from('resources').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ resources: s.resources.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
   },
 
   deleteResource: async (id) => {
     const resource = get().resources.find(r => r.id === id);
-    const { error } = await supabase.from('resources').delete().eq('id', id);
+    const { error } = await db.from('resources').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ resources: s.resources.filter((x) => x.id !== id) }));
     // Update resource_count on project
     if (resource) {
       const newCount = get().resources.filter(res => res.projectId === resource.projectId).length;
-      await supabase.from('projects').update({ resource_count: newCount }).eq('id', resource.projectId);
+      await db.from('projects').update({ resource_count: newCount }).eq('id', resource.projectId);
       set((s) => ({ projects: s.projects.map(p => p.id === resource.projectId ? { ...p, resourceCount: newCount } : p) }));
     }
   },
@@ -262,7 +262,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   // ---- Custody ----
   addCustody: async (c) => {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('custodies').insert({
+    const { data, error } = await db.from('custodies').insert({
       user_id: userId, project_id: c.projectId || null,
       company_id: c.companyId || null, resource_name: c.resourceName,
       amount: c.amount, notes: c.notes || null,
@@ -289,13 +289,13 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if ((c as any).sourceFundId !== undefined) updates.source_fund_id = (c as any).sourceFundId || null;
     if (c.status !== undefined) updates.status = c.status;
     if (c.closedDate !== undefined) updates.closed_date = c.closedDate || null;
-    const { error } = await (supabase as any).from('custodies').update(updates).eq('id', id);
+    const { error } = await db.from('custodies').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ custodies: s.custodies.map((x) => x.id === id ? { ...x, ...c } as any : x) }));
   },
 
   deleteCustody: async (id) => {
-    const { error } = await supabase.from('custodies').delete().eq('id', id);
+    const { error } = await db.from('custodies').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ custodies: s.custodies.filter((x) => x.id !== id) }));
   },
@@ -303,7 +303,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   // ---- Commitment ----
   addCommitment: async (c) => {
     const userId = await getUserId();
-    const { data, error } = await (supabase as any).from('commitments').insert({
+    const { data, error } = await db.from('commitments').insert({
       user_id: userId, project_id: c.projectId, description: c.description,
       vendor_name: c.vendorName || null, contract_ref: c.contractRef || null,
       total_amount: c.totalAmount || 0, spent_amount: c.spentAmount || 0,
@@ -325,13 +325,13 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (c.spentAmount !== undefined) updates.spent_amount = c.spentAmount;
     if (c.status !== undefined) updates.status = c.status;
     if (c.notes !== undefined) updates.notes = c.notes;
-    const { error } = await (supabase as any).from('commitments').update(updates).eq('id', id);
+    const { error } = await db.from('commitments').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ commitments: s.commitments.map((x) => (x.id === id ? { ...x, ...c } : x)) }));
   },
 
   deleteCommitment: async (id) => {
-    const { error } = await (supabase as any).from('commitments').delete().eq('id', id);
+    const { error } = await db.from('commitments').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ commitments: s.commitments.filter((x) => x.id !== id) }));
   },
