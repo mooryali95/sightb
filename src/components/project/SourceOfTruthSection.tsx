@@ -128,6 +128,27 @@ export function SourceOfTruthSection({
         </div>
       </div>
 
+      <ServerTruthCard
+        projectId={project.id}
+        currency={currency}
+        client={{
+          totalActualExpenses: expenses
+            .filter((e) => e.projectId === project.id && e.approvalStatus !== 'rejected')
+            .reduce((s, e) => s + e.amount, 0),
+          totalTransferredFunds: fundsSummary.totalTransferred,
+          outstandingAdvances: fundsSummary.totalOutstandingAdvances,
+          totalCustodyDraw: fundsSummary.totalCustodyDraw,
+          remainingFunds: fundsSummary.remainingInManagerHand,
+          profit:
+            project.contractValue + approvedCOImpact -
+            expenses
+              .filter((e) => e.projectId === project.id && e.approvalStatus !== 'rejected')
+              .reduce((s, e) => s + e.amount, 0),
+        }}
+      />
+
+
+
       <Accordion type="multiple" defaultValue={['contract', 'funds', 'evm']} className="space-y-2">
         {/* عقد + إيرادات */}
         <AccordionItem value="contract" className="border border-border rounded-lg bg-card px-3 md:px-4">
