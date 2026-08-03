@@ -1928,6 +1928,10 @@ export type Database = {
         }
         Returns: number
       }
+      project_financial_summary: {
+        Args: { _project_id: string }
+        Returns: Json
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
