@@ -190,6 +190,11 @@ BEGIN
                               approval_status, custody_id, is_vat_exempt)
   VALUES (_uid, _p, 'other', 'E2E custody spend', 12000, '2026-03-04', 3, 'approved', _cu, false);
 
+  -- Ensure a resource exists for the advance (payment_requests.resource_id is NOT NULL).
+  INSERT INTO public.resources(project_id, user_id, name, role, monthly_cost)
+  SELECT _p, _uid, 'E2E Resource', 'engineer', 0
+   WHERE NOT EXISTS (SELECT 1 FROM public.resources WHERE project_id = _p);
+
   INSERT INTO public.payment_requests(project_id, resource_id, request_type, amount, currency,
                                       description, status, requested_by, user_id,
                                       paid_from_fund_id, paid_date)
