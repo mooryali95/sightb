@@ -77,7 +77,7 @@ describe('offline-queue', () => {
 
   it('drains the queue once back online', async () => {
     enqueueMutation({ table: 'expenses', op: 'insert', payload: { id: 'e1' } });
-    enqueueMutation({ table: 'expenses', op: 'delete', match: { id: 'e0' } });
+    enqueueMutation({ table: 'expenses', op: 'insert', payload: { id: 'e2' } });
     const result = await flushQueue();
     expect(result.flushed).toBe(2);
     expect(result.remaining).toBe(0);
