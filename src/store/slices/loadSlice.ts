@@ -1,5 +1,4 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
 import { db } from '@/services/db';
 import {
   CostBaseline,
@@ -230,7 +229,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
       change_orders: { key: 'changeOrders', map: mapChangeOrder },
     };
 
-    const channel = supabase
+    const channel = db.raw
       .channel(`project-${projectId}`)
       .on('postgres_changes', {
         event: '*',
@@ -257,6 +256,6 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { db.raw.removeChannel(channel); };
   },
 });

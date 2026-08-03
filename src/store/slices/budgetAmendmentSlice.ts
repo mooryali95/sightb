@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import {
   BudgetAmendment,
   BudgetAmendmentSnapshotItem,

@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import type { CashTransfer } from '@/types/project';
 import { getUserId } from '../helpers';
 import type { AppState } from '../useStore';
