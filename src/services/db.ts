@@ -136,6 +136,23 @@ export const db = {
     return execute(() => (supabase as any).rpc(fn, args), `rpc.${fn}`);
   },
 
+  /** Retry-aware edge function invocation. */
+  async invoke<T = unknown>(fn: string, body?: unknown): Promise<{ data: T | null; error: unknown }> {
+    return execute(
+      () => supabase.functions.invoke(fn, body === undefined ? undefined : { body }),
+      `fn.${fn}`
+    );
+  },
+
+  /** Storage handle — binary I/O, not routed through the query retry chain. */
+  storage: supabase.storage,
+
+  /** Ends the current session. */
+  async signOut(): Promise<void> {
+    await supabase.auth.signOut();
+  },
+
+
   /** Current authenticated user id (throws when signed out). */
   async userId(): Promise<string> {
     const { data } = await supabase.auth.getUser();
