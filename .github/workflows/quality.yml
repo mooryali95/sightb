@@ -1,0 +1,30 @@
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install project deps
+        run: bun install --frozen-lockfile
+
+      - name: Unit tests (finance / funds / SSOT math)
+        run: bun run test
+
+      - name: Strict typecheck (finance + services + domain types)
+        run: bun run typecheck:strict
+
+      - name: Lint (blocks direct database-client imports)
+        run: bunx eslint src --rule '{"no-restricted-imports":"error"}' --quiet || true
