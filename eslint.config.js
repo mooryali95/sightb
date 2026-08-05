@@ -39,7 +39,15 @@ export default tseslint.config(
   },
   {
     // The service layer and generated integrations own the raw client.
-    files: ["src/services/**", "src/integrations/**", "src/hooks/useAuth.tsx"],
+    files: [
+      "src/services/**",
+      "src/integrations/**",
+      "src/lib/offline-queue.ts",
+      // Auth surfaces talk to the auth client (PKCE, session events), not the Data API.
+      "src/hooks/useAuth.tsx",
+      "src/pages/Login.tsx",
+      "src/pages/ResetPassword.tsx",
+    ],
     rules: { "no-restricted-imports": "off" },
   },
 );
