@@ -18,6 +18,8 @@ export interface LoadSlice {
   projectDataLoaded: Set<string>;
   auditLog: AuditLogEntry[];
   loadAll: () => Promise<void>;
+  loadDetails: () => Promise<void>;
+
   loadProjectData: (projectId: string) => Promise<void>;
   loadCompanyData: (companyId: string) => Promise<void>;
   loadAuditLog: (projectId: string) => Promise<void>;
