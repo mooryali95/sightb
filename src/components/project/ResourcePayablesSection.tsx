@@ -6,7 +6,7 @@ import {
   exportSettlementEventsPDF,
   type OutstandingAdvanceRow,
   type SettlementEventRow,
-} from '@/lib/export';
+} from '@/lib/export-lazy';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';

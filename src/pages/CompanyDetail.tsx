@@ -7,7 +7,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
-import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export';
+import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export-lazy';
 import {
   HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS,
   INDIRECT_COST_CATEGORY_LABELS, type IndirectCostCategory,
