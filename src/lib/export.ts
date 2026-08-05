@@ -11,7 +11,7 @@ declare module 'jspdf' {
   }
 }
 
-interface ExportBudgetData {
+export interface ExportBudgetData {
   projectName: string;
   contractValue: number;
   budgetItems: { category: string; description: string; plannedAmount: number; month?: number; actual: number; startMonth?: number; endMonth?: number; costType?: string }[];
@@ -532,7 +532,7 @@ export function exportCompanyToPDF(data: CompanyExportData) {
 }
 
 // ======== Portfolio Export ========
-interface PortfolioExportData {
+export interface PortfolioExportData {
   portfolioName: string;
   summary: {
     totalContractValue: number;
@@ -604,7 +604,7 @@ export function exportPortfolioToExcel(data: PortfolioExportData) {
 }
 
 // ======== Company Export ========
-interface CompanyExportData {
+export interface CompanyExportData {
   companyName: string;
   summary: {
     totalContractValue: number;
