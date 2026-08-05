@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import { useAuth } from './useAuth';
 
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -37,7 +37,7 @@ export function useSessionTimeout() {
       if (idle >= IDLE_TIMEOUT_MS) {
         clearInterval(checkIdle);
         setShowWarning(false);
-        await supabase.auth.signOut();
+        await db.signOut();
         window.location.href = '/login';
       } else if (idle >= IDLE_TIMEOUT_MS - WARNING_BEFORE_MS) {
         const remaining = Math.ceil((IDLE_TIMEOUT_MS - idle) / 1000);

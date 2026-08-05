@@ -2,16 +2,8 @@ import { useState } from 'react';
 import { Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { generateExecutiveSummary, type AISummary } from '@/services/aiService';
 import { toast } from 'sonner';
-
-interface AISummary {
-  headline?: string;
-  highlights?: string[];
-  concerns?: string[];
-  recommendations?: string[];
-  error?: string;
-}
 
 interface Props {
   context: Record<string, unknown>;
@@ -25,8 +17,7 @@ export function AIExecutiveInsights({ context }: Props) {
     setLoading(true);
     setSummary(null);
     try {
-      const { data, error } = await supabase.functions.invoke('ai-executive-summary', { body: context });
-      if (error) throw error;
+      const data = await generateExecutiveSummary(context);
       if (data?.error) {
         toast.error(data.error);
         setSummary({ error: data.error });
