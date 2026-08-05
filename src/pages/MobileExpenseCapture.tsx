@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { extractReceiptData } from '@/services/aiService';
+import { uploadReceipt, attachReceiptMetadata } from '@/services/expenseAttachmentService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -107,13 +108,7 @@ export default function MobileExpenseCapture() {
     setStep('analyzing');
     try {
       const base64 = await blobToBase64(imageBlob);
-      const { data, error } = await supabase.functions.invoke('extract-receipt-data', {
-        body: { image_base64: base64, mime_type: imageBlob.type },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      const ext = data?.data as ExtractedReceipt;
-      if (!ext) throw new Error('لم يتم استخراج بيانات');
+      const ext = (await extractReceiptData(base64, imageBlob.type)) as ExtractedReceipt;
 
       setExtracted(ext);
       // pre-fill form
@@ -156,21 +151,10 @@ export default function MobileExpenseCapture() {
     setStep('saving');
     try {
       // 1) Upload receipt image (if any)
-      let receiptUrl: string | undefined;
-      let receiptName: string | undefined;
+      let receipt: Awaited<ReturnType<typeof uploadReceipt>> = null;
       if (imageBlob && user?.id) {
-        const ext = imageBlob.type.split('/')[1] || 'jpg';
-        const path = `${user.id}/${Date.now()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage
-          .from('expense-receipts')
-          .upload(path, imageBlob, { contentType: imageBlob.type, upsert: false });
-        if (uploadErr) {
-          console.error('upload error', uploadErr);
-          toast.warning('تعذّر رفع الصورة، سيتم حفظ المصروف بدونها');
-        } else {
-          receiptUrl = path;
-          receiptName = `إيصال ${vendor || 'بدون مورد'}`;
-        }
+        receipt = await uploadReceipt(user.id, imageBlob, `إيصال ${vendor || 'بدون مورد'}`);
+        if (!receipt) toast.warning('تعذّر رفع الصورة، سيتم حفظ المصروف بدونها');
       }
 
       // 2) Net amount (DB stores VAT-exclusive per Net Storage Policy)
@@ -198,13 +182,8 @@ export default function MobileExpenseCapture() {
       const newId = await addExpense(expenseData);
 
       // 3) Persist receipt + ocr metadata via direct update (slice doesn't expose these yet)
-      if (newId && (receiptUrl || extracted)) {
-        await (supabase as any).from('expenses').update({
-          receipt_attachments: receiptUrl
-            ? [{ name: receiptName, path: receiptUrl, uploaded_at: new Date().toISOString() }]
-            : [],
-          ocr_extracted_data: extracted || null,
-        }).eq('id', newId);
+      if (newId && (receipt || extracted)) {
+        await attachReceiptMetadata(newId, receipt, extracted);
       }
 
       toast.success('تم حفظ المصروف');

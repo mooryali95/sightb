@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useCoreData, useCompanyData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
-import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export';
+import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export-lazy';
 import {
   HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS,
   INDIRECT_COST_CATEGORY_LABELS, type IndirectCostCategory,
@@ -43,8 +44,8 @@ export default function CompanyDetail() {
 
   const { detailsLoaded, loadCompanyData } = useStore();
 
-  useEffect(() => { loadAll(); }, []);
-  useEffect(() => { if (id && !detailsLoaded) loadCompanyData(id); }, [id, detailsLoaded]);
+  useCoreData();
+  useCompanyData(detailsLoaded ? undefined : id);
 
   const company = companies.find(c => c.id === id);
 

@@ -18,6 +18,8 @@ export interface LoadSlice {
   projectDataLoaded: Set<string>;
   auditLog: AuditLogEntry[];
   loadAll: () => Promise<void>;
+  loadDetails: () => Promise<void>;
+
   loadProjectData: (projectId: string) => Promise<void>;
   loadCompanyData: (companyId: string) => Promise<void>;
   loadAuditLog: (projectId: string) => Promise<void>;
@@ -83,45 +85,58 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         loading: false,
         _lastLoadedAt: now,
       } as any);
-
-      if (!get().detailsLoaded) {
-        set({ detailsLoading: true });
-        const [budgetItemsData, expensesData, revenuesData, resourcesData, custodiesData, milestonesData, changeOrdersData, risksData, indirectCostsData, commitmentsData] = await Promise.all([
-          fetchAll('budget_items'),
-          fetchAll('expenses'),
-          fetchAll('revenues'),
-          fetchAll('resources'),
-          fetchAll('custodies'),
-          fetchAll('milestones', 'sort_order', true),
-          fetchAll('change_orders'),
-          fetchAll('risks'),
-          fetchAll('indirect_costs'),
-          fetchAll('commitments'),
-        ]);
-
-        const mappedExpenses = expensesData.map(mapExpense);
-
-        set({
-          budgetItems: budgetItemsData.map(mapBudgetItem),
-          expenses: mappedExpenses,
-          revenues: revenuesData.map(mapRevenue),
-          resources: resourcesData.map(mapResource),
-          custodies: custodiesData.map((c: any) => mapCustody(c, mappedExpenses)),
-          milestones: milestonesData.map(mapMilestone),
-          changeOrders: changeOrdersData.map(mapChangeOrder),
-          risks: risksData.map(mapRisk),
-          indirectCosts: indirectCostsData.map(mapIndirectCost),
-          commitments: commitmentsData.map(mapCommitment),
-          detailsLoading: false,
-          detailsLoaded: true,
-        });
-      }
     } catch (error: any) {
       console.error('[Store.loadAll]', error);
-      set({ loading: false, detailsLoading: false });
+      set({ loading: false });
       throw error;
     }
   },
+
+  /**
+   * Cross-project preload. Only screens that aggregate over every project
+   * (the portfolio dashboard) need it — routes like project detail load
+   * their own slice of data instead.
+   */
+  loadDetails: async () => {
+    if (get().detailsLoaded || get().detailsLoading) return;
+    try {
+      set({ detailsLoading: true });
+      const [budgetItemsData, expensesData, revenuesData, resourcesData, custodiesData, milestonesData, changeOrdersData, risksData, indirectCostsData, commitmentsData] = await Promise.all([
+        fetchAll('budget_items'),
+        fetchAll('expenses'),
+        fetchAll('revenues'),
+        fetchAll('resources'),
+        fetchAll('custodies'),
+        fetchAll('milestones', 'sort_order', true),
+        fetchAll('change_orders'),
+        fetchAll('risks'),
+        fetchAll('indirect_costs'),
+        fetchAll('commitments'),
+      ]);
+
+      const mappedExpenses = expensesData.map(mapExpense);
+
+      set({
+        budgetItems: budgetItemsData.map(mapBudgetItem),
+        expenses: mappedExpenses,
+        revenues: revenuesData.map(mapRevenue),
+        resources: resourcesData.map(mapResource),
+        custodies: custodiesData.map((c: any) => mapCustody(c, mappedExpenses)),
+        milestones: milestonesData.map(mapMilestone),
+        changeOrders: changeOrdersData.map(mapChangeOrder),
+        risks: risksData.map(mapRisk),
+        indirectCosts: indirectCostsData.map(mapIndirectCost),
+        commitments: commitmentsData.map(mapCommitment),
+        detailsLoading: false,
+        detailsLoaded: true,
+      });
+    } catch (error: any) {
+      console.error('[Store.loadDetails]', error);
+      set({ detailsLoading: false });
+      throw error;
+    }
+  },
+
 
   loadProjectData: async (projectId: string) => {
     if (get().detailsLoaded || get().projectDataLoaded.has(projectId)) return;

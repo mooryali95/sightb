@@ -6,7 +6,7 @@ import {
   exportSettlementEventsPDF,
   type OutstandingAdvanceRow,
   type SettlementEventRow,
-} from '@/lib/export';
+} from '@/lib/export-lazy';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -67,6 +67,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { usePayablesScope } from './payables/usePayablesScope';
 
 interface Props {
   projectId: string;
@@ -93,52 +94,11 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   } = useStore();
 
 
-  const projBudgetItems = useMemo(
-    () => budgetItems.filter((b: any) => b.projectId === projectId),
-    [budgetItems, projectId],
-  );
-
-  const projResources = useMemo(
-    () => resources.filter((r) => r.projectId === projectId),
-    [resources, projectId],
-  );
-  // Vendor payables live in their own panel — this section is strictly
-  // the employee/resource ledger, so every aggregate below excludes them.
-  const projAllReimbs = useMemo(
-    () => reimbursements.filter((r) => r.projectId === projectId),
-    [reimbursements, projectId],
-  );
-  const projReimbs = useMemo(
-    () => filterResourceReimbursements(projAllReimbs),
-    [projAllReimbs],
-  );
-  const projVendorReimbs = useMemo(
-    () => filterVendorReimbursements(projAllReimbs),
-    [projAllReimbs],
-  );
-
-  const projReqs = useMemo(
-    () => paymentRequests.filter((p) => p.projectId === projectId),
-    [paymentRequests, projectId],
-  );
-  const projSettles = useMemo(
-    () => resourceSettlements.filter((s) => s.projectId === projectId),
-    [resourceSettlements, projectId],
-  );
-
-  // نطاق العرض: دفتر الفريق أو دفتر الموردين — الأرقام تتبدل معه بالكامل
-  const [scope, setScope] = useState<'resource' | 'vendor'>('resource');
-
-  const resourceSummary = useMemo(
-    () => getProjectPayablesSummary(projectId, projResources, projReimbs, projReqs, projSettles),
-    [projectId, projResources, projReimbs, projReqs, projSettles],
-  );
-  const vendorSummary = useMemo(
-    () => getVendorPayablesSummary(projectId, projVendorReimbs),
-    [projectId, projVendorReimbs],
-  );
-  const summary = scope === 'resource' ? resourceSummary : vendorSummary;
-  const scopedReimbs = scope === 'resource' ? projReimbs : projVendorReimbs;
+  const {
+    scope, setScope,
+    projBudgetItems, projResources, projAllReimbs, projReimbs, projVendorReimbs,
+    projReqs, projSettles, resourceSummary, vendorSummary, summary, scopedReimbs,
+  } = usePayablesScope(projectId);
 
   // ─── Reimbursement dialog state ───
   const [reimbOpen, setReimbOpen] = useState(false);

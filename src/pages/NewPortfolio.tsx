@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useCoreData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ export default function NewPortfolio() {
   const { isAdmin, canEdit } = useRole();
   const navigate = useNavigate();
 
-  useEffect(() => { loadAll(); }, []);
+  useCoreData();
 
   const editableCompanies = useMemo(() => companies.filter(c => isAdmin || canEdit('company', c.id)), [companies, isAdmin, canEdit]);
 

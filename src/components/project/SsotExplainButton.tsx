@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, Code2, AlertTriangle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { explainSsotKey } from '@/services/ssotService';
 import { formatCurrency } from '@/lib/finance';
 import { toast } from '@/hooks/use-toast';
 
@@ -22,15 +22,10 @@ export function SsotExplainButton({ ssotKey, label, projectId, currency }: Props
   async function load() {
     setLoading(true); setError(null); setData(null);
     try {
-      const { data: r, error: e } = await (supabase as any).rpc('ssot_explain', {
-        _key: ssotKey, _project_id: projectId,
-      });
-      if (e) throw e;
+      const r = await explainSsotKey(ssotKey, projectId);
       setData(r as any);
     } catch (e: any) {
-      const msg = e?.message?.includes('admin_only')
-        ? 'هذه الأداة متاحة لمدير النظام فقط.'
-        : (e?.message || 'تعذّر جلب المصدر.');
+      const msg = e?.message || 'تعذّر جلب المصدر.';
       setError(msg);
       toast({ title: 'مصدر الحقيقة', description: msg, variant: 'destructive' });
     } finally {

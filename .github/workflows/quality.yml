@@ -1,0 +1,44 @@
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install project deps
+        run: bun install --frozen-lockfile
+
+      - name: Unit tests (finance / funds / SSOT math)
+        run: bun run test
+
+      - name: Strict typecheck (finance + services + domain types)
+        run: bun run typecheck:strict
+
+      - name: Guard the data-access layer
+        run: |
+          violations=$(grep -rl "integrations/supabase/client" src \
+            --include='*.ts' --include='*.tsx' \
+            | grep -v '^src/services/' \
+            | grep -v '^src/integrations/' \
+            | grep -v '^src/lib/offline-queue.ts$' \
+            | grep -v '^src/hooks/useAuth.tsx$' \
+            | grep -v '^src/pages/Login.tsx$' \
+            | grep -v '^src/pages/ResetPassword.tsx$' || true)
+          if [ -n "$violations" ]; then
+            echo "Direct database-client imports outside the service layer:"
+            echo "$violations"
+            exit 1
+          fi
+

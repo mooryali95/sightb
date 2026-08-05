@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
+import { useCoreData, useProjectData } from '@/hooks/useAppData';
 import {
   getProjectSummary, getExpensesByCategory, getMonthlyBreakdown,
   calculateEVM, getCurrentMonth,
@@ -26,8 +27,8 @@ export function useProjectDetailData(id: string | undefined) {
   const { detailsLoaded, loadProjectData, subscribeToProject, loadFundsForProject, loadResourcePayablesForProject } =
     useStore() as any;
 
-  useEffect(() => { loadAll(); }, [loadAll]);
-  useEffect(() => { if (id && !detailsLoaded) loadProjectData(id); }, [id, detailsLoaded, loadProjectData]);
+  useCoreData();
+  useProjectData(detailsLoaded ? undefined : id);
 
   // Funds + payables are NOT part of loadAll(); without this they stay blank
   // until an unrelated side-effect refetch happens.

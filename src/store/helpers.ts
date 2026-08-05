@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/db';
 import type { Json } from '@/integrations/supabase/types';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
@@ -15,9 +15,7 @@ import {
 
 // ---- getUserId ----
 export async function getUserId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-  return user.id;
+  return db.userId();
 }
 
 // ---- Audit log helper (DEPRECATED - server-side triggers handle audit logging) ----

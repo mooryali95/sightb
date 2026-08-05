@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { exportToExcel, exportToPDF } from '@/lib/export';
+import { exportToExcel, exportToPDF } from '@/lib/export-lazy';
 import { getMonthlyBudgetPlan } from '@/lib/finance';
 import { MobileFAB } from '@/components/MobileFAB';
 import { useTabBadges } from '@/hooks/useTabBadges';

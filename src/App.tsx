@@ -1,16 +1,15 @@
-import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "next-themes";
 import { SessionTimeoutWarning } from "@/components/SessionTimeoutWarning";
-import { useStore } from "@/store/useStore";
+import { useCoreData } from "@/hooks/useAppData";
 
 // Eagerly load landing/login (initial pages users see)
 import Landing from "./pages/Landing";
@@ -30,21 +29,20 @@ const SystemAuditLog = lazy(() => import("./pages/SystemAuditLog"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const MobileExpenseCapture = lazy(() => import("./pages/MobileExpenseCapture"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 15 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function AppBootstrap({ children }: { children: ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
-  const loadAll = useStore((state) => state.loadAll);
-  const userId = user?.id;
-
-  useEffect(() => {
-    if (authLoading || !userId) return;
-
-    loadAll().catch((error) => {
-      console.error("[AppBootstrap.loadAll]", error);
-    });
-  }, [authLoading, userId, loadAll]);
-
+  // React Query dedupes this with every page-level useCoreData() call.
+  useCoreData();
   return <>{children}</>;
 }
 

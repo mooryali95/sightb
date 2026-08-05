@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useCoreData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { getPortfolioSummary } from '@/lib/portfolio';
 import { getProjectSummary, getCashFlowForecast } from '@/lib/finance';
-import { exportPortfolioToExcel, exportPortfolioToPDF } from '@/lib/export';
+import { exportPortfolioToExcel, exportPortfolioToPDF } from '@/lib/export-lazy';
 import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, RISK_PROBABILITY_LABELS, RISK_STATUS_LABELS, type ProjectStatus } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ export default function PortfolioDetail() {
 
   const { loadProjectData } = useStore();
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useCoreData();
 
   // Load project data for all portfolio projects (idempotent per project)
   const earlyPortfolioProjects = useMemo(() => projects.filter(p => p.portfolioId === id), [projects, id]);

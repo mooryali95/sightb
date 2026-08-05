@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { listSystemAuditEntries } from '@/services/auditService';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { Navigate } from 'react-router-dom';
@@ -56,25 +56,11 @@ export default function SystemAuditLog() {
 
   const loadEntries = async () => {
     setLoading(true);
-    const { data } = await (supabase as any)
-      .from('system_audit_log')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(500);
-
-    setEntries(
-      (data || []).map((e: any) => ({
-        id: e.id,
-        userId: e.user_id,
-        userEmail: e.user_email,
-        action: e.action,
-        entityType: e.entity_type,
-        entityId: e.entity_id,
-        entityName: e.entity_name,
-        details: e.details,
-        createdAt: e.created_at,
-      }))
-    );
+    try {
+      setEntries(await listSystemAuditEntries(500));
+    } catch {
+      setEntries([]);
+    }
     setLoading(false);
   };
 

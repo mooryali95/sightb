@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { calcVAT, addVAT, removeVAT, formatCurrency } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
+import { useCoreData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,7 @@ export default function NewProject() {
   const { isAdmin, canEdit } = useRole();
   const navigate = useNavigate();
 
-  useEffect(() => { loadAll(); }, []);
+  useCoreData();
 
   const [companyId, setCompanyId] = useState(searchParams.get('company') || '');
   const [portfolioId, setPortfolioId] = useState(searchParams.get('portfolio') || '');

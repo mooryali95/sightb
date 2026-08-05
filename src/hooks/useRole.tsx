@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { listRolesForUser } from '@/services/userService';
 import { useAuth } from './useAuth';
 
 export type AppRole = 'owner' | 'admin' | 'editor' | 'viewer';
@@ -43,19 +43,19 @@ export function useRole() {
     prevUserId.current = user.id;
 
     const fetchRoles = async () => {
-      const { data } = await (supabase as any)
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', user.id);
-
-      setRoles(
-        (data || []).map((r: any) => ({
-          id: r.id,
-          role: r.role as AppRole,
-          scopeType: r.scope_type as ScopeType,
-          scopeId: r.scope_id,
-        }))
-      );
+      try {
+        const rows = await listRolesForUser(user.id);
+        setRoles(
+          rows.map((r) => ({
+            id: r.id,
+            role: r.role as AppRole,
+            scopeType: r.scopeType as ScopeType,
+            scopeId: r.scopeId,
+          }))
+        );
+      } catch {
+        setRoles([]);
+      }
       setLoading(false);
     };
 

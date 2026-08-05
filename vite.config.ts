@@ -13,6 +13,19 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  build: {
+    rollupOptions: {
+      output: {
+        // Keep heavy, rarely-used libraries out of the route chunks.
+        manualChunks: {
+          "vendor-charts": ["recharts"],
+          "vendor-xlsx": ["xlsx"],
+          "vendor-pdf": ["jspdf", "jspdf-autotable"],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1200,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
