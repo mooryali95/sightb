@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useCoreData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
@@ -46,7 +47,7 @@ export default function PortfolioDetail() {
 
   const { loadProjectData } = useStore();
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useCoreData();
 
   // Load project data for all portfolio projects (idempotent per project)
   const earlyPortfolioProjects = useMemo(() => projects.filter(p => p.portfolioId === id), [projects, id]);

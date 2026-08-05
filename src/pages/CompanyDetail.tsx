@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { useCoreData, useCompanyData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
@@ -43,8 +44,8 @@ export default function CompanyDetail() {
 
   const { detailsLoaded, loadCompanyData } = useStore();
 
-  useEffect(() => { loadAll(); }, []);
-  useEffect(() => { if (id && !detailsLoaded) loadCompanyData(id); }, [id, detailsLoaded]);
+  useCoreData();
+  useCompanyData(detailsLoaded ? undefined : id);
 
   const company = companies.find(c => c.id === id);
 

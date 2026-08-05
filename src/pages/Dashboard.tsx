@@ -25,6 +25,7 @@ import { CompanyManagement } from '@/components/dashboard/CompanyManagement';
 import { SnapshotControls } from '@/components/dashboard/SnapshotControls';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { PageHeader } from '@/components/ui/page-header';
+import { useCoreData, useDetailsData } from '@/hooks/useAppData';
 
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
@@ -44,11 +45,14 @@ export default function Dashboard() {
 
   const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'] as const;
 
+  const core = useCoreData();
+  useDetailsData();
+
   useEffect(() => {
-    loadAll().catch(() => {
+    if (core.isError) {
       toast.error('حدث خطأ أثناء تحميل البيانات. يرجى إعادة تحميل الصفحة.');
-    });
-  }, []);
+    }
+  }, [core.isError]);
 
   // Time period date ranges
   const { currentRange, previousRange } = useMemo(() => {
