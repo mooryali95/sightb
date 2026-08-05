@@ -5,5 +5,10 @@
     "noImplicitAny": true,
     "noEmit": true
   },
-  "include": ["src/lib/finance", "src/services", "src/types"]
+  "include": [
+    "src/lib/finance",
+    "src/services",
+    "src/types",
+    "src/vite-env.d.ts"
+  ]
 }

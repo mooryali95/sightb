@@ -139,7 +139,7 @@ export const db = {
   /** Retry-aware edge function invocation. */
   async invoke<T = unknown>(fn: string, body?: unknown): Promise<{ data: T | null; error: unknown }> {
     return execute(
-      () => supabase.functions.invoke(fn, body === undefined ? undefined : { body }),
+      () => supabase.functions.invoke(fn, body == null ? undefined : { body: body as Record<string, unknown> }),
       `fn.${fn}`
     );
   },
