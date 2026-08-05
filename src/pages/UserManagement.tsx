@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import * as userService from '@/services/userService';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole, type AppRole } from '@/hooks/useRole';
 import { useStore } from '@/store/useStore';
@@ -102,59 +102,25 @@ export default function UserManagement() {
 
   const loadData = async () => {
     setLoading(true);
-    const [profilesRes, rolesRes, invitesRes] = await Promise.all([
-      (supabase as any).from('profiles').select('*').order('created_at', { ascending: false }),
-      (supabase as any).from('user_roles').select('*'),
-      (supabase as any).from('user_invites').select('*').order('created_at', { ascending: false }),
+    const [profileRows, roleRows, inviteRows] = await Promise.all([
+      userService.listProfiles().catch(() => []),
+      userService.listRoles().catch(() => []),
+      userService.listInvites().catch(() => []),
     ]);
 
-    setProfiles(
-      (profilesRes.data || []).map((p: any) => ({
-        id: p.id,
-        email: p.email,
-        fullName: p.full_name || '',
-        status: p.status,
-      }))
-    );
-    setAllRoles(
-      (rolesRes.data || []).map((r: any) => ({
-        id: r.id,
-        userId: r.user_id,
-        role: r.role,
-        scopeType: r.scope_type,
-        scopeId: r.scope_id,
-      }))
-    );
-    const mappedInvites = (invitesRes.data || []).map((i: any) => ({
-        id: i.id,
-        email: i.email,
-        role: i.role,
-        scopeType: i.scope_type,
-        scopeId: i.scope_id,
-        status: i.status,
-        createdAt: i.created_at,
-      }));
-    setInvites(mappedInvites);
+    setProfiles(profileRows as any);
+    setAllRoles(roleRows as any);
+    const mappedInvites = inviteRows as any[];
+    setInvites(mappedInvites as any);
 
     if (mappedInvites.length > 0) {
       try {
         const emails = Array.from(new Set(mappedInvites.map((invite) => invite.email.toLowerCase())));
-        const { data, error } = await supabase.functions.invoke('admin-email-status', {
-          body: { emails },
-        });
-
-        if (error) throw error;
+        const items = await userService.fetchInviteEmailStatus(emails);
 
         const deliveryMap: Record<string, InviteDeliveryStatus> = {};
-        for (const item of data?.items || []) {
-          const normalizedEmail = String(item.email || '').toLowerCase();
-          const statusItem: InviteDeliveryStatus = {
-            inviteId: item.inviteId ?? null,
-            email: normalizedEmail,
-            status: item.status,
-            errorMessage: item.errorMessage ?? null,
-            createdAt: item.createdAt,
-          };
+        for (const statusItem of items as InviteDeliveryStatus[]) {
+          const normalizedEmail = statusItem.email;
 
           if (statusItem.inviteId) {
             deliveryMap[`invite:${statusItem.inviteId}`] = statusItem;
@@ -186,18 +152,13 @@ export default function UserManagement() {
     }
     setSubmitting(true);
     try {
-      const res = await supabase.functions.invoke('send-invite', {
-        body: {
-          email: invEmail.trim().toLowerCase(),
-          role: invRole,
-          scope_type: invScopeType,
-          scope_id: invScopeType === 'system' ? null : invScopeId,
-        },
+      const data = await userService.sendInvite({
+        email: invEmail.trim().toLowerCase(),
+        role: invRole,
+        scopeType: invScopeType,
+        scopeId: invScopeType === 'system' ? null : invScopeId,
       });
 
-      if (res.error) throw res.error;
-
-      const data = res.data;
       if (data?.existingUser) {
         toast.success('المستخدم موجود بالفعل، تم منحه الصلاحيات مباشرة');
       } else if (data?.emailSent) {
@@ -223,28 +184,27 @@ export default function UserManagement() {
   };
 
   const deleteInvite = async (id: string) => {
-    const { error } = await (supabase as any).from('user_invites').delete().eq('id', id);
-    if (error) toast.error('حدث خطأ');
-    else loadData();
+    try {
+      await userService.deleteInvite(id);
+      loadData();
+    } catch {
+      toast.error('حدث خطأ');
+    }
   };
 
   const resendInvite = async (invite: Invite) => {
     setResendingInviteId(invite.id);
     try {
-      const res = await supabase.functions.invoke('send-invite', {
-        body: {
-          email: invite.email,
-          role: invite.role,
-          scope_type: invite.scopeType,
-          scope_id: invite.scopeType === 'system' ? null : invite.scopeId,
-          resend: true,
-          invite_id: invite.id,
-        },
+      const res = await userService.sendInvite({
+        email: invite.email,
+        role: invite.role,
+        scopeType: invite.scopeType,
+        scopeId: invite.scopeId,
+        resend: true,
+        inviteId: invite.id,
       });
 
-      if (res.error) throw res.error;
-
-      if (res.data?.emailSent) {
+      if (res?.emailSent) {
         toast.success(`تمت إعادة إرسال الدعوة إلى ${invite.email}`);
       } else {
         toast.warning('تم حفظ محاولة إعادة الإرسال لكن البريد لم يُرسل بعد');
@@ -263,22 +223,18 @@ export default function UserManagement() {
   };
 
   const deleteRole = async (id: string) => {
-    const { error } = await (supabase as any).from('user_roles').delete().eq('id', id);
-    if (error) toast.error('حدث خطأ');
-    else loadData();
+    try {
+      await userService.deleteRole(id);
+      loadData();
+    } catch {
+      toast.error('حدث خطأ');
+    }
   };
 
   const deleteUser = async (targetUserId: string) => {
     setDeletingUser(targetUserId);
     try {
-      const res = await supabase.functions.invoke('delete-user', {
-        body: { targetUserId },
-      });
-      if (res.error) throw res.error;
-      if (res.data?.error) {
-        toast.error(res.data.error);
-        return;
-      }
+      await userService.deleteUser(targetUserId);
       toast.success('تم حذف الحساب بنجاح');
       loadData();
     } catch (err: any) {
