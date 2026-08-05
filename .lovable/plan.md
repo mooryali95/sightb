@@ -1,90 +1,44 @@
-# خطة: إكمال المرحلة B + المرحلة 1 (تقليل الديون التقنية)
+# تحليل معماري + خطة تحسين البناء والتكامل
 
-هدف مزدوج: (1) إغلاق دورة تسوية السلف كمصاريف مرتبطة بالمورد مع تكامل SSOT، (2) بدء تفكيك الملفات الضخمة وإضافة طبقة `services/` عازلة بين slices و Supabase — دون كسر السلوك الحالي.
+## الوضع الحالي (متحقَّق منه)
 
----
+- **الحجم**: 196 ملف TS/TSX (~36 ألف سطر). أضخم الملفات: `ResourcePayablesSection.tsx` (2078)، `FundsSection.tsx` (917)، `ExpensesSection.tsx` (839)، `types/project.ts` (833)، `export.ts` (801)، `resourcePayableSlice.ts` (738).
+- **الاختبارات**: 111/111 خضراء (9 ملفات) + pgTAP في CI.
+- **الباكاند**: 72 migration، 10 edge functions، 35 جدولاً بـ RLS.
+- **طبقة البيانات**: `src/services/db.ts` (retry + offline queue) مطبَّقة على الـ slices، لكن ما زالت صفحات ومكوّنات تستورد عميل قاعدة البيانات مباشرة: `UserManagement.tsx`، `SystemAuditLog.tsx`، `MobileExpenseCapture.tsx`، `AIExecutiveInsights.tsx`، `SsotExplainButton.tsx`، `useRole.tsx`، `useSessionTimeout.tsx`، `store/helpers.ts`.
+- **TypeScript**: `strictNullChecks: false`، `noImplicitAny: false`، و`as any` منتشر في مسارات الاستعلام (`supabase as any` في 11 ملفاً) — أنواع `types.ts` المولَّدة غير مستفاد منها فعلياً.
+- **حالة الخادم**: `@tanstack/react-query` مثبَّت لكن **غير مستخدَم في أي ملف**؛ كل التحميل يتم عبر `loadAll()` في Zustand عند الإقلاع (تحميل جماعي لكل الجداول).
+- **البناء**: Vite افتراضي بلا تقسيم chunks يدوي؛ `xlsx` + `jspdf` + `recharts` تُحمَّل ضمن حزم الصفحات.
+- **DB linter**: 10 تحذيرات كلها من فئة "SECURITY DEFINER قابلة للتنفيذ" (2 لـ anon، 8 لـ authenticated).
 
-## الجزء الأول — إكمال Phase B (Advance → Expense Settlement)
+## المشاكل الجوهرية
 
-البنية التحتية جاهزة (RPC `split_settle_advance` + triggers). ما ينقص: واجهة المستخدم داخل تدفق طلب الصرف.
+1. **ازدواج مصدر البيانات**: `loadAll` يسحب كل الجداول لكل المستخدمين عند الدخول → بطء إقلاع وتضخم ذاكرة، وبلا cache/invalidation منظم رغم وجود react-query.
+2. **تسريب طبقة البيانات**: صفحات تتحدث مباشرةً مع العميل فتفوّت retry/offline/logging.
+3. **ضعف أمان الأنواع**: `strictNullChecks: false` + `as any` يلغيان فائدة الأنواع المولَّدة، ويخفيان أخطاء nullable في الحسابات المالية.
+4. **مكوّنات ضخمة**: ملفات الأقسام تتجاوز 800–2000 سطر وتخلط عرضاً ومنطقاً ونماذج.
+5. **حجم الحزمة**: مكتبات التصدير الثقيلة غير مؤجَّلة.
+6. **تحذيرات SECURITY DEFINER** على انتقاء دوال في الـ API schema.
 
-### 1.1 خدمة جديدة `src/services/advanceSettlementService.ts`
-- `settleAdvance({ prId, mode: 'full' | 'partial' | 'split', ... })` تغلف نداءات RPC/Insert.
-- Modes:
-  - **full**: مصروف واحد بمبلغ السلفة الكامل (event `documented`).
-  - **partial**: مصروف جزئي + إبقاء الباقي مفتوحاً.
-  - **split**: يستدعي `split_settle_advance` عندما يتجاوز المصروف مبلغ السلفة (فائض من دفعة/عهدة أخرى).
+## الخطة — 3 مراحل
 
-### 1.2 مكوّن `AdvanceSettlementInspector.tsx`
-- يفتح من `PaymentRequestsSection` أو من زر "تسوية" داخل قائمة السلف المفتوحة.
-- InspectorPanel مع ثلاثة أوضاع + معاينة SSOT (المتبقي، أثر التسوية).
+### المرحلة 1: إغلاق طبقة الوصول للبيانات
+- ترحيل الملفات الستة المتبقية إلى `services/` (خدمات: `userService`، `auditService`، `mobileExpenseService`، `aiService`، `ssotService`).
+- منع الانحدار عبر قاعدة ESLint `no-restricted-imports` تحظر استيراد عميل القاعدة خارج `src/services/` و`src/integrations/`.
+- توحيد `store/helpers.ts` على `db.userId()`.
 
-### 1.3 ربطه في `ExpensesSection`
-- Dropdown "من سلفة مفتوحة" داخل نموذج المصروف يفتح Inspector السابق بدل السماح بإدخال حر.
+### المرحلة 2: نموذج بيانات الخادم والأداء
+- إدخال React Query فعلياً: تحويل `loadProjectData` / `loadCompanyData` إلى queries بمفاتيح مُنظَّمة مع `staleTime`، وإبقاء Zustand للحالة المحلية (اختيارات، فلاتر) فقط.
+- تقليم `loadAll` إلى الحد الأدنى للإقلاع (الشركات + المحافظ + المشاريع)، وتحميل البقية عند الطلب.
+- تقسيم الحزمة: `manualChunks` لـ `xlsx`/`jspdf`/`recharts` + استيراد ديناميكي داخل `lib/export.ts`.
 
----
+### المرحلة 3: صرامة الأنواع والباكاند
+- تفعيل `strictNullChecks` تدريجياً (`src/lib/finance/**` و`src/services/**` أولاً) وإزالة `supabase as any` باستخدام `Database` المولَّد.
+- تفكيك `ResourcePayablesSection.tsx` و`FundsSection.tsx` و`ExpensesSection.tsx` إلى (جدول / نموذج / لوحة تفاصيل / hook منطق).
+- migration واحد يضبط صلاحيات الدوال الـ 10 المُبلَّغ عنها: REVOKE من `PUBLIC`/`anon`، ومنح `authenticated` فقط للدوال المقصود استدعاؤها من العميل.
 
-## الجزء الثاني — طبقة `services/` (Week 1, تقليل الديون)
+## تفاصيل تقنية
 
-### 2.1 هيكل جديد
-```text
-src/services/
-  supabaseClient.ts        # re-export موحّد (نقطة عزل)
-  fundService.ts           # كل نداءات project_funds + cash_transfers
-  custodyService.ts        # custodies + auto-close
-  expenseService.ts        # expenses CRUD + validations
-  paymentRequestService.ts # payment_requests + settlement_events
-  resourcePayableService.ts# resource_reimbursements (resource + vendor)
-  advanceSettlementService.ts
-```
-- كل service يُرجع Result موحد `{ data, error }` ويرمي أخطاء موصوفة بالعربي.
-- Slices تستدعي services فقط — ممنوع استيراد `supabase` مباشرة في slices بعد الترحيل.
-
-### 2.2 ترحيل تدريجي (بدون كسر)
-- المرحلة الأولى: نقل جميع `.from('project_funds')` و `.from('cash_transfers')` من `fundSlice` و `cashTransferSlice` إلى `fundService`.
-- المرحلة الثانية: `resourcePayableSlice.ts` (836 سطر) — نقل CRUD إلى `resourcePayableService.ts` + `advanceSettlementService.ts`، الإبقاء على الحالة/الاختيار في الـ slice فقط.
-- Slices تصبح "state + orchestration" فقط.
-
----
-
-## الجزء الثالث — تفكيك الملفات الكبيرة
-
-### 3.1 `ProjectDetail.tsx` (955 سطر)
-مقسّم إلى:
-- `ProjectDetailHeader.tsx` (PageHeader + status menu + actions) — موجود جزئياً.
-- `ProjectTabsConfig.ts` — قائمة التبويبات + الأيقونات + الصلاحيات في مكان واحد.
-- `useProjectDetailData.ts` — hook يجمع كل selectors + realtime subscriptions.
-- الملف الأصلي يبقى Shell (< 200 سطر) يركّب المكوّنات.
-
-### 3.2 `resourcePayableSlice.ts` (836 سطر)
-- استخراج الأنواع إلى `src/types/resourcePayables.ts`.
-- استخراج helpers الحساب إلى `src/lib/resource-payables.ts` (موجود — نوسّعه).
-- استخراج CRUD إلى `resourcePayableService.ts`.
-- الـ slice يبقى ~200 سطر: state + actions تنسيقية.
-
-### 3.3 `finance.ts` (760 سطر)
-- تقسيم موضوعي:
-  - `src/lib/finance/evm.ts` — PV/EV/AC/CPI/SPI/EAC/ETC.
-  - `src/lib/finance/variance.ts` — CV/SV/VAC + تفسيرات.
-  - `src/lib/finance/forecast.ts` — TCPI + توقعات.
-  - `src/lib/finance/index.ts` — re-exports للتوافق العكسي (لا يكسر الاستيرادات القائمة).
-
----
-
-## ضمانات الجودة
-- كل ترحيل يصاحبه تشغيل `vitest run` — الاختبارات الحالية (`funds.test.ts`, `resource-payables.test.ts`, `evm`) يجب أن تبقى خضراء.
-- إضافة اختبارات جديدة:
-  - `advanceSettlementService.test.ts` (mock supabase) — full/partial/split.
-  - `fundService.test.ts` — دلالة `effectiveAmount` بعد التحويل.
-- لا تغييرات على schema أو RLS في هذه الخطة (البنية جاهزة).
-
----
-
-## ترتيب التنفيذ (هذه الجلسة والتي تليها)
-1. إنشاء هيكل `src/services/` + `fundService.ts` + `paymentRequestService.ts` + `advanceSettlementService.ts`.
-2. `AdvanceSettlementInspector.tsx` + ربطه في PaymentRequests.
-3. تقسيم `finance.ts` (الأسهل، بدون سلوك).
-4. تفكيك `ProjectDetail.tsx` عبر hook + config.
-5. تقليم `resourcePayableSlice.ts` عبر `resourcePayableService.ts`.
-
-قل "ابدأ" لأنفذ الخطوات 1→5 بالتتابع، أو حدّد أي خطوة أولاً.
+- لا تغيير في المخطط سوى منح/سحب صلاحيات التنفيذ.
+- كل مرحلة تُغلَق بـ `bun run test` (111 حالياً) + فحص أنواع، مع إضافة اختبارات للخدمات الجديدة.
+- المراحل مستقلة ويمكن تنفيذ أي منها منفردة.
