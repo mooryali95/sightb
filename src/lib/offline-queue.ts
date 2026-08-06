@@ -27,6 +27,20 @@ export interface QueuedMutation {
 
 type Listener = (items: QueuedMutation[]) => void;
 const listeners = new Set<Listener>();
+
+/** Permanently-failed replays (validation / RLS) — the UI must warn the user. */
+export interface FailedMutation {
+  item: QueuedMutation;
+  message: string;
+}
+type FailureListener = (failure: FailedMutation) => void;
+const failureListeners = new Set<FailureListener>();
+
+export function subscribeToQueueFailures(listener: FailureListener): () => void {
+  failureListeners.add(listener);
+  return () => failureListeners.delete(listener);
+}
+
 let flushing = false;
 
 function read(): QueuedMutation[] {
@@ -113,8 +127,10 @@ export async function flushQueue(): Promise<{ flushed: number; remaining: number
           logger.warn('offline-queue', 'ما زال الاتصال منقطعاً — سيُعاد المحاولة لاحقاً');
           break;
         }
-        // Permanent failure (validation / RLS): drop it so the queue never jams.
+        // Permanent failure (validation / RLS): drop it so the queue never jams,
+        // but notify the UI so the user knows the row never reached the server.
         logger.error('offline-queue', `فشل نهائي في ${head.op} على ${head.table}: ${message}`);
+        failureListeners.forEach((l) => l({ item: head, message }));
         items = rest;
         write(items);
       }
