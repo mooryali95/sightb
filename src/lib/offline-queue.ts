@@ -27,6 +27,20 @@ export interface QueuedMutation {
 
 type Listener = (items: QueuedMutation[]) => void;
 const listeners = new Set<Listener>();
+
+/** Permanently-failed replays (validation / RLS) — the UI must warn the user. */
+export interface FailedMutation {
+  item: QueuedMutation;
+  message: string;
+}
+type FailureListener = (failure: FailedMutation) => void;
+const failureListeners = new Set<FailureListener>();
+
+export function subscribeToQueueFailures(listener: FailureListener): () => void {
+  failureListeners.add(listener);
+  return () => failureListeners.delete(listener);
+}
+
 let flushing = false;
 
 function read(): QueuedMutation[] {
