@@ -127,8 +127,10 @@ export async function flushQueue(): Promise<{ flushed: number; remaining: number
           logger.warn('offline-queue', 'ما زال الاتصال منقطعاً — سيُعاد المحاولة لاحقاً');
           break;
         }
-        // Permanent failure (validation / RLS): drop it so the queue never jams.
+        // Permanent failure (validation / RLS): drop it so the queue never jams,
+        // but notify the UI so the user knows the row never reached the server.
         logger.error('offline-queue', `فشل نهائي في ${head.op} على ${head.table}: ${message}`);
+        failureListeners.forEach((l) => l({ item: head, message }));
         items = rest;
         write(items);
       }
