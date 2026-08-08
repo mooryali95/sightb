@@ -449,10 +449,12 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                                   if (!fid) return;
                                   const f = availableFunds.find(x => x.id === fid);
                                   if (!f) return;
-                                  if (f.remaining < c.amount - c.spent) {
-                                    toast.error(`رصيد الدفعة لا يكفي. المتاح: ${formatCurrency(f.remaining)}, المطلوب: ${formatCurrency(c.amount - c.spent)}`);
+                                  // ربط العهدة بدفعة يسحب مبلغ العهدة الأساسي كاملاً من الدفعة
+                                  if (f.remaining < c.amount) {
+                                    toast.error(`رصيد الدفعة لا يكفي. المتاح: ${formatCurrency(f.remaining)}, المطلوب: ${formatCurrency(c.amount)}`);
                                     return;
                                   }
+
                                   try {
                                     await updateCustody(c.id, { sourceFundId: fid } as any);
                                     toast.success(`تم ربط العهدة بالدفعة #${f.fundNumber}`);
