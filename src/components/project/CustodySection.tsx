@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 
-import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining } from '@/lib/funds';
+import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining, getCustodyBreakdown } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
@@ -144,10 +144,17 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   };
 
   const enrichedCustodies = custodies.map(c => {
-    const spent = expenses.filter((e: any) => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
-    const transfersIn = getCustodyCashTransfersIn(c.id, projTransfers);
-    const effectiveAmount = c.amount + transfersIn;
-    return { ...c, spent, transfersIn, effectiveAmount, remaining: effectiveAmount - spent };
+    const bd = getCustodyBreakdown(c, expenses as any, projTransfers, projPRs);
+    return {
+      ...c,
+      breakdown: bd,
+      spent: bd.spent,
+      transfersIn: bd.transfersIn,
+      outstandingAdvances: bd.outstandingAdvances,
+      effectiveAmount: bd.availableAmount,
+      remaining: bd.remaining,
+      spendPercent: bd.spendPercent,
+    };
   });
 
   // Auto-close exhausted custodies (via Zustand updateCustody — keeps state in sync)
@@ -166,6 +173,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
 
   const totalAmount = enrichedCustodies.reduce((s, c) => s + c.effectiveAmount, 0);
   const totalSpent = enrichedCustodies.reduce((s, c) => s + c.spent, 0);
+
 
   const openTransfer = (custodyId: string) => {
     setTransferCustodyId(custodyId);
@@ -353,6 +361,8 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
               <tr>
                 <th>المستلم</th>
                 <th>مبلغ العهدة</th>
+                <th className="hidden sm:table-cell">تحويلات واردة</th>
+                <th>الإجمالي المتاح</th>
                 <th>المصروف</th>
                 <th>المتبقي</th>
                 <th className="hidden sm:table-cell">نسبة الصرف</th>
@@ -364,9 +374,10 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             </thead>
             <tbody>
               {enrichedCustodies.map((c) => {
-                const pct = c.effectiveAmount > 0 ? (c.spent / c.effectiveAmount) * 100 : 0;
+                const pct = c.spendPercent;
                 return (
                   <tr key={c.id} className={pct > 100 ? 'bg-destructive/5' : ''}>
+
                     <td className="font-medium">
                       <div className="flex flex-col gap-0.5">
                         <span>{c.resourceName}</span>
@@ -385,16 +396,28 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                       </div>
                     </td>
                     <td className="font-mono text-sm">{formatCurrency(c.amount)}</td>
-                    <td className="font-mono text-sm">{formatCurrency(c.spent)}</td>
+                    <td className="font-mono text-sm hidden sm:table-cell">
+                      {c.transfersIn > 0
+                        ? <span className="text-primary">+{formatCurrency(c.transfersIn)}</span>
+                        : <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="font-mono text-sm font-semibold">{formatCurrency(c.effectiveAmount)}</td>
+                    <td className="font-mono text-sm">
+                      {formatCurrency(c.spent)}
+                      {c.outstandingAdvances > 0 && (
+                        <span className="block text-[10px] text-warning">+ سلف {formatCurrency(c.outstandingAdvances)}</span>
+                      )}
+                    </td>
                     <td>
                       <span className={c.remaining >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(c.remaining)}</span>
                       {c.remaining <= 0 && (
                         <span className="text-xs text-destructive mr-1">⚠️ مستنفدة</span>
                       )}
-                      {c.remaining > 0 && c.remaining < c.amount * 0.1 && (
+                      {c.remaining > 0 && c.remaining < c.effectiveAmount * 0.1 && (
                         <span className="text-xs text-warning mr-1">⚠️ أقل من 10%</span>
                       )}
                     </td>
+
                     <td className="hidden sm:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -426,10 +449,12 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                                   if (!fid) return;
                                   const f = availableFunds.find(x => x.id === fid);
                                   if (!f) return;
-                                  if (f.remaining < c.amount - c.spent) {
-                                    toast.error(`رصيد الدفعة لا يكفي. المتاح: ${formatCurrency(f.remaining)}, المطلوب: ${formatCurrency(c.amount - c.spent)}`);
+                                  // ربط العهدة بدفعة يسحب مبلغ العهدة الأساسي كاملاً من الدفعة
+                                  if (f.remaining < c.amount) {
+                                    toast.error(`رصيد الدفعة لا يكفي. المتاح: ${formatCurrency(f.remaining)}, المطلوب: ${formatCurrency(c.amount)}`);
                                     return;
                                   }
+
                                   try {
                                     await updateCustody(c.id, { sourceFundId: fid } as any);
                                     toast.success(`تم ربط العهدة بالدفعة #${f.fundNumber}`);
@@ -472,7 +497,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         if (!c) return null;
         const sf = c.sourceFundId ? projectFunds.find(f => f.id === c.sourceFundId) : null;
         const linkedExpenses = expenses.filter((e: any) => e.custodyId === c.id);
-        const pct = c.effectiveAmount > 0 ? (c.spent / c.effectiveAmount) * 100 : 0;
+        const pct = c.spendPercent;
         return (
           <InspectorPanel
             open={!!inspectorId}
@@ -493,10 +518,26 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
               items={[
                 { label: 'مبلغ العهدة', value: formatCurrency(c.amount) },
                 { label: 'تحويلات واردة', value: formatCurrency(c.transfersIn), tone: c.transfersIn > 0 ? 'info' : 'default' },
+                { label: 'الإجمالي المتاح', value: formatCurrency(c.effectiveAmount) },
                 { label: 'المصروف', value: formatCurrency(c.spent), tone: 'warning' },
                 { label: 'المتبقي', value: formatCurrency(c.remaining), tone: c.remaining > 0 ? 'success' : 'destructive' },
               ]}
             />
+
+            <InspectorSection title="معادلة الرصيد">
+              <div className="text-xs font-mono leading-6 bg-muted/40 rounded-md p-3 space-y-0.5" dir="rtl">
+                <div>مبلغ العهدة: {formatCurrency(c.amount)}</div>
+                <div>+ تحويلات نقدية واردة: {formatCurrency(c.transfersIn)}</div>
+                <div>= الإجمالي المتاح: {formatCurrency(c.effectiveAmount)}</div>
+                <div>− المصروفات المرتبطة: {formatCurrency(c.spent)}</div>
+                <div>− سلف قائمة من العهدة: {formatCurrency(c.outstandingAdvances)}</div>
+                <div className="border-t border-border pt-0.5 font-semibold">= المتبقي: {formatCurrency(c.remaining)}</div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                محسوب عبر <span className="font-mono">getCustodyBreakdown()</span> — نفس المصدر المستخدم في كل الشاشات.
+              </p>
+            </InspectorSection>
+
 
             <InspectorSection title="نسبة الصرف">
               <div className="flex items-center gap-3">

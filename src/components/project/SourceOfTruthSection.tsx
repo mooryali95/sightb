@@ -10,7 +10,9 @@ import {
   getFundCustodyDraw,
   getFundOutstandingAdvances,
   getFundCashTransfersOut,
+  getCustodyBreakdown,
 } from '@/lib/funds';
+
 import type {
   Project, BudgetItem, Expense, Revenue, ChangeOrder,
   ProjectFund, FundSettlement, Custody, PaymentRequest, CashTransfer,
@@ -140,6 +142,10 @@ export function SourceOfTruthSection({
           totalTransferredFunds: fundsSummary.totalTransferred,
           outstandingAdvances: fundsSummary.totalOutstandingAdvances,
           totalCustodyDraw: fundsSummary.totalCustodyDraw,
+          custodyInHand: custodies
+            .filter((c) => c.projectId === project.id && c.status === 'active')
+            .reduce((s, c) => s + getCustodyBreakdown(c, expenses, cashTransfers, paymentRequests).remaining, 0),
+
           remainingFunds: fundsSummary.remainingInManagerHand,
           profit:
             project.contractValue + approvedCOImpact -

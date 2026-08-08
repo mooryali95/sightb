@@ -31,9 +31,14 @@ export interface ServerProjectSummary {
   outstandingPayablesResource: number;
   outstandingPayablesVendor: number;
   remainingFunds: number;
+  custodyAvailable: number;
+  custodySpent: number;
+  custodyOutstandingAdvances: number;
+  custodyInHand: number;
   profit: number;
   marginPercent: number;
 }
+
 
 const num = (v: unknown) => Number(v ?? 0);
 
@@ -58,6 +63,11 @@ function mapSummary(raw: Record<string, unknown>): ServerProjectSummary {
     outstandingPayablesResource: num(raw.outstanding_payables_resource),
     outstandingPayablesVendor: num(raw.outstanding_payables_vendor),
     remainingFunds: num(raw.remaining_funds),
+    custodyAvailable: num(raw.custody_available),
+    custodySpent: num(raw.custody_spent),
+    custodyOutstandingAdvances: num(raw.custody_outstanding_advances),
+    custodyInHand: num(raw.custody_in_hand),
+
     profit: num(raw.profit),
     marginPercent: num(raw.margin_percent),
   };
