@@ -497,7 +497,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         if (!c) return null;
         const sf = c.sourceFundId ? projectFunds.find(f => f.id === c.sourceFundId) : null;
         const linkedExpenses = expenses.filter((e: any) => e.custodyId === c.id);
-        const pct = c.effectiveAmount > 0 ? (c.spent / c.effectiveAmount) * 100 : 0;
+        const pct = c.spendPercent;
         return (
           <InspectorPanel
             open={!!inspectorId}
