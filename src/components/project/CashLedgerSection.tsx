@@ -92,20 +92,20 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
     return m;
   }, [projectPayReqs]);
 
+  const custodyBd = (c: typeof projectCustodies[number]) =>
+    getCustodyBreakdown(c, projectExpenses, projectTransfers, projectPayReqs);
   const custodySpent = (id: string) =>
-    projectExpenses.filter((e) => e.custodyId === id).reduce((s, e) => s + e.amount, 0);
+    projectExpenses.filter((e) => e.custodyId === id && e.approvalStatus !== 'rejected').reduce((s, e) => s + e.amount, 0);
 
   const activeCustodies = projectCustodies.filter((c) => c.status === 'active');
-  // ★ effectiveAmount = c.amount + Σ cash_transfers_in — يجب أن يعكس النقد الوارد للعهدة
-  const activeCustodyAmount = activeCustodies.reduce(
-    (s, c) => s + c.amount + getCustodyCashTransfersIn(c.id, projectTransfers),
-    0,
-  );
-  const activeCustodySpent = activeCustodies.reduce((s, c) => s + custodySpent(c.id), 0);
-  const inHandsOfHolders = activeCustodyAmount - activeCustodySpent;
+  // SSOT: كل الأرقام من getCustodyBreakdown (المتاح = المبلغ + التحويلات الواردة)
+  const activeCustodyAmount = activeCustodies.reduce((s, c) => s + custodyBd(c).availableAmount, 0);
+  const activeCustodySpent = activeCustodies.reduce((s, c) => s + custodyBd(c).spent, 0);
+  const inHandsOfHolders = activeCustodies.reduce((s, c) => s + custodyBd(c).remaining, 0);
 
   const directSpend = summary.totalDocumentedSpend;
-  const custodyTotalSpend = projectCustodies.reduce((s, c) => s + custodySpent(c.id), 0);
+  const custodyTotalSpend = projectCustodies.reduce((s, c) => s + custodyBd(c).spent, 0);
+
   const totalDocumentedExpense = directSpend + custodyTotalSpend;
   const openFundsCount = projectFundsList.filter((f) => f.status !== 'settled').length;
 
