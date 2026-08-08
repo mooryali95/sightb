@@ -31,9 +31,14 @@ export interface ServerProjectSummary {
   outstandingPayablesResource: number;
   outstandingPayablesVendor: number;
   remainingFunds: number;
+  custodyAvailable: number;
+  custodySpent: number;
+  custodyOutstandingAdvances: number;
+  custodyInHand: number;
   profit: number;
   marginPercent: number;
 }
+
 
 const num = (v: unknown) => Number(v ?? 0);
 
