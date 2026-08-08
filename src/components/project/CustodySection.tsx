@@ -396,16 +396,28 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                       </div>
                     </td>
                     <td className="font-mono text-sm">{formatCurrency(c.amount)}</td>
-                    <td className="font-mono text-sm">{formatCurrency(c.spent)}</td>
+                    <td className="font-mono text-sm hidden sm:table-cell">
+                      {c.transfersIn > 0
+                        ? <span className="text-primary">+{formatCurrency(c.transfersIn)}</span>
+                        : <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="font-mono text-sm font-semibold">{formatCurrency(c.effectiveAmount)}</td>
+                    <td className="font-mono text-sm">
+                      {formatCurrency(c.spent)}
+                      {c.outstandingAdvances > 0 && (
+                        <span className="block text-[10px] text-warning">+ سلف {formatCurrency(c.outstandingAdvances)}</span>
+                      )}
+                    </td>
                     <td>
                       <span className={c.remaining >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(c.remaining)}</span>
                       {c.remaining <= 0 && (
                         <span className="text-xs text-destructive mr-1">⚠️ مستنفدة</span>
                       )}
-                      {c.remaining > 0 && c.remaining < c.amount * 0.1 && (
+                      {c.remaining > 0 && c.remaining < c.effectiveAmount * 0.1 && (
                         <span className="text-xs text-warning mr-1">⚠️ أقل من 10%</span>
                       )}
                     </td>
+
                     <td className="hidden sm:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
