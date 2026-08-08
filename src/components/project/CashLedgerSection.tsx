@@ -451,12 +451,15 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
               ) : (
                 <div className="space-y-2">
                   {projectCustodies.map((c) => {
+                    const bd = getCustodyBreakdown(c, projectExpenses, projectTransfers, projectPayReqs);
                     const linked = projectExpenses.filter((e) => e.custodyId === c.id);
-                    const spent = linked.reduce((s, e) => s + e.amount, 0);
-                    const remaining = c.amount - spent;
+                    const spent = bd.spent;
+                    const available = bd.availableAmount;
+                    const remaining = bd.remaining;
                     const fromPR = linked.filter((e) => expenseToPayReq.has(e.id));
                     const fromPRTotal = fromPR.reduce((s, e) => s + e.amount, 0);
                     const directTotal = spent - fromPRTotal;
+
                     const isOpen = openCustodies.has(c.id);
                     return (
                       <div key={c.id} className="border border-border rounded-lg overflow-hidden">
