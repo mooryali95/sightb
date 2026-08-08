@@ -518,10 +518,26 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
               items={[
                 { label: 'مبلغ العهدة', value: formatCurrency(c.amount) },
                 { label: 'تحويلات واردة', value: formatCurrency(c.transfersIn), tone: c.transfersIn > 0 ? 'info' : 'default' },
+                { label: 'الإجمالي المتاح', value: formatCurrency(c.effectiveAmount) },
                 { label: 'المصروف', value: formatCurrency(c.spent), tone: 'warning' },
                 { label: 'المتبقي', value: formatCurrency(c.remaining), tone: c.remaining > 0 ? 'success' : 'destructive' },
               ]}
             />
+
+            <InspectorSection title="معادلة الرصيد">
+              <div className="text-xs font-mono leading-6 bg-muted/40 rounded-md p-3 space-y-0.5" dir="rtl">
+                <div>مبلغ العهدة: {formatCurrency(c.amount)}</div>
+                <div>+ تحويلات نقدية واردة: {formatCurrency(c.transfersIn)}</div>
+                <div>= الإجمالي المتاح: {formatCurrency(c.effectiveAmount)}</div>
+                <div>− المصروفات المرتبطة: {formatCurrency(c.spent)}</div>
+                <div>− سلف قائمة من العهدة: {formatCurrency(c.outstandingAdvances)}</div>
+                <div className="border-t border-border pt-0.5 font-semibold">= المتبقي: {formatCurrency(c.remaining)}</div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                محسوب عبر <span className="font-mono">getCustodyBreakdown()</span> — نفس المصدر المستخدم في كل الشاشات.
+              </p>
+            </InspectorSection>
+
 
             <InspectorSection title="نسبة الصرف">
               <div className="flex items-center gap-3">
