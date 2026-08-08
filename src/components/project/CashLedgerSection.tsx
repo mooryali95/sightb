@@ -491,13 +491,14 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                                 )}
                               </div>
                               <span className="font-mono text-xs text-muted-foreground">
-                                {formatCurrency(spent)} / {formatCurrency(c.amount)}
+                                {formatCurrency(spent)} / {formatCurrency(available)}
                               </span>
                             </div>
                             <div className="mt-1.5 h-1.5 w-full bg-muted rounded-full overflow-hidden flex">
-                              <div className="h-full bg-primary" style={{ width: `${Math.min(100, (directTotal / Math.max(1, c.amount)) * 100)}%` }} />
-                              <div className="h-full bg-violet-500" style={{ width: `${Math.min(100 - (directTotal / Math.max(1, c.amount)) * 100, (fromPRTotal / Math.max(1, c.amount)) * 100)}%` }} />
+                              <div className="h-full bg-primary" style={{ width: `${Math.min(100, (directTotal / Math.max(1, available)) * 100)}%` }} />
+                              <div className="h-full bg-violet-500" style={{ width: `${Math.min(100 - (directTotal / Math.max(1, available)) * 100, (fromPRTotal / Math.max(1, available)) * 100)}%` }} />
                             </div>
+
                             <p className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
                               <span>مصروفات مباشرة: {formatCurrency(directTotal)}</span>
                               {fromPRTotal > 0 && <span className="text-violet-600">طلبات صرف: {formatCurrency(fromPRTotal)}</span>}
