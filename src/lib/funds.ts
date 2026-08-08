@@ -112,6 +112,60 @@ export function getCustodyCashTransfersIn(
 }
 
 /**
+ * SSOT: التفصيل الوحيد المعتمد لرصيد العهدة.
+ * كل شاشة تعرض "متبقي العهدة" أو "نسبة الصرف" يجب أن تستهلك هذه الدالة.
+ *
+ *   المتاح  = المبلغ الأساسي + التحويلات النقدية الواردة
+ *   المتبقي = المتاح − المصروف المعتمد − السلف القائمة من العهدة
+ */
+export interface CustodyBreakdown {
+  custodyId: string;
+  baseAmount: number;        // مبلغ العهدة عند الإنشاء
+  transfersIn: number;       // نقد وارد لاحقاً من دفعات
+  availableAmount: number;   // الإجمالي المتاح
+  spent: number;             // مصروفات مرتبطة (غير المرفوضة)
+  outstandingAdvances: number; // سلف مدفوعة من العهدة ولم تُسوَّ
+  remaining: number;
+  spendPercent: number;      // على أساس المتاح
+}
+
+export function getCustodyBreakdown(
+  custody: Custody,
+  expenses: Expense[] = [],
+  cashTransfers: CashTransfer[] = [],
+  paymentRequests: PaymentRequest[] = [],
+): CustodyBreakdown {
+  const transfersIn = getCustodyCashTransfersIn(custody.id, cashTransfers);
+  const availableAmount = custody.amount + transfersIn;
+  const spent = expenses
+    .filter((e) => e.custodyId === custody.id && e.approvalStatus !== 'rejected')
+    .reduce((s, e) => s + e.amount, 0);
+  const outstandingAdvances = getCustodyOutstandingAdvances(custody.id, paymentRequests);
+  const remaining = availableAmount - spent - outstandingAdvances;
+  return {
+    custodyId: custody.id,
+    baseAmount: custody.amount,
+    transfersIn,
+    availableAmount,
+    spent,
+    outstandingAdvances,
+    remaining,
+    spendPercent: availableAmount > 0 ? ((spent + outstandingAdvances) / availableAmount) * 100 : 0,
+  };
+}
+
+export function getCustodyRemaining(
+  custody: Custody,
+  expenses: Expense[] = [],
+  cashTransfers: CashTransfer[] = [],
+  paymentRequests: PaymentRequest[] = [],
+): number {
+  return getCustodyBreakdown(custody, expenses, cashTransfers, paymentRequests).remaining;
+}
+
+
+
+/**
  * إجمالي ما "خرج" من الدفعة = مصروف مباشر + عهد مسحوبة منها + سلف قائمة عليها + تحويلات نقدية صادرة.
  */
 export function getFundSpent(
