@@ -144,10 +144,17 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   };
 
   const enrichedCustodies = custodies.map(c => {
-    const spent = expenses.filter((e: any) => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
-    const transfersIn = getCustodyCashTransfersIn(c.id, projTransfers);
-    const effectiveAmount = c.amount + transfersIn;
-    return { ...c, spent, transfersIn, effectiveAmount, remaining: effectiveAmount - spent };
+    const bd = getCustodyBreakdown(c, expenses as any, projTransfers, projPRs);
+    return {
+      ...c,
+      breakdown: bd,
+      spent: bd.spent,
+      transfersIn: bd.transfersIn,
+      outstandingAdvances: bd.outstandingAdvances,
+      effectiveAmount: bd.availableAmount,
+      remaining: bd.remaining,
+      spendPercent: bd.spendPercent,
+    };
   });
 
   // Auto-close exhausted custodies (via Zustand updateCustody — keeps state in sync)
@@ -166,6 +173,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
 
   const totalAmount = enrichedCustodies.reduce((s, c) => s + c.effectiveAmount, 0);
   const totalSpent = enrichedCustodies.reduce((s, c) => s + c.spent, 0);
+
 
   const openTransfer = (custodyId: string) => {
     setTransferCustodyId(custodyId);
