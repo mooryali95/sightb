@@ -19,6 +19,7 @@ interface ClientFigures {
   totalTransferredFunds: number;
   outstandingAdvances: number;
   totalCustodyDraw: number;
+  custodyInHand: number;
   remainingFunds: number;
   profit: number;
 }
@@ -34,9 +35,11 @@ const LABELS: Record<keyof ClientFigures, string> = {
   totalTransferredFunds: 'إجمالي الدفعات المحوّلة',
   outstandingAdvances: 'السلف القائمة',
   totalCustodyDraw: 'المسحوب للعُهد',
+  custodyInHand: 'النقد بيد مستلمي العُهد',
   remainingFunds: 'المتبقي من الدفعات',
   profit: 'الربح المتوقع',
 };
+
 
 /** فرق أقل من هللة واحدة ليس اختلافاً حقيقياً. */
 const TOLERANCE = 0.01;
