@@ -354,9 +354,10 @@ export function getFundOpenItems(
   const openCustodies = custodies
     .filter((c) => c.sourceFundId === fundId && c.status !== 'closed')
     .map((c) => {
-      const spent = expenses.filter((e) => e.custodyId === c.id).reduce((s, e) => s + e.amount, 0);
-      return { id: c.id, resourceName: c.resourceName, amount: c.amount, remaining: c.amount - spent };
+      const bd = getCustodyBreakdown(c, expenses, cashTransfers, paymentRequests);
+      return { id: c.id, resourceName: c.resourceName, amount: bd.availableAmount, remaining: bd.remaining };
     });
+
 
   const outstandingAdvances = paymentRequests
     .filter((p) =>
