@@ -361,6 +361,8 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
               <tr>
                 <th>المستلم</th>
                 <th>مبلغ العهدة</th>
+                <th className="hidden sm:table-cell">تحويلات واردة</th>
+                <th>الإجمالي المتاح</th>
                 <th>المصروف</th>
                 <th>المتبقي</th>
                 <th className="hidden sm:table-cell">نسبة الصرف</th>
@@ -372,9 +374,10 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             </thead>
             <tbody>
               {enrichedCustodies.map((c) => {
-                const pct = c.effectiveAmount > 0 ? (c.spent / c.effectiveAmount) * 100 : 0;
+                const pct = c.spendPercent;
                 return (
                   <tr key={c.id} className={pct > 100 ? 'bg-destructive/5' : ''}>
+
                     <td className="font-medium">
                       <div className="flex flex-col gap-0.5">
                         <span>{c.resourceName}</span>
