@@ -39,6 +39,8 @@ import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSe
 import { VendorPayablesPanel } from '@/components/project/VendorPayablesPanel';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
 import { SourceOfTruthSection } from '@/components/project/SourceOfTruthSection';
+import { SsotHealthBanner } from '@/components/project/SsotHealthBanner';
+
 import { PerformanceComparisonSection } from '@/components/project/PerformanceComparisonSection';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 
@@ -273,12 +275,25 @@ export default function ProjectDetail() {
           onDelete={handleDelete}
         />
 
+        <SsotHealthBanner
+          project={project}
+          expenses={pExpenses}
+          custodies={pCustodies}
+          paymentRequests={paymentRequests.filter((p) => p.projectId === project.id)}
+          cashTransfers={(cashTransfers || []).filter((t) => t.projectId === project.id)}
+          funds={projectFunds.filter((f) => f.projectId === project.id)}
+          settlements={fundSettlements.filter((s) => s.projectId === project.id)}
+          changeOrders={pChangeOrders}
+          onInspect={() => navigateToTab('ssot')}
+        />
+
         <ProjectEditDialog
           open={editOpen}
           onOpenChange={setEditOpen}
           project={project}
           onSave={(values) => updateProject(project.id, values)}
         />
+
 
         <ProjectStatsGrid
           project={project} summary={summary} evm={evm} currentMonth={currentMonth}
