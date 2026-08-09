@@ -73,3 +73,9 @@ export async function exportSettlementEventsPDF(
 ) {
   return (await load()).exportSettlementEventsPDF(rows, projectName, currency);
 }
+
+export async function exportSsotReportPDF(
+  data: import('./ssot-report').SsotReportInput & { currency?: string },
+) {
+  return (await load()).exportSsotReportPDF(data);
+}

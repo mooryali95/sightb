@@ -24,6 +24,9 @@ import { Info, FunctionSquare, Database, Calculator } from 'lucide-react';
 import type { ProjectSummary, EVMMetrics } from '@/types/project';
 import { SsotExplainButton } from './SsotExplainButton';
 import { ServerTruthCard } from './ServerTruthCard';
+import { SsotReportExportButton } from './SsotReportExportButton';
+import { buildSsotAudit } from '@/lib/ssot-report';
+
 
 
 
@@ -114,6 +117,14 @@ export function SourceOfTruthSection({
     .filter((p) => p.projectId === project.id && p.requestType === 'advance' && p.status === 'paid' && p.isAdvanceOutstanding === true)
     .reduce((s, p) => s + Math.max(p.amount - (p.refundedAmount ?? 0), 0), 0);
 
+  const audit = buildSsotAudit({
+    projectId: project.id,
+    contractValue: project.contractValue,
+    expenses, custodies, paymentRequests, cashTransfers, funds, settlements, changeOrders,
+  });
+
+
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-primary/25 bg-primary/5 p-4">
@@ -132,28 +143,22 @@ export function SourceOfTruthSection({
         </div>
       </div>
 
+      <div className="flex justify-end">
+        <SsotReportExportButton
+          project={project}
+          audit={audit}
+          revenues={revenues}
+          funds={funds}
+          settlements={settlements}
+        />
+      </div>
+
       <ServerTruthCard
         projectId={project.id}
         currency={currency}
-        client={{
-          totalActualExpenses: expenses
-            .filter((e) => e.projectId === project.id && e.approvalStatus !== 'rejected')
-            .reduce((s, e) => s + e.amount, 0),
-          totalTransferredFunds: fundsSummary.totalTransferred,
-          outstandingAdvances: fundsSummary.totalOutstandingAdvances,
-          totalCustodyDraw: fundsSummary.totalCustodyDraw,
-          custodyInHand: custodies
-            .filter((c) => c.projectId === project.id && c.status === 'active')
-            .reduce((s, c) => s + getCustodyBreakdown(c, expenses, cashTransfers, paymentRequests).remaining, 0),
-
-          remainingFunds: fundsSummary.remainingInManagerHand,
-          profit:
-            project.contractValue + approvedCOImpact -
-            expenses
-              .filter((e) => e.projectId === project.id && e.approvalStatus !== 'rejected')
-              .reduce((s, e) => s + e.amount, 0),
-        }}
+        audit={audit}
       />
+
 
 
 
