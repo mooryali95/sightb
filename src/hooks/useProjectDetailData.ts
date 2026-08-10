@@ -24,19 +24,19 @@ export function useProjectDetailData(id: string | undefined) {
     loadAll, updateProject, archiveProject, deleteProject,
   } = useStore();
 
-  const { detailsLoaded, loadProjectData, subscribeToProject, loadFundsForProject, loadResourcePayablesForProject } =
+  const { detailsLoaded, loadProjectData, subscribeToProject, ensureProjectCashData } =
     useStore() as any;
 
   useCoreData();
   useProjectData(detailsLoaded ? undefined : id);
 
-  // Funds + payables are NOT part of loadAll(); without this they stay blank
-  // until an unrelated side-effect refetch happens.
+  // النقد (دفعات + مستحقات + تحويلات) ليس جزءاً من loadAll()/loadDetails()،
+  // وبدون تحميله تظهر أرصدة وهمية للدفعات والعُهد.
   useEffect(() => {
     if (!id) return;
-    loadFundsForProject?.(id).catch((e: any) => console.warn('[ProjectDetail] funds', e));
-    loadResourcePayablesForProject?.(id).catch((e: any) => console.warn('[ProjectDetail] payables', e));
-  }, [id, loadFundsForProject, loadResourcePayablesForProject]);
+    ensureProjectCashData?.(id).catch((e: any) => console.warn('[ProjectDetail] cash data', e));
+  }, [id, ensureProjectCashData]);
+
 
   // Realtime subscription for collaborative editing — cleanup on id change
   useEffect(() => {
