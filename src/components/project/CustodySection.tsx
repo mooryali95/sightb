@@ -29,7 +29,7 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests, cashTransfers, createCashTransfer, deleteCashTransfer } = useStore();
+  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests, cashTransfers, createCashTransfer, deleteCashTransfer, ensureProjectCashData } = useStore();
   const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
   const projTransfers = useMemo(
     () => (cashTransfers || []).filter((t) => t.projectId === projectId),
