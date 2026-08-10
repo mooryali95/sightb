@@ -207,7 +207,9 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
       toast.success('تم تسجيل تحويل النقد');
       setTransferOpen(false);
     } catch (e: any) {
-      toast.error(e.message || 'تعذّر تسجيل التحويل');
+      // رفض الخادم يعني أن أرقام الواجهة قديمة — أعد المزامنة فوراً
+      await ensureProjectCashData?.(projectId).catch(() => undefined);
+      toast.error(`${e.message || 'تعذّر تسجيل التحويل'} — تم تحديث الأرصدة من الخادم`);
     }
   };
 
