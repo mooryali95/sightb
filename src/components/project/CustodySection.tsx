@@ -29,7 +29,7 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests, cashTransfers, createCashTransfer, deleteCashTransfer } = useStore();
+  const { addCustody, updateCustody, deleteCustody, projectFunds, paymentRequests, cashTransfers, createCashTransfer, deleteCashTransfer, ensureProjectCashData } = useStore();
   const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
   const projTransfers = useMemo(
     () => (cashTransfers || []).filter((t) => t.projectId === projectId),
@@ -207,7 +207,9 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
       toast.success('تم تسجيل تحويل النقد');
       setTransferOpen(false);
     } catch (e: any) {
-      toast.error(e.message || 'تعذّر تسجيل التحويل');
+      // رفض الخادم يعني أن أرقام الواجهة قديمة — أعد المزامنة فوراً
+      await ensureProjectCashData?.(projectId).catch(() => undefined);
+      toast.error(`${e.message || 'تعذّر تسجيل التحويل'} — تم تحديث الأرصدة من الخادم`);
     }
   };
 

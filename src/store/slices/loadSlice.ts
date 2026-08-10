@@ -20,6 +20,7 @@ export interface LoadSlice {
   loadAll: () => Promise<void>;
   loadDetails: () => Promise<void>;
 
+  ensureProjectCashData: (projectId: string) => Promise<void>;
   loadProjectData: (projectId: string) => Promise<void>;
   loadCompanyData: (companyId: string) => Promise<void>;
   loadAuditLog: (projectId: string) => Promise<void>;
@@ -138,7 +139,30 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
   },
 
 
+  /**
+   * النقد (دفعات + مستحقات + تحويلات نقدية) ليس جزءاً من `loadDetails()`،
+   * لذلك يجب تحميله لكل مشروع دائماً — بغض النظر عن حالة `detailsLoaded`.
+   * إغفال هذا كان يسبب أرصدة وهمية (تحويلات صادرة غير محمّلة).
+   */
+  ensureProjectCashData: async (projectId: string) => {
+    const tasks: Array<Promise<unknown>> = [
+      Promise.resolve(get().loadFundsForProject(projectId)).catch((err) => {
+        console.warn('[Store.loadFundsForProject]', err);
+      }),
+      Promise.resolve(get().loadResourcePayablesForProject(projectId)).catch((err) => {
+        console.warn('[Store.loadResourcePayablesForProject]', err);
+      }),
+      Promise.resolve(get().loadCashTransfersForProject(projectId)).catch((err) => {
+        console.warn('[Store.loadCashTransfersForProject]', err);
+      }),
+    ];
+    await Promise.all(tasks);
+  },
+
   loadProjectData: async (projectId: string) => {
+    // بيانات النقد تُحمّل دائماً (SSOT للأرصدة)
+    await get().ensureProjectCashData(projectId);
+
     if (get().detailsLoaded || get().projectDataLoaded.has(projectId)) return;
 
     try {
@@ -153,24 +177,6 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         fetchAll('risks', 'created_at', false, { project_id: projectId }),
       ]);
 
-      // Load funds & settlements (non-blocking — failure shouldn't block project load)
-      try {
-        await get().loadFundsForProject(projectId);
-      } catch (err) {
-        console.warn('[Store.loadFundsForProject]', err);
-      }
-      // Load resource payables (reimbursements, payment requests, settlements)
-      try {
-        await get().loadResourcePayablesForProject(projectId);
-      } catch (err) {
-        console.warn('[Store.loadResourcePayablesForProject]', err);
-      }
-      // Load cash transfers (manager → custody)
-      try {
-        await get().loadCashTransfersForProject(projectId);
-      } catch (err) {
-        console.warn('[Store.loadCashTransfersForProject]', err);
-      }
 
       const mappedExpenses = expensesData.map(mapExpense);
       const loaded = new Set(get().projectDataLoaded);
