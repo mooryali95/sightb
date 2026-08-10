@@ -20,6 +20,7 @@ export interface LoadSlice {
   loadAll: () => Promise<void>;
   loadDetails: () => Promise<void>;
 
+  ensureProjectCashData: (projectId: string) => Promise<void>;
   loadProjectData: (projectId: string) => Promise<void>;
   loadCompanyData: (companyId: string) => Promise<void>;
   loadAuditLog: (projectId: string) => Promise<void>;
