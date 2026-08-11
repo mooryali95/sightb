@@ -46,7 +46,7 @@ export default function Landing() {
   if (user) return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background">
       {/* Hero */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--navy))] to-[hsl(var(--navy-light))]" />

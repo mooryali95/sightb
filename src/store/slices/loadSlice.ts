@@ -27,6 +27,18 @@ export interface LoadSlice {
   subscribeToProject: (projectId: string) => () => void;
 }
 
+/** Raw `audit_log` row as it comes back from PostgREST (snake_case). */
+interface AuditLogRow {
+  id: string;
+  user_id: string;
+  action: string;
+  table_name: string;
+  record_id: string;
+  record_data: unknown;
+  project_id: string | null;
+  created_at: string;
+}
+
 /**
  * Paginated fetch to overcome Supabase's 1000-row default limit.
  */
@@ -227,7 +239,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         .limit(100);
       if (error) throw error;
       set({
-        auditLog: (data || []).map((d) => ({
+        auditLog: (data as AuditLogRow[] | null ?? []).map((d) => ({
           id: d.id, userId: d.user_id, action: d.action,
           tableName: d.table_name, recordId: d.record_id,
           recordData: d.record_data, projectId: d.project_id || undefined,

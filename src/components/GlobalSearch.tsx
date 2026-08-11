@@ -161,7 +161,7 @@ export function GlobalSearch() {
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="h-[85vh] p-0 flex flex-col" dir="rtl">
+        <SheetContent side="bottom" className="h-[85vh] p-0 flex flex-col">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
             <SheetTitle className="text-right text-base">بحث سريع</SheetTitle>
           </SheetHeader>

@@ -1,15 +1,18 @@
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '@/types/project';
+import type {
+  Project, Expense, BudgetItem, Revenue, ChangeOrder, Company,
+} from '@/types/project';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface ProjectCardsProps {
-  filteredProjects: any[];
-  expenses: any[];
-  budgetItems: any[];
-  revenues: any[];
-  changeOrders: any[];
-  companies: any[];
+  filteredProjects: Project[];
+  expenses: Expense[];
+  budgetItems: BudgetItem[];
+  revenues: Revenue[];
+  changeOrders: ChangeOrder[];
+  companies: Company[];
 }
 
 export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues, changeOrders, companies }: ProjectCardsProps) {
@@ -25,12 +28,12 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"
     >
       {filteredProjects.slice(0, 6).map((project) => {
-        const pExpenses = expenses.filter((e: any) => e.projectId === project.id);
-        const pRevenues = revenues.filter((r: any) => r.projectId === project.id);
-        const pBudget = budgetItems.filter((b: any) => b.projectId === project.id);
-        const pCO = changeOrders.filter((co: any) => co.projectId === project.id);
+        const pExpenses = expenses.filter((e) => e.projectId === project.id);
+        const pRevenues = revenues.filter((r) => r.projectId === project.id);
+        const pBudget = budgetItems.filter((b) => b.projectId === project.id);
+        const pCO = changeOrders.filter((co) => co.projectId === project.id);
         const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues, pCO);
-        const company = companies.find((c: any) => c.id === project.companyId);
+        const company = companies.find((c) => c.id === project.companyId);
         const spendRate = summary.contractSpendRate;
         const budgetUtilization = summary.effectiveContractValue > 0 ? (summary.totalPlanned / summary.effectiveContractValue) * 100 : 0;
 

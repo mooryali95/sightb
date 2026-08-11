@@ -57,7 +57,7 @@ export function PortfolioPayablesSection({ projects }: Props) {
   if (projects.length === 0) return null;
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">

@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
-import { Milestone, ChangeOrder, Risk, Resource, Custody, Commitment } from '@/types/project';
+import { Milestone, ChangeOrder, Risk, Resource, Custody, Commitment, RiskUpdate } from '@/types/project';
 import {
   getUserId, logDeletion,
   mapMilestone, mapChangeOrder, mapRisk, mapResource, mapCustody, mapCommitment,
@@ -22,7 +22,7 @@ export interface TrackingSlice {
   deleteChangeOrder: (id: string) => Promise<void>;
   applyApprovedChangeOrder: (projectId: string, changeOrder: ChangeOrder) => Promise<void>;
   addRisk: (r: Omit<Risk, 'id' | 'createdAt'>) => Promise<string>;
-  updateRisk: (id: string, r: Partial<Risk>) => Promise<void>;
+  updateRisk: (id: string, r: RiskUpdate) => Promise<void>;
   deleteRisk: (id: string) => Promise<void>;
   addResource: (r: Omit<Resource, 'id' | 'createdAt'>) => Promise<string>;
   updateResource: (id: string, r: Partial<Resource>) => Promise<void>;
@@ -33,6 +33,25 @@ export interface TrackingSlice {
   addCommitment: (c: Omit<Commitment, 'id' | 'createdAt'>) => Promise<string>;
   updateCommitment: (id: string, c: Partial<Commitment>) => Promise<void>;
   deleteCommitment: (id: string) => Promise<void>;
+}
+
+/**
+ * Merges a write payload into the cached risk.
+ *
+ * A cleared column arrives as `null` (that is how `updateRisk` tells the
+ * database to blank it), but `mapRisk` hands back `undefined` for the same
+ * column on the next load. Collapsing here keeps the cached row identical to
+ * what a reload would produce — otherwise `risk.owner` reads as `null` until
+ * the page is refreshed and `undefined` afterwards.
+ */
+function applyRiskUpdate(current: Risk, update: RiskUpdate): Risk {
+  const merged = { ...current, ...update };
+  return {
+    ...merged,
+    description: merged.description || undefined,
+    mitigationPlan: merged.mitigationPlan || undefined,
+    owner: merged.owner || undefined,
+  };
 }
 
 export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> = (set, get) => ({
@@ -204,11 +223,10 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (r.mitigationPlan !== undefined) updates.mitigation_plan = r.mitigationPlan || null;
     if (r.owner !== undefined) updates.owner = r.owner || null;
     if (r.identifiedDate !== undefined) updates.identified_date = r.identifiedDate;
-    if (r.identifiedDate !== undefined) updates.identified_date = r.identifiedDate;
     if (r.closedDate !== undefined) updates.closed_date = r.closedDate;
     const { error } = await db.from('risks').update(updates).eq('id', id);
     if (error) throw error;
-    set((s) => ({ risks: s.risks.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
+    set((s) => ({ risks: s.risks.map((x) => (x.id === id ? applyRiskUpdate(x, r) : x)) }));
   },
 
   deleteRisk: async (id) => {

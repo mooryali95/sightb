@@ -73,7 +73,7 @@ export function AppBreadcrumb() {
   if (crumbs.length <= 1) return null;
 
   return (
-    <Breadcrumb dir="rtl" className="min-w-0">
+    <Breadcrumb className="min-w-0">
       <BreadcrumbList className="gap-1.5 text-xs sm:text-sm flex-nowrap">
         {crumbs.map((crumb, i) => {
           const isLast = i === crumbs.length - 1;

@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Secrets. `.env` itself is still tracked — see P0-03 in
+# docs/production-readiness-2026-08.md; untracking it needs the deployment to
+# supply VITE_SUPABASE_* first, or the build ships a client with no URL.
+# These patterns stop every *other* env file from ever being committed.
+.env.*
+!.env.example
+eslint-report.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

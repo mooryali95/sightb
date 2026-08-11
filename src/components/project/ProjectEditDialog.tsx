@@ -59,7 +59,7 @@ export function ProjectEditDialog({ open, onOpenChange, project, onSave }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" dir="rtl">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>تعديل بيانات المشروع</DialogTitle>
         </DialogHeader>
