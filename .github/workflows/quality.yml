@@ -56,10 +56,13 @@ jobs:
       - name: Guard the data-access layer
         run: |
           # Production code must reach the database through src/services only.
-          # Tests are exempt: mocking the client (vi.mock) is the correct way to
-          # isolate a unit, and matching on it flagged offline-queue.test.ts as a
-          # violation even though it never issues a query.
-          violations=$(grep -rl "integrations/supabase/client" src \
+          #
+          # Match the import statement, not the bare path. A plain substring
+          # search has produced two false positives already: `vi.mock(...)` in
+          # offline-queue.test.ts, and a doc comment in main.tsx that merely
+          # names the file. Neither issues a query; both blocked every PR.
+          # Tests stay excluded as a second line of defence.
+          violations=$(grep -rlE "(from|require\()[[:space:]]*['\"][^'\"]*integrations/supabase/client" src \
             --include='*.ts' --include='*.tsx' \
             | grep -v '/__tests__/' \
             | grep -v '^src/services/' \
