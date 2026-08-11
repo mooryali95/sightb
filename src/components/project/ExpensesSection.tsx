@@ -125,6 +125,8 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setCustodyId('');
     setBudgetItemId('');
     setFundId('');
+    setSourceMode(activeFund ? 'fund' : 'custody');
+
     setApprovalStatus('approved');
     setVendor('');
     setInvoiceRef('');
