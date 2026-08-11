@@ -130,18 +130,17 @@ export function buildSsotAudit(input: SsotAuditInput): Record<SsotKey, SsotFigur
     outstandingAdvances: {
       key: 'outstandingAdvances',
       label: SSOT_LABELS.outstandingAdvances,
-      value: fundsSummary.totalOutstandingAdvances,
+      // نطاق المشروع بالكامل (مدفوعة من الدفعات أو من العهد) — مطابق لدالة الخادم
+      value: sum(allOutstandingAdvances.map((p) => Math.max(p.amount - (p.refundedAmount ?? 0), 0))),
       formula: "Σ (amount − refunded_amount) WHERE request_type='advance' AND status='paid' AND is_advance_outstanding",
-      components: paymentRequests
-        .filter((p) => p.projectId === projectId && p.requestType === 'advance'
-          && p.status === 'paid' && p.isAdvanceOutstanding === true)
-        .map((p) => ({
-          label: p.description || 'سلفة',
-          value: Math.max(p.amount - (p.refundedAmount ?? 0), 0),
-          source: 'payment_requests',
-          sign: '+' as const,
-        })),
+      components: allOutstandingAdvances.map((p) => ({
+        label: `${p.description || 'سلفة'}${p.paidFromCustodyId ? ' (من عهدة)' : ''}`,
+        value: Math.max(p.amount - (p.refundedAmount ?? 0), 0),
+        source: 'payment_requests',
+        sign: '+' as const,
+      })),
     },
+
     totalCustodyDraw: {
       key: 'totalCustodyDraw',
       label: SSOT_LABELS.totalCustodyDraw,
