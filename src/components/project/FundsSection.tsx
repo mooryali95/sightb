@@ -274,7 +274,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   };
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4">
       {/* Alerts */}
       {alerts.length > 0 && (
         <div className="space-y-2">
@@ -311,7 +311,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                   <Plus className="w-3.5 h-3.5" /> دفعة جديدة
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md" dir="rtl">
+              <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>إنشاء دفعة جديدة</DialogTitle>
                 </DialogHeader>
@@ -359,7 +359,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                       <AlertTriangle className="w-3 h-3" /> دفعة استثنائية
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md" dir="rtl">
+                  <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle className="text-destructive">دفعة استثنائية (تجاوز قاعدة التسوية)</DialogTitle>
                     </DialogHeader>
@@ -565,7 +565,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
 
       {/* Settlement Dialog */}
       <Dialog open={!!settleFor} onOpenChange={(v) => { if (!v) closeSettle(); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               تسوية الدفعة #{settleFor?.fundNumber}
@@ -783,7 +783,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
 
       {/* Reject Dialog */}
       <Dialog open={!!rejectFor} onOpenChange={(v) => { if (!v) { setRejectFor(null); setRejectReason(''); } }}>
-        <DialogContent className="max-w-md" dir="rtl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>رفض التسوية</DialogTitle>
           </DialogHeader>

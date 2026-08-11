@@ -200,7 +200,7 @@ export default function MobileExpenseCapture() {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
         <div className="flex items-center justify-between p-4 max-w-md mx-auto">

@@ -47,7 +47,7 @@ export function ConfirmDeleteDialog({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>{trigger || defaultTrigger}</AlertDialogTrigger>
-      <AlertDialogContent dir="rtl">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>

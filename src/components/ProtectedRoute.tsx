@@ -26,7 +26,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // User is authenticated but has no roles — not authorized
   if (roles.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center space-y-4 max-w-md">
           <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
             <span className="text-2xl">🚫</span>

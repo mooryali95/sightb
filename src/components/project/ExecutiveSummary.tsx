@@ -127,7 +127,7 @@ export function ExecutiveSummary({
   }, [currentMonth, project.durationMonths]);
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4">
       {/* ═══ 1. أداء الشهر ═══ */}
       <SectionCard>
         <SectionTitle

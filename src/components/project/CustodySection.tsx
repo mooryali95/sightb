@@ -527,7 +527,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             />
 
             <InspectorSection title="معادلة الرصيد">
-              <div className="text-xs font-mono leading-6 bg-muted/40 rounded-md p-3 space-y-0.5" dir="rtl">
+              <div className="text-xs font-mono leading-6 bg-muted/40 rounded-md p-3 space-y-0.5">
                 <div>مبلغ العهدة: {formatCurrency(c.amount)}</div>
                 <div>+ تحويلات نقدية واردة: {formatCurrency(c.transfersIn)}</div>
                 <div>= الإجمالي المتاح: {formatCurrency(c.effectiveAmount)}</div>

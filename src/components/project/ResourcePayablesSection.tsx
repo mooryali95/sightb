@@ -752,7 +752,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6">
       {/* Scope filter + CSV export */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex rounded-lg border p-1 bg-muted/40">
@@ -1435,7 +1435,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
       {/* Payment confirmation dialog */}
       <Dialog open={!!payDialogId} onOpenChange={(o) => { if (!o) setPayDialogId(null); }}>
-        <DialogContent dir="rtl">
+        <DialogContent>
           <DialogHeader><DialogTitle>تأكيد الدفع</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
@@ -1534,7 +1534,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
       {/* ─── Edit links dialog ─── */}
       <Dialog open={!!editLinksId} onOpenChange={(o) => { if (!o) setEditLinksId(null); }}>
-        <DialogContent dir="rtl" className="max-w-lg">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>تعديل ربط البنود</DialogTitle>
           </DialogHeader>
@@ -1607,7 +1607,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
       {/* Reject reason dialog */}
       <Dialog open={!!rejectId} onOpenChange={(o) => { if (!o) { setRejectId(null); setRejectReason(''); } }}>
-        <DialogContent dir="rtl">
+        <DialogContent>
           <DialogHeader><DialogTitle>سبب الرفض</DialogTitle></DialogHeader>
           <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={4} placeholder="اكتب سبباً واضحاً..." />
           <DialogFooter>
@@ -1619,7 +1619,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
       {/* Settlement creation dialog */}
       <Dialog open={settleOpen} onOpenChange={setSettleOpen}>
-        <DialogContent className="max-w-2xl" dir="rtl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>إنشاء مخالصة نهائية — {sResource?.name}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -1651,7 +1651,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
       {/* Settle Advance Dialog */}
       <Dialog open={!!settleAdvanceId} onOpenChange={(o) => !o && setSettleAdvanceId(null)}>
-        <DialogContent className="max-w-xl" dir="rtl">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>تسوية سلفة قائمة</DialogTitle>
           </DialogHeader>

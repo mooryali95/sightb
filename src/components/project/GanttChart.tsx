@@ -236,7 +236,7 @@ export function GanttChart({ milestones, onMilestoneClick }: GanttChartProps) {
                           )}
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent side="top" className="text-xs max-w-xs" dir="rtl">
+                      <TooltipContent side="top" className="text-xs max-w-xs">
                         <div className="space-y-1">
                           <p className="font-semibold">{m.name}</p>
                           <p>الحالة: {MILESTONE_STATUS_LABELS[m.status]}</p>

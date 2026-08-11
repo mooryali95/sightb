@@ -233,7 +233,7 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
   }, [projectFundsList, projectCustodies, projectExpenses, projectPayReqs, settlements, resourceSettlements, resources, expenseToPayReq, projectId]);
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4">
       {/* ─── البطاقات: مصدر الأموال ومآلها ─── */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Card className="p-4 rounded-xl">

@@ -10,7 +10,7 @@ export function SessionTimeoutWarning() {
 
   return (
     <AlertDialog open={showWarning}>
-      <AlertDialogContent dir="rtl">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Timer className="w-5 h-5 text-destructive" />
