@@ -3,8 +3,10 @@ name: Quality
 on:
   push:
     branches: [main]
+  # No branch filter: a pull request gets checked whatever it targets. Pinning
+  # this to [main] meant work stacked on a feature branch went unverified until
+  # it was retargeted.
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -23,8 +25,33 @@ jobs:
       - name: Unit tests (finance / funds / SSOT math)
         run: bun run test
 
-      - name: Strict typecheck (finance + services + domain types)
+      - name: "Strict typecheck (whole app — tsconfig.app.json sets strict: true)"
         run: bun run typecheck:strict
+
+      - name: Production build
+        run: bun run build
+
+      - name: Lint (ratchet — the count may fall, never rise)
+        run: |
+          # 398 errors predate lint being gated at all; see P1-05 in
+          # docs/production-readiness-2026-08.md. Clearing them in one pass would
+          # be a huge, unreviewable diff, so the budget below holds the line
+          # instead: new code cannot add errors, and every batch you clear should
+          # be paid forward by lowering BUDGET in the same PR.
+          BUDGET=398
+          # Call eslint directly rather than through `bun run lint` — passing
+          # `-f json` through a package script differs between bun and npm.
+          bunx eslint . -f json > eslint-report.json || true
+          count=$(node -e "const r=require('./eslint-report.json');console.log(r.reduce((n,f)=>n+f.errorCount,0))")
+          echo "ESLint errors: $count (budget $BUDGET)"
+          if [ "$count" -gt "$BUDGET" ]; then
+            echo "::error::ESLint errors rose from $BUDGET to $count — new violations are not accepted."
+            bun run lint || true
+            exit 1
+          fi
+          if [ "$count" -lt "$BUDGET" ]; then
+            echo "::notice::Down to $count errors — lower BUDGET to $count in .github/workflows/quality.yml."
+          fi
 
       - name: Guard the data-access layer
         run: |
