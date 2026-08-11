@@ -94,7 +94,7 @@ export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetI
         }
       }
     });
-  }, [totalPlanned, totalActual, contractValue, budgetItems, expenses, baselineItems, allExpenses, durationMonths, startDate, percentComplete]);
+  }, [totalPlanned, totalActual, contractValue, budgetItems, expenses, baselineItems, allExpenses, durationMonths, startDate, percentComplete, managementReserve]);
 
   // Render inline warnings
   const overallPct = totalPlanned > 0 ? (totalActual / totalPlanned) * 100 : 0;

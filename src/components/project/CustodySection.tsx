@@ -74,7 +74,9 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
     if (open && sourceFundId === 'none' && availableFunds.length > 0) {
       setSourceFundId(availableFunds[0].id);
     }
-  }, [open, availableFunds.length]);
+    // Settles after one pass: the guard requires sourceFundId === 'none', which
+    // the setter clears. `availableFunds` is memoized, so its identity is stable.
+  }, [open, availableFunds, sourceFundId]);
 
   const fundsExist = availableFunds.length > 0;
   const isUnlinked = sourceFundId === 'none';
@@ -158,6 +160,16 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
   });
 
   // Auto-close exhausted custodies (via Zustand updateCustody — keeps state in sync)
+  //
+  // NOTE: `trg_auto_close_custody` on public.expenses already does this in the
+  // database, and the two disagree on what "exhausted" means. The trigger
+  // compares SUM(expenses) against custodies.amount alone; `remaining` below
+  // also credits incoming cash transfers and debits outstanding advances. The
+  // trigger additionally *re-opens* a custody whenever spend drops back under
+  // the base amount, so it can revert a close performed here. Reconciling the
+  // two definitions is tracked as P1-01 in docs/production-readiness-2026-08.md;
+  // neither side is removed here because that needs a live database to verify.
+  const custodyRemainingKey = enrichedCustodies.map((c) => `${c.id}:${c.remaining}`).join(',');
   useEffect(() => {
     enrichedCustodies.forEach(async (c) => {
       if (c.remaining <= 0 && c.status === 'active' && !c.closedDate) {
@@ -169,7 +181,11 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         } catch { /* silent — background close */ }
       }
     });
-  }, [enrichedCustodies.map(c => `${c.id}:${c.remaining}`).join(',')]);
+    // Deliberately keyed on the id:remaining digest rather than the array.
+    // `enrichedCustodies` is rebuilt on every render, so depending on it would
+    // re-run this write-effect each render — an unbounded loop of UPDATEs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [custodyRemainingKey]);
 
   const totalAmount = enrichedCustodies.reduce((s, c) => s + c.effectiveAmount, 0);
   const totalSpent = enrichedCustodies.reduce((s, c) => s + c.spent, 0);

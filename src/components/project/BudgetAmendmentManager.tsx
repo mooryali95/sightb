@@ -48,10 +48,15 @@ export function BudgetAmendmentManager({
 
   useEffect(() => {
     loadBudgetAmendments(projectId).catch((err) => console.error('[load-amendments]', err));
-  }, [projectId]);
+  }, [projectId, loadBudgetAmendments]);
 
   useEffect(() => {
     onAmendmentChange?.(activeDraft || null);
+    // Narrowed to the draft's identity and status on purpose. `activeDraft` is
+    // derived by `.find()` on every render, and `onAmendmentChange` is a parent
+    // callback that is not memoized — depending on either would notify the
+    // parent on every render, and the parent re-renders in response.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDraft?.id, activeDraft?.status]);
 
   const handleOpen = async () => {

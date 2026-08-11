@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   exportOutstandingAdvancesExcel,
   exportOutstandingAdvancesPDF,
@@ -441,10 +441,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   }, [outstandingAdvances]);
 
   // ─── Compute age days per advance ───
-  const advanceAgeDays = (req: typeof outstandingAdvances[number]): number => {
+  // Closes over nothing, so an empty dep list keeps the identity stable and
+  // lets the alert effect below depend on it without re-firing every render.
+  const advanceAgeDays = useCallback((req: typeof outstandingAdvances[number]): number => {
     const t = req.paidDate ? new Date(req.paidDate).getTime() : new Date(req.createdAt).getTime();
     return Math.max(0, Math.floor((Date.now() - t) / (1000 * 60 * 60 * 24)));
-  };
+  }, []);
 
   const ageBadgeClasses = (days: number) =>
     days >= 90 ? 'border-destructive text-destructive bg-destructive/10'
@@ -475,7 +477,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         }
       }
     });
-  }, [outstandingAdvances, projResources]);
+  }, [outstandingAdvances, projResources, advanceAgeDays]);
 
   // ─── Lazy-load settlement events for all advances of this project (once each) ───
   const eventsLoaded = useRef<Set<string>>(new Set());

@@ -33,24 +33,43 @@ jobs:
 
       - name: Lint (ratchet — the count may fall, never rise)
         run: |
-          # 398 errors predate lint being gated at all; see P1-05 in
+          # These counts predate lint being gated at all; see P1-05 in
           # docs/production-readiness-2026-08.md. Clearing them in one pass would
-          # be a huge, unreviewable diff, so the budget below holds the line
-          # instead: new code cannot add errors, and every batch you clear should
-          # be paid forward by lowering BUDGET in the same PR.
-          BUDGET=398
+          # be a huge, unreviewable diff, so the budgets below hold the line
+          # instead: new code cannot add violations, and every batch you clear
+          # should be paid forward by lowering the budget in the same PR.
+          #
+          # Warnings are capped too, not just errors. react-hooks/exhaustive-deps
+          # reports at warning severity, and those are the violations with actual
+          # runtime consequences — a stale dependency array shows a stale balance.
+          # Counting only errors let the whole class through unnoticed.
+          ERROR_BUDGET=398
+          WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.
           bunx eslint . -f json > eslint-report.json || true
-          count=$(node -e "const r=require('./eslint-report.json');console.log(r.reduce((n,f)=>n+f.errorCount,0))")
-          echo "ESLint errors: $count (budget $BUDGET)"
-          if [ "$count" -gt "$BUDGET" ]; then
-            echo "::error::ESLint errors rose from $BUDGET to $count — new violations are not accepted."
+          read -r errors warnings <<< "$(node -e "
+            const r = require('./eslint-report.json');
+            const e = r.reduce((n, f) => n + f.errorCount, 0);
+            const w = r.reduce((n, f) => n + f.warningCount, 0);
+            console.log(e, w);
+          ")"
+          echo "ESLint: $errors errors (budget $ERROR_BUDGET), $warnings warnings (budget $WARN_BUDGET)"
+          failed=0
+          if [ "$errors" -gt "$ERROR_BUDGET" ]; then
+            echo "::error::ESLint errors rose from $ERROR_BUDGET to $errors — new violations are not accepted."
+            failed=1
+          fi
+          if [ "$warnings" -gt "$WARN_BUDGET" ]; then
+            echo "::error::ESLint warnings rose from $WARN_BUDGET to $warnings — new violations are not accepted."
+            failed=1
+          fi
+          if [ "$failed" -eq 1 ]; then
             bun run lint || true
             exit 1
           fi
-          if [ "$count" -lt "$BUDGET" ]; then
-            echo "::notice::Down to $count errors — lower BUDGET to $count in .github/workflows/quality.yml."
+          if [ "$errors" -lt "$ERROR_BUDGET" ] || [ "$warnings" -lt "$WARN_BUDGET" ]; then
+            echo "::notice::Down to $errors errors / $warnings warnings — lower the budgets in .github/workflows/quality.yml."
           fi
 
       - name: Guard the data-access layer
