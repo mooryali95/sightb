@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:ssot": "bash scripts/run-ssot-tests.sh",
-    "typecheck:strict": "tsc --noEmit -p tsconfig.strict.json",
+    "typecheck:strict": "tsc --noEmit -p tsconfig.app.json",
     "test:watch": "vitest"
   },
   "dependencies": {

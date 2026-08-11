@@ -1,18 +1,21 @@
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, RISK_PROBABILITY_LABELS, RISK_PROBABILITY_COLORS } from '@/types/project';
+import type {
+  Project, Expense, BudgetItem, Revenue, ChangeOrder, Risk, Portfolio,
+} from '@/types/project';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface AttentionProjectsProps {
-  filteredProjects: any[];
-  expenses: any[];
-  budgetItems: any[];
-  revenues: any[];
-  changeOrders: any[];
-  risks: any[];
-  projects: any[];
-  portfolios: any[];
+  filteredProjects: Project[];
+  expenses: Expense[];
+  budgetItems: BudgetItem[];
+  revenues: Revenue[];
+  changeOrders: ChangeOrder[];
+  risks: Risk[];
+  projects: Project[];
+  portfolios: Portfolio[];
 }
 
 export function AttentionProjects({
@@ -21,21 +24,21 @@ export function AttentionProjects({
   const navigate = useNavigate();
 
   const attentionProjects = filteredProjects.filter(p => {
-    const pExp = expenses.filter((e: any) => e.projectId === p.id);
-    const pBud = budgetItems.filter((b: any) => b.projectId === p.id);
-    const pRev = revenues.filter((r: any) => r.projectId === p.id);
-    const pCO = changeOrders.filter((co: any) => co.projectId === p.id);
+    const pExp = expenses.filter((e) => e.projectId === p.id);
+    const pBud = budgetItems.filter((b) => b.projectId === p.id);
+    const pRev = revenues.filter((r) => r.projectId === p.id);
+    const pCO = changeOrders.filter((co) => co.projectId === p.id);
     const s = getProjectSummary(p, pBud, pExp, pRev, pCO);
     return s.spendRate > 90 || p.status === 'on-hold' || p.status === 'cancelled';
   });
 
-  const filteredProjectIds = new Set(filteredProjects.map((p: any) => p.id));
+  const filteredProjectIds = new Set(filteredProjects.map((p) => p.id));
   const openRisks = risks
-    .filter((r: any) =>
+    .filter((r) =>
       (r.status === 'open' || r.status === 'mitigating') &&
       (r.projectId ? filteredProjectIds.has(r.projectId) : true)
     )
-    .sort((a: any, b: any) => b.financialImpact - a.financialImpact)
+    .sort((a, b) => b.financialImpact - a.financialImpact)
     .slice(0, 5);
 
   return (
@@ -55,10 +58,10 @@ export function AttentionProjects({
             {attentionProjects.slice(0, 5).map(p => {
               const s = getProjectSummary(
                 p,
-                budgetItems.filter((b: any) => b.projectId === p.id),
-                expenses.filter((e: any) => e.projectId === p.id),
-                revenues.filter((r: any) => r.projectId === p.id),
-                changeOrders.filter((co: any) => co.projectId === p.id),
+                budgetItems.filter((b) => b.projectId === p.id),
+                expenses.filter((e) => e.projectId === p.id),
+                revenues.filter((r) => r.projectId === p.id),
+                changeOrders.filter((co) => co.projectId === p.id),
               );
               return (
                 <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/project/${p.id}`)}>
@@ -96,9 +99,9 @@ export function AttentionProjects({
                 </tr>
               </thead>
               <tbody>
-                {openRisks.map((risk: any) => {
-                  const project = risk.projectId ? projects.find((p: any) => p.id === risk.projectId) : null;
-                  const portfolio = risk.portfolioId ? portfolios.find((p: any) => p.id === risk.portfolioId) : null;
+                {openRisks.map((risk) => {
+                  const project = risk.projectId ? projects.find((p) => p.id === risk.projectId) : null;
+                  const portfolio = risk.portfolioId ? portfolios.find((p) => p.id === risk.portfolioId) : null;
                   return (
                     <tr key={risk.id}>
                       <td className="font-medium text-sm">{risk.title}</td>

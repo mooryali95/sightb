@@ -1,17 +1,20 @@
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '@/types/project';
+import type {
+  Project, Expense, BudgetItem, Revenue, ChangeOrder, Company,
+} from '@/types/project';
 import { ArrowLeft, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface ProjectsTableProps {
-  filteredProjects: any[];
-  expenses: any[];
-  budgetItems: any[];
-  revenues: any[];
-  changeOrders: any[];
-  companies: any[];
+  filteredProjects: Project[];
+  expenses: Expense[];
+  budgetItems: BudgetItem[];
+  revenues: Revenue[];
+  changeOrders: ChangeOrder[];
+  companies: Company[];
   hasActiveFilters: boolean;
   clearFilters: () => void;
 }
@@ -48,12 +51,12 @@ export function ProjectsTable({
           <tbody>
             <AnimatePresence mode="popLayout">
               {filteredProjects.map((project, idx) => {
-                const pExpenses = expenses.filter((e: any) => e.projectId === project.id);
-                const pRevenues = revenues.filter((r: any) => r.projectId === project.id);
-                const pBudget = budgetItems.filter((b: any) => b.projectId === project.id);
-                const pCO = changeOrders.filter((co: any) => co.projectId === project.id);
+                const pExpenses = expenses.filter((e) => e.projectId === project.id);
+                const pRevenues = revenues.filter((r) => r.projectId === project.id);
+                const pBudget = budgetItems.filter((b) => b.projectId === project.id);
+                const pCO = changeOrders.filter((co) => co.projectId === project.id);
                 const summary = getProjectSummary(project, pBudget, pExpenses, pRevenues, pCO);
-                const company = companies.find((c: any) => c.id === project.companyId);
+                const company = companies.find((c) => c.id === project.companyId);
                 const spendRate = summary.contractSpendRate;
 
                 return (

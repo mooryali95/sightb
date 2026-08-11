@@ -299,6 +299,22 @@ export interface Risk {
   createdAt: string;
 }
 
+/**
+ * Write payload for an existing risk.
+ *
+ * `Risk` itself can't be reused here: `mapRisk` turns every nullable column
+ * into `undefined` on read, so an in-memory Risk never holds `null`. On the
+ * write side the two are not interchangeable — `updateRisk` skips any key that
+ * is `undefined` and only forwards `null` to clear a column. Typing these
+ * fields as `string | null` keeps "clear the description" expressible.
+ */
+export type RiskUpdate =
+  Partial<Omit<Risk, 'id' | 'createdAt' | 'description' | 'mitigationPlan' | 'owner'>> & {
+    description?: string | null;
+    mitigationPlan?: string | null;
+    owner?: string | null;
+  };
+
 // ======== Indirect Cost Types ========
 export type IndirectCostCategory = 'rent' | 'admin_salary' | 'utilities' | 'insurance' | 'marketing' | 'other';
 

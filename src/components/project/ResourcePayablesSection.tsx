@@ -547,7 +547,8 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           amount: Number(e.amount),
           overflowAmount,
           overflowSource,
-          notes: e.notes,
+          // The column is nullable; the export row treats "absent" as undefined.
+          notes: e.notes ?? undefined,
         };
       });
   };
@@ -1559,7 +1560,9 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                     ) : (
                       editEligibleReimbs.map((r) => {
                         const checked = editLinkedIds.includes(r.id);
-                        const linkedElsewhere = r.paymentRequestId && r.paymentRequestId !== editLinksId;
+                        // Boolean(): paymentRequestId is optional, so `&&` would
+                        // otherwise yield '' | undefined and leak into `disabled`.
+                        const linkedElsewhere = Boolean(r.paymentRequestId) && r.paymentRequestId !== editLinksId;
                         return (
                           <label key={r.id} className={cn('flex items-start gap-2 p-1.5 rounded cursor-pointer hover:bg-muted/50', linkedElsewhere && 'opacity-60')}>
                             <input
