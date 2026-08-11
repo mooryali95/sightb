@@ -158,14 +158,15 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
 
   const hasCustody = !!(custodyId && custodyId !== 'none');
 
-  // Auto-fill fundId for NEW expense ONLY if no custody selected.
+  // Auto-fill fundId for NEW expense ONLY when the source mode is "fund".
   // Single-source rule: custody-backed expense MUST NOT also link to a fund.
   useEffect(() => {
-    if (open && !editingId && activeFund && !hasCustody) {
+    if (open && !editingId && activeFund && sourceMode === 'fund') {
       setFundId((prev) => prev || activeFund.id);
     }
-    if (hasCustody) setFundId('');
-  }, [open, editingId, activeFund, hasCustody]);
+    if (sourceMode === 'custody') setFundId('');
+  }, [open, editingId, activeFund, sourceMode]);
+
 
   // Quick-link an existing legacy expense to the active fund
   const handleQuickLinkFund = async (expId: string) => {
