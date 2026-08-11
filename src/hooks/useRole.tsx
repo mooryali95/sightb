@@ -60,7 +60,9 @@ export function useRole() {
     };
 
     fetchRoles();
-  }, [user, authLoading]);
+    // `roles.length` only feeds the skip-guard above: once the fetch lands, the
+    // re-run it triggers hits that guard and returns without fetching again.
+  }, [user, authLoading, roles.length]);
 
   const isOwner = roles.some((r) => r.role === 'owner' && r.scopeType === 'system');
   const isAdmin = isOwner || roles.some((r) => r.role === 'admin' && r.scopeType === 'system');

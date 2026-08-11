@@ -31,6 +31,9 @@ import { toast } from 'sonner';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { PageHeader } from '@/components/ui/page-header';
 
+/** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
+const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
+
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -88,7 +91,6 @@ export default function CompanyDetail() {
   const [expandedPortfolios, setExpandedPortfolios] = useState<Record<string, boolean>>({});
   const [showInactive, setShowInactive] = useState(false);
 
-  const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
   const visibleCompanyProjects = useMemo(() => {
     if (showInactive) return companyProjects;
     return companyProjects.filter(p => !INACTIVE_STATUSES.includes(p.status));

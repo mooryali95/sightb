@@ -27,6 +27,13 @@ import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { PageHeader } from '@/components/ui/page-header';
 import { useCoreData, useDetailsData } from '@/hooks/useAppData';
 
+/**
+ * Project states hidden from the default view. Module scope, not component
+ * scope: a literal declared inside the body is a fresh array every render, so
+ * every `useMemo` closing over it silently lost its memoization.
+ */
+const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'] as const;
+
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
   const navigate = useNavigate();
@@ -42,8 +49,6 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [timePeriod, setTimePeriod] = useState<string>('all');
   const [showInactive, setShowInactive] = useState(false);
-
-  const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'] as const;
 
   const core = useCoreData();
   useDetailsData();

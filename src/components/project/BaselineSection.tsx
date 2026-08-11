@@ -42,7 +42,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
 
   useEffect(() => {
     loadBaselines(projectId).finally(() => setLoading(false));
-  }, [projectId]);
+  }, [projectId, loadBaselines]);
 
   const projectBaselines = baselines.filter(b => b.projectId === projectId);
   const activeBaseline = projectBaselines.find(b => b.isActive);

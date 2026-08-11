@@ -43,7 +43,7 @@ export function AuditLogSection({ projectId }: AuditLogSectionProps) {
 
   useEffect(() => {
     loadAuditLog(projectId).finally(() => setLoading(false));
-  }, [projectId]);
+  }, [projectId, loadAuditLog]);
 
   if (loading) {
     return <div className="stat-card text-center py-8 text-sm text-muted-foreground">جاري التحميل...</div>;

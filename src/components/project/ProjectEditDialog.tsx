@@ -33,6 +33,11 @@ export function ProjectEditDialog({ open, onOpenChange, project, onSave }: Props
       percentComplete: project.percentComplete || 0,
       taxPercent: project.taxPercent ?? 15,
     });
+    // Keyed on the identity of the project, not its contents: this seeds the
+    // form when a different project is opened. Depending on the fields would
+    // re-seed whenever the underlying row changes — including a realtime update
+    // arriving mid-edit, which would silently discard what the user typed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
   const handleSave = async () => {

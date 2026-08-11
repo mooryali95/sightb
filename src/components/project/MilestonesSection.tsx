@@ -56,7 +56,10 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
         toast.info(`المرحلة "${m.name}" تحولت لـ "متأخرة" تلقائياً`);
       }
     });
-  }, [milestones.length]);
+    // Safe to depend on the array itself: `delayChecked` makes the body run at
+    // most once per mount, so the extra re-runs return immediately instead of
+    // writing again.
+  }, [milestones, readOnly, updateMilestone]);
 
   const resetForm = () => {
     setEditingId(null); setName(''); setDescription(''); setWeight('');
