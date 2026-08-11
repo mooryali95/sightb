@@ -568,46 +568,6 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     </Select>
                   </div>
                 )}
-                {!editingId && custodies.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>خصم من عهدة (اختياري)</Label>
-                    <Select value={custodyId} onValueChange={setCustodyId}>
-                      <SelectTrigger><SelectValue placeholder="اختر العهدة" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">بدون عهدة</SelectItem>
-                        {custodies.map((c) => {
-                          const custodySpent = expenses.filter(e => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
-                          const custodyRemaining = c.amount - custodySpent;
-                          return (
-                            <SelectItem key={c.id} value={c.id}>{c.resourceName} — متبقي: {formatCurrency(custodyRemaining)}</SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    {custodyId && custodyId !== 'none' && (() => {
-                      const c = custodies.find(c => c.id === custodyId);
-                      if (!c) return null;
-                      const spent = expenses.filter(e => e.custodyId === c.id).reduce((s: number, e: any) => s + e.amount, 0);
-                      const selectedCustody = { ...c, spent, remaining: c.amount - spent };
-                      const parsedAmount = parseFloat(amount) || 0;
-                      return (
-                        <div className="space-y-1">
-                          <p className={`text-xs ${selectedCustody.remaining > 0 ? 'text-muted-foreground' : 'text-destructive'}`}>
-                            المتبقي من العهدة: {formatCurrency(selectedCustody.remaining)}
-                            {selectedCustody.remaining <= 0 && ' ⚠️ العهدة مستنفدة'}
-                          </p>
-                          {parsedAmount > 0 && parsedAmount > selectedCustody.remaining && (
-                            <p className="text-xs text-destructive">
-                              ⚠️ المبلغ ({formatCurrency(parsedAmount)}) يتجاوز المتبقي ({formatCurrency(selectedCustody.remaining)}).
-                              قسّم المصروف: سجّل {formatCurrency(selectedCustody.remaining)} من هذه العهدة، والباقي من عهدة/دفعة أخرى.
-                            </p>
-                          )}
-
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
             </div>
           </ResponsiveFormDialog>
           )}
