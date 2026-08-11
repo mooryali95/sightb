@@ -96,6 +96,12 @@ export function buildSsotAudit(input: SsotAuditInput): Record<SsotKey, SsotFigur
 
   const totalActual = sum(approved.map((e) => e.amount));
 
+  const allOutstandingAdvances = paymentRequests.filter(
+    (p) => p.projectId === projectId && p.requestType === 'advance'
+      && p.status === 'paid' && p.isAdvanceOutstanding === true,
+  );
+
+
   const custodyRows = activeCustodies.map((c) =>
     getCustodyBreakdown(c, expenses, cashTransfers, paymentRequests));
   const custodyInHand = sum(custodyRows.map((r) => r.remaining));
