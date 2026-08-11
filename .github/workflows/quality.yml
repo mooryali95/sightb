@@ -28,8 +28,13 @@ jobs:
 
       - name: Guard the data-access layer
         run: |
+          # Production code must reach the database through src/services only.
+          # Tests are exempt: mocking the client (vi.mock) is the correct way to
+          # isolate a unit, and matching on it flagged offline-queue.test.ts as a
+          # violation even though it never issues a query.
           violations=$(grep -rl "integrations/supabase/client" src \
             --include='*.ts' --include='*.tsx' \
+            | grep -v '/__tests__/' \
             | grep -v '^src/services/' \
             | grep -v '^src/integrations/' \
             | grep -v '^src/lib/offline-queue.ts$' \
