@@ -146,6 +146,8 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     setCustodyId(exp.custodyId || '');
     setBudgetItemId(exp.budgetItemId || '');
     setFundId(exp.fundId || '');
+    setSourceMode(exp.custodyId ? 'custody' : 'fund');
+
     setApprovalStatus(exp.approvalStatus || 'approved');
     setVendor(exp.vendor || '');
     setInvoiceRef(exp.invoiceRef || '');
