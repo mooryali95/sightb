@@ -67,6 +67,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     [projectId, projectFunds],
   );
   const fundIsRequired = !!activeFund;
+  const [sourceMode, setSourceMode] = useState<'fund' | 'custody'>('fund');
   const paymentRequests = useStore((s) => s.paymentRequests);
   const cashTransfers = useStore((s) => s.cashTransfers);
   const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
@@ -74,6 +75,17 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     () => (cashTransfers || []).filter((t) => t.projectId === projectId),
     [cashTransfers, projectId],
   );
+  // SSOT: رصيد العهدة = المبلغ + التحويلات الواردة − المصروف − السلف القائمة
+  const activeCustodies = useMemo(
+    () => custodies.filter((c: any) => c.status !== 'closed'),
+    [custodies],
+  );
+  const custodyBreakdowns = useMemo(
+    () => new Map(custodies.map((c) => [c.id, getCustodyBreakdown(c, expenses, projTransfers, projPRs)])),
+    [custodies, expenses, projTransfers, projPRs],
+  );
+  const custodyRemainingOf = (id: string) => custodyBreakdowns.get(id)?.remaining ?? 0;
+
   const activeFundRemaining = activeFund
     ? getFundRemaining(activeFund, expenses, custodies, projPRs, projTransfers)
     : 0;
