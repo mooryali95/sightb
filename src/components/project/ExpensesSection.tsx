@@ -6,7 +6,7 @@ import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS,
   type ExpenseCategory, type ApprovalStatus, type Resource, type Custody, type BudgetItem,
 } from '@/types/project';
-import { getActiveFund, getFundRemaining } from '@/lib/funds';
+import { getActiveFund, getFundRemaining, getCustodyBreakdown } from '@/lib/funds';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
