@@ -427,58 +427,111 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     </Select>
                   </div>
                 )}
-                {/* Fund linking — hidden when expense comes from a custody (single-source rule) */}
-                {fundIsRequired && activeFund && !hasCustody && (
-                  <div className="space-y-2 p-3 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700/30">
+                {/* مصدر الصرف — قاعدة المصدر الواحد: دفعة أو عهدة، واحدة فقط */}
+                {!editingId && (activeFund || activeCustodies.length > 0) && (
+                  <div className="space-y-3 p-3 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700/30">
                     <Label className="flex items-center gap-1.5">
                       <Wallet className="w-3.5 h-3.5" />
-                      ربط بدفعة الصرفيات
+                      مصدر الصرف
                       <span className="text-destructive text-xs">*</span>
                     </Label>
-                    {activeFund.status === 'transferred' && !editingId && (
-                      <div className="flex items-start justify-between gap-2 p-2 rounded bg-background border border-border">
-                        <div className="text-xs">
-                          <p className="font-semibold">الدفعة #{activeFund.fundNumber} — قيد التحويل</p>
-                          <p className="text-muted-foreground mt-0.5">
-                            يجب إقرار الاستلام قبل الصرف منها (سيتم الربط تلقائياً).
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button" size="sm"
+                        variant={sourceMode === 'fund' ? 'default' : 'outline'}
+                        disabled={!activeFund}
+                        onClick={() => { setSourceMode('fund'); setCustodyId(''); setFundId(activeFund?.id || ''); }}
+                      >
+                        من الدفعة
+                      </Button>
+                      <Button
+                        type="button" size="sm"
+                        variant={sourceMode === 'custody' ? 'default' : 'outline'}
+                        disabled={activeCustodies.length === 0}
+                        onClick={() => { setSourceMode('custody'); setFundId(''); }}
+                      >
+                        من العهدة
+                      </Button>
+                    </div>
+
+                    {sourceMode === 'fund' && activeFund && (
+                      <div className="space-y-2">
+                        {activeFund.status === 'transferred' && (
+                          <div className="flex items-start justify-between gap-2 p-2 rounded bg-background border border-border">
+                            <div className="text-xs">
+                              <p className="font-semibold">الدفعة #{activeFund.fundNumber} — قيد التحويل</p>
+                              <p className="text-muted-foreground mt-0.5">
+                                يجب إقرار الاستلام قبل الصرف منها.
+                              </p>
+                            </div>
+                            {isAdmin && (
+                              <Button type="button" size="sm" variant="outline" onClick={handleInlineAcknowledge}>
+                                إقرار الاستلام
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                        <Select value={fundId || activeFund.id} onValueChange={setFundId}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={activeFund.id}>
+                              الدفعة #{activeFund.fundNumber} — متبقي: {formatCurrency(activeFundRemaining)}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {parseFloat(amount) > 0 && parseFloat(amount) > activeFundRemaining && (
+                          <p className="text-xs text-destructive">
+                            ⚠️ المبلغ يتجاوز رصيد الدفعة المتبقي — سيُرفض من النظام
                           </p>
-                        </div>
-                        {isAdmin && (
-                          <Button type="button" size="sm" variant="outline" onClick={handleInlineAcknowledge}>
-                            إقرار الاستلام
-                          </Button>
                         )}
                       </div>
                     )}
-                    <Select
-                      value={fundId || activeFund.id}
-                      onValueChange={setFundId}
-                      disabled={!!editingId && !isAdmin && !!(expenses.find((x: any) => x.id === editingId)?.fundId)}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={activeFund.id}>
-                          الدفعة #{activeFund.fundNumber} — متبقي: {formatCurrency(activeFundRemaining)}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {parseFloat(amount) > 0 && parseFloat(amount) > activeFundRemaining && (
-                      <p className="text-xs text-destructive">
-                        ⚠️ المبلغ يتجاوز رصيد الدفعة المتبقي — سيُرفض من النظام
-                      </p>
+
+                    {sourceMode === 'custody' && (
+                      <div className="space-y-2">
+                        <Select value={custodyId} onValueChange={setCustodyId}>
+                          <SelectTrigger><SelectValue placeholder="اختر العهدة" /></SelectTrigger>
+                          <SelectContent>
+                            {activeCustodies.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.resourceName} — متبقي: {formatCurrency(custodyRemainingOf(c.id))}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {hasCustody && (() => {
+                          const b = custodyBreakdowns.get(custodyId);
+                          if (!b) return null;
+                          const parsedAmount = parseFloat(amount) || 0;
+                          return (
+                            <div className="space-y-1 text-xs">
+                              <p className="text-muted-foreground">
+                                العهدة: {formatCurrency(b.baseAmount)}
+                                {b.transfersIn > 0 && ` + تحويلات واردة: ${formatCurrency(b.transfersIn)}`}
+                                {' '}− مصروف: {formatCurrency(b.spent)}
+                                {b.outstandingAdvances > 0 && ` − سلف قائمة: ${formatCurrency(b.outstandingAdvances)}`}
+                              </p>
+                              <p className={b.remaining > 0 ? 'font-semibold' : 'text-destructive font-semibold'}>
+                                المتبقي: {formatCurrency(b.remaining)}
+                                {b.remaining <= 0 && ' ⚠️ العهدة مستنفدة'}
+                              </p>
+                              {parsedAmount > 0 && parsedAmount > b.remaining && (
+                                <p className="text-destructive">
+                                  ⚠️ المبلغ ({formatCurrency(parsedAmount)}) يتجاوز المتبقي ({formatCurrency(b.remaining)}).
+                                  قسّم المصروف: {formatCurrency(b.remaining)} من هذه العهدة، والباقي من عهدة/دفعة أخرى.
+                                </p>
+                              )}
+                              <p className="text-muted-foreground">
+                                سيُخصم من العهدة فقط ولن يُخصم من الدفعة مرة أخرى (مبلغ العهدة محجوز مسبقاً).
+                              </p>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     )}
                   </div>
                 )}
-                {hasCustody && (
-                  <div className="p-3 rounded-lg border border-emerald-300/50 bg-emerald-50/40 dark:bg-emerald-900/10 dark:border-emerald-700/30 text-xs space-y-1">
-                    <p className="font-semibold flex items-center gap-1.5">
-                      <Wallet className="w-3.5 h-3.5" /> الصرف من عهدة
-                    </p>
-                    <p className="text-muted-foreground">
-                      هذا المصروف سيُخصم من رصيد العهدة المختارة فقط، ولن يُخصم من الدفعة مرة أخرى (تم حجز مبلغ العهدة عند إنشائها).
-                    </p>
-                  </div>
-                )}
+
                 <div className="space-y-2">
                   <Label>الوصف</Label>
                   <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب شهر يناير — أحمد" />
