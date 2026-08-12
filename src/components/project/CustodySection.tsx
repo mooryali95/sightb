@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 
-import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining, getCustodyBreakdown } from '@/lib/funds';
+import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining, getCustodyBreakdown, getCustodyTransferSources } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
@@ -147,9 +147,12 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
 
   const enrichedCustodies = custodies.map(c => {
     const bd = getCustodyBreakdown(c, expenses as any, projTransfers, projPRs);
+    const transferSources = getCustodyTransferSources(c.id, projTransfers, projectFunds);
     return {
       ...c,
       breakdown: bd,
+      transferSources,
+      orphanTransfers: transferSources.filter((t) => t.orphan),
       spent: bd.spent,
       transfersIn: bd.transfersIn,
       outstandingAdvances: bd.outstandingAdvances,
@@ -415,9 +418,27 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     </td>
                     <td className="font-mono text-sm">{formatCurrency(c.amount)}</td>
                     <td className="font-mono text-sm hidden sm:table-cell">
-                      {c.transfersIn > 0
-                        ? <span className="text-primary">+{formatCurrency(c.transfersIn)}</span>
-                        : <span className="text-muted-foreground">—</span>}
+                      {c.transfersIn > 0 ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-primary">+{formatCurrency(c.transfersIn)}</span>
+                          <div className="flex flex-wrap gap-1">
+                            {c.transferSources.map((t) => (
+                              <Badge
+                                key={t.transferId}
+                                variant="outline"
+                                className={`text-[10px] w-fit ${t.orphan
+                                  ? 'border-destructive/50 text-destructive'
+                                  : 'border-primary/40 text-primary'}`}
+                                title={`${formatCurrency(t.amount)} · ${t.transferDate}`}
+                              >
+                                {t.orphan ? 'مصدر مفقود ⚠' : `من دفعة #${t.fundNumber}`}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="font-mono text-sm font-semibold">{formatCurrency(c.effectiveAmount)}</td>
                     <td className="font-mono text-sm">
@@ -555,6 +576,39 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                 محسوب عبر <span className="font-mono">getCustodyBreakdown()</span> — نفس المصدر المستخدم في كل الشاشات.
               </p>
             </InspectorSection>
+
+            <InspectorSection title="أصل التحويلات النقدية الواردة">
+              {c.transferSources.length === 0 ? (
+                <p className="text-xs text-muted-foreground">لا توجد تحويلات نقدية واردة لهذه العهدة.</p>
+              ) : (
+                <div className="space-y-1">
+                  {c.transferSources.map((t) => (
+                    <div
+                      key={t.transferId}
+                      className="flex items-center justify-between gap-2 text-xs border border-border/60 rounded-md px-2 py-1.5"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${t.orphan ? 'border-destructive/50 text-destructive' : 'border-primary/40 text-primary'}`}
+                        >
+                          {t.orphan ? 'مصدر مفقود' : `دفعة #${t.fundNumber}`}
+                        </Badge>
+                        <span className="text-muted-foreground font-mono">{t.transferDate}</span>
+                      </span>
+                      <span className="font-mono">+{formatCurrency(t.amount)}</span>
+                    </div>
+                  ))}
+                  {c.orphanTransfers.length > 0 && (
+                    <p className="text-[11px] text-destructive bg-destructive/5 border border-destructive/20 rounded px-2 py-1">
+                      تحويل بلا دفعة مصدر (الدفعة محذوفة) — يجب حذف التحويل أو إعادة ربطه بدفعة قائمة حتى يبقى كل ريال في العهدة له أصل.
+                    </p>
+                  )}
+                </div>
+              )}
+            </InspectorSection>
+
+
 
 
             <InspectorSection title="نسبة الصرف">

@@ -112,6 +112,42 @@ export function getCustodyCashTransfersIn(
 }
 
 /**
+ * أصل كل تحويل نقدي وارد لعهدة: أي دفعة جاءت منه، وهل الأصل مفقود.
+ * تُستخدم لعرض «تحويلات واردة» مربوطةً بمصدرها بدل رقم مجهول.
+ */
+export interface CustodyTransferSource {
+  transferId: string;
+  amount: number;
+  transferDate: string;
+  fundId: string;
+  fundNumber: number | null;   // null = الدفعة المصدر غير موجودة (سجل يتيم)
+  fundStatus: string | null;
+  orphan: boolean;
+}
+
+export function getCustodyTransferSources(
+  custodyId: string,
+  cashTransfers: CashTransfer[] = [],
+  funds: ProjectFund[] = [],
+): CustodyTransferSource[] {
+  return cashTransfers
+    .filter((t) => t.toCustodyId === custodyId)
+    .map((t) => {
+      const fund = funds.find((f) => f.id === t.fromFundId) ?? null;
+      return {
+        transferId: t.id,
+        amount: t.amount,
+        transferDate: t.transferDate,
+        fundId: t.fromFundId,
+        fundNumber: fund ? fund.fundNumber : null,
+        fundStatus: fund ? fund.status : null,
+        orphan: !fund,
+      };
+    })
+    .sort((a, b) => (a.transferDate < b.transferDate ? 1 : -1));
+}
+
+/**
  * SSOT: التفصيل الوحيد المعتمد لرصيد العهدة.
  * كل شاشة تعرض "متبقي العهدة" أو "نسبة الصرف" يجب أن تستهلك هذه الدالة.
  *

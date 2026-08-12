@@ -96,8 +96,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   );
 
   const alerts = useMemo(
-    () => generateFundAlerts(projectId, projectFunds, fundSettlements, projectExpenses),
-    [projectId, projectFunds, fundSettlements, projectExpenses],
+    () => generateFundAlerts(projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies, projPRs, projTransfers),
+    [projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies, projPRs, projTransfers],
   );
 
   const lastFundAmount = projectFundsList[0]?.amount ?? 0;
