@@ -147,9 +147,12 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
 
   const enrichedCustodies = custodies.map(c => {
     const bd = getCustodyBreakdown(c, expenses as any, projTransfers, projPRs);
+    const transferSources = getCustodyTransferSources(c.id, projTransfers, projectFunds);
     return {
       ...c,
       breakdown: bd,
+      transferSources,
+      orphanTransfers: transferSources.filter((t) => t.orphan),
       spent: bd.spent,
       transfersIn: bd.transfersIn,
       outstandingAdvances: bd.outstandingAdvances,
