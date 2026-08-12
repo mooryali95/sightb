@@ -577,6 +577,39 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
               </p>
             </InspectorSection>
 
+            <InspectorSection title="أصل التحويلات النقدية الواردة">
+              {c.transferSources.length === 0 ? (
+                <p className="text-xs text-muted-foreground">لا توجد تحويلات نقدية واردة لهذه العهدة.</p>
+              ) : (
+                <div className="space-y-1">
+                  {c.transferSources.map((t) => (
+                    <div
+                      key={t.transferId}
+                      className="flex items-center justify-between gap-2 text-xs border border-border/60 rounded-md px-2 py-1.5"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${t.orphan ? 'border-destructive/50 text-destructive' : 'border-primary/40 text-primary'}`}
+                        >
+                          {t.orphan ? 'مصدر مفقود' : `دفعة #${t.fundNumber}`}
+                        </Badge>
+                        <span className="text-muted-foreground font-mono">{t.transferDate}</span>
+                      </span>
+                      <span className="font-mono">+{formatCurrency(t.amount)}</span>
+                    </div>
+                  ))}
+                  {c.orphanTransfers.length > 0 && (
+                    <p className="text-[11px] text-destructive bg-destructive/5 border border-destructive/20 rounded px-2 py-1">
+                      تحويل بلا دفعة مصدر (الدفعة محذوفة) — يجب حذف التحويل أو إعادة ربطه بدفعة قائمة حتى يبقى كل ريال في العهدة له أصل.
+                    </p>
+                  )}
+                </div>
+              )}
+            </InspectorSection>
+
+
+
 
             <InspectorSection title="نسبة الصرف">
               <div className="flex items-center gap-3">
