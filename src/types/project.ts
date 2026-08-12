@@ -421,6 +421,16 @@ export interface PortfolioSummary {
   portfolioId: string;
   portfolioName: string;
   projectCount: number;
+  /** Shared currency of the projects rolled up here; the default when mixed. */
+  currency: string;
+  /**
+   * True when the projects do not share one currency, which makes every total
+   * below a sum of unlike units. Show it instead of the figures — see
+   * `src/lib/currency.ts` for why no conversion happens.
+   */
+  isMixedCurrency: boolean;
+  /** Every distinct currency present, sorted. */
+  currencies: string[];
   totalContractValue: number;
   totalEffectiveValue: number;
   totalPlanned: number;
