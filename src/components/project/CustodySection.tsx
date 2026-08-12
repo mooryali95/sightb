@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 
-import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining, getCustodyBreakdown } from '@/lib/funds';
+import { getFundSpent, getFundCustodyDraw, getCustodyCashTransfersIn, getFundRemaining, getCustodyBreakdown, getCustodyTransferSources } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
