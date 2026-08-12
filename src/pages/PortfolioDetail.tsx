@@ -32,6 +32,7 @@ import {
 import { RisksSection } from '@/components/project/RisksSection';
 import { PortfolioPayablesSection } from '@/components/portfolio/PortfolioPayablesSection';
 import { PageHeader } from '@/components/ui/page-header';
+import { MixedCurrencyNotice } from '@/components/MixedCurrencyNotice';
 
 const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)', 'hsl(200, 70%, 50%)'];
 
@@ -287,6 +288,8 @@ export default function PortfolioDetail() {
             </>
           }
         />
+
+        <MixedCurrencyNotice currencies={summary.currencies} scopeLabel="هذه المحفظة" />
 
         {/* Edit Dialog */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>

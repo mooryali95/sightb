@@ -4,6 +4,7 @@ import {
   PortfolioSummary, CompanySummary, HealthStatus, ProjectSummary,
 } from '@/types/project';
 import { getProjectSummary, calculateEVM, getCurrentMonth } from './finance';
+import { inspectCurrencyMix } from './currency';
 
 /**
  * Get a summary of a portfolio by aggregating its project summaries
@@ -95,10 +96,18 @@ export function getPortfolioSummary(
     averageCPI,
   });
 
+  // Every total below is a plain sum across projects, which only carries a
+  // meaning while they share a currency. Report the mix so the UI can say so
+  // rather than print a figure with no unit.
+  const currencyMix = inspectCurrencyMix(projects);
+
   return {
     portfolioId: portfolio.id,
     portfolioName: portfolio.name,
     projectCount: projects.length,
+    currency: currencyMix.currency,
+    isMixedCurrency: currencyMix.isMixed,
+    currencies: currencyMix.currencies,
     totalContractValue,
     totalEffectiveValue,
     totalPlanned,
