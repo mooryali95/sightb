@@ -418,9 +418,27 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     </td>
                     <td className="font-mono text-sm">{formatCurrency(c.amount)}</td>
                     <td className="font-mono text-sm hidden sm:table-cell">
-                      {c.transfersIn > 0
-                        ? <span className="text-primary">+{formatCurrency(c.transfersIn)}</span>
-                        : <span className="text-muted-foreground">—</span>}
+                      {c.transfersIn > 0 ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-primary">+{formatCurrency(c.transfersIn)}</span>
+                          <div className="flex flex-wrap gap-1">
+                            {c.transferSources.map((t) => (
+                              <Badge
+                                key={t.transferId}
+                                variant="outline"
+                                className={`text-[10px] w-fit ${t.orphan
+                                  ? 'border-destructive/50 text-destructive'
+                                  : 'border-primary/40 text-primary'}`}
+                                title={`${formatCurrency(t.amount)} · ${t.transferDate}`}
+                              >
+                                {t.orphan ? 'مصدر مفقود ⚠' : `من دفعة #${t.fundNumber}`}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="font-mono text-sm font-semibold">{formatCurrency(c.effectiveAmount)}</td>
                     <td className="font-mono text-sm">
