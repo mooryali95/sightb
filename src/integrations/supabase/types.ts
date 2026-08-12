@@ -277,7 +277,15 @@ export type Database = {
           transfer_date?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cash_transfers_to_custody_id_fkey"
+            columns: ["to_custody_id"]
+            isOneToOne: false
+            referencedRelation: "custodies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       change_orders: {
         Row: {
@@ -1904,6 +1912,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      fund_total_spent: { Args: { _fund_id: string }; Returns: number }
       has_access: {
         Args: {
           _scope_id: string
