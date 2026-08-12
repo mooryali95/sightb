@@ -118,26 +118,35 @@ export function generateFundAlerts(
   }
 
   // التنبيه 5: فرق غير مبرر في تسوية مُرسلة/معتمدة
+  // يُعاد حساب الفرق حياً (SSOT) بدل الاعتماد على العمود المخزَّن الذي قد يكون قديماً،
+  // فلا يظهر تنبيه بينما الجدول يعرض دفعة مستهلكة بالكامل.
   for (const st of settlements) {
     if (st.projectId !== projectId) continue;
     if (st.status === 'submitted' || st.status === 'approved') {
+      const fund = projectFunds.find((f) => f.id === st.fundId);
+      const liveSpent = fund
+        ? getFundSpent(fund.id, projectExpenses, projectCustodies, projectPRs, projectTransfers)
+        : st.totalSpent;
+      const liveDiff = fund
+        ? fund.amount - liveSpent - st.remainingCash
+        : st.difference;
       if (
-        Math.abs(st.difference) > UNEXPLAINED_DIFF_TOLERANCE &&
+        Math.abs(liveDiff) > UNEXPLAINED_DIFF_TOLERANCE &&
         !st.differenceReason
       ) {
-        const fund = projectFunds.find((f) => f.id === st.fundId);
         alerts.push({
           id: `diff-${st.id}`,
           type: 'unexplained_diff',
           severity: 'high',
           title: 'فرق غير مبرر في التسوية',
-          message: `تسوية الدفعة رقم ${fund?.fundNumber ?? '?'} تحتوي فرقاً: ${Math.round(st.difference).toLocaleString('en-US')} ريال`,
+          message: `تسوية الدفعة رقم ${fund?.fundNumber ?? '?'} تحتوي فرقاً: ${Math.round(liveDiff).toLocaleString('en-US')} ريال`,
           projectId,
           settlementId: st.id,
           fundId: st.fundId,
         });
       }
     }
+
   }
 
   // ترتيب حسب الخطورة
