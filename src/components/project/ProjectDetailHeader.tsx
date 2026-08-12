@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type Project, type ProjectStatus } from '@/types/project';
 import { toast } from 'sonner';
+import { currencySymbol } from '@/lib/currency';
 
 interface Props {
   project: Project;
@@ -132,7 +133,7 @@ export function ProjectDetailHeader({
       }
       subtitle={
         <>
-          {project.durationMonths} أشهر · {project.resourceCount} موارد · {project.currency}
+          {project.durationMonths} أشهر · {project.resourceCount} موارد · {currencySymbol(project.currency)}
           {project.percentComplete > 0 && ` · الإنجاز: ${project.percentComplete}%`}
         </>
       }

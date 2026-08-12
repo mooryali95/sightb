@@ -9,6 +9,17 @@ describe('formatCurrency', () => {
     expect(formatCurrency(0)).toBe('0.00 ر.س');
   });
 
+  it('prints the symbol for a stored ISO code', () => {
+    // Regression guard for the ISO 4217 migration: the column now holds 'SAR',
+    // and appending it verbatim made every screen read "1,000.00 SAR".
+    expect(formatCurrency(1000, 'SAR')).toBe('1,000.00 ر.س');
+    expect(formatCurrency(1000, 'USD')).toBe('1,000.00 $');
+  });
+
+  it('renders rows from either side of the migration identically', () => {
+    expect(formatCurrency(250, 'SAR')).toBe(formatCurrency(250, 'ر.س'));
+  });
+
   it('keeps a halala visible — the unit the reconciliation engine judges on', () => {
     // Regression guard for P0-02: the UI used to round to whole units while
     // buildReconciliation flagged anything above SSOT_TOLERANCE as a conflict,
@@ -20,7 +31,7 @@ describe('formatCurrency', () => {
 
   it('groups thousands and honours a custom currency label', () => {
     expect(formatCurrency(1234567.89)).toBe('1,234,567.89 ر.س');
-    expect(formatCurrency(50, 'USD')).toBe('50.00 USD');
+    expect(formatCurrency(50, 'USD')).toBe('50.00 $');
   });
 
   it('keeps the sign on negative amounts', () => {

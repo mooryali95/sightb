@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
+import { DEFAULT_CURRENCY, currencySymbol } from '@/lib/currency';
 import { Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectSchema } from '@/lib/validations';
@@ -33,7 +34,9 @@ export default function NewProject() {
   const [endDate, setEndDate] = useState('');
   const [durationMonths, setDurationMonths] = useState('4');
   const [resourceCount, setResourceCount] = useState('1');
-  const [currency] = useState('ر.س');
+  // Must be the ISO code, not the symbol: `projects_currency_iso4217` rejects
+  // anything else, so writing 'ر.س' here fails project creation outright.
+  const [currency] = useState<string>(DEFAULT_CURRENCY);
   const [contractType, setContractType] = useState<ContractType>('lump_sum');
   const [retentionPercent, setRetentionPercent] = useState('0');
   const [loading, setLoading] = useState(false);
@@ -147,7 +150,7 @@ export default function NewProject() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>قيمة العقد {vatInclusive ? '(شاملة الضريبة)' : '(بدون ضريبة)'} ({currency})</Label>
+              <Label>قيمة العقد {vatInclusive ? '(شاملة الضريبة)' : '(بدون ضريبة)'} ({currencySymbol(currency)})</Label>
               <Input type="number" value={contractValue} onChange={(e) => setContractValue(e.target.value)} placeholder="230,000" required />
             </div>
             <div className="space-y-2">
