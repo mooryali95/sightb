@@ -87,8 +87,55 @@ $$;
 -- ─────────────────────────────────────────────────────────────────────
 -- الخطوة 2 — الترحيل. معاملة واحدة: تنجح كاملة أو تتراجع كاملة.
 -- ─────────────────────────────────────────────────────────────────────
+--
+-- لماذا تبدأ بتعريف الهوية:
+--
+-- على الجدولين مُشغِّلا تدقيق — trg_audit_projects وtrg_audit_payreq —
+-- يقرآن auth.uid() ويكتبانها في system_audit_log.user_id المُعرَّف
+-- NOT NULL. ومحرّر Supabase يعمل بلا مستخدم مُصادَق، فترجع NULL ويفشل
+-- التحديث بـ:
+--
+--   ERROR: 23502: null value in column "user_id" of relation
+--          "system_audit_log" violates not-null constraint
+--
+-- الحل السهل تعطيل المُشغِّلات (session_replication_role = replica).
+-- مرفوض عمداً: تغيير جماعي لعملة كل المشاريع في نظام مالي بلا أثر
+-- يقول من فعله ومتى هو بالضبط ما يرفعه المدقق كملاحظة — والمفارقة أن
+-- نُعطّل نظام تدقيق مبنيّ بعناية لنُمرّر تعديلاً مالياً.
+--
+-- بدلاً من ذلك تُعرَّف الجلسة بهوية مالك النظام، فيُسجَّل الترحيل باسمه
+-- في system_audit_log كأي تعديل آخر. الإعداد transaction-local
+-- (المعامل الثالث = true)، فينتهي أثره بانتهاء المعاملة.
 
 BEGIN;
+
+-- 0/3 · عرّف الجلسة بمالك النظام حتى تعمل مُشغِّلات التدقيق.
+DO $$
+DECLARE
+  _uid uuid;
+BEGIN
+  -- المقارنة نصية لا بتحويل enum: 'owner' أُضيفت إلى app_role في هجرة
+  -- لاحقة، فلو لم تكن مطبَّقة على هذه القاعدة لفشل التحويل بخطأ
+  -- «invalid input value for enum». المقارنة النصية تتجاوز ذلك.
+  SELECT user_id INTO _uid
+    FROM public.user_roles
+   WHERE scope_type::text = 'system'
+     AND role::text IN ('owner', 'admin')
+   ORDER BY (role::text = 'owner') DESC, created_at
+   LIMIT 1;
+
+  IF _uid IS NULL THEN
+    RAISE EXCEPTION
+      'لا يوجد مالك ولا مدير نظام في user_roles — لا يمكن نسب الترحيل إلى أحد.';
+  END IF;
+
+  -- auth.uid() تقرأ من أيّ من الإعدادين حسب نسخة Supabase؛ يُضبطان معاً.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', _uid)::text, true);
+  PERFORM set_config('request.jwt.claim.sub', _uid::text, true);
+
+  RAISE NOTICE 'سيُسجَّل الترحيل في سجل التدقيق باسم: %', _uid;
+END;
+$$;
 
 -- 1/3 · تطبيع projects
 WITH map(raw, iso) AS (
@@ -170,6 +217,13 @@ ORDER BY table_name;
 
 -- دليل أن القيد يعمل: هذا يجب أن يفشل. ألغِ التعليق لتجربته ثم أعده.
 -- UPDATE public.projects SET currency = 'ر.س' WHERE id = (SELECT id FROM public.projects LIMIT 1);
+
+-- أثر الترحيل في سجل التدقيق — يجب أن تظهر صفوف باسم مالك النظام.
+SELECT user_email, action, entity_type, count(*) AS rows, max(created_at) AS at
+FROM public.system_audit_log
+WHERE created_at > now() - interval '10 minutes'
+GROUP BY user_email, action, entity_type
+ORDER BY at DESC;
 
 
 -- ─────────────────────────────────────────────────────────────────────
