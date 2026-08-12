@@ -5,10 +5,14 @@ import type {
   ProjectFund,
   FundSettlement,
   Expense,
+  Custody,
+  PaymentRequest,
+  CashTransfer,
   FundAlert,
 } from '@/types/project';
 import {
   getFundRemaining,
+  getFundSpent,
   getProjectFundsSummary,
   daysBetween,
   getSettlementForFund,
@@ -26,10 +30,17 @@ export function generateFundAlerts(
   funds: ProjectFund[],
   settlements: FundSettlement[],
   expenses: Expense[],
+  custodies: Custody[] = [],
+  paymentRequests: PaymentRequest[] = [],
+  cashTransfers: CashTransfer[] = [],
 ): FundAlert[] {
   const alerts: FundAlert[] = [];
   const projectFunds = funds.filter((f) => f.projectId === projectId);
   const projectExpenses = expenses.filter((e) => e.projectId === projectId);
+  const projectCustodies = custodies.filter((c) => c.projectId === projectId);
+  const projectPRs = paymentRequests.filter((p) => p.projectId === projectId);
+  const projectTransfers = cashTransfers.filter((t) => t.projectId === projectId);
+
 
   // التنبيه 1: دفعة بدون تسوية تجاوزت 30 يوماً
   for (const fund of projectFunds) {
