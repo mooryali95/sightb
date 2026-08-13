@@ -1895,6 +1895,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_expense_receipt: { Args: { _path: string }; Returns: boolean }
+      can_access_resource_receipt: { Args: { _path: string }; Returns: boolean }
       can_edit: {
         Args: {
           _scope_id: string
