@@ -43,7 +43,11 @@ jobs:
           # reports at warning severity, and those are the violations with actual
           # runtime consequences — a stale dependency array shows a stale balance.
           # Counting only errors let the whole class through unnoticed.
-          ERROR_BUDGET=398
+          # Ratchet log — lower these, never raise them:
+          #   398 → 375 (14 Aug): cleared every non-`any` rule class. What is
+          #   left is 375 `no-explicit-any` and 10 `react-refresh` warnings,
+          #   so the next batch is necessarily typing work, file by file.
+          ERROR_BUDGET=375
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

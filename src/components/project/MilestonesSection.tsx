@@ -110,7 +110,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
-    let pct = parseInt(percentComplete) || 0;
+    const pct = parseInt(percentComplete) || 0;
     let st = status;
 
     // Auto status based on percent

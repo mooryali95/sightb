@@ -56,7 +56,7 @@ export function PermissionMatrixInspector() {
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">
         الصق مسار الملف داخل مخزن الإيصالات (مثال:
-        <code className="mx-1 px-1 bg-muted rounded text-[11px] direction-ltr">uid/1734…​.jpg</code>)
+        <code className="mx-1 px-1 bg-muted rounded text-[11px] direction-ltr">uid/1734….jpg</code>)
         لعرض القاعدة التي سمحت أو منعت الوصول، والسجل والمشروع المالك له.
       </p>
 

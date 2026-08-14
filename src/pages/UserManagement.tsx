@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { UserPlus, Trash2, Users, Shield, Eye, Pencil, Mail, CheckCircle2, Clock, UserX, ChevronDown, ChevronUp, Filter, Search, Crown, RefreshCw, AlertCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -52,17 +54,17 @@ interface RoleEntry {
 }
 
 const roleLabels: Record<string, string> = { owner: 'مالك', admin: 'أدمن', editor: 'محرر', viewer: 'مشاهد' };
-const roleIcons: Record<string, any> = { owner: Crown, admin: Shield, editor: Pencil, viewer: Eye };
+const roleIcons: Record<string, LucideIcon> = { owner: Crown, admin: Shield, editor: Pencil, viewer: Eye };
 const scopeLabels: Record<string, string> = { system: 'النظام', company: 'شركة', project: 'مشروع' };
 
-const inviteStatusConfig: Record<string, { label: string; icon: any; className: string }> = {
+const inviteStatusConfig: Record<string, { label: string; icon: LucideIcon; className: string }> = {
   pending: { label: 'قيد المعالجة', icon: Clock, className: 'bg-muted text-muted-foreground' },
   sent: { label: 'تم الإرسال', icon: Mail, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
   accepted: { label: 'مقبولة ومسجّل', icon: CheckCircle2, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
   failed: { label: 'فشل الإرسال', icon: AlertCircle, className: 'bg-destructive/10 text-destructive' },
 };
 
-const deliveryStatusConfig: Record<string, { label: string; icon: any; className: string }> = {
+const deliveryStatusConfig: Record<string, { label: string; icon: LucideIcon; className: string }> = {
   pending: { label: 'البريد بانتظار الإرسال', icon: Clock, className: 'bg-muted text-muted-foreground' },
   sent: { label: 'البريد أُرسل', icon: Mail, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
   failed: { label: 'البريد فشل', icon: AlertCircle, className: 'bg-destructive/10 text-destructive' },
@@ -110,10 +112,10 @@ export default function UserManagement() {
       userService.listInvites().catch(() => []),
     ]);
 
-    setProfiles(profileRows as any);
-    setAllRoles(roleRows as any);
-    const mappedInvites = inviteRows as any[];
-    setInvites(mappedInvites as any);
+    setProfiles(profileRows);
+    setAllRoles(roleRows);
+    const mappedInvites = inviteRows;
+    setInvites(mappedInvites);
 
     if (mappedInvites.length > 0) {
       try {
@@ -177,8 +179,8 @@ export default function UserManagement() {
       window.setTimeout(() => {
         void loadData();
       }, 6000);
-    } catch (err: any) {
-      console.error('[invite]', err);
+    } catch (err) {
+      logger.capture('user-management.invite', err);
       toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
       setSubmitting(false);
@@ -239,8 +241,8 @@ export default function UserManagement() {
       await userService.deleteUser(targetUserId);
       toast.success('تم حذف الحساب بنجاح');
       loadData();
-    } catch (err: any) {
-      console.error('[delete-user]', err);
+    } catch (err) {
+      logger.capture('user-management.delete-user', err);
       toast.error('حدث خطأ في حذف الحساب');
     } finally {
       setDeletingUser(null);
