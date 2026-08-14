@@ -1914,6 +1914,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      explain_attachment_access: { Args: { _path: string }; Returns: Json }
       fund_total_spent: { Args: { _fund_id: string }; Returns: number }
       has_access: {
         Args: {
