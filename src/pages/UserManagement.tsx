@@ -15,6 +15,8 @@ import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { PermissionMatrixInspector } from '@/components/security/PermissionMatrixInspector';
+
 
 interface Profile {
   id: string;
@@ -689,7 +691,10 @@ export default function UserManagement() {
             </div>
           )}
         </motion.div>
+
+        <PermissionMatrixInspector />
       </div>
     </AppLayout>
   );
 }
+
