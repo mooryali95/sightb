@@ -689,7 +689,10 @@ export default function UserManagement() {
             </div>
           )}
         </motion.div>
+
+        <PermissionMatrixInspector />
       </div>
     </AppLayout>
   );
 }
+
