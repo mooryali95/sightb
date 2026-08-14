@@ -7,6 +7,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# This job seeds shared fixtures into one test database, so two runs must never
+# overlap: a push to main and a PR run can otherwise re-seed the same rows while
+# the other's pgTAP transaction is mid-flight. Queue them instead of cancelling
+# — a cancelled run would leave the seed half-applied.
+concurrency:
+  group: supabase-test-db
+  cancel-in-progress: false
+
 jobs:
   ssot:
     runs-on: ubuntu-latest
