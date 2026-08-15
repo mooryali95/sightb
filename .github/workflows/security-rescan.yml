@@ -33,10 +33,11 @@ jobs:
       - name: Install psql
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Ensure pgtap extension available
-        if: ${{ env.SUPABASE_DB_URL != '' }}
-        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgtap;"
-
+      # No `CREATE EXTENSION pgtap` here any more: this workflow no longer runs
+      # the pgTAP suite (it needs seeded fixtures and belongs to SSOT Tests —
+      # see scripts/security-scan.sh). Dropping it also removes the last write
+      # this job made, so the scan is now purely read-only and cannot contend
+      # with the seeding job for anything.
       - name: Run security scan
         run: bash scripts/security-scan.sh
 

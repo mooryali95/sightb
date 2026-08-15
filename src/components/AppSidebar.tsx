@@ -53,7 +53,8 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
   const toggleCompany = (id: string) => {
     setExpandedCompanies((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -61,7 +62,8 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
   const togglePortfolio = (id: string) => {
     setExpandedPortfolios((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -69,7 +71,8 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
   const toggleShowInactive = (companyId: string) => {
     setShowInactive((prev) => {
       const next = new Set(prev);
-      next.has(companyId) ? next.delete(companyId) : next.add(companyId);
+      if (next.has(companyId)) next.delete(companyId);
+      else next.add(companyId);
       return next;
     });
   };

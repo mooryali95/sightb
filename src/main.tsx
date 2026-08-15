@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import App from "./App.tsx";
 import "./index.css";
 import { installGlobalErrorHandlers } from "@/lib/logger";
+import { installRemoteLogging } from "@/lib/observability";
 import { installOfflineQueue, subscribeToQueueFailures } from "@/lib/offline-queue";
 
 const TABLE_LABELS: Record<string, string> = {
@@ -43,6 +44,12 @@ function assertSupabaseEnv(): boolean {
 }
 
 installGlobalErrorHandlers();
+
+// Ships warn/error to VITE_LOG_ENDPOINT when it is set. A no-op otherwise,
+// which is every environment until you configure a collector — see P0-04 in
+// docs/production-readiness-key-points.md. Installed before anything else can
+// fail so that startup errors are captured too.
+installRemoteLogging();
 
 // A queued offline write that fails permanently (تحقق/صلاحيات) must never
 // disappear silently — the optimistic row is still on screen.

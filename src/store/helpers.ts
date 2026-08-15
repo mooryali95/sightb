@@ -1,4 +1,5 @@
 import { db } from '@/services/db';
+import { logger } from '@/lib/logger';
 import type { Json } from '@/integrations/supabase/types';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
@@ -158,7 +159,9 @@ export function mapChangeOrder(d: any): ChangeOrder {
   try {
     const raw = d.budget_items_json;
     if (raw) parsedBudgetItems = typeof raw === 'string' ? JSON.parse(raw) : raw;
-  } catch {}
+  } catch (err) {
+    logger.warn('store.mapChangeOrder', 'تعذّر تحليل budget_items_json — أُهملت بنود أمر التغيير', { id: d.id, err: String(err) });
+  }
   return {
     id: d.id, projectId: d.project_id, description: d.description,
     changeType: (d.change_type || 'scope_addition') as ChangeOrderType,

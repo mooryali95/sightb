@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
+import { logger } from '@/lib/logger';
 import { BudgetItem, Expense, Revenue } from '@/types/project';
 import { getUserId, mapBudgetItem, mapExpense, mapRevenue } from '../helpers';
 import type { AppState } from '../useStore';
@@ -88,10 +89,12 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (res.queuedOffline) return mapped.id;
     // Reload fund settlements + payables so DB-trigger-updated totals reflect in UI
     if (mapped.fundId) {
-      try { await (get() as any).loadFundsForProject?.(e.projectId); } catch {}
+      try { await (get() as any).loadFundsForProject?.(e.projectId); }
+      catch (err) { logger.warn('store.budget', 'تعذّرت إعادة تحميل العهد بعد إضافة مصروف', { projectId: e.projectId, err: String(err) }); }
     }
     if (mapped.reimbursesPayableId) {
-      try { await (get() as any).loadResourcePayablesForProject?.(e.projectId); } catch {}
+      try { await (get() as any).loadResourcePayablesForProject?.(e.projectId); }
+      catch (err) { logger.warn('store.budget', 'تعذّرت إعادة تحميل المستحقات بعد إضافة مصروف', { projectId: e.projectId, err: String(err) }); }
     }
     return mapped.id;
   },
@@ -121,7 +124,8 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...e } : x)) }));
     const projectId = existing?.projectId;
     if (projectId && (e.fundId !== undefined || e.amount !== undefined)) {
-      try { await (get() as any).loadFundsForProject?.(projectId); } catch {}
+      try { await (get() as any).loadFundsForProject?.(projectId); }
+      catch (err) { logger.warn('store.budget', 'تعذّرت إعادة تحميل العهد بعد تعديل مصروف', { projectId, err: String(err) }); }
     }
   },
 
@@ -131,7 +135,8 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) }));
     if (existing?.fundId && existing?.projectId) {
-      try { await (get() as any).loadFundsForProject?.(existing.projectId); } catch {}
+      try { await (get() as any).loadFundsForProject?.(existing.projectId); }
+      catch (err) { logger.warn('store.budget', 'تعذّرت إعادة تحميل العهد بعد حذف مصروف', { projectId: existing.projectId, err: String(err) }); }
     }
   },
 

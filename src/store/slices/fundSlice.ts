@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
+import { logger } from '@/lib/logger';
 import {
   ProjectFund,
   FundSettlement,
@@ -136,7 +137,8 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     }
 
     // إعادة تحميل من DB لمنع state stale
-    try { await get().loadFundsForProject(projectId); } catch {}
+    try { await get().loadFundsForProject(projectId); }
+    catch (err) { logger.warn('store.fund', 'تعذّرت إعادة تحميل العهد قبل التسوية — قد تكون الحالة قديمة', { projectId, err: String(err) }); }
 
     const projectFunds = get().projectFunds.filter((f) => f.projectId === projectId);
     const unsettled = projectFunds.find((f) => f.status !== 'settled');
