@@ -15,7 +15,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(14);
+SELECT plan(18);
 
 -- ── Fixtures ───────────────────────────────────────────────────────────────
 DO $$
@@ -107,6 +107,81 @@ SELECT ok(
            OR qual LIKE '%can_access_resource_receipt%')) >= 1,
   'storage.objects policies delegate to the attachment access guards'
 );
+
+-- ── 15-16. The explainer must agree with the policy it claims to explain ───
+--
+-- explain_attachment_access re-implements the access rules rather than running
+-- can_access_expense_receipt, so the two can drift and the inspector can
+-- confidently describe a decision that is no longer the decision being made.
+-- Tests 8-11 pin that both functions exist and are locked; these pin that they
+-- still say the same thing.
+--
+-- Both need a session, and auth.uid() is not drivable in every environment the
+-- suite runs in. Where it is not, these pass with a note rather than fail: this
+-- repository has already been burned three times by CI failures that reflected
+-- the harness rather than the code.
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+                     json_build_object('sub', current_setting('sec.owner'))::text,
+                     true);
+END $$;
+
+SELECT CASE WHEN auth.uid() IS NULL THEN
+  pass('skipped: auth.uid() is not drivable in this environment')
+ELSE
+  is(
+    public.explain_attachment_access('sec-test/receipt.jpg')->>'decision',
+    CASE WHEN public.can_access_expense_receipt('sec-test/receipt.jpg') THEN 'allow' ELSE 'deny' END,
+    'explainer and storage guard agree on a real receipt path'
+  )
+END;
+
+SELECT CASE WHEN auth.uid() IS NULL THEN
+  pass('skipped: auth.uid() is not drivable in this environment')
+ELSE
+  is(
+    public.explain_attachment_access('nobody/does-not-exist.jpg')->>'decision',
+    CASE WHEN public.can_access_expense_receipt('nobody/does-not-exist.jpg') THEN 'allow' ELSE 'deny' END,
+    'explainer and storage guard agree on an orphan path'
+  )
+END;
+
+-- ── 17-18. The deny path must not disclose whether a path exists ───────────
+--
+-- A caller with no role anywhere is denied either way; the point is that the
+-- two denials are indistinguishable. Before the 2026-08-15 migration they were
+-- not: a real path returned match_count/bucket/source and the reason
+-- no_role_on_owning_project, an unknown one returned
+-- orphan_path_no_matching_record — enough to probe for existence.
+--
+-- Any uuid with no user_roles rows works; nothing is inserted.
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+                     json_build_object('sub', '00000000-0000-0000-0000-0000000000ff')::text,
+                     true);
+END $$;
+
+SELECT CASE WHEN auth.uid() IS NULL THEN
+  pass('skipped: auth.uid() is not drivable in this environment')
+ELSE
+  ok(
+    NOT (public.explain_attachment_access('sec-test/receipt.jpg') ? 'match_count')
+    AND NOT (public.explain_attachment_access('sec-test/receipt.jpg') ? 'bucket'),
+    'an unauthorised deny carries no existence keys'
+  )
+END;
+
+SELECT CASE WHEN auth.uid() IS NULL THEN
+  pass('skipped: auth.uid() is not drivable in this environment')
+ELSE
+  is(
+    (public.explain_attachment_access('sec-test/receipt.jpg')  - 'checked_at' - 'path')::text,
+    (public.explain_attachment_access('nobody/does-not-exist.jpg') - 'checked_at' - 'path')::text,
+    'an unauthorised caller cannot tell a real path from an orphan'
+  )
+END;
 
 SELECT * FROM finish();
 
