@@ -243,6 +243,57 @@ export type Database = {
           },
         ]
       }
+      cash_transfer_repairs: {
+        Row: {
+          after_snapshot: Json
+          amount: number
+          before_snapshot: Json
+          created_at: string
+          custody_id: string | null
+          custody_name: string | null
+          id: string
+          missing_fund_id: string | null
+          performed_by: string
+          performed_by_email: string | null
+          project_id: string
+          reason: string
+          transfer_date: string | null
+          transfer_id: string
+        }
+        Insert: {
+          after_snapshot?: Json
+          amount: number
+          before_snapshot?: Json
+          created_at?: string
+          custody_id?: string | null
+          custody_name?: string | null
+          id?: string
+          missing_fund_id?: string | null
+          performed_by: string
+          performed_by_email?: string | null
+          project_id: string
+          reason: string
+          transfer_date?: string | null
+          transfer_id: string
+        }
+        Update: {
+          after_snapshot?: Json
+          amount?: number
+          before_snapshot?: Json
+          created_at?: string
+          custody_id?: string | null
+          custody_name?: string | null
+          id?: string
+          missing_fund_id?: string | null
+          performed_by?: string
+          performed_by_email?: string | null
+          project_id?: string
+          reason?: string
+          transfer_date?: string | null
+          transfer_id?: string
+        }
+        Relationships: []
+      }
       cash_transfers: {
         Row: {
           amount: number
@@ -1905,6 +1956,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      custody_snapshot: { Args: { _custody_id: string }; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1951,6 +2003,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      repair_orphan_cash_transfer: {
+        Args: { _reason: string; _transfer_id: string }
+        Returns: Json
       }
       split_settle_advance: {
         Args: {
