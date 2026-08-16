@@ -34,6 +34,8 @@ import { CommitmentsSection } from '@/components/project/CommitmentsSection';
 import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
 import { FundsSection } from '@/components/project/FundsSection';
 import { CashLedgerSection } from '@/components/project/CashLedgerSection';
+import { ExpenseSpendExplorer } from '@/components/project/ExpenseSpendExplorer';
+import { CashRepairLogSection } from '@/components/project/CashRepairLogSection';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { VendorPayablesPanel } from '@/components/project/VendorPayablesPanel';
@@ -174,11 +176,27 @@ export default function ProjectDetail() {
       case 'baseline':
         return <BaselineSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} budgetItems={pBudget} project={project} readOnly={isReadOnly} />;
       case 'expenses':
-        return <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} projectStatus={project.status} />;
+        return (
+          <div className="space-y-4">
+            <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} projectStatus={project.status} />
+            <ExpenseSpendExplorer
+              projectName={project.name}
+              expenses={pExpenses}
+              resources={pResources}
+              custodies={pCustodies}
+              budgetItems={pBudget}
+            />
+          </div>
+        );
       case 'funds':
         return (
           <div className="space-y-4">
             <CashLedgerSection projectId={project.id} funds={projectFunds} settlements={fundSettlements} expenses={pExpenses} custodies={pCustodies} />
+            <CashRepairLogSection
+              projectId={project.id} custodies={pCustodies} cashTransfers={cashTransfers || []}
+              funds={projectFunds} expenses={pExpenses} paymentRequests={paymentRequests}
+              readOnly={isReadOnly}
+            />
             <CashFlowSankey
               projectId={project.id} funds={projectFunds} expenses={pExpenses} custodies={pCustodies}
               paymentRequests={paymentRequests} cashTransfers={cashTransfers || []}
