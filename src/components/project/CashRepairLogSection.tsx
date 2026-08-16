@@ -63,7 +63,7 @@ export function CashRepairLogSection({
     try {
       setRepairs(await listCashTransferRepairs(projectId));
     } catch (e) {
-      logger.error('failed to load cash transfer repairs', e);
+      logger.error('cashRepair.load', e instanceof Error ? e.message : 'تعذّر تحميل سجل الإصلاح');
     } finally {
       setLoading(false);
     }
