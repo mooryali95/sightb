@@ -256,11 +256,40 @@ function esc(v: unknown): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-/** تصدير التقرير: صف لكل مجموعة ثم تفصيل بنودها. */
-export function buildSpendReportCSV(report: SpendReport, projectName: string): string {
+export interface SpendCsvMeta {
+  filters?: SpendFilters;
+  sort?: SpendSort;
+  /** مسار التجميع متعدد المستويات إن وُجد. */
+  dimensionPath?: SpendDimension[];
+}
+
+function filterLines(meta: SpendCsvMeta): string[] {
+  const f = meta.filters || {};
+  const out: string[] = [];
+  out.push(['الفلاتر المطبّقة', ''].join(','));
+  out.push(['بحث', f.query || '—'].map(esc).join(','));
+  out.push(['من تاريخ', f.dateFrom || '—'].map(esc).join(','));
+  out.push(['إلى تاريخ', f.dateTo || '—'].map(esc).join(','));
+  out.push(['الفئة', !f.category || f.category === 'all' ? 'كل الفئات' : (EXPENSE_CATEGORY_LABELS[f.category as ExpenseCategory] || f.category)].map(esc).join(','));
+  out.push(['الحالة', !f.approvalStatus || f.approvalStatus === 'all' ? 'كل الحالات' : f.approvalStatus].map(esc).join(','));
+  if (f.groupKey) out.push(['محصور بمجموعة', f.groupKey].map(esc).join(','));
+  if (meta.dimensionPath?.length) {
+    out.push(['مسار التجميع', meta.dimensionPath.map((d) => SPEND_DIMENSION_LABELS[d]).join(' ← ')].map(esc).join(','));
+  }
+  if (meta.sort) {
+    out.push(['الفرز', `${SPEND_SORT_LABELS[meta.sort.key]} — ${meta.sort.dir === 'asc' ? 'تصاعدي' : 'تنازلي'}`].map(esc).join(','));
+  }
+  return out;
+}
+
+/** تصدير التقرير: يعكس نفس الفلاتر والفرز والنطاق الزمني المعروض على الشاشة. */
+export function buildSpendReportCSV(report: SpendReport, projectName: string, meta: SpendCsvMeta = {}): string {
   const lines: string[] = [];
   lines.push([projectName, SPEND_DIMENSION_LABELS[report.dimension], new Date().toISOString().split('T')[0]].map(esc).join(','));
   lines.push('');
+  lines.push(...filterLines(meta));
+  lines.push('');
+
   lines.push(['المجموعة', 'الإجمالي', 'معتمد', 'قيد الاعتماد', 'مرفوض', 'عدد', 'النسبة %', 'من', 'إلى'].join(','));
   for (const g of report.groups) {
     lines.push([g.label, g.total, g.approved, g.pending, g.rejected, g.count, g.share.toFixed(1), g.firstDate ?? '', g.lastDate ?? ''].map(esc).join(','));
