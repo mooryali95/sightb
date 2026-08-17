@@ -79,6 +79,41 @@ export interface SpendFilters {
   groupKey?: string;
 }
 
+export type SpendSortKey = 'total' | 'count' | 'label' | 'recent';
+export type SpendSortDir = 'asc' | 'desc';
+
+export interface SpendSort {
+  key: SpendSortKey;
+  dir: SpendSortDir;
+}
+
+export const DEFAULT_SPEND_SORT: SpendSort = { key: 'total', dir: 'desc' };
+
+export const SPEND_SORT_LABELS: Record<SpendSortKey, string> = {
+  total: 'الإجمالي',
+  count: 'عدد المصروفات',
+  label: 'الاسم',
+  recent: 'آخر تاريخ صرف',
+};
+
+/** فرز المجموعات حسب مفتاح واتجاه — نفس الفرز المستخدم في العرض والتصدير. */
+export function sortSpendGroups<T extends SpendGroup>(groups: T[], sort: SpendSort = DEFAULT_SPEND_SORT): T[] {
+  const dir = sort.dir === 'asc' ? 1 : -1;
+  return [...groups].sort((a, b) => {
+    switch (sort.key) {
+      case 'count':
+        return (a.count - b.count) * dir;
+      case 'label':
+        return a.label.localeCompare(b.label, 'ar') * dir;
+      case 'recent':
+        return ((a.lastDate || '').localeCompare(b.lastDate || '')) * dir;
+      default:
+        return (a.total - b.total) * dir;
+    }
+  });
+}
+
+
 function labelOf(dimension: SpendDimension, exp: Expense, look: SpendLookups): { key: string; label: string } {
   switch (dimension) {
     case 'resource': {
