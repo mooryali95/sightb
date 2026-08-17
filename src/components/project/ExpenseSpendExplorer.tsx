@@ -1,9 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/finance';
 import {
-  buildSpendReport, buildSpendReportCSV, SPEND_DIMENSION_LABELS,
-  type SpendDimension, type SpendGroup, type SpendFilters,
+  buildSpendTree, buildSpendTreeCSV, SPEND_DIMENSION_LABELS, SPEND_SORT_LABELS,
+  DEFAULT_SPEND_SORT,
+  type SpendDimension, type SpendFilters, type SpendNode, type SpendSort, type SpendSortKey,
 } from '@/lib/expense-analytics';
+import {
+  listSpendTemplates, saveSpendTemplate, deleteSpendTemplate, type SpendTemplate,
+} from '@/lib/spend-templates';
 import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS,
   type ExpenseCategory, type ApprovalStatus, type Resource, type Custody, type BudgetItem, type Expense,
@@ -14,9 +18,13 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InspectorPanel, InspectorSection, InspectorKpiStrip } from '@/components/ui/inspector-panel';
-import { Download, Search, X, ChevronLeft } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Download, Search, X, ChevronDown, ChevronLeft, Save, Trash2, ArrowUpDown,
+} from 'lucide-react';
 
 interface Props {
+  projectId?: string;
   projectName?: string;
   expenses: Expense[];
   resources: Resource[];
@@ -25,42 +33,66 @@ interface Props {
 }
 
 const DIMENSIONS: SpendDimension[] = ['resource', 'vendor', 'category', 'responsible', 'budgetItem', 'custody'];
+const SORT_KEYS: SpendSortKey[] = ['total', 'count', 'label', 'recent'];
+const DEFAULT_PATH: SpendDimension[] = ['resource', 'category', 'budgetItem'];
 
 /**
- * مستكشف الصرف: يجيب بضغطة واحدة على «كم صُرف على هذا المورد، وفي ماذا؟»
- * فرز حسب بُعد + بحث + نطاق زمني + حالة، مع تفصيل كامل لكل مجموعة.
+ * مستكشف الصرف: تجميع متعدد المستويات (مورد ← فئة ← بند ← تفاصيل الصرف)
+ * مع بحث ونطاق زمني وفرز، تصدير CSV مطابق تماماً لما يظهر، وقوالب فلاتر محفوظة.
  */
-export function ExpenseSpendExplorer({ projectName = '', expenses, resources, custodies, budgetItems }: Props) {
-  const [dimension, setDimension] = useState<SpendDimension>('resource');
+export function ExpenseSpendExplorer({
+  projectId, projectName = '', expenses, resources, custodies, budgetItems,
+}: Props) {
+  const { toast } = useToast();
+  const [levels, setLevels] = useState<SpendDimension[]>(DEFAULT_PATH);
   const [query, setQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [category, setCategory] = useState<string>('all');
   const [status, setStatus] = useState<string>('all');
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [sort, setSort] = useState<SpendSort>(DEFAULT_SPEND_SORT);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [active, setActive] = useState<SpendNode | null>(null);
+  const [templates, setTemplates] = useState<SpendTemplate[]>([]);
+  const [templateName, setTemplateName] = useState('');
+
+  useEffect(() => { setTemplates(listSpendTemplates(projectId)); }, [projectId]);
 
   const look = useMemo(() => ({ resources, custodies, budgetItems }), [resources, custodies, budgetItems]);
   const filters: SpendFilters = useMemo(
-    () => ({ query, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, category: category as ExpenseCategory | 'all', approvalStatus: status }),
+    () => ({
+      query,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      category: category as ExpenseCategory | 'all',
+      approvalStatus: status,
+    }),
     [query, dateFrom, dateTo, category, status],
   );
 
-  const report = useMemo(
-    () => buildSpendReport(expenses, dimension, filters, look),
-    [expenses, dimension, filters, look],
+  const tree = useMemo(
+    () => buildSpendTree(expenses, levels, filters, look, sort),
+    [expenses, levels, filters, look, sort],
   );
 
-  const active: SpendGroup | null = openGroup ? report.groups.find((g) => g.key === openGroup) ?? null : null;
-  const maxTotal = report.groups[0]?.total ?? 0;
+  const maxTotal = tree.nodes[0]?.total ?? Math.max(0, ...tree.nodes.map((n) => n.total));
   const hasFilters = !!(query || dateFrom || dateTo || category !== 'all' || status !== 'all');
 
+  const toggle = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   const handleExport = () => {
-    const csv = buildSpendReportCSV(report, projectName);
+    const csv = buildSpendTreeCSV(tree, projectName, { filters, sort, dimensionPath: levels });
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `spend-by-${dimension}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `spend-${levels.join('-')}-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -69,36 +101,127 @@ export function ExpenseSpendExplorer({ projectName = '', expenses, resources, cu
     setQuery(''); setDateFrom(''); setDateTo(''); setCategory('all'); setStatus('all');
   };
 
+  const handleSaveTemplate = () => {
+    const name = templateName.trim();
+    if (!name) return;
+    saveSpendTemplate({ name, projectId: projectId ?? null, dimensions: levels, filters, sort });
+    setTemplates(listSpendTemplates(projectId));
+    setTemplateName('');
+    toast({ title: 'تم حفظ القالب', description: name });
+  };
+
+  const applyTemplate = (t: SpendTemplate) => {
+    setLevels(t.dimensions?.length ? t.dimensions : DEFAULT_PATH);
+    setQuery(t.filters.query || '');
+    setDateFrom(t.filters.dateFrom || '');
+    setDateTo(t.filters.dateTo || '');
+    setCategory((t.filters.category as string) || 'all');
+    setStatus((t.filters.approvalStatus as string) || 'all');
+    setSort(t.sort || DEFAULT_SPEND_SORT);
+    setExpanded(new Set());
+  };
+
+  const removeTemplate = (id: string) => {
+    deleteSpendTemplate(id);
+    setTemplates(listSpendTemplates(projectId));
+  };
+
+  const setLevel = (index: number, dim: SpendDimension | 'none') => {
+    setExpanded(new Set());
+    setLevels((prev) => {
+      const next = [...prev];
+      if (dim === 'none') return next.slice(0, index);
+      next[index] = dim;
+      return next.slice(0, index + 1).concat(prev.slice(index + 1).filter((d) => d !== dim));
+    });
+  };
+
+  const renderNode = (n: SpendNode, depth: number) => {
+    const id = n.path.join('>');
+    const open = expanded.has(id);
+    const hasChildren = n.children.length > 0;
+    return (
+      <div key={id} className="space-y-1" style={{ marginInlineStart: depth ? 16 : 0 }}>
+        <div className="p-3 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              className="flex items-center gap-2 min-w-0 text-start flex-1"
+              onClick={() => (hasChildren ? toggle(id) : setActive(n))}
+            >
+              {hasChildren
+                ? (open ? <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" /> : <ChevronLeft className="w-4 h-4 shrink-0 text-muted-foreground" />)
+                : <span className="w-4" />}
+              <span className="min-w-0">
+                <span className="block text-sm font-medium truncate">{n.label}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {SPEND_DIMENSION_LABELS[n.dimension]} · {n.count} مصروف · {n.share.toFixed(1)}%
+                  {n.firstDate && ` · ${n.firstDate} → ${n.lastDate}`}
+                </span>
+              </span>
+            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="text-end">
+                <p className="text-sm font-mono font-semibold">{formatCurrency(n.total)}</p>
+                {n.pending > 0 && (
+                  <p className="text-[11px] text-warning">قيد الاعتماد: {formatCurrency(n.pending)}</p>
+                )}
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => setActive(n)}>تفاصيل</Button>
+            </div>
+          </div>
+          {depth === 0 && (
+            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mt-2">
+              <div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${maxTotal > 0 ? (n.total / maxTotal) * 100 : 0}%` }}
+              />
+            </div>
+          )}
+        </div>
+        {open && hasChildren && (
+          <div className="space-y-1">{n.children.map((c) => renderNode(c, depth + 1))}</div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="stat-card space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold">مستكشف الصرف — تجميع وتتبع</h3>
+          <h3 className="text-sm font-semibold">مستكشف الصرف — تجميع متعدد المستويات</h3>
           <p className="text-xs text-muted-foreground">
-            اختر بُعد التجميع وابحث لترى إجمالي ما صُرف لكل جهة، وفي ماذا صُرف بالتفصيل.
+            إجمالي التكلفة لكل مورد ثم الهبوط إلى الفئة فالبند فتفاصيل كل عملية صرف.
           </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport} disabled={report.groups.length === 0}>
-          <Download className="w-3.5 h-3.5" />تصدير CSV
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport} disabled={tree.nodes.length === 0}>
+          <Download className="w-3.5 h-3.5" />تصدير CSV (بنفس الفلاتر والفرز)
         </Button>
       </div>
 
-      {/* Dimension switcher */}
-      <div className="flex flex-wrap gap-1.5">
-        {DIMENSIONS.map((d) => (
-          <Button
-            key={d}
-            type="button"
-            size="sm"
-            variant={dimension === d ? 'default' : 'outline'}
-            onClick={() => { setDimension(d); setOpenGroup(null); }}
-          >
-            {SPEND_DIMENSION_LABELS[d]}
-          </Button>
+      {/* مستويات التجميع */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="space-y-1">
+            <Label className="text-xs">المستوى {i + 1}</Label>
+            <Select
+              value={levels[i] ?? 'none'}
+              onValueChange={(v) => setLevel(i, v as SpendDimension | 'none')}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {i > 0 && <SelectItem value="none">— بدون —</SelectItem>}
+                {DIMENSIONS.map((d) => (
+                  <SelectItem key={d} value={d}>{SPEND_DIMENSION_LABELS[d]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         ))}
       </div>
 
-      {/* Filters */}
+      {/* الفلاتر */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         <div className="md:col-span-2 space-y-1">
           <Label className="text-xs">بحث</Label>
@@ -133,6 +256,7 @@ export function ExpenseSpendExplorer({ projectName = '', expenses, resources, cu
           </Select>
         </div>
       </div>
+
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <Label className="text-xs">الحالة</Label>
@@ -146,6 +270,26 @@ export function ExpenseSpendExplorer({ projectName = '', expenses, resources, cu
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1">
+          <Label className="text-xs">الفرز</Label>
+          <Select value={sort.key} onValueChange={(v) => setSort((s) => ({ ...s, key: v as SpendSortKey }))}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SORT_KEYS.map((k) => (
+                <SelectItem key={k} value={k}>{SPEND_SORT_LABELS[k]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1"
+          onClick={() => setSort((s) => ({ ...s, dir: s.dir === 'desc' ? 'asc' : 'desc' }))}
+        >
+          <ArrowUpDown className="w-3.5 h-3.5" />
+          {sort.dir === 'desc' ? 'تنازلي' : 'تصاعدي'}
+        </Button>
         {hasFilters && (
           <Button variant="ghost" size="sm" className="gap-1" onClick={resetFilters}>
             <X className="w-3.5 h-3.5" />مسح الفلاتر
@@ -153,86 +297,68 @@ export function ExpenseSpendExplorer({ projectName = '', expenses, resources, cu
         )}
       </div>
 
-      {/* Totals strip */}
+      {/* قوالب الفلاتر */}
+      <div className="p-3 rounded-lg border border-border bg-muted/20 space-y-2">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1 flex-1 min-w-48">
+            <Label className="text-xs">حفظ الفلاتر الحالية كقالب</Label>
+            <Input
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="مثال: مصروفات الربع الأول — د. أيمن"
+            />
+          </div>
+          <Button size="sm" className="gap-1.5" onClick={handleSaveTemplate} disabled={!templateName.trim()}>
+            <Save className="w-3.5 h-3.5" />حفظ القالب
+          </Button>
+        </div>
+        {templates.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {templates.map((t) => (
+              <span key={t.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-background ps-2 pe-1 py-0.5">
+                <button type="button" className="text-xs" onClick={() => applyTemplate(t)}>{t.name}</button>
+                {!t.projectId && <Badge variant="outline" className="text-[9px]">عام</Badge>}
+                <button type="button" aria-label="حذف القالب" onClick={() => removeTemplate(t.id)}>
+                  <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* الإجماليات */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3 rounded-lg border border-border bg-muted/30">
           <p className="text-xs text-muted-foreground">إجمالي المطابق</p>
-          <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(report.grandTotal)}</p>
+          <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(tree.grandTotal)}</p>
         </div>
         <div className="p-3 rounded-lg border border-border bg-muted/30">
           <p className="text-xs text-muted-foreground">عدد المصروفات</p>
-          <p className="text-sm font-mono font-semibold mt-1">{report.grandCount}</p>
+          <p className="text-sm font-mono font-semibold mt-1">{tree.grandCount}</p>
         </div>
         <div className="p-3 rounded-lg border border-border bg-muted/30">
           <p className="text-xs text-muted-foreground">عدد المجموعات</p>
-          <p className="text-sm font-mono font-semibold mt-1">{report.groups.length}</p>
+          <p className="text-sm font-mono font-semibold mt-1">{tree.nodes.length}</p>
         </div>
         <div className="p-3 rounded-lg border border-border bg-muted/30">
           <p className="text-xs text-muted-foreground">مرفوض (خارج الإجمالي)</p>
-          <p className="text-sm font-mono font-semibold mt-1 text-destructive">{formatCurrency(report.rejectedTotal)}</p>
+          <p className="text-sm font-mono font-semibold mt-1 text-destructive">{formatCurrency(tree.rejectedTotal)}</p>
         </div>
       </div>
 
-      {/* Groups */}
-      {report.groups.length === 0 ? (
+      {tree.nodes.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-6">لا توجد نتائج مطابقة للفلاتر</p>
       ) : (
-        <div className="space-y-2">
-          {report.groups.map((g) => (
-            <button
-              key={g.key}
-              type="button"
-              onClick={() => setOpenGroup(g.key)}
-              className="w-full text-start p-3 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{g.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {g.count} مصروف · {g.share.toFixed(1)}%
-                    {g.firstDate && ` · ${g.firstDate} → ${g.lastDate}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-end">
-                    <p className="text-sm font-mono font-semibold">{formatCurrency(g.total)}</p>
-                    {g.pending > 0 && (
-                      <p className="text-[11px] text-amber-600">منها قيد الاعتماد: {formatCurrency(g.pending)}</p>
-                    )}
-                  </div>
-                  <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </div>
-              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mt-2">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${maxTotal > 0 ? (g.total / maxTotal) * 100 : 0}%` }}
-                />
-              </div>
-              {g.byCategory.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {g.byCategory.slice(0, 4).map((c) => (
-                    <Badge key={c.key} variant="outline" className="text-[10px]">
-                      {c.label}: {formatCurrency(c.total)}
-                    </Badge>
-                  ))}
-                  {g.byCategory.length > 4 && (
-                    <Badge variant="outline" className="text-[10px]">+{g.byCategory.length - 4}</Badge>
-                  )}
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
+        <div className="space-y-2">{tree.nodes.map((n) => renderNode(n, 0))}</div>
       )}
 
-      {/* Drill-down */}
       {active && (
         <InspectorPanel
           open={!!active}
-          onOpenChange={(v) => !v && setOpenGroup(null)}
+          onOpenChange={(v) => !v && setActive(null)}
           title={active.label}
-          description={`${SPEND_DIMENSION_LABELS[dimension]} · ${active.count} مصروف`}
+          description={`${SPEND_DIMENSION_LABELS[active.dimension]} · ${active.count} مصروف`}
           width="lg"
         >
           <InspectorKpiStrip
@@ -244,16 +370,18 @@ export function ExpenseSpendExplorer({ projectName = '', expenses, resources, cu
             ]}
           />
 
-          <InspectorSection title="في ماذا صُرف">
-            <div className="space-y-2">
-              {active.byCategory.map((c) => (
-                <div key={c.key} className="flex items-center justify-between gap-2">
-                  <span className="text-xs">{c.label} <span className="text-muted-foreground">({c.count})</span></span>
-                  <span className="text-xs font-mono">{formatCurrency(c.total)}</span>
-                </div>
-              ))}
-            </div>
-          </InspectorSection>
+          {active.children.length > 0 && (
+            <InspectorSection title={`تفصيل حسب ${SPEND_DIMENSION_LABELS[active.children[0].dimension]}`}>
+              <div className="space-y-2">
+                {active.children.map((c) => (
+                  <div key={c.path.join('>')} className="flex items-center justify-between gap-2">
+                    <span className="text-xs">{c.label} <span className="text-muted-foreground">({c.count})</span></span>
+                    <span className="text-xs font-mono">{formatCurrency(c.total)}</span>
+                  </div>
+                ))}
+              </div>
+            </InspectorSection>
+          )}
 
           <InspectorSection title="بنود الصرف">
             <div className="space-y-2">
