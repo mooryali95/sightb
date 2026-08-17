@@ -223,7 +223,7 @@ export function buildSpendReport(
 
   const grandTotal = Array.from(map.values()).reduce((s, g) => s + g.total, 0);
 
-  const groups = Array.from(map.values()).map((g) => {
+  const groups = sortSpendGroups(Array.from(map.values()).map((g) => {
     const catMap = new Map<string, SpendBreakdownEntry>();
     for (const e of g.expenses) {
       if ((e.approvalStatus || 'approved') === 'rejected') continue;
@@ -239,7 +239,8 @@ export function buildSpendReport(
       byCategory: Array.from(catMap.values()).sort((a, b) => b.total - a.total),
       expenses: [...g.expenses].sort((a, b) => (a.date < b.date ? 1 : -1)),
     };
-  }).sort((a, b) => b.total - a.total);
+  }), sort);
+
 
   return {
     dimension,
