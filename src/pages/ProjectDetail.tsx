@@ -35,6 +35,8 @@ import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
 import { FundsSection } from '@/components/project/FundsSection';
 import { CashLedgerSection } from '@/components/project/CashLedgerSection';
 import { ExpenseSpendExplorer } from '@/components/project/ExpenseSpendExplorer';
+import { SpendConsistencyChart } from '@/components/project/SpendConsistencyChart';
+
 import { CashRepairLogSection } from '@/components/project/CashRepairLogSection';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
