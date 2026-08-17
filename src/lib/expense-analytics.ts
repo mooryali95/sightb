@@ -310,3 +310,142 @@ export function buildSpendReportCSV(report: SpendReport, projectName: string, me
   lines.push(['إجمالي المرفوض (خارج الإجمالي)', report.rejectedTotal].map(esc).join(','));
   return lines.join('\n');
 }
+
+/* ------------------------------------------------------------------ */
+/* تجميع متعدد المستويات: مورد ← فئة ← بند ← تفاصيل كل عملية صرف        */
+/* ------------------------------------------------------------------ */
+
+export interface SpendNode {
+  key: string;
+  label: string;
+  dimension: SpendDimension;
+  /** المسار الكامل من الجذر (مفاتيح) — يُستخدم للفتح/الطي والتصدير. */
+  path: string[];
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  count: number;
+  share: number;
+  firstDate: string | null;
+  lastDate: string | null;
+  children: SpendNode[];
+  expenses: Expense[];
+}
+
+export interface SpendTree {
+  dimensions: SpendDimension[];
+  nodes: SpendNode[];
+  grandTotal: number;
+  grandCount: number;
+  rejectedTotal: number;
+}
+
+function buildLevel(
+  rows: Expense[],
+  dims: SpendDimension[],
+  look: SpendLookups,
+  sort: SpendSort,
+  parentPath: string[],
+  parentTotal: number,
+): SpendNode[] {
+  const [dim, ...rest] = dims;
+  if (!dim) return [];
+  const buckets = new Map<string, { label: string; rows: Expense[] }>();
+  for (const e of rows) {
+    const { key, label } = labelOf(dim, e, look);
+    const b = buckets.get(key) || { label, rows: [] };
+    b.rows.push(e);
+    buckets.set(key, b);
+  }
+
+  const nodes: SpendNode[] = Array.from(buckets.entries()).map(([key, b]) => {
+    let total = 0, approved = 0, pending = 0, rejected = 0;
+    let firstDate: string | null = null, lastDate: string | null = null;
+    for (const e of b.rows) {
+      const st = e.approvalStatus || 'approved';
+      if (st === 'rejected') rejected += e.amount;
+      else {
+        total += e.amount;
+        if (st === 'pending') pending += e.amount; else approved += e.amount;
+      }
+      if (!firstDate || e.date < firstDate) firstDate = e.date;
+      if (!lastDate || e.date > lastDate) lastDate = e.date;
+    }
+    const path = [...parentPath, key];
+    return {
+      key, label: b.label, dimension: dim, path,
+      total, approved, pending, rejected,
+      count: b.rows.length,
+      share: parentTotal > 0 ? (total / parentTotal) * 100 : 0,
+      firstDate, lastDate,
+      children: rest.length ? buildLevel(b.rows, rest, look, sort, path, total) : [],
+      expenses: [...b.rows].sort((a, c) => (a.date < c.date ? 1 : -1)),
+    };
+  });
+
+  return sortSpendGroups(nodes as unknown as SpendGroup[], sort) as unknown as SpendNode[];
+}
+
+/**
+ * يبني شجرة تجميع متعددة المستويات بنفس فلاتر وفرز التقرير المسطّح،
+ * فيصبح بالإمكان الهبوط من المورد ← الفئة ← بند الموازنة ← بنود الصرف.
+ */
+export function buildSpendTree(
+  expenses: Expense[],
+  dimensions: SpendDimension[],
+  filters: SpendFilters = {},
+  look: SpendLookups = {},
+  sort: SpendSort = DEFAULT_SPEND_SORT,
+): SpendTree {
+  const dims = dimensions.length ? dimensions : (['resource'] as SpendDimension[]);
+  const rows = filterExpenses(expenses, filters, look, dims[0]);
+  let grandTotal = 0, rejectedTotal = 0;
+  for (const e of rows) {
+    if ((e.approvalStatus || 'approved') === 'rejected') rejectedTotal += e.amount;
+    else grandTotal += e.amount;
+  }
+  return {
+    dimensions: dims,
+    nodes: buildLevel(rows, dims, look, sort, [], grandTotal),
+    grandTotal,
+    grandCount: rows.length,
+    rejectedTotal,
+  };
+}
+
+/** تصدير الشجرة كاملة: مستوى لكل صف مع مسار التجميع، ثم بنود الصرف. */
+export function buildSpendTreeCSV(tree: SpendTree, projectName: string, meta: SpendCsvMeta = {}): string {
+  const lines: string[] = [];
+  lines.push([projectName, tree.dimensions.map((d) => SPEND_DIMENSION_LABELS[d]).join(' ← '), new Date().toISOString().split('T')[0]].map(esc).join(','));
+  lines.push('');
+  lines.push(...filterLines({ ...meta, dimensionPath: tree.dimensions }));
+  lines.push('');
+  lines.push(['المستوى', 'البُعد', 'المسار', 'الاسم', 'الإجمالي', 'معتمد', 'قيد الاعتماد', 'مرفوض', 'عدد', 'النسبة %', 'من', 'إلى'].join(','));
+
+  const walk = (nodes: SpendNode[], level: number, trail: string[]) => {
+    for (const n of nodes) {
+      const path = [...trail, n.label];
+      lines.push([
+        level, SPEND_DIMENSION_LABELS[n.dimension], path.join(' / '), n.label,
+        n.total, n.approved, n.pending, n.rejected, n.count, n.share.toFixed(1),
+        n.firstDate ?? '', n.lastDate ?? '',
+      ].map(esc).join(','));
+      if (n.children.length) walk(n.children, level + 1, path);
+      else {
+        for (const e of n.expenses) {
+          lines.push([
+            level + 1, 'بند صرف', path.join(' / '), e.description,
+            e.amount, '', '', '', 1, '', e.date, e.date,
+          ].map(esc).join(','));
+        }
+      }
+    }
+  };
+  walk(tree.nodes, 1, []);
+
+  lines.push('');
+  lines.push(['الإجمالي العام', tree.grandTotal].map(esc).join(','));
+  lines.push(['إجمالي المرفوض (خارج الإجمالي)', tree.rejectedTotal].map(esc).join(','));
+  return lines.join('\n');
+}
