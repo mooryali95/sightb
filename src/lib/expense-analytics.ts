@@ -189,7 +189,9 @@ export function buildSpendReport(
   dimension: SpendDimension,
   filters: SpendFilters = {},
   look: SpendLookups = {},
+  sort: SpendSort = DEFAULT_SPEND_SORT,
 ): SpendReport {
+
   const rows = filterExpenses(expenses, filters, look, dimension);
   const map = new Map<string, SpendGroup>();
   let rejectedTotal = 0;
