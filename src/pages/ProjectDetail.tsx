@@ -189,7 +189,7 @@ export default function ProjectDetail() {
               custodies={pCustodies}
               budgetItems={pBudget}
             />
-            <SpendConsistencyChart projectId={project.id} expenses={pExpenses} resources={pResources} />
+            <SpendConsistencyChart projectId={project.id} projectName={project.name} expenses={pExpenses} resources={pResources} />
 
           </div>
         );

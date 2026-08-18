@@ -2,7 +2,7 @@ import { useStore } from '@/store/useStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Building2, FolderKanban, LayoutDashboard, Plus, ChevronDown, ChevronLeft,
-  Briefcase, Menu, LogOut, Users, ScrollText, Archive, CheckCircle2, XCircle, Search, X,
+  Briefcase, Menu, LogOut, Users, BellRing, ScrollText, Archive, CheckCircle2, XCircle, Search, X,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
@@ -163,6 +163,14 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
             onClick={() => navigate('/users')}
           />
         )}
+
+        <NavItem
+          collapsed={collapsed}
+          label="مركز التنبيهات"
+          icon={<BellRing className="w-4 h-4 shrink-0" />}
+          active={isActive('/alerts')}
+          onClick={() => navigate('/alerts')}
+        />
 
         {/* System Audit Log - Owner only */}
         {isOwner && (

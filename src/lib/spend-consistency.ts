@@ -136,3 +136,108 @@ export function buildSpendConsistency(
     hasIssues: Math.abs(totalGap) > 0.01 || totalUnlinked > 0.01,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* مقارنة تفصيلية لكل مجموعة (مورد/فئة): ما الذي تغيّر قبل/بعد الإصلاح  */
+/* ------------------------------------------------------------------ */
+
+export interface ComparisonLine {
+  /** معرّف المصروف، أو معرّف الإصلاح للأسطر غير المرتبطة بمصروف. */
+  id: string;
+  kind: 'expense' | 'repair';
+  date: string | null;
+  description: string;
+  categoryLabel: string;
+  custodyId: string | null;
+  /** الرقم الحالي (الحقيقة بعد الإصلاح). */
+  after: number;
+  /** الرقم كما كان محسوباً قبل الإصلاح. */
+  before: number;
+  /** before − after. */
+  diff: number;
+}
+
+export interface RowComparison {
+  key: string;
+  label: string;
+  before: number;
+  after: number;
+  gap: number;
+  changedCount: number;
+  lines: ComparisonLine[];
+}
+
+/**
+ * يبني تفصيل «ما الذي تغيّر» لمجموعة واحدة: كل عنصر صرف مع رقمه قبل وبعد
+ * وفرق المبلغ، إضافة إلى مبالغ الإصلاح التي لم تُنسب إلى أي مصروف.
+ */
+export function buildRowComparison(
+  groupKey: string,
+  expenses: Expense[],
+  repairs: RepairRecord[],
+  dimension: ConsistencyDimension,
+  look: SpendLookups = {},
+): RowComparison {
+  const counted = expenses.filter(isCounted);
+  const label =
+    counted.map((e) => groupOf(dimension, e, look)).find((g) => g.key === groupKey)?.label ??
+    (groupKey === UNASSIGNED_KEY ? UNASSIGNED_LABEL : groupKey);
+
+  const lines = new Map<string, ComparisonLine>();
+  for (const e of counted) {
+    if (groupOf(dimension, e, look).key !== groupKey) continue;
+    lines.set(e.id, {
+      id: e.id,
+      kind: 'expense',
+      date: e.date ?? null,
+      description: e.description,
+      categoryLabel: EXPENSE_CATEGORY_LABELS[e.category] || e.category,
+      custodyId: e.custodyId ?? null,
+      after: e.amount,
+      before: e.amount,
+      diff: 0,
+    });
+  }
+
+  for (const rep of repairs) {
+    const amount = Number(rep.amount) || 0;
+    if (amount <= 0) continue;
+    const linked = rep.custodyId ? counted.filter((e) => e.custodyId === rep.custodyId) : [];
+    const base = linked.reduce((s, e) => s + e.amount, 0);
+    if (linked.length === 0 || base <= 0) {
+      if (groupKey !== UNASSIGNED_KEY) continue;
+      lines.set(`repair-${rep.id}`, {
+        id: rep.id,
+        kind: 'repair',
+        date: null,
+        description: 'تحويل بلا مصدر — تم حذفه',
+        categoryLabel: '—',
+        custodyId: rep.custodyId,
+        after: 0,
+        before: amount,
+        diff: amount,
+      });
+      continue;
+    }
+    for (const e of linked) {
+      const line = lines.get(e.id);
+      if (!line) continue;
+      const share = amount * (e.amount / base);
+      line.before += share;
+      line.diff += share;
+    }
+  }
+
+  const list = Array.from(lines.values()).sort((a, b) => (b.diff - a.diff) || (b.after - a.after));
+  const after = list.reduce((s, l) => s + l.after, 0);
+  const before = list.reduce((s, l) => s + l.before, 0);
+  return {
+    key: groupKey,
+    label,
+    before,
+    after,
+    gap: before - after,
+    changedCount: list.filter((l) => Math.abs(l.diff) > 0.01).length,
+    lines: list,
+  };
+}
