@@ -159,6 +159,88 @@ export function SpendConsistencyChart({ projectId, projectName = '', expenses, r
           ))}
         </div>
       )}
+
+      {/* جدول المجموعات — انقر لفتح المقارنة التفصيلية */}
+      {report.rows.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">
+            انقر على أي {dimension === 'resource' ? 'مورد' : 'فئة'} لعرض عناصر الصرف التي تغيّرت قبل/بعد الإصلاح.
+          </p>
+          {report.rows.map((r) => {
+            const changed = Math.abs(r.gap) > 0.01;
+            return (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => setActiveKey(r.key)}
+                className="w-full flex items-center justify-between gap-3 p-2 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors text-start"
+              >
+                <span className="text-xs font-medium truncate">{r.label}</span>
+                <span className="flex items-center gap-3 shrink-0 font-mono text-[11px]">
+                  <span className="text-muted-foreground">قبل: {formatCurrency(r.before)}</span>
+                  <span>بعد: {formatCurrency(r.after)}</span>
+                  <span className={changed ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
+                    فرق: {formatCurrency(r.gap)}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {comparison && (
+        <InspectorPanel
+          open={!!comparison}
+          onOpenChange={(v) => !v && setActiveKey(null)}
+          title={`مقارنة تفصيلية — ${comparison.label}`}
+          description={`${comparison.changedCount} عنصر تغيّر من أصل ${comparison.lines.length}`}
+          width="lg"
+        >
+          <InspectorKpiStrip
+            items={[
+              { label: 'قبل الإصلاح', value: formatCurrency(comparison.before), tone: 'default' },
+              { label: 'بعد الإصلاح', value: formatCurrency(comparison.after), tone: 'success' },
+              { label: 'الفرق', value: formatCurrency(comparison.gap), tone: Math.abs(comparison.gap) > 0.01 ? 'danger' : 'default' },
+            ]}
+          />
+          <InspectorSection title="عناصر الصرف — قبل / بعد / الفرق">
+            <div className="space-y-2">
+              {comparison.lines.map((l) => {
+                const changed = Math.abs(l.diff) > 0.01;
+                return (
+                  <div
+                    key={`${l.kind}-${l.id}`}
+                    className={`p-2 rounded border ${changed ? 'border-destructive/40 bg-destructive/5' : 'border-border bg-muted/20'}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium truncate">{l.description}</span>
+                      {changed && <Badge variant="destructive" className="text-[10px] shrink-0">تغيّر</Badge>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] font-mono">
+                      {l.date && <span className="text-muted-foreground">{l.date}</span>}
+                      <span className="text-muted-foreground">{l.categoryLabel}</span>
+                      <span className="text-muted-foreground">قبل: {formatCurrency(l.before)}</span>
+                      <span>بعد: {formatCurrency(l.after)}</span>
+                      <span className={changed ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
+                        فرق: {formatCurrency(l.diff)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+              {comparison.lines.length === 0 && (
+                <p className="text-xs text-muted-foreground">لا توجد عناصر صرف في هذه المجموعة.</p>
+              )}
+            </div>
+          </InspectorSection>
+          <InspectorSection title="مركز التنبيهات">
+            <Link to="/alerts" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <BellRing className="w-3.5 h-3.5" />عرض سجل تنبيهات الاتساق لكل المشاريع
+            </Link>
+          </InspectorSection>
+        </InspectorPanel>
+      )}
     </div>
   );
 }
