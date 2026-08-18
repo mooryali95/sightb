@@ -37,7 +37,7 @@ export function SpendConsistencyChart({ projectId, projectName = '', expenses, r
       .then((rows) => {
         if (alive) setRepairs(rows.map((r) => ({ id: r.id, custodyId: r.custodyId, amount: r.amount })));
       })
-      .catch((e) => logger.error('spend-consistency: repairs load failed', e));
+      .catch((e) => logger.error('spend-consistency', 'repairs load failed', { error: String(e) }));
     return () => { alive = false; };
   }, [projectId]);
 
