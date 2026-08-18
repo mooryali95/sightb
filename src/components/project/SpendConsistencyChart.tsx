@@ -201,7 +201,7 @@ export function SpendConsistencyChart({ projectId, projectName = '', expenses, r
             items={[
               { label: 'قبل الإصلاح', value: formatCurrency(comparison.before), tone: 'default' },
               { label: 'بعد الإصلاح', value: formatCurrency(comparison.after), tone: 'success' },
-              { label: 'الفرق', value: formatCurrency(comparison.gap), tone: Math.abs(comparison.gap) > 0.01 ? 'danger' : 'default' },
+              { label: 'الفرق', value: formatCurrency(comparison.gap), tone: Math.abs(comparison.gap) > 0.01 ? 'destructive' : 'default' },
             ]}
           />
           <InspectorSection title="عناصر الصرف — قبل / بعد / الفرق">
