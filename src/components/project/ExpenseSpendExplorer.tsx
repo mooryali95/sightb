@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/finance';
 import {
   buildSpendTree, buildSpendTreeCSV, SPEND_DIMENSION_LABELS, SPEND_SORT_LABELS,
@@ -19,9 +20,13 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InspectorPanel, InspectorSection, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 import { useToast } from '@/hooks/use-toast';
+import { decodeSpendView, encodeSpendView, buildShareUrl } from '@/lib/spend-url';
 import {
-  Download, Search, X, ChevronDown, ChevronLeft, Save, Trash2, ArrowUpDown,
+  Download, Search, X, ChevronDown, ChevronLeft, Save, Trash2, ArrowUpDown, Link2, Plus,
 } from 'lucide-react';
+
+/** عدد الصفوف المعروضة في كل دفعة — تحميل تدريجي للقوائم الكبيرة. */
+const PAGE_SIZE = 40;
 
 interface Props {
   projectId?: string;
@@ -55,8 +60,25 @@ export function ExpenseSpendExplorer({
   const [active, setActive] = useState<SpendNode | null>(null);
   const [templates, setTemplates] = useState<SpendTemplate[]>([]);
   const [templateName, setTemplateName] = useState('');
+  const [pages, setPages] = useState<Record<string, number>>({});
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => { setTemplates(listSpendTemplates(projectId)); }, [projectId]);
+
+  // فتح رابط مشارَك: استعادة نفس المستويات والفلاتر والفرز.
+  useEffect(() => {
+    const view = decodeSpendView(location.search);
+    if (!view) return;
+    if (view.dimensions.length) setLevels(view.dimensions);
+    setQuery(view.filters.query || '');
+    setDateFrom(view.filters.dateFrom || '');
+    setDateTo(view.filters.dateTo || '');
+    setCategory((view.filters.category as string) || 'all');
+    setStatus((view.filters.approvalStatus as string) || 'all');
+    setSort(view.sort);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const look = useMemo(() => ({ resources, custodies, budgetItems }), [resources, custodies, budgetItems]);
   const filters: SpendFilters = useMemo(
@@ -74,6 +96,24 @@ export function ExpenseSpendExplorer({
     () => buildSpendTree(expenses, levels, filters, look, sort),
     [expenses, levels, filters, look, sort],
   );
+
+  useEffect(() => { setPages({}); }, [levels, filters, sort]);
+
+  const shareState = useMemo(() => ({ dimensions: levels, filters, sort }), [levels, filters, sort]);
+
+  const handleShare = useCallback(async () => {
+    const url = buildShareUrl(window.location.origin, location.pathname, shareState, location.hash);
+    navigate({ pathname: location.pathname, search: `?${encodeSpendView(shareState)}`, hash: location.hash }, { replace: true });
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'تم نسخ رابط التقرير', description: 'يفتح نفس العرض بنفس الفلاتر والفرز والنطاق الزمني.' });
+    } catch {
+      toast({ title: 'رابط التقرير', description: url });
+    }
+  }, [shareState, location.pathname, location.hash, navigate, toast]);
+
+  const showMore = (key: string) =>
+    setPages((prev) => ({ ...prev, [key]: (prev[key] ?? PAGE_SIZE) + PAGE_SIZE }));
 
   const maxTotal = tree.nodes[0]?.total ?? Math.max(0, ...tree.nodes.map((n) => n.total));
   const hasFilters = !!(query || dateFrom || dateTo || category !== 'all' || status !== 'all');
@@ -179,8 +219,28 @@ export function ExpenseSpendExplorer({
             </div>
           )}
         </div>
-        {open && hasChildren && (
-          <div className="space-y-1">{n.children.map((c) => renderNode(c, depth + 1))}</div>
+        {open && hasChildren && renderList(n.children, depth + 1, id)}
+      </div>
+    );
+  };
+
+  const renderList = (nodes: SpendNode[], depth: number, parentKey: string) => {
+    const limit = pages[parentKey] ?? PAGE_SIZE;
+    const slice = nodes.slice(0, limit);
+    return (
+      <div className="space-y-1">
+        {slice.map((c) => renderNode(c, depth))}
+        {nodes.length > slice.length && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-1.5"
+            style={{ marginInlineStart: depth ? 16 : 0 }}
+            onClick={() => showMore(parentKey)}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            عرض المزيد ({nodes.length - slice.length} صفاً متبقياً)
+          </Button>
         )}
       </div>
     );
@@ -195,9 +255,14 @@ export function ExpenseSpendExplorer({
             إجمالي التكلفة لكل مورد ثم الهبوط إلى الفئة فالبند فتفاصيل كل عملية صرف.
           </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport} disabled={tree.nodes.length === 0}>
-          <Download className="w-3.5 h-3.5" />تصدير CSV (بنفس الفلاتر والفرز)
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleShare}>
+            <Link2 className="w-3.5 h-3.5" />نسخ رابط التقرير
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport} disabled={tree.nodes.length === 0}>
+            <Download className="w-3.5 h-3.5" />تصدير CSV (بنفس الفلاتر والفرز)
+          </Button>
+        </div>
       </div>
 
       {/* مستويات التجميع */}
@@ -350,7 +415,7 @@ export function ExpenseSpendExplorer({
       {tree.nodes.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-6">لا توجد نتائج مطابقة للفلاتر</p>
       ) : (
-        <div className="space-y-2">{tree.nodes.map((n) => renderNode(n, 0))}</div>
+        renderList(tree.nodes, 0, '__root__')
       )}
 
       {active && (
