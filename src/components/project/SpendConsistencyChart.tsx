@@ -52,7 +52,7 @@ export function SpendConsistencyChart({ projectId, projectName = '', expenses, r
     try {
       recordConsistencyAlert(projectId, projectName, report);
     } catch (e) {
-      logger.error('consistency alert record failed', e);
+      logger.error('spend-consistency', 'alert record failed', { error: String(e) });
     }
   }, [projectId, projectName, report]);
 
