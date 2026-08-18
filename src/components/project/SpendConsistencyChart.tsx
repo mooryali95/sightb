@@ -46,6 +46,23 @@ export function SpendConsistencyChart({ projectId, projectName = '', expenses, r
     [expenses, repairs, dimension, resources],
   );
 
+  // تسجيل أي اختلاف في مركز التنبيهات مع تاريخ الاكتشاف.
+  useEffect(() => {
+    if (!projectId) return;
+    try {
+      recordConsistencyAlert(projectId, projectName, report);
+    } catch (e) {
+      logger.error('consistency alert record failed', e);
+    }
+  }, [projectId, projectName, report]);
+
+  const comparison = useMemo(
+    () => (activeKey ? buildRowComparison(activeKey, expenses, repairs, dimension, { resources }) : null),
+    [activeKey, expenses, repairs, dimension, resources],
+  );
+
+
+
   const data = useMemo(
     () => report.rows.slice(0, 12).map((r) => ({
       name: r.label.length > 18 ? `${r.label.slice(0, 17)}…` : r.label,
