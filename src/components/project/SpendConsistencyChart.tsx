@@ -1,19 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts';
 import { formatCurrency } from '@/lib/finance';
-import { buildSpendConsistency, type ConsistencyDimension } from '@/lib/spend-consistency';
+import { buildSpendConsistency, buildRowComparison, type ConsistencyDimension } from '@/lib/spend-consistency';
+import { recordConsistencyAlert } from '@/lib/consistency-alerts';
 import { listCashTransferRepairs } from '@/services/cashRepairService';
 import { logger } from '@/lib/logger';
 import type { Expense, Resource } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { InspectorPanel, InspectorSection, InspectorKpiStrip } from '@/components/ui/inspector-panel';
+import { AlertTriangle, CheckCircle2, BellRing } from 'lucide-react';
 
 interface Props {
   projectId: string;
+  projectName?: string;
   expenses: Expense[];
   resources: Resource[];
 }
@@ -22,9 +26,10 @@ interface Props {
  * مخطط فجوات الاتساق: يقارن أرقام الصرف قبل/بعد إصلاح التحويلات بلا مصدر
  * على مستوى المورد أو الفئة، وينبّه عند وجود أي اختلاف أو مصروف بلا مصدر.
  */
-export function SpendConsistencyChart({ projectId, expenses, resources }: Props) {
+export function SpendConsistencyChart({ projectId, projectName = '', expenses, resources }: Props) {
   const [dimension, setDimension] = useState<ConsistencyDimension>('resource');
   const [repairs, setRepairs] = useState<{ id: string; custodyId: string | null; amount: number }[]>([]);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
