@@ -80,3 +80,26 @@ export const createCashTransferSlice: StateCreator<AppState, [], [], CashTransfe
     set((s) => ({ cashTransfers: s.cashTransfers.filter((t) => t.id !== id) }));
   },
 });
+
+/**
+ * مُخفِّض نقي لأحداث realtime على جدول `cash_transfers`.
+ * مُصدَّر لاختباره مباشرة ولضمان أن DELETE/UPDATE تنعكس فوراً بدون إعادة جلب.
+ */
+export function applyCashTransferRealtimeEvent(
+  list: CashTransfer[],
+  payload: { eventType: string; new?: any; old?: any },
+): CashTransfer[] {
+  if (payload.eventType === 'INSERT' && payload.new) {
+    const mapped = mapCashTransfer(payload.new);
+    if (list.some((t) => t.id === mapped.id)) return list;
+    return [mapped, ...list];
+  }
+  if (payload.eventType === 'UPDATE' && payload.new) {
+    const mapped = mapCashTransfer(payload.new);
+    return list.map((t) => (t.id === mapped.id ? mapped : t));
+  }
+  if (payload.eventType === 'DELETE' && payload.old?.id) {
+    return list.filter((t) => t.id !== payload.old.id);
+  }
+  return list;
+}

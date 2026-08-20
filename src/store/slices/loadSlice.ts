@@ -9,6 +9,7 @@ import {
   mapMilestone, mapChangeOrder, mapRisk, mapIndirectCost, mapSnapshot,
   mapCommitment,
 } from '../helpers';
+import { applyCashTransferRealtimeEvent } from './cashTransferSlice';
 import type { AppState, AuditLogEntry } from '../useStore';
 
 export interface LoadSlice {
@@ -21,6 +22,8 @@ export interface LoadSlice {
   loadDetails: () => Promise<void>;
 
   ensureProjectCashData: (projectId: string) => Promise<void>;
+  /** طبقة واحدة لإعادة جلب النقد + إعادة اشتقاق الأرصدة (العهد) بعد أي إصلاح. */
+  refreshCashDerivations: (projectId: string) => Promise<void>;
   loadProjectData: (projectId: string) => Promise<void>;
   loadCompanyData: (companyId: string) => Promise<void>;
   loadAuditLog: (projectId: string) => Promise<void>;
@@ -171,6 +174,29 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
     await Promise.all(tasks);
   },
 
+  /**
+   * طبقة موحّدة: تُستدعى بعد أي عملية تغيّر النقد (إصلاح/تحويل/تسوية)
+   * فتعيد جلب الدفعات والتحويلات والمستحقات ثم تعيد اشتقاق العهد،
+   * ما يضمن اتساق FundsSection وProjectDetail من مصدر واحد.
+   */
+  refreshCashDerivations: async (projectId: string) => {
+    await get().ensureProjectCashData(projectId);
+    try {
+      const custodiesData = await fetchAll('custodies', 'created_at', false, { project_id: projectId });
+      set((s) => {
+        const projectExpenses = s.expenses.filter((e) => e.projectId === projectId);
+        return {
+          custodies: [
+            ...s.custodies.filter((c) => c.projectId !== projectId),
+            ...custodiesData.map((c: any) => mapCustody(c, projectExpenses)),
+          ],
+        };
+      });
+    } catch (err) {
+      console.warn('[Store.refreshCashDerivations]', err);
+    }
+  },
+
   loadProjectData: async (projectId: string) => {
     // بيانات النقد تُحمّل دائماً (SSOT للأرصدة)
     await get().ensureProjectCashData(projectId);
@@ -270,6 +296,15 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         filter: `project_id=eq.${projectId}`,
       }, (payload) => {
         const table = payload.table;
+
+        // التحويلات النقدية: تُطبَّق فوراً (DELETE/UPDATE) بدون إعادة جلب يدوية
+        if (table === 'cash_transfers') {
+          set((s: any) => ({
+            cashTransfers: applyCashTransferRealtimeEvent(s.cashTransfers, payload as any),
+          }));
+          return;
+        }
+
         const m = mappers[table];
         if (!m) return;
 
