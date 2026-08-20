@@ -85,8 +85,15 @@ export function CashRepairLogSection({
       toast({ title: 'تم الإصلاح', description: 'حُذف التحويل بلا مصدر وسُجّلت الأرقام قبل/بعد.' });
       setTarget(null);
       setReason('');
-      await load();
+      // إعادة مزامنة النقد في المتجر حتى تختفي الحوالة اليتيمة وتُصحّح الأرصدة فوراً
+      await Promise.all([
+        load(),
+        Promise.resolve(ensureProjectCashData?.(projectId)).catch((err) =>
+          logger.error('cashRepair.resync', err instanceof Error ? err.message : 'تعذّر تحديث بيانات النقد'),
+        ),
+      ]);
       onRepaired?.();
+
     } catch (e) {
       toast({ title: 'تعذّر الإصلاح', description: e instanceof Error ? e.message : 'خطأ غير متوقع', variant: 'destructive' });
     } finally {
