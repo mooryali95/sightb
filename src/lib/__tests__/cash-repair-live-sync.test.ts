@@ -32,8 +32,8 @@ describe('repair of an orphan transfer syncs live (no page reload)', () => {
     const report = auditCashIntegrity({ custodies, cashTransfers: [orphan], funds, expenses });
     expect(report.clean).toBe(false);
     expect(report.orphanTransfers.map((o) => o.transferId)).toEqual(['t-orphan']);
-    const b = getCustodyBreakdown(custodies[0], [orphan], expenses, []);
-    expect(b.available).toBe(10000);
+    const b = getCustodyBreakdown(custodies[0], expenses, [orphan], []);
+    expect(b.availableAmount).toBe(10000);
   });
 
   it('realtime DELETE removes it from the orphan list and recomputes balances instantly', () => {
@@ -48,8 +48,8 @@ describe('repair of an orphan transfer syncs live (no page reload)', () => {
     expect(report.orphanTransfers).toHaveLength(0);
     expect(report.inflatedAmount).toBe(0);
 
-    const b = getCustodyBreakdown(custodies[0], next, expenses, []);
-    expect(b.available).toBe(5000);
+    const b = getCustodyBreakdown(custodies[0], expenses, next, []);
+    expect(b.availableAmount).toBe(5000);
     expect(b.spent).toBe(1000);
     expect(b.remaining).toBe(4000);
   });
