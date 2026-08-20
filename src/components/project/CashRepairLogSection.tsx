@@ -47,6 +47,8 @@ export function CashRepairLogSection({
   projectId, custodies, cashTransfers, funds, expenses, paymentRequests = [], readOnly, onRepaired,
 }: Props) {
   const { toast } = useToast();
+  const ensureProjectCashData = useStore((s) => s.ensureProjectCashData);
+
   const [repairs, setRepairs] = useState<CashTransferRepair[]>([]);
   const [loading, setLoading] = useState(true);
   const [target, setTarget] = useState<OrphanTransfer | null>(null);
