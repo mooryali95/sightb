@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { formatCurrency } from '@/lib/finance';
+import { useStore } from '@/store/useStore';
+
 import { auditCashIntegrity, type OrphanTransfer } from '@/lib/cash-integrity';
 import { listCashTransferRepairs, repairOrphanCashTransfer, type CashTransferRepair, type CustodySnapshot } from '@/services/cashRepairService';
 import type { Custody, CashTransfer, ProjectFund, Expense, PaymentRequest } from '@/types/project';
