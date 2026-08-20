@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { formatCurrency } from '@/lib/finance';
+import { useStore } from '@/store/useStore';
+
 import { auditCashIntegrity, type OrphanTransfer } from '@/lib/cash-integrity';
 import { listCashTransferRepairs, repairOrphanCashTransfer, type CashTransferRepair, type CustodySnapshot } from '@/services/cashRepairService';
 import type { Custody, CashTransfer, ProjectFund, Expense, PaymentRequest } from '@/types/project';
@@ -47,6 +49,8 @@ export function CashRepairLogSection({
   projectId, custodies, cashTransfers, funds, expenses, paymentRequests = [], readOnly, onRepaired,
 }: Props) {
   const { toast } = useToast();
+  const ensureProjectCashData = useStore((s) => s.ensureProjectCashData);
+
   const [repairs, setRepairs] = useState<CashTransferRepair[]>([]);
   const [loading, setLoading] = useState(true);
   const [target, setTarget] = useState<OrphanTransfer | null>(null);
@@ -85,8 +89,15 @@ export function CashRepairLogSection({
       toast({ title: 'تم الإصلاح', description: 'حُذف التحويل بلا مصدر وسُجّلت الأرقام قبل/بعد.' });
       setTarget(null);
       setReason('');
-      await load();
+      // إعادة مزامنة النقد في المتجر حتى تختفي الحوالة اليتيمة وتُصحّح الأرصدة فوراً
+      await Promise.all([
+        load(),
+        Promise.resolve(ensureProjectCashData?.(projectId)).catch((err) =>
+          logger.error('cashRepair.resync', err instanceof Error ? err.message : 'تعذّر تحديث بيانات النقد'),
+        ),
+      ]);
       onRepaired?.();
+
     } catch (e) {
       toast({ title: 'تعذّر الإصلاح', description: e instanceof Error ? e.message : 'خطأ غير متوقع', variant: 'destructive' });
     } finally {
