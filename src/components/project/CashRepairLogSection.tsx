@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { InspectorPanel, InspectorSection, InspectorField } from '@/components/ui/inspector-panel';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { AlertTriangle, CheckCircle2, History, Wrench } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, History, Loader2, Wrench } from 'lucide-react';
 
 interface Props {
   projectId: string;
@@ -49,7 +49,7 @@ export function CashRepairLogSection({
   projectId, custodies, cashTransfers, funds, expenses, paymentRequests = [], readOnly, onRepaired,
 }: Props) {
   const { toast } = useToast();
-  const ensureProjectCashData = useStore((s) => s.ensureProjectCashData);
+  const refreshCashDerivations = useStore((s) => s.refreshCashDerivations);
 
   const [repairs, setRepairs] = useState<CashTransferRepair[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +92,7 @@ export function CashRepairLogSection({
       // إعادة مزامنة النقد في المتجر حتى تختفي الحوالة اليتيمة وتُصحّح الأرصدة فوراً
       await Promise.all([
         load(),
-        Promise.resolve(ensureProjectCashData?.(projectId)).catch((err) =>
+        Promise.resolve(refreshCashDerivations?.(projectId)).catch((err) =>
           logger.error('cashRepair.resync', err instanceof Error ? err.message : 'تعذّر تحديث بيانات النقد'),
         ),
       ]);
@@ -142,8 +142,15 @@ export function CashRepairLogSection({
                   <p className="text-[11px] text-muted-foreground font-mono">{o.transferDate}</p>
                 </div>
                 {!readOnly && (
-                  <Button size="sm" variant="outline" onClick={() => { setTarget(o); setReason(''); }}>
-                    إصلاح
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={saving}
+                    onClick={() => { if (saving) return; setTarget(o); setReason(''); }}
+                  >
+                    {saving && target?.transferId === o.transferId ? (
+                      <><Loader2 className="w-3 h-3 ms-1 animate-spin" />جارٍ الإصلاح…</>
+                    ) : 'إصلاح'}
                   </Button>
                 )}
               </div>
