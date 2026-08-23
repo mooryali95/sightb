@@ -38,6 +38,7 @@ import { ExpenseSpendExplorer } from '@/components/project/ExpenseSpendExplorer'
 import { SpendConsistencyChart } from '@/components/project/SpendConsistencyChart';
 
 import { CashRepairLogSection } from '@/components/project/CashRepairLogSection';
+import { CashRepairStatusBar } from '@/components/project/CashRepairStatusBar';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { VendorPayablesPanel } from '@/components/project/VendorPayablesPanel';
@@ -297,6 +298,8 @@ export default function ProjectDetail() {
           onArchive={handleArchive}
           onDelete={handleDelete}
         />
+
+        <CashRepairStatusBar projectId={project.id} />
 
         <SsotHealthBanner
           project={project}
