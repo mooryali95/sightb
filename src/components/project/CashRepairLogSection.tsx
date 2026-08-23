@@ -3,6 +3,8 @@ import { formatCurrency } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
 
 import { auditCashIntegrity, type OrphanTransfer } from '@/lib/cash-integrity';
+import { getProjectFundsSummary, getFundRemaining, getCustodyBreakdown } from '@/lib/funds';
+import { recordCashRepairEvent, type CashRepairBalanceSnapshot } from '@/lib/cash-repair-events';
 import { listCashTransferRepairs, repairOrphanCashTransfer, type CashTransferRepair, type CustodySnapshot } from '@/services/cashRepairService';
 import type { Custody, CashTransfer, ProjectFund, Expense, PaymentRequest } from '@/types/project';
 import { Button } from '@/components/ui/button';
@@ -13,6 +15,31 @@ import { InspectorPanel, InspectorSection, InspectorField } from '@/components/u
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { AlertTriangle, CheckCircle2, History, Loader2, Wrench } from 'lucide-react';
+
+/** لقطة أرصدة محسوبة من حالة المتجر الحالية (نفس معادلات FundsSection). */
+function balanceSnapshot(projectId: string, custodyId: string): CashRepairBalanceSnapshot {
+  const s = useStore.getState();
+  const expenses = (s.expenses || []).filter((e) => e.projectId === projectId);
+  const custodies = (s.custodies || []).filter((c) => c.projectId === projectId);
+  const prs = (s.paymentRequests || []).filter((p) => p.projectId === projectId);
+  const transfers = (s.cashTransfers || []).filter((t) => t.projectId === projectId);
+  const summary = getProjectFundsSummary(
+    projectId, s.projectFunds || [], s.fundSettlements || [], expenses, custodies as any, prs, transfers,
+  );
+  const activeFundRemaining = summary.activeFund
+    ? getFundRemaining(summary.activeFund, expenses, custodies as any, prs, transfers)
+    : 0;
+  const custody = custodies.find((c) => c.id === custodyId);
+  const bd = custody ? getCustodyBreakdown(custody, expenses, transfers, prs) : null;
+  return {
+    activeFundRemaining,
+    managerRemaining: summary.remainingInManagerHand,
+    custodyAvailable: bd?.availableAmount ?? 0,
+    custodySpent: bd?.spent ?? 0,
+    custodyRemaining: bd?.remaining ?? 0,
+  };
+}
+
 
 interface Props {
   projectId: string;
@@ -50,6 +77,8 @@ export function CashRepairLogSection({
 }: Props) {
   const { toast } = useToast();
   const refreshCashDerivations = useStore((s) => s.refreshCashDerivations);
+  const removeCashTransferLocal = useStore((s) => s.removeCashTransferLocal);
+  const restoreCashTransferLocal = useStore((s) => s.restoreCashTransferLocal);
 
   const [repairs, setRepairs] = useState<CashTransferRepair[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,26 +113,44 @@ export function CashRepairLogSection({
       return;
     }
     setSaving(true);
+    const repaired = target;
+    // لقطة الأرصدة قبل الإزالة التفاؤلية
+    const before = balanceSnapshot(projectId, repaired.custodyId);
+    // إزالة تفاؤلية: يختفي التحويل اليتيم فوراً من القائمة والأرصدة
+    const removed = removeCashTransferLocal?.(repaired.transferId) ?? null;
     try {
-      await repairOrphanCashTransfer(target.transferId, reason.trim());
+      await repairOrphanCashTransfer(repaired.transferId, reason.trim());
       toast({ title: 'تم الإصلاح', description: 'حُذف التحويل بلا مصدر وسُجّلت الأرقام قبل/بعد.' });
       setTarget(null);
       setReason('');
-      // إعادة مزامنة النقد في المتجر حتى تختفي الحوالة اليتيمة وتُصحّح الأرصدة فوراً
+      // إعادة مزامنة النقد في المتجر حتى تُصحّح الأرصدة من الخادم
       await Promise.all([
         load(),
         Promise.resolve(refreshCashDerivations?.(projectId)).catch((err) =>
           logger.error('cashRepair.resync', err instanceof Error ? err.message : 'تعذّر تحديث بيانات النقد'),
         ),
       ]);
+      recordCashRepairEvent({
+        projectId,
+        at: new Date().toISOString(),
+        transferId: repaired.transferId,
+        custodyId: repaired.custodyId,
+        custodyName: custodyName(repaired.custodyId),
+        amount: repaired.amount,
+        before,
+        after: balanceSnapshot(projectId, repaired.custodyId),
+      });
       onRepaired?.();
 
     } catch (e) {
+      // تراجع تلقائي: يعود التحويل اليتيم للقائمة كما كان
+      if (removed) restoreCashTransferLocal?.(removed);
       toast({ title: 'تعذّر الإصلاح', description: e instanceof Error ? e.message : 'خطأ غير متوقع', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
+
 
   return (
     <div className="space-y-4">

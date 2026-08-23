@@ -16,7 +16,12 @@ export interface CashTransferSlice {
     notes?: string;
   }) => Promise<string>;
   deleteCashTransfer: (id: string) => Promise<void>;
+  /** إزالة تفاؤلية محلية (بدون قاعدة بيانات) — تُعيد السجل المحذوف للتراجع */
+  removeCashTransferLocal: (id: string) => CashTransfer | null;
+  /** التراجع عن إزالة تفاؤلية */
+  restoreCashTransferLocal: (transfer: CashTransfer) => void;
 }
+
 
 function mapCashTransfer(d: any): CashTransfer {
   return {
@@ -79,7 +84,21 @@ export const createCashTransferSlice: StateCreator<AppState, [], [], CashTransfe
     if (error) throw error;
     set((s) => ({ cashTransfers: s.cashTransfers.filter((t) => t.id !== id) }));
   },
+
+  removeCashTransferLocal: (id) => {
+    const existing = get().cashTransfers.find((t) => t.id === id) ?? null;
+    if (!existing) return null;
+    set((s) => ({ cashTransfers: s.cashTransfers.filter((t) => t.id !== id) }));
+    return existing;
+  },
+
+  restoreCashTransferLocal: (transfer) => {
+    set((s) => (s.cashTransfers.some((t) => t.id === transfer.id)
+      ? s
+      : { cashTransfers: [transfer, ...s.cashTransfers] }));
+  },
 });
+
 
 /**
  * مُخفِّض نقي لأحداث realtime على جدول `cash_transfers`.

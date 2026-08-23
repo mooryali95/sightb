@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { CashRepairDiffCard } from '@/components/project/CashRepairDiffCard';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
 import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
@@ -275,7 +276,11 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
 
   return (
     <div className="space-y-4">
+      {/* أثر آخر إصلاح لتحويل يتيم على الأرصدة */}
+      <CashRepairDiffCard projectId={projectId} />
+
       {/* Alerts */}
+
       {alerts.length > 0 && (
         <div className="space-y-2">
           {alerts.slice(0, 3).map((a) => (
