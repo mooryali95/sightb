@@ -1,0 +1,105 @@
+name: Apply migrations
+
+# Migrations merged through GitHub were never applied. Lovable applies the
+# migrations it authors; anything arriving through git it ignores. That was
+# proved on 23 August: 20260815004500 and 20260815010000 sat in the repository
+# unapplied while two Lovable migrations dated *after* them went in — so it was
+# never lag, it was provenance. Both had to be run by hand.
+#
+# This closes that: a migration merged to main is applied here, by the same
+# tool Supabase uses, and recorded in schema_migrations like any other.
+#
+# Two things this deliberately is NOT:
+#   * not part of Quality — that workflow is a gate and must stay side-effect
+#     free. A gate that writes to production is not a gate.
+#   * not automatic on every push — only when supabase/migrations actually
+#     changes, so ordinary code merges never touch the database.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only report what would be applied'
+        type: boolean
+        default: false
+
+# Never let two applies overlap, and never cancel one midway: an interrupted
+# push can leave the history table disagreeing with the schema.
+concurrency:
+  group: supabase-migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    # Requires the secret SUPABASE_PROD_DB_URL — the production postgres URI,
+    # percent-encoded. Deliberately NOT the SUPABASE_DB_URL that ssot-tests.yml
+    # uses: that one points at a *test* branch, and pointing this job at a test
+    # database would report success while production stayed unmigrated.
+    #
+    # `environment:` is what lets you require an approval before anything is
+    # written. Configure reviewers under Settings → Environments → production
+    # if you want a human in the loop on a financial database; leave it open if
+    # you do not. Either way the job is gated on the secret existing, so it
+    # skips cleanly rather than failing red until you have set it up.
+    #
+    # The guard is on each step via `env`, NOT a job-level
+    # `if: secrets.X != ''`. The `secrets` context is not available in a
+    # job-level `if`, and using it there does not skip the job — it fails the
+    # whole workflow before any job starts. ssot-tests.yml did exactly that and
+    # errored 66 times without ever running a test. `env` IS available in a
+    # step-level `if`.
+    environment: production
+
+    env:
+      DB_URL: ${{ secrets.SUPABASE_PROD_DB_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip cleanly when the secret is not configured
+        if: ${{ env.DB_URL == '' }}
+        run: echo "SUPABASE_PROD_DB_URL is not set — nothing to apply. Set it to enable this job."
+
+      - uses: supabase/setup-cli@v1
+        if: ${{ env.DB_URL != '' }}
+        with:
+          version: latest
+
+      - name: What is pending
+        if: ${{ env.DB_URL != '' }}
+        run: |
+          echo "Local files vs the remote history table:"
+          supabase migration list --db-url "$DB_URL"
+
+      # Always shown before anything is written, so the log records what the
+      # apply was about to do even if the apply itself then fails.
+      - name: Dry run
+        if: ${{ env.DB_URL != '' }}
+        run: supabase db push --db-url "$DB_URL" --dry-run --skip-vault
+
+      - name: Apply
+        if: ${{ env.DB_URL != '' && (github.event_name == 'push' || inputs.dry_run == false) }}
+        # --skip-vault: `db push` otherwise syncs vault secrets from
+        # config.toml before migrating, which is a side effect nobody asked
+        # this job for.
+        #
+        # No --include-all: only migrations the remote history table has not
+        # recorded are applied. That is what makes a re-run safe.
+        run: supabase db push --db-url "$DB_URL" --skip-vault
+
+      - name: Verify the ledger matches the repository
+        if: ${{ env.DB_URL != '' && (github.event_name == 'push' || inputs.dry_run == false) }}
+        run: |
+          # The check that would have caught the original problem: a file with
+          # no row means the apply silently did nothing.
+          files=$(ls supabase/migrations/*.sql | wc -l)
+          echo "migration files in the repository: $files"
+          supabase migration list --db-url "$DB_URL"
+          echo
+          echo "Any row above showing a local version with no remote counterpart means it did not apply."

@@ -21,29 +21,43 @@ jobs:
     # Requires two repo secrets:
     #   SUPABASE_DB_URL  — postgres URI to a *test* Supabase branch
     #   SSOT_OWNER_UID   — uuid of an existing auth.users row in that branch
-    if: ${{ secrets.SUPABASE_DB_URL != '' }}
+    # No job-level `if: secrets.X != ''`. The secrets context is unavailable
+    # there, so instead of skipping the job it failed the whole workflow before
+    # any job started — this errored 66 times and never ran a single test.
+    # Each step is gated on `env` instead, which is a supported context in a
+    # step-level `if`.
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       SSOT_OWNER_UID:  ${{ secrets.SSOT_OWNER_UID }}
     steps:
+      - name: Skip cleanly when the test database is not configured
+        if: ${{ env.SUPABASE_DB_URL == '' }}
+        run: echo "SUPABASE_DB_URL is not set — SSOT tests need a test database. Skipping."
+
       - uses: actions/checkout@v4
+        if: ${{ env.SUPABASE_DB_URL != '' }}
 
       - name: Install psql
+        if: ${{ env.SUPABASE_DB_URL != '' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
       - uses: oven-sh/setup-bun@v2
+        if: ${{ env.SUPABASE_DB_URL != '' }}
         with:
           bun-version: latest
 
       - name: Install project deps
+        if: ${{ env.SUPABASE_DB_URL != '' }}
         run: bun install --frozen-lockfile
 
       - name: Ensure pgtap extension available
+        if: ${{ env.SUPABASE_DB_URL != '' }}
         run: |
           psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
             -c "CREATE EXTENSION IF NOT EXISTS pgtap;"
 
       - name: Run SSOT tests
+        if: ${{ env.SUPABASE_DB_URL != '' }}
         run: bash scripts/run-ssot-tests.sh
