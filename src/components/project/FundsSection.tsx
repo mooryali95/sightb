@@ -276,7 +276,11 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
 
   return (
     <div className="space-y-4">
+      {/* أثر آخر إصلاح لتحويل يتيم على الأرصدة */}
+      <CashRepairDiffCard projectId={projectId} />
+
       {/* Alerts */}
+
       {alerts.length > 0 && (
         <div className="space-y-2">
           {alerts.slice(0, 3).map((a) => (
