@@ -7,9 +7,10 @@
 #   2. RLS coverage              (every public table has RLS enabled)
 #   3. SECURITY DEFINER hygiene  (fixed search_path, no anon EXECUTE)
 #   4. grant sanity              (no table exposed to anon without a policy)
+#   5. migration drift           (every tracked file present in the history table)
 #
-# All four are read-only: the dependency audit touches no database, and checks
-# 2-4 only read the system catalogs. Nothing here writes, so this scan can run
+# All five are read-only: the dependency audit touches no database, and checks
+# 2-5 only read the system catalogs. Nothing here writes, so this scan can run
 # alongside any other job without contending for rows. (The pgTAP security
 # suite needs seeded fixtures and lives in run-ssot-tests.sh — see the note at
 # the foot of this file.)
@@ -26,7 +27,7 @@ step() { printf '\n\033[1m▶ %s\033[0m\n' "$1"; }
 fail() { printf '\033[31m✘ %s\033[0m\n' "$1"; FAILED=1; }
 pass() { printf '\033[32m✔ %s\033[0m\n' "$1"; }
 
-step "1/4 Dependency audit"
+step "1/5 Dependency audit"
 # The command is `bun audit`, not `bun pm audit` — the latter is not a
 # subcommand, so bun printed its help text and exited non-zero. The old `if`
 # read that as "advisories found", which is how run #1 of this workflow
@@ -86,14 +87,14 @@ fi
 
 psql_q() { psql "$SUPABASE_DB_URL" -tAX -c "$1"; }
 
-step "2/4 RLS coverage on public tables"
+step "2/5 RLS coverage on public tables"
 NO_RLS=$(psql_q "SELECT string_agg(c.relname, ', ')
                    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
                   WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT c.relrowsecurity;")
 if [ -z "$NO_RLS" ]; then pass "all public tables have RLS enabled"
 else fail "tables without RLS: $NO_RLS"; fi
 
-step "3/4 SECURITY DEFINER hygiene"
+step "3/5 SECURITY DEFINER hygiene"
 NO_PATH=$(psql_q "SELECT string_agg(p.proname, ', ')
                     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                    WHERE n.nspname = 'public' AND p.prosecdef
@@ -113,7 +114,7 @@ ANON_EXEC=$(psql_q "SELECT string_agg(p.proname, ', ')
 if [ -z "$ANON_EXEC" ]; then pass "anon cannot execute privileged functions"
 else fail "anon can execute: $ANON_EXEC"; fi
 
-step "4/4 Grant sanity (anon reach without a permissive policy)"
+step "4/5 Grant sanity (anon reach without a permissive policy)"
 LEAKY=$(psql_q "SELECT string_agg(t.relname, ', ') FROM (
                   SELECT c.relname, c.oid
                     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -125,6 +126,41 @@ LEAKY=$(psql_q "SELECT string_agg(t.relname, ', ') FROM (
                                      AND 'anon' = ANY(pol.roles));")
 if [ -z "$LEAKY" ]; then pass "no anon-readable table lacking an anon policy"
 else fail "anon SELECT granted without matching policy: $LEAKY"; fi
+
+step "5/5 Migration drift (tracked files vs applied history)"
+# The check that would have caught the original problem. Migrations merged
+# through GitHub are not applied by the Lovable pipeline, so a file can sit in
+# supabase/migrations for days while the code depending on it is live. Two did.
+#
+# Matching is on real timestamps with a tolerance, NOT string equality. The
+# filename and the recorded version routinely differ by a second or two, and
+# comparing them as text — or as integers — reports false drift: 20260307175459
+# and 20260307175500 are one second apart, but 41 apart numerically.
+VERSIONS=$(ls supabase/migrations/*.sql 2>/dev/null \
+           | sed 's|.*/||; s|_.*||' \
+           | grep -E '^[0-9]{14}$' \
+           | sort -u \
+           | awk '{printf "%s\047%s\047", (NR>1 ? "," : ""), $0}')
+
+if [ -z "$VERSIONS" ]; then
+  fail "no migration files found — is this being run from the repository root?"
+else
+  UNAPPLIED=$(psql_q "
+    SELECT COALESCE(string_agg(v, ', ' ORDER BY v), '')
+      FROM unnest(ARRAY[$VERSIONS]) AS v
+     WHERE NOT EXISTS (
+       SELECT 1 FROM supabase_migrations.schema_migrations m
+        WHERE abs(EXTRACT(EPOCH FROM (
+                to_timestamp(m.version, 'YYYYMMDDHH24MISS')
+              - to_timestamp(v,         'YYYYMMDDHH24MISS')))) <= 10
+     );")
+  if [ -z "$UNAPPLIED" ]; then
+    pass "every tracked migration is present in the history table"
+  else
+    fail "merged but never applied: $UNAPPLIED"
+    printf '  Apply them with the Apply-migrations workflow, or by hand from the SQL editor.\n'
+  fi
+fi
 
 # The pgTAP security suite deliberately does NOT run here.
 #
