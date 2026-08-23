@@ -30,3 +30,6 @@ eslint-report.json
 *.njsproj
 *.sln
 *.sw?
+
+# Written by the Supabase CLI on any invocation; never part of the project.
+supabase/.temp/
