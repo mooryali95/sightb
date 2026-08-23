@@ -16,7 +16,12 @@ export interface CashTransferSlice {
     notes?: string;
   }) => Promise<string>;
   deleteCashTransfer: (id: string) => Promise<void>;
+  /** إزالة تفاؤلية محلية (بدون قاعدة بيانات) — تُعيد السجل المحذوف للتراجع */
+  removeCashTransferLocal: (id: string) => CashTransfer | null;
+  /** التراجع عن إزالة تفاؤلية */
+  restoreCashTransferLocal: (transfer: CashTransfer) => void;
 }
+
 
 function mapCashTransfer(d: any): CashTransfer {
   return {
