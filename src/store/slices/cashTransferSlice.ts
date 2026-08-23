@@ -23,7 +23,19 @@ export interface CashTransferSlice {
 }
 
 
-function mapCashTransfer(d: any): CashTransfer {
+/** The row as `cash_transfers` returns it, and as realtime delivers it. */
+export interface CashTransferRow {
+  id: string;
+  project_id: string;
+  from_fund_id: string;
+  to_custody_id: string;
+  amount: number | string;
+  transfer_date: string;
+  notes?: string | null;
+  created_at: string;
+}
+
+function mapCashTransfer(d: CashTransferRow): CashTransfer {
   return {
     id: d.id,
     projectId: d.project_id,
@@ -104,9 +116,15 @@ export const createCashTransferSlice: StateCreator<AppState, [], [], CashTransfe
  * مُخفِّض نقي لأحداث realtime على جدول `cash_transfers`.
  * مُصدَّر لاختباره مباشرة ولضمان أن DELETE/UPDATE تنعكس فوراً بدون إعادة جلب.
  */
+export interface CashTransferRealtimePayload {
+  eventType: string;
+  new?: CashTransferRow;
+  old?: Partial<CashTransferRow>;
+}
+
 export function applyCashTransferRealtimeEvent(
   list: CashTransfer[],
-  payload: { eventType: string; new?: any; old?: any },
+  payload: CashTransferRealtimePayload,
 ): CashTransfer[] {
   if (payload.eventType === 'INSERT' && payload.new) {
     const mapped = mapCashTransfer(payload.new);
@@ -118,7 +136,10 @@ export function applyCashTransferRealtimeEvent(
     return list.map((t) => (t.id === mapped.id ? mapped : t));
   }
   if (payload.eventType === 'DELETE' && payload.old?.id) {
-    return list.filter((t) => t.id !== payload.old.id);
+    // Captured before the closure: narrowing on payload.old does not survive
+    // into the predicate.
+    const deletedId = payload.old.id;
+    return list.filter((t) => t.id !== deletedId);
   }
   return list;
 }

@@ -9,7 +9,7 @@ import {
   mapMilestone, mapChangeOrder, mapRisk, mapIndirectCost, mapSnapshot,
   mapCommitment,
 } from '../helpers';
-import { applyCashTransferRealtimeEvent } from './cashTransferSlice';
+import { applyCashTransferRealtimeEvent, type CashTransferRealtimePayload } from './cashTransferSlice';
 import type { AppState, AuditLogEntry } from '../useStore';
 
 export interface LoadSlice {
@@ -137,7 +137,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         expenses: mappedExpenses,
         revenues: revenuesData.map(mapRevenue),
         resources: resourcesData.map(mapResource),
-        custodies: custodiesData.map((c: any) => mapCustody(c, mappedExpenses)),
+        custodies: custodiesData.map((c) => mapCustody(c, mappedExpenses)),
         milestones: milestonesData.map(mapMilestone),
         changeOrders: changeOrdersData.map(mapChangeOrder),
         risks: risksData.map(mapRisk),
@@ -188,7 +188,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         return {
           custodies: [
             ...s.custodies.filter((c) => c.projectId !== projectId),
-            ...custodiesData.map((c: any) => mapCustody(c, projectExpenses)),
+            ...custodiesData.map((c) => mapCustody(c, projectExpenses)),
           ],
         };
       });
@@ -225,7 +225,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         expenses: [...s.expenses.filter(e => e.projectId !== projectId), ...mappedExpenses],
         revenues: [...s.revenues.filter(r => r.projectId !== projectId), ...revenuesData.map(mapRevenue)],
         resources: [...s.resources.filter(r => r.projectId !== projectId), ...resourcesData.map(mapResource)],
-        custodies: [...s.custodies.filter(c => c.projectId !== projectId), ...custodiesData.map((c: any) => mapCustody(c, mappedExpenses))],
+        custodies: [...s.custodies.filter(c => c.projectId !== projectId), ...custodiesData.map((c) => mapCustody(c, mappedExpenses))],
         milestones: [...s.milestones.filter(m => m.projectId !== projectId), ...milestonesData.map(mapMilestone)],
         changeOrders: [...s.changeOrders.filter(co => co.projectId !== projectId), ...changeOrdersData.map(mapChangeOrder)],
         risks: [...s.risks.filter(r => r.projectId !== projectId), ...risksData.map(mapRisk)],
@@ -299,8 +299,11 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
 
         // التحويلات النقدية: تُطبَّق فوراً (DELETE/UPDATE) بدون إعادة جلب يدوية
         if (table === 'cash_transfers') {
-          set((s: any) => ({
-            cashTransfers: applyCashTransferRealtimeEvent(s.cashTransfers, payload as any),
+          set((s: AppState) => ({
+            cashTransfers: applyCashTransferRealtimeEvent(
+              s.cashTransfers,
+              payload as unknown as CashTransferRealtimePayload,
+            ),
           }));
           return;
         }

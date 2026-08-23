@@ -2,18 +2,28 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { buildSpendTree, buildSpendTreeCSV } from '@/lib/expense-analytics';
 import { buildSpendConsistency } from '@/lib/spend-consistency';
 import { saveSpendTemplate, listSpendTemplates, deleteSpendTemplate } from '@/lib/spend-templates';
+import type { Expense, Resource } from '@/types/project';
 
-const resources = [
-  { id: 'r1', projectId: 'p1', userId: 'u', name: 'أيمن أصلان', monthlyCost: 0 },
-  { id: 'r2', projectId: 'p1', userId: 'u', name: 'أحمد صبري', monthlyCost: 0 },
-] as any[];
+/**
+ * Fixtures carry only the fields under test. Typing them through this helper
+ * keeps `any` out while still allowing partial rows — a renamed field on the
+ * real type surfaces here as a compile error.
+ */
+const fixture = <T,>(rows: Partial<T>[]): T[] => rows as T[];
+const one = <T,>(row: Partial<T>): T => row as T;
 
-const expenses = [
+
+const resources = fixture<Resource>([
+  { id: 'r1', projectId: 'p1', name: 'أيمن أصلان', monthlyCost: 0 },
+  { id: 'r2', projectId: 'p1', name: 'أحمد صبري', monthlyCost: 0 },
+]);
+
+const expenses = fixture<Expense>([
   { id: 'e1', projectId: 'p1', resourceId: 'r1', custodyId: 'c1', category: 'salary', description: 'راتب', amount: 10000, date: '2026-01-05', month: 1, approvalStatus: 'approved' },
   { id: 'e2', projectId: 'p1', resourceId: 'r1', custodyId: 'c1', category: 'other', description: 'مواصلات', amount: 2000, date: '2026-02-10', month: 2, approvalStatus: 'pending' },
   { id: 'e3', projectId: 'p1', resourceId: 'r2', fundId: 'f1', category: 'salary', description: 'راتب', amount: 23000, date: '2026-01-05', month: 1, approvalStatus: 'approved' },
   { id: 'e4', projectId: 'p1', category: 'other', description: 'قرطاسية', amount: 500, date: '2026-03-01', month: 3, approvalStatus: 'approved' },
-] as any[];
+]);
 
 describe('buildSpendTree', () => {
   it('nests resource → category and keeps totals consistent', () => {

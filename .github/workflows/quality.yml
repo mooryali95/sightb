@@ -47,7 +47,12 @@ jobs:
           #   398 → 375 (14 Aug): cleared every non-`any` rule class. What is
           #   left is 375 `no-explicit-any` and 10 `react-refresh` warnings,
           #   so the next batch is necessarily typing work, file by file.
-          ERROR_BUDGET=375
+          #   375 → 372 (23 Aug): main had been red for eight days — the cash
+          #   -repair work pushed the count to 402. Typed the DB row shapes it
+          #   introduced (cash_transfer_repairs, cash_transfers) and the test
+          #   fixtures, which also surfaced a dead `userId` field and two casts
+          #   that were never needed.
+          ERROR_BUDGET=372
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.
