@@ -77,6 +77,8 @@ export function CashRepairLogSection({
 }: Props) {
   const { toast } = useToast();
   const refreshCashDerivations = useStore((s) => s.refreshCashDerivations);
+  const removeCashTransferLocal = useStore((s) => s.removeCashTransferLocal);
+  const restoreCashTransferLocal = useStore((s) => s.restoreCashTransferLocal);
 
   const [repairs, setRepairs] = useState<CashTransferRepair[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,26 +113,44 @@ export function CashRepairLogSection({
       return;
     }
     setSaving(true);
+    const repaired = target;
+    // لقطة الأرصدة قبل الإزالة التفاؤلية
+    const before = balanceSnapshot(projectId, repaired.custodyId);
+    // إزالة تفاؤلية: يختفي التحويل اليتيم فوراً من القائمة والأرصدة
+    const removed = removeCashTransferLocal?.(repaired.transferId) ?? null;
     try {
-      await repairOrphanCashTransfer(target.transferId, reason.trim());
+      await repairOrphanCashTransfer(repaired.transferId, reason.trim());
       toast({ title: 'تم الإصلاح', description: 'حُذف التحويل بلا مصدر وسُجّلت الأرقام قبل/بعد.' });
       setTarget(null);
       setReason('');
-      // إعادة مزامنة النقد في المتجر حتى تختفي الحوالة اليتيمة وتُصحّح الأرصدة فوراً
+      // إعادة مزامنة النقد في المتجر حتى تُصحّح الأرصدة من الخادم
       await Promise.all([
         load(),
         Promise.resolve(refreshCashDerivations?.(projectId)).catch((err) =>
           logger.error('cashRepair.resync', err instanceof Error ? err.message : 'تعذّر تحديث بيانات النقد'),
         ),
       ]);
+      recordCashRepairEvent({
+        projectId,
+        at: new Date().toISOString(),
+        transferId: repaired.transferId,
+        custodyId: repaired.custodyId,
+        custodyName: custodyName(repaired.custodyId),
+        amount: repaired.amount,
+        before,
+        after: balanceSnapshot(projectId, repaired.custodyId),
+      });
       onRepaired?.();
 
     } catch (e) {
+      // تراجع تلقائي: يعود التحويل اليتيم للقائمة كما كان
+      if (removed) restoreCashTransferLocal?.(removed);
       toast({ title: 'تعذّر الإصلاح', description: e instanceof Error ? e.message : 'خطأ غير متوقع', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
+
 
   return (
     <div className="space-y-4">
