@@ -34,8 +34,29 @@ export interface CashTransferRepair {
   createdAt: string;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function mapRow(r: any): CashTransferRepair {
+/**
+ * The row as `cash_transfer_repairs` returns it. Naming the shape instead of
+ * taking `any` means a column renamed in a migration fails the typecheck here
+ * rather than silently mapping to undefined at runtime.
+ */
+interface CashTransferRepairRow {
+  id: string;
+  project_id: string;
+  transfer_id: string;
+  custody_id: string | null;
+  custody_name: string | null;
+  amount: number | string;
+  transfer_date: string | null;
+  missing_fund_id: string | null;
+  reason: string;
+  before_snapshot: CashTransferRepair['before'];
+  after_snapshot: CashTransferRepair['after'];
+  performed_by: string;
+  performed_by_email: string | null;
+  created_at: string;
+}
+
+function mapRow(r: CashTransferRepairRow): CashTransferRepair {
   return {
     id: r.id,
     projectId: r.project_id,
@@ -60,7 +81,7 @@ export async function listCashTransferRepairs(projectId: string): Promise<CashTr
     .select('*')
     .eq('project_id', projectId)
     .order('created_at', { ascending: false });
-  const rows = unwrap<any[]>(res, 'تعذّر تحميل سجل إصلاح التحويلات');
+  const rows = unwrap<CashTransferRepairRow[]>(res, 'تعذّر تحميل سجل إصلاح التحويلات');
   return (rows || []).map(mapRow);
 }
 

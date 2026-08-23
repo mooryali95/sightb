@@ -24,10 +24,10 @@ function balanceSnapshot(projectId: string, custodyId: string): CashRepairBalanc
   const prs = (s.paymentRequests || []).filter((p) => p.projectId === projectId);
   const transfers = (s.cashTransfers || []).filter((t) => t.projectId === projectId);
   const summary = getProjectFundsSummary(
-    projectId, s.projectFunds || [], s.fundSettlements || [], expenses, custodies as any, prs, transfers,
+    projectId, s.projectFunds || [], s.fundSettlements || [], expenses, custodies, prs, transfers,
   );
   const activeFundRemaining = summary.activeFund
-    ? getFundRemaining(summary.activeFund, expenses, custodies as any, prs, transfers)
+    ? getFundRemaining(summary.activeFund, expenses, custodies, prs, transfers)
     : 0;
   const custody = custodies.find((c) => c.id === custodyId);
   const bd = custody ? getCustodyBreakdown(custody, expenses, transfers, prs) : null;

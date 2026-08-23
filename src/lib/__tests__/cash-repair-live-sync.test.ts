@@ -2,30 +2,40 @@ import { describe, it, expect } from 'vitest';
 import { applyCashTransferRealtimeEvent } from '@/store/slices/cashTransferSlice';
 import { auditCashIntegrity } from '@/lib/cash-integrity';
 import { getCustodyBreakdown } from '@/lib/funds';
+import type { Custody, CashTransfer, Expense, ProjectFund } from '@/types/project';
+
+/**
+ * Fixtures carry only the fields under test. Typing them through this helper
+ * keeps `any` out while still allowing partial rows — a renamed field on the
+ * real type surfaces here as a compile error.
+ */
+const fixture = <T,>(rows: Partial<T>[]): T[] => rows as T[];
+const one = <T,>(row: Partial<T>): T => row as T;
+
 
 const P = 'p1';
 
-const funds = [
+const funds = fixture<ProjectFund>([
   { id: 'f1', projectId: P, fundNumber: 1, amount: 50000, status: 'acknowledged' },
-] as any[];
+]);
 
-const custodies = [
+const custodies = fixture<Custody>([
   { id: 'c1', projectId: P, resourceName: 'عمر', amount: 5000, status: 'active', sourceFundId: 'f1' },
-] as any[];
+]);
 
-const expenses = [
+const expenses = fixture<Expense>([
   { id: 'e1', projectId: P, custodyId: 'c1', amount: 1000, approvalStatus: 'approved' },
-] as any[];
+]);
 
 const orphanRow = {
   id: 't-orphan', project_id: P, from_fund_id: 'f-missing', to_custody_id: 'c1',
   amount: 5000, transfer_date: '2026-08-02', created_at: '2026-08-02T00:00:00Z',
 };
 
-const orphan = {
+const orphan = one<CashTransfer>({
   id: 't-orphan', projectId: P, fromFundId: 'f-missing', toCustodyId: 'c1',
   amount: 5000, transferDate: '2026-08-02',
-} as any;
+});
 
 describe('repair of an orphan transfer syncs live (no page reload)', () => {
   it('starts flagged as orphan with an inflated custody balance', () => {
