@@ -81,6 +81,37 @@ jobs:
             echo "::notice::Down to $errors errors / $warnings warnings — lower the budgets in .github/workflows/quality.yml."
           fi
 
+      - name: Guard the lockfile registry
+        run: |
+          # Every tarball must resolve from the public npm registry.
+          #
+          # bun.lock has twice arrived resolving packages from
+          # <region>-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache — a private
+          # Google Artifact Registry belonging to Lovable. 176 packages the first
+          # time, four more on the next Lovable push, from a different region.
+          # So this is not a one-off to clean up; it regenerates whenever the
+          # lockfile is written by that toolchain, and needs a gate rather than
+          # a fix.
+          #
+          # Integrity hashes mean this was never a tampering risk — bun rejects
+          # altered content. The risk is availability: if that registry is retired
+          # or closes public read, every CI install and every fresh clone breaks
+          # on a URL nobody chose to depend on.
+          #
+          # The remedy is a plain substitution — swap the host for
+          # registry.npmjs.org and keep the sha512 untouched; a successful
+          # `bun install --frozen-lockfile` then proves the content is identical.
+          private=$(grep -oE 'https://[a-z0-9.-]*pkg\.dev/[^"]*' bun.lock | sort -u || true)
+          if [ -n "$private" ]; then
+            echo "::error::bun.lock resolves packages from a private registry."
+            echo "$private"
+            echo
+            echo "Fix: replace the host with https://registry.npmjs.org/ keeping each sha512,"
+            echo "then run 'bun install --frozen-lockfile' to verify the hashes still match."
+            exit 1
+          fi
+          echo "All lockfile tarballs resolve from the public npm registry."
+
       - name: Guard the data-access layer
         run: |
           # Production code must reach the database through src/services only.
