@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:ssot": "bash scripts/run-ssot-tests.sh",
     "typecheck:strict": "tsc --noEmit -p tsconfig.app.json",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "predev": "bunx tsx scripts/generate-sitemap.ts",
+    "prebuild": "bunx tsx scripts/generate-sitemap.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
