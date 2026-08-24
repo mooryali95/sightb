@@ -65,8 +65,10 @@ const App = () => (
           <Sonner />
           <SessionTimeoutWarning />
           <BrowserRouter>
+            <Seo />
             <AppBootstrap>
               <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
+
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/welcome" element={<Landing />} />
