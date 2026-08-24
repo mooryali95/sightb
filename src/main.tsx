@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { HelmetProvider } from "react-helmet-async";
 import { toast } from "sonner";
 import App from "./App.tsx";
 import "./index.css";
@@ -64,5 +65,9 @@ subscribeToQueueFailures(({ item, message }) => {
 installOfflineQueue();
 
 if (assertSupabaseEnv()) {
-  createRoot(document.getElementById("root")!).render(<App />);
+  createRoot(document.getElementById("root")!).render(
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>,
+  );
 }
