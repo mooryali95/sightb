@@ -1,4 +1,5 @@
 import { lazy, Suspense, type ReactNode } from "react";
+import { Seo } from '@/components/Seo';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -65,8 +66,10 @@ const App = () => (
           <Sonner />
           <SessionTimeoutWarning />
           <BrowserRouter>
+            <Seo />
             <AppBootstrap>
               <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
+
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/welcome" element={<Landing />} />
