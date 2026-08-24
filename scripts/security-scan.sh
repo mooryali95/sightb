@@ -28,56 +28,71 @@ fail() { printf '\033[31m✘ %s\033[0m\n' "$1"; FAILED=1; }
 pass() { printf '\033[32m✔ %s\033[0m\n' "$1"; }
 
 step "1/5 Dependency audit"
-# The command is `bun audit`, not `bun pm audit` — the latter is not a
-# subcommand, so bun printed its help text and exited non-zero. The old `if`
-# read that as "advisories found", which is how run #1 of this workflow
-# reported a dependency finding without ever having audited anything.
+# Scope is production dependencies only, and that scoping is the whole point.
 #
-# `bun audit` also exits non-zero *both* when it finds advisories and when it
-# fails to run, so the exit status still cannot tell those apart — but a
-# parseable JSON report can. If the JSON parses, the audit ran.
+# The audit used to count every installed package and was therefore left
+# non-gating, with a note to "flip STRICT_AUDIT=1 once xlsx is replaced".
+# Measuring showed that guidance was wrong. With xlsx gone there are still 28
+# high/critical advisories across the full tree — but they are in vitest, vite,
+# rollup, and the glob/minimatch chain under eslint. Build tooling. A ReDoS in
+# the thing that matches filenames at build time is not a risk to a user's
+# financial data, and gating on it would paint this workflow red every night
+# for reasons nobody can act on. A workflow that is always red is a workflow
+# nobody reads.
 #
-# The two outcomes need opposite responses: a tool that cannot run is a bug in
-# this script and always fails; advisories are a tracked backlog item (P1-04)
-# and only fail when explicitly asked.
+# Production dependencies are what actually reach a browser, and there the
+# count is zero. So that is what this gates on, by default, with no opt-in.
+#
+# npm rather than bun: `bun audit` has no production-only scope (--json,
+# --audit-level and --ignore are the only flags). `npm audit --omit=dev` does,
+# and now works because package-lock.json is back in sync.
 AUDIT_JSON="${TMPDIR:-/tmp}/sightb-audit.json"
-COUNT=0
-if ! command -v bun >/dev/null 2>&1; then
-  fail "bun is not on PATH — the dependency audit did not run"
+if ! command -v npm >/dev/null 2>&1; then
+  fail "npm is not on PATH — the dependency audit did not run"
 elif ! command -v node >/dev/null 2>&1; then
   fail "node is not on PATH — cannot read the audit report"
 else
-  bun audit --json >"$AUDIT_JSON" 2>/dev/null || true
-  COUNT=$(node -e '
+  # npm audit exits non-zero both when it finds advisories and when it fails to
+  # run, so the exit status cannot tell those apart — but a parseable report
+  # can. If the JSON parses, the audit ran. Those two outcomes need opposite
+  # responses: a tool that could not run is a bug in this script.
+  npm audit --omit=dev --json >"$AUDIT_JSON" 2>/dev/null || true
+  if COUNT=$(node -e '
     const fs = require("fs");
     let data;
     try { data = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
     catch { process.exit(2); }
-    let n = 0;
-    for (const [pkg, list] of Object.entries(data))
-      for (const a of list)
-        if (a.severity === "high" || a.severity === "critical") {
-          n++;
-          console.error("  " + a.severity.padEnd(8) + " " + pkg + " — " + a.title);
-        }
-    console.log(n);
-  ' "$AUDIT_JSON")
-  if [ $? -ne 0 ]; then
-    fail 'bun audit produced no parseable report — the dependency audit did not run'
-    COUNT=0
-  elif [ "$COUNT" -eq 0 ]; then
-    pass "no high/critical advisories"
-  elif [ "${STRICT_AUDIT:-0}" = "1" ]; then
-    fail "$COUNT high/critical advisories (STRICT_AUDIT=1)"
+    if (!data.metadata || !data.metadata.vulnerabilities) process.exit(2);
+    const v = data.metadata.vulnerabilities;
+    for (const [name, adv] of Object.entries(data.vulnerabilities || {}))
+      if (adv.severity === "high" || adv.severity === "critical")
+        console.error("  " + adv.severity.padEnd(8) + " " + name +
+                      " — fix available: " + JSON.stringify(adv.fixAvailable));
+    console.log((v.high || 0) + (v.critical || 0));
+  ' "$AUDIT_JSON"); then
+    if [ "$COUNT" -eq 0 ]; then
+      pass "no high/critical advisories in production dependencies"
+    else
+      fail "$COUNT high/critical advisories in production dependencies"
+      printf '  These ship to users. Upgrade, or replace the package if no fix exists.\n'
+    fi
   else
-    # Non-gating by default, deliberately. `xlsx` carries two high advisories
-    # with no fix published, so a gating audit would paint this workflow red
-    # every night for a known, already-tracked reason — and a workflow that is
-    # always red is a workflow nobody reads. The findings are still printed
-    # above and land in the job summary. Flip STRICT_AUDIT=1 once P1-04 is
-    # closed (xlsx replaced, single lockfile) and this becomes a real gate.
-    printf '\033[33m⚠ %s high/critical advisories — tracked as P1-04, not gating.\033[0m\n' "$COUNT"
+    fail 'npm audit produced no parseable report — the dependency audit did not run'
   fi
+
+  # Development advisories are reported but never gate: they affect the build
+  # machine, not the deployed application. Printed so a genuinely alarming one
+  # is still visible rather than hidden by the scoping above.
+  npm audit --json >"$AUDIT_JSON" 2>/dev/null || true
+  DEV=$(node -e '
+    const fs = require("fs");
+    try {
+      const d = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+      const v = d.metadata.vulnerabilities;
+      console.log((v.high || 0) + (v.critical || 0));
+    } catch { console.log("?"); }
+  ' "$AUDIT_JSON")
+  printf '\033[33mℹ %s high/critical across all dependencies including build tooling — informational.\033[0m\n' "$DEV"
 fi
 
 if [ -z "${SUPABASE_DB_URL:-}" ]; then

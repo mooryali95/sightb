@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import { bookNew, appendSheet, writeWorkbook } from './xlsx-writer';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { formatCurrency, getCashFlowForecast, addVAT, getMonthlyBudgetPlan } from './finance';
@@ -41,8 +41,8 @@ function statusLabel(s: string): string {
   }
 }
 
-export function exportToExcel(data: ExportBudgetData) {
-  const wb = XLSX.utils.book_new();
+export async function exportToExcel(data: ExportBudgetData) {
+  const wb = bookNew();
 
   // Budget sheet
   const budgetRows = data.budgetItems.map(b => ({
@@ -63,8 +63,7 @@ export function exportToExcel(data: ExportBudgetData) {
     'نسبة الصرف': data.totalPlanned > 0 ? (data.totalActual / data.totalPlanned) * 100 : 0,
     'الفترة': '',
   });
-  const wsBudget = XLSX.utils.json_to_sheet(budgetRows);
-  XLSX.utils.book_append_sheet(wb, wsBudget, 'الموازنة');
+  appendSheet(wb, budgetRows, 'الموازنة');
 
   // Expenses sheet
   const expenseRows = data.expenses.map(e => ({
@@ -75,8 +74,7 @@ export function exportToExcel(data: ExportBudgetData) {
     'التاريخ': e.date,
     'المسؤول': e.responsible || '',
   }));
-  const wsExpenses = XLSX.utils.json_to_sheet(expenseRows);
-  XLSX.utils.book_append_sheet(wb, wsExpenses, 'المصروفات');
+  appendSheet(wb, expenseRows, 'المصروفات');
 
   // Revenue sheet
   const revenueRows = data.revenues.map(r => ({
@@ -88,8 +86,7 @@ export function exportToExcel(data: ExportBudgetData) {
     'التاريخ': r.date,
     'رقم الفاتورة': r.invoiceNumber || '',
   }));
-  const wsRevenue = XLSX.utils.json_to_sheet(revenueRows);
-  XLSX.utils.book_append_sheet(wb, wsRevenue, 'الإيرادات');
+  appendSheet(wb, revenueRows, 'الإيرادات');
 
   // Change Orders sheet
   if (data.changeOrders && data.changeOrders.length > 0) {
@@ -101,8 +98,7 @@ export function exportToExcel(data: ExportBudgetData) {
       'الحالة': CHANGE_ORDER_STATUS_LABELS[co.status] || co.status,
       'طلب بواسطة': co.requestedBy || '',
     }));
-    const wsCO = XLSX.utils.json_to_sheet(coRows);
-    XLSX.utils.book_append_sheet(wb, wsCO, 'أوامر التغيير');
+    appendSheet(wb, coRows, 'أوامر التغيير');
   }
 
   // Cash Flow sheet
@@ -124,8 +120,7 @@ export function exportToExcel(data: ExportBudgetData) {
       'تراكمي مخطط': cf.cumulativePlanned,
       'تراكمي فعلي': cf.cumulativeActual,
     }));
-    const wsCF = XLSX.utils.json_to_sheet(cfRows);
-    XLSX.utils.book_append_sheet(wb, wsCF, 'التدفق النقدي');
+    appendSheet(wb, cfRows, 'التدفق النقدي');
 
     // Monthly Budget Plan sheet
     const plan = getMonthlyBudgetPlan(
@@ -147,8 +142,7 @@ export function exportToExcel(data: ExportBudgetData) {
       'تراكمي فعلي': r.cumulativeActual,
       'عدد البنود': r.items.length,
     }));
-    const wsPlan = XLSX.utils.json_to_sheet(planRows);
-    XLSX.utils.book_append_sheet(wb, wsPlan, 'الخطة الشهرية');
+    appendSheet(wb, planRows, 'الخطة الشهرية');
 
     // Monthly items detail sheet — every item in every month it appears in
     const itemRows: any[] = [];
@@ -164,8 +158,7 @@ export function exportToExcel(data: ExportBudgetData) {
       });
     });
     if (itemRows.length > 0) {
-      const wsItems = XLSX.utils.json_to_sheet(itemRows);
-      XLSX.utils.book_append_sheet(wb, wsItems, 'تفاصيل البنود شهرياً');
+      appendSheet(wb, itemRows, 'تفاصيل البنود شهرياً');
     }
   }
 
@@ -191,10 +184,9 @@ export function exportToExcel(data: ExportBudgetData) {
     { 'البند': 'المستحق لهيئة الزكاة', 'المبلغ': data.netVATPayable || 0 },
     { 'البند': 'قيمة العقد شامل الضريبة', 'المبلغ': data.contractValueInclVAT || addVAT(data.contractValue, data.vatRate || 15) },
   ];
-  const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'الملخص');
+  appendSheet(wb, summaryRows, 'الملخص');
 
-  XLSX.writeFile(wb, `${data.projectName}_تقرير_مالي.xlsx`);
+  await writeWorkbook(wb, `${data.projectName}_تقرير_مالي.xlsx`);
 }
 
 // ======== PDF Helpers ========
@@ -555,8 +547,8 @@ export interface PortfolioExportData {
   risks: { title: string; project: string; probability: string; impact: string; financialImpact: number; status: string }[];
 }
 
-export function exportPortfolioToExcel(data: PortfolioExportData) {
-  const wb = XLSX.utils.book_new();
+export async function exportPortfolioToExcel(data: PortfolioExportData) {
+  const wb = bookNew();
 
   // Summary sheet
   const summaryRows = [
@@ -573,7 +565,7 @@ export function exportPortfolioToExcel(data: PortfolioExportData) {
     { 'البند': 'مخاطر مفتوحة', 'القيمة': data.summary.openRisks },
     { 'البند': 'التعرض المالي', 'القيمة': data.summary.totalFinancialExposure },
   ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'الملخص');
+  appendSheet(wb, summaryRows, 'الملخص');
 
   // Projects comparison
   const projectRows = data.projectSummaries.map(p => ({
@@ -585,7 +577,7 @@ export function exportPortfolioToExcel(data: PortfolioExportData) {
     'الإنجاز %': p.percentComplete,
     'الصحة': p.health,
   }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(projectRows), 'مقارنة المشاريع');
+  appendSheet(wb, projectRows, 'مقارنة المشاريع');
 
   // Risks
   if (data.risks.length > 0) {
@@ -597,10 +589,10 @@ export function exportPortfolioToExcel(data: PortfolioExportData) {
       'الأثر المالي': r.financialImpact,
       'الحالة': r.status,
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(riskRows), 'المخاطر');
+    appendSheet(wb, riskRows, 'المخاطر');
   }
 
-  XLSX.writeFile(wb, `${data.portfolioName}_تقرير_محفظة.xlsx`);
+  await writeWorkbook(wb, `${data.portfolioName}_تقرير_محفظة.xlsx`);
 }
 
 // ======== Company Export ========
@@ -619,8 +611,8 @@ export interface CompanyExportData {
   indirectCosts: { category: string; description: string; amount: number; month: number }[];
 }
 
-export function exportCompanyToExcel(data: CompanyExportData) {
-  const wb = XLSX.utils.book_new();
+export async function exportCompanyToExcel(data: CompanyExportData) {
+  const wb = bookNew();
 
   // Summary
   const summaryRows = [
@@ -633,7 +625,7 @@ export function exportCompanyToExcel(data: CompanyExportData) {
     { 'البند': 'هامش صافي الربح %', 'القيمة': data.summary.netProfitMargin.toFixed(1) },
     { 'البند': 'مشاريع متعثرة', 'القيمة': data.summary.totalAtRiskProjects },
   ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'الملخص');
+  appendSheet(wb, summaryRows, 'الملخص');
 
   // Portfolios
   if (data.portfolioSummaries.length > 0) {
@@ -646,7 +638,7 @@ export function exportCompanyToExcel(data: CompanyExportData) {
       'الإنجاز %': p.completion,
       'الصحة': p.health,
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pRows), 'أداء المحافظ');
+    appendSheet(wb, pRows, 'أداء المحافظ');
   }
 
   // Indirect costs
@@ -657,10 +649,10 @@ export function exportCompanyToExcel(data: CompanyExportData) {
       'المبلغ': ic.amount,
       'الشهر': `شهر ${ic.month}`,
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(icRows), 'تكاليف غير مباشرة');
+    appendSheet(wb, icRows, 'تكاليف غير مباشرة');
   }
 
-  XLSX.writeFile(wb, `${data.companyName}_تقرير_شركة.xlsx`);
+  await writeWorkbook(wb, `${data.companyName}_تقرير_شركة.xlsx`);
 }
 
 // ======== Outstanding Advances Export ========
@@ -682,8 +674,8 @@ function ageLabelAr(days: number): string {
   return 'حديث';
 }
 
-export function exportOutstandingAdvancesExcel(rows: OutstandingAdvanceRow[], projectName: string) {
-  const wb = XLSX.utils.book_new();
+export async function exportOutstandingAdvancesExcel(rows: OutstandingAdvanceRow[], projectName: string) {
+  const wb = bookNew();
   const data: any[] = rows.map(r => ({
     'المورد': r.resourceName,
     'تاريخ السلفة': r.paidDate,
@@ -701,8 +693,8 @@ export function exportOutstandingAdvancesExcel(rows: OutstandingAdvanceRow[], pr
     'المسوّى': '', 'المتبقي': total, 'العمر (يوم)': '',
     'حالة العمر': '', 'المصدر': '', 'الوصف': '',
   });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'السلف القائمة');
-  XLSX.writeFile(wb, `${projectName}_السلف_القائمة.xlsx`);
+  appendSheet(wb, data, 'السلف القائمة');
+  await writeWorkbook(wb, `${projectName}_السلف_القائمة.xlsx`);
 }
 
 export function exportOutstandingAdvancesPDF(rows: OutstandingAdvanceRow[], projectName: string, currency?: string) {
@@ -756,8 +748,8 @@ const EVENT_TYPE_LABELS_AR: Record<string, string> = {
   reverse: 'تراجع',
 };
 
-export function exportSettlementEventsExcel(rows: SettlementEventRow[], projectName: string) {
-  const wb = XLSX.utils.book_new();
+export async function exportSettlementEventsExcel(rows: SettlementEventRow[], projectName: string) {
+  const wb = bookNew();
   const data = rows.map(r => ({
     'التاريخ': r.date,
     'المورد': r.resourceName,
@@ -767,8 +759,8 @@ export function exportSettlementEventsExcel(rows: SettlementEventRow[], projectN
     'مصدر الفائض': r.overflowSource || '',
     'ملاحظات': r.notes || '',
   }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'سجل التسويات');
-  XLSX.writeFile(wb, `${projectName}_سجل_التسويات.xlsx`);
+  appendSheet(wb, data, 'سجل التسويات');
+  await writeWorkbook(wb, `${projectName}_سجل_التسويات.xlsx`);
 }
 
 export function exportSettlementEventsPDF(rows: SettlementEventRow[], projectName: string, currency?: string) {

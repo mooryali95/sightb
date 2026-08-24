@@ -1,7 +1,7 @@
 /**
  * export-lazy
  * ---------------------------------------------------------------
- * `xlsx` + `jspdf` are ~700KB of the bundle and are only needed the
+ * The spreadsheet writer and `jspdf` are only needed the
  * moment a user clicks "export". These thin async wrappers keep the
  * heavy libraries out of every page chunk — they load on first use.
  *
