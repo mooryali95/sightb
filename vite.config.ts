@@ -19,7 +19,9 @@ export default defineConfig(({ mode }) => ({
         // Keep heavy, rarely-used libraries out of the route chunks.
         manualChunks: {
           "vendor-charts": ["recharts"],
-          "vendor-xlsx": ["xlsx"],
+          // `write-excel-file` exposes only subpath exports (./browser, ./node);
+          // there is no "." entry, so the bare specifier does not resolve here.
+          "vendor-xlsx": ["write-excel-file/browser"],
           "vendor-pdf": ["jspdf", "jspdf-autotable"],
         },
       },
