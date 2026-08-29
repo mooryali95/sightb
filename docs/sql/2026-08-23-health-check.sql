@@ -1,12 +1,25 @@
 -- ============================================================================
 -- SightB · production health check
 --
--- One statement, read-only, safe at any time. Paste into the Supabase SQL
--- editor and run. The editor shows only the LAST statement's result set, which
--- is why everything below is a single SELECT — an earlier version of this file
--- was eight statements and silently reported only the last one.
+-- SUPERSEDED — prefer `bash scripts/security-scan.sh`, which now runs every
+-- check below automatically from the Security Re-scan workflow.
 --
--- Every row is either "ok" or tells you exactly what to do.
+-- Keep this file only as an emergency fallback for when CI cannot reach the
+-- database. Running it by hand costs a round-trip, goes stale the moment
+-- anything merges, and can draw down the Lovable workspace quota — which
+-- meters usage and then asks for payment. The workflow talks to Supabase
+-- directly and consumes none of it.
+--
+-- Coverage is now: scan steps 2/6 (RLS), 3/6 (search_path, anon EXECUTE),
+-- 5/6 (migration drift) and 6/6 (disclosure fix, ISO constraints, currency
+-- values). The scan's drift check also improves on row 1 below, which compares
+-- against a hard-coded file count that must be edited by hand every time a
+-- migration is added.
+--
+-- If you do run it: one statement, read-only, safe at any time. The Supabase
+-- editor shows only the LAST statement's result set, which is why everything
+-- below is a single SELECT — an earlier version was eight statements and
+-- silently reported only the last one.
 -- ============================================================================
 
 WITH

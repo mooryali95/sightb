@@ -8,9 +8,10 @@
 #   3. SECURITY DEFINER hygiene  (fixed search_path, no anon EXECUTE)
 #   4. grant sanity              (no table exposed to anon without a policy)
 #   5. migration drift           (every tracked file present in the history table)
+#   6. schema invariants         (disclosure fix, ISO 4217 constraints, currency values)
 #
-# All five are read-only: the dependency audit touches no database, and checks
-# 2-5 only read the system catalogs. Nothing here writes, so this scan can run
+# All six are read-only: the dependency audit touches no database, and checks
+# 2-6 only read the system catalogs. Nothing here writes, so this scan can run
 # alongside any other job without contending for rows. (The pgTAP security
 # suite needs seeded fixtures and lives in run-ssot-tests.sh — see the note at
 # the foot of this file.)
@@ -27,7 +28,7 @@ step() { printf '\n\033[1m▶ %s\033[0m\n' "$1"; }
 fail() { printf '\033[31m✘ %s\033[0m\n' "$1"; FAILED=1; }
 pass() { printf '\033[32m✔ %s\033[0m\n' "$1"; }
 
-step "1/5 Dependency audit"
+step "1/6 Dependency audit"
 # Scope is production dependencies only, and that scoping is the whole point.
 #
 # The audit used to count every installed package and was therefore left
@@ -102,14 +103,14 @@ fi
 
 psql_q() { psql "$SUPABASE_DB_URL" -tAX -c "$1"; }
 
-step "2/5 RLS coverage on public tables"
+step "2/6 RLS coverage on public tables"
 NO_RLS=$(psql_q "SELECT string_agg(c.relname, ', ')
                    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
                   WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT c.relrowsecurity;")
 if [ -z "$NO_RLS" ]; then pass "all public tables have RLS enabled"
 else fail "tables without RLS: $NO_RLS"; fi
 
-step "3/5 SECURITY DEFINER hygiene"
+step "3/6 SECURITY DEFINER hygiene"
 NO_PATH=$(psql_q "SELECT string_agg(p.proname, ', ')
                     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                    WHERE n.nspname = 'public' AND p.prosecdef
@@ -129,7 +130,7 @@ ANON_EXEC=$(psql_q "SELECT string_agg(p.proname, ', ')
 if [ -z "$ANON_EXEC" ]; then pass "anon cannot execute privileged functions"
 else fail "anon can execute: $ANON_EXEC"; fi
 
-step "4/5 Grant sanity (anon reach without a permissive policy)"
+step "4/6 Grant sanity (anon reach without a permissive policy)"
 LEAKY=$(psql_q "SELECT string_agg(t.relname, ', ') FROM (
                   SELECT c.relname, c.oid
                     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -142,7 +143,7 @@ LEAKY=$(psql_q "SELECT string_agg(t.relname, ', ') FROM (
 if [ -z "$LEAKY" ]; then pass "no anon-readable table lacking an anon policy"
 else fail "anon SELECT granted without matching policy: $LEAKY"; fi
 
-step "5/5 Migration drift (tracked files vs applied history)"
+step "5/6 Migration drift (tracked files vs applied history)"
 # The check that would have caught the original problem. Migrations merged
 # through GitHub are not applied by the Lovable pipeline, so a file can sit in
 # supabase/migrations for days while the code depending on it is live. Two did.
@@ -175,6 +176,53 @@ else
     fail "merged but never applied: $UNAPPLIED"
     printf '  Apply them with the Apply-migrations workflow, or by hand from the SQL editor.\n'
   fi
+fi
+
+step "6/6 Schema invariants"
+# These three used to live only in docs/sql/2026-08-23-health-check.sql, a file
+# the owner had to paste into the Supabase SQL editor by hand and send the
+# results back. That was the wrong shape: it costs a round-trip every time, the
+# answer is stale the moment anything merges, and it can draw down the Lovable
+# workspace quota — which meters usage and then asks for payment.
+#
+# Running them here costs nothing extra: this job already holds a connection,
+# talks to Supabase directly, and never touches Lovable.
+
+# 6a. The attachment explainer must not disclose whether a path exists.
+#     An unprivileged caller gets a uniform `not_authorized` on every deny.
+DISCLOSURE=$(psql_q "SELECT CASE
+    WHEN NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'explain_attachment_access')
+      THEN 'missing'
+    WHEN EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'explain_attachment_access'
+                   AND prosrc LIKE '%not_authorized%')
+      THEN 'ok'
+    ELSE 'unapplied'
+  END;")
+case "$DISCLOSURE" in
+  ok)        pass "attachment explainer deny path discloses nothing" ;;
+  missing)   fail "explain_attachment_access does not exist" ;;
+  unapplied) fail "attachment disclosure fix NOT applied — 20260815004500 is merged but not live" ;;
+  *)         fail "could not determine the disclosure state (got: '$DISCLOSURE')" ;;
+esac
+
+# 6b. Both currency columns must carry the ISO 4217 CHECK constraint.
+ISO_N=$(psql_q "SELECT count(*) FROM pg_constraint WHERE conname LIKE '%currency_iso4217%';")
+if [ "$ISO_N" = "2" ]; then
+  pass "ISO 4217 constraints present on both tables"
+else
+  fail "expected 2 ISO 4217 constraints, found ${ISO_N:-none} — 20260815010000 may not be applied"
+fi
+
+# 6c. No legacy currency symbols may survive. The constraint should make this
+#     impossible, so a hit here means the constraint is missing or was added
+#     NOT VALID over rows that never got normalised.
+BAD_CCY=$(psql_q "SELECT COALESCE(string_agg(DISTINCT currency, ', '), '')
+                    FROM public.projects
+                   WHERE currency IS NOT NULL AND currency !~ '^[A-Z]{3}$';")
+if [ -z "$BAD_CCY" ]; then
+  pass "every project currency is a 3-letter ISO code"
+else
+  fail "non-ISO currency values still stored: $BAD_CCY"
 fi
 
 # The pgTAP security suite deliberately does NOT run here.
