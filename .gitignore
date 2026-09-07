@@ -33,3 +33,7 @@ eslint-report.json
 
 # Written by the Supabase CLI on any invocation; never part of the project.
 supabase/.temp/
+
+# Playwright run output
+test-results/
+playwright-report/
