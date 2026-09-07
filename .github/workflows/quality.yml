@@ -52,7 +52,7 @@ jobs:
           #   introduced (cash_transfer_repairs, cash_transfers) and the test
           #   fixtures, which also surfaced a dead `userId` field and two casts
           #   that were never needed.
-          ERROR_BUDGET=372
+          ERROR_BUDGET=336
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

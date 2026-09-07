@@ -1,5 +1,9 @@
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
+import type { Database, Tables } from '@/integrations/supabase/types';
+
+/** Every table name the generated schema knows about. */
+type TableName = keyof Database['public']['Tables'];
 import {
   CostBaseline,
 } from '@/types/project';
@@ -18,6 +22,8 @@ export interface LoadSlice {
   detailsLoaded: boolean;
   projectDataLoaded: Set<string>;
   auditLog: AuditLogEntry[];
+  /** When loadAll last completed, so repeat calls inside 30s can no-op. */
+  _lastLoadedAt?: number;
   loadAll: () => Promise<void>;
   loadDetails: () => Promise<void>;
 
@@ -45,15 +51,15 @@ interface AuditLogRow {
 /**
  * Paginated fetch to overcome Supabase's 1000-row default limit.
  */
-async function fetchAll(
-  table: string,
+async function fetchAll<T extends TableName>(
+  table: T,
   orderCol = 'created_at',
   ascending = false,
   filters?: Record<string, string>,
-): Promise<any[]> {
+): Promise<Tables<T>[]> {
   const PAGE = 1000;
   let from = 0;
-  const all: any[] = [];
+  const all: Tables<T>[] = [];
   while (true) {
     let q = db.from(table).select('*')
       .order(orderCol, { ascending })
@@ -63,7 +69,10 @@ async function fetchAll(
     }
     const { data, error } = await q;
     if (error) throw error;
-    all.push(...(data || []));
+    // The one cast in this function, and it is confined here: db.from records
+    // its chain lazily and so cannot carry the row type through. The table
+    // name is what the generic pins, so callers still get real rows.
+    all.push(...((data ?? []) as Tables<T>[]));
     if (!data || data.length < PAGE) break;
     from += PAGE;
   }
@@ -79,7 +88,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
 
   loadAll: async () => {
     const now = Date.now();
-    const lastLoaded = (get() as any)._lastLoadedAt || 0;
+    const lastLoaded = get()._lastLoadedAt ?? 0;
     if (now - lastLoaded < 30000 && get().companies.length > 0) return;
 
     try {
@@ -100,8 +109,8 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         projects: (projects.data || []).map(mapProject),
         loading: false,
         _lastLoadedAt: now,
-      } as any);
-    } catch (error: any) {
+      });
+    } catch (error) {
       console.error('[Store.loadAll]', error);
       set({ loading: false });
       throw error;
@@ -146,7 +155,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         detailsLoading: false,
         detailsLoaded: true,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('[Store.loadDetails]', error);
       set({ detailsLoading: false });
       throw error;
@@ -231,7 +240,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         risks: [...s.risks.filter(r => r.projectId !== projectId), ...risksData.map(mapRisk)],
         projectDataLoaded: loaded,
       }));
-    } catch (error: any) {
+    } catch (error) {
       console.error('[Store.loadProjectData]', error);
       throw error;
     }
@@ -250,7 +259,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
       for (const p of companyProjects) {
         await get().loadProjectData(p.id);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('[Store.loadCompanyData]', error);
       throw error;
     }
@@ -272,7 +281,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
           createdAt: d.created_at,
         })),
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('[Store.loadAuditLog]', error);
       throw error;
     }
