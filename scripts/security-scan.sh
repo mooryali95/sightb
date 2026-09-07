@@ -6,7 +6,7 @@
 #   1. dependency audit          (known CVEs in the lockfile)
 #   2. RLS coverage              (every public table has RLS enabled)
 #   3. SECURITY DEFINER hygiene  (fixed search_path, no anon EXECUTE)
-#   4. grant sanity              (no table exposed to anon without a policy)
+#   4. grant sanity              (what the anon role can actually read)
 #   5. migration drift           (every tracked file present in the history table)
 #   6. schema invariants         (disclosure fix, ISO 4217 constraints, currency values)
 #
@@ -27,6 +27,12 @@ FAILED=0
 step() { printf '\n\033[1m▶ %s\033[0m\n' "$1"; }
 fail() { printf '\033[31m✘ %s\033[0m\n' "$1"; FAILED=1; }
 pass() { printf '\033[32m✔ %s\033[0m\n' "$1"; }
+
+# Bound every registry call, where coreutils provides the means to. Left
+# empty rather than failing if it does not: an unbounded audit still beats
+# no audit at all.
+AUDIT_TIMEOUT=""
+command -v timeout >/dev/null 2>&1 && AUDIT_TIMEOUT="timeout 120"
 
 step "1/6 Dependency audit"
 # Scope is production dependencies only, and that scoping is the whole point.
@@ -57,7 +63,18 @@ else
   # run, so the exit status cannot tell those apart — but a parseable report
   # can. If the JSON parses, the audit ran. Those two outcomes need opposite
   # responses: a tool that could not run is a bug in this script.
-  npm audit --omit=dev --json >"$AUDIT_JSON" 2>/dev/null || true
+  # Bounded, and retried once. On 4 September this call hung for five minutes
+  # and came back with nothing parseable, reddening the nightly scan for a
+  # reason outside this repository. Failing loudly was the correct response —
+  # the report genuinely had not been computed — but a registry hiccup should
+  # not need a human. Two bounded attempts, then the parse below decides.
+  for attempt in 1 2; do
+    $AUDIT_TIMEOUT npm audit --omit=dev --json >"$AUDIT_JSON" 2>/dev/null
+    if node -e 'const d = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+                if (!d.metadata || !d.metadata.vulnerabilities) process.exit(1);' \
+            "$AUDIT_JSON" 2>/dev/null; then break; fi
+    [ "$attempt" -eq 1 ] && sleep 5
+  done
   if COUNT=$(node -e '
     const fs = require("fs");
     let data;
@@ -84,7 +101,7 @@ else
   # Development advisories are reported but never gate: they affect the build
   # machine, not the deployed application. Printed so a genuinely alarming one
   # is still visible rather than hidden by the scoping above.
-  npm audit --json >"$AUDIT_JSON" 2>/dev/null || true
+  $AUDIT_TIMEOUT npm audit --json >"$AUDIT_JSON" 2>/dev/null || true
   DEV=$(node -e '
     const fs = require("fs");
     try {
@@ -130,18 +147,86 @@ ANON_EXEC=$(psql_q "SELECT string_agg(p.proname, ', ')
 if [ -z "$ANON_EXEC" ]; then pass "anon cannot execute privileged functions"
 else fail "anon can execute: $ANON_EXEC"; fi
 
-step "4/6 Grant sanity (anon reach without a permissive policy)"
-LEAKY=$(psql_q "SELECT string_agg(t.relname, ', ') FROM (
-                  SELECT c.relname, c.oid
-                    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-                   WHERE n.nspname='public' AND c.relkind='r'
-                     AND has_table_privilege('anon', c.oid, 'SELECT')
-                ) t
-                WHERE NOT EXISTS (SELECT 1 FROM pg_policies pol
-                                   WHERE pol.schemaname='public' AND pol.tablename=t.relname
-                                     AND 'anon' = ANY(pol.roles));")
-if [ -z "$LEAKY" ]; then pass "no anon-readable table lacking an anon policy"
-else fail "anon SELECT granted without matching policy: $LEAKY"; fi
+step "4/6 Grant sanity (what anon can actually reach)"
+# This check used to ask a question whose answer meant nothing: does a table
+# anon holds SELECT on lack a policy naming anon? On this database that was
+# true of 35 tables out of 36 — and every one of them was safe.
+#
+# The reason is how Supabase is wired. It grants anon SELECT on public tables
+# by default, and the policies here are written TO authenticated. With RLS on
+# and no policy matching anon, Postgres denies by default: anon sees zero rows.
+# So the old check read the safe, ordinary arrangement as a leak, and would
+# have painted this workflow red on 35 tables the first night SUPABASE_DB_URL
+# was set. A gate that cries wolf on the correct configuration is worse than no
+# gate — people learn to scroll past it.
+#
+# It also missed the case that matters. A policy declared TO public applies to
+# every role, anon included, but `'anon' = ANY(roles)` never matches `{public}`.
+# The one shape that could actually expose data was the one shape it skipped.
+#
+# Both halves below were tested against a scratch Postgres in every direction:
+# silent on a healthy database, and each fault firing only its own half.
+
+# 4a. Empirical, and deliberately so: assume the anon role and count what comes
+#     back. That is the path a logged-out browser takes, so zero here is
+#     evidence rather than inference. Wrapped in a transaction that always rolls
+#     back — SET LOCAL confines the role change to it, and the scan stays
+#     read-only.
+#
+#     ON_ERROR_STOP is not optional. Without it a failed SET ROLE aborts the
+#     transaction, psql prints the error to stderr and still exits 0, and the
+#     empty result reads as "nothing found" — reporting a pass this check never
+#     computed. That is the bun-pm-audit bug exactly, and it appeared in the
+#     first draft of this rewrite.
+ANON_READS=$(psql "$SUPABASE_DB_URL" -tAXq -v ON_ERROR_STOP=1 <<'SQL'
+BEGIN;
+SET LOCAL ROLE anon;
+SELECT coalesce(string_agg(x.relname || ' (' || x.n || ' rows)', ', ' ORDER BY x.relname), '')
+  FROM (SELECT c.relname,
+               (xpath('/row/c/text()',
+                      query_to_xml(format('SELECT count(*) AS c FROM public.%I', c.relname),
+                                   false, true, '')))[1]::text::bigint AS n
+          FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public' AND c.relkind = 'r'
+           AND has_table_privilege('anon', c.oid, 'SELECT')) x
+ WHERE x.n > 0;
+ROLLBACK;
+SQL
+) || ANON_READS='__COULD_NOT_RUN__'
+
+if [ "$ANON_READS" = '__COULD_NOT_RUN__' ]; then
+  fail "could not assume the anon role — this check did not run"
+  printf '  A check that cannot run must never be counted as a pass.\n'
+elif [ -n "$ANON_READS" ]; then
+  fail "anon can read rows from: $ANON_READS"
+  printf '  Reachable without logging in. Find the permissive policy and scope it.\n'
+else
+  pass "anon reads no rows from any public table"
+fi
+
+# 4b. Static, and it earns its place: 4a can only speak for tables that hold
+#     rows today. An empty table with a wide-open policy leaks the moment it is
+#     populated, and 4a stays silent throughout. So every policy anon can reach
+#     must also carry a visible guard.
+#
+#     Reachable means the roles list names anon, or names public — which is
+#     every role. Guarded means it defers to service_role, or requires
+#     auth.uid() (NULL for anon, so the predicate denies), or is a flat false.
+UNGUARDED=$(psql_q "
+  SELECT coalesce(string_agg(tablename || '.' || policyname, ', ' ORDER BY tablename, policyname), '')
+    FROM pg_policies
+   WHERE schemaname = 'public'
+     AND permissive = 'PERMISSIVE'
+     AND ('anon' = ANY(roles) OR 'public' = ANY(roles))
+     AND NOT (concat_ws(' ', qual, with_check) ~ '(service_role|auth[.]uid[(][)])'
+           OR (coalesce(qual, 'false')       ~ '^[[:space:]]*false[[:space:]]*\$'
+          AND  coalesce(with_check, 'false') ~ '^[[:space:]]*false[[:space:]]*\$'));")
+if [ -z "$UNGUARDED" ]; then
+  pass "every policy anon can reach is guarded"
+else
+  fail "policies reachable by anon with no guard: $UNGUARDED"
+  printf '  A policy TO public reaches anon too. Scope it, or deny it explicitly.\n'
+fi
 
 step "5/6 Migration drift (tracked files vs applied history)"
 # The check that would have caught the original problem. Migrations merged
