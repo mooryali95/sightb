@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 
 export async function getPaymentRequestRaw(id: string): Promise<Record<string, unknown> | null> {
   const { data, error } = await (supabase as any)
@@ -30,12 +31,12 @@ export async function listSettlementEventsRaw(
   return (data ?? []) as Record<string, unknown>[];
 }
 
-export async function getExpenseRaw(id: string): Promise<Record<string, unknown> | null> {
-  const { data, error } = await (supabase as any)
+export async function getExpenseRaw(id: string): Promise<Tables<'expenses'> | null> {
+  const { data, error } = await supabase
     .from('expenses')
     .select('*')
     .eq('id', id)
     .maybeSingle();
   if (error) throw new Error(error.message || 'فشل تحميل المصروف');
-  return (data ?? null) as Record<string, unknown> | null;
+  return data ?? null;
 }

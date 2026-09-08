@@ -1,11 +1,15 @@
 import { db } from '@/services/db';
 import { logger } from '@/lib/logger';
-import type { Json } from '@/integrations/supabase/types';
+// Row shapes come from the generated schema rather than `any`: these mappers
+// are where database rows become money, and an untyped boundary here turns a
+// renamed or missing column into a silent NaN instead of a build error.
+import type { Json, Tables } from '@/integrations/supabase/types';
 import {
   Company, Portfolio, Project, BudgetItem, Expense, Revenue,
   CostBaseline, BaselineItem, Resource, Custody, Milestone, ChangeOrder,
   Risk, IndirectCost, PeriodicSnapshot,
   type ChangeOrderBudgetItem,
+  type CompanyStatus,
   type ContractType, type CostType, type CostClass, type RevenueType, type RevenueStatus,
   type MilestoneStatus, type ChangeOrderType, type ChangeOrderStatus,
   type RiskProbability, type RiskImpact, type RiskCategory, type RiskStatus,
@@ -26,11 +30,11 @@ export async function logDeletion(_tableName: string, _recordId: string, _record
 }
 
 // ---- Mappers ----
-export function mapCompany(d: any): Company {
-  return { id: d.id, name: d.name, description: d.description || undefined, logo: d.logo || undefined, status: d.status || 'active', createdAt: d.created_at };
+export function mapCompany(d: Tables<'companies'>): Company {
+  return { id: d.id, name: d.name, description: d.description || undefined, logo: d.logo || undefined, status: (d.status || 'active') as CompanyStatus, createdAt: d.created_at };
 }
 
-export function mapPortfolio(d: any): Portfolio {
+export function mapPortfolio(d: Tables<'portfolios'>): Portfolio {
   return {
     id: d.id, companyId: d.company_id, name: d.name,
     description: d.description || undefined,
@@ -42,7 +46,7 @@ export function mapPortfolio(d: any): Portfolio {
   };
 }
 
-export function mapProject(d: any): Project {
+export function mapProject(d: Tables<'projects'>): Project {
   return {
     id: d.id, companyId: d.company_id, portfolioId: d.portfolio_id || undefined,
     name: d.name, description: d.description || undefined,
@@ -59,7 +63,7 @@ export function mapProject(d: any): Project {
   };
 }
 
-export function mapBudgetItem(d: any): BudgetItem {
+export function mapBudgetItem(d: Tables<'budget_items'>): BudgetItem {
   return {
     id: d.id, projectId: d.project_id, category: d.category as BudgetItem['category'],
     description: d.description, plannedAmount: Number(d.planned_amount),
@@ -72,7 +76,7 @@ export function mapBudgetItem(d: any): BudgetItem {
   };
 }
 
-export function mapExpense(d: any): Expense {
+export function mapExpense(d: Tables<'expenses'>): Expense {
   return {
     id: d.id, projectId: d.project_id, budgetItemId: d.budget_item_id || undefined,
     category: d.category as Expense['category'], description: d.description, amount: Number(d.amount),
@@ -91,14 +95,14 @@ export function mapExpense(d: any): Expense {
   };
 }
 
-export function mapResource(d: any): Resource {
+export function mapResource(d: Tables<'resources'>): Resource {
   return {
     id: d.id, projectId: d.project_id, name: d.name,
     role: d.role || undefined, monthlyCost: Number(d.monthly_cost), createdAt: d.created_at,
   };
 }
 
-export function mapCustody(d: any, expenses: Expense[]): Custody {
+export function mapCustody(d: Tables<'custodies'>, expenses: Expense[]): Custody {
   const spent = expenses.filter(e => e.custodyId === d.id).reduce((s, e) => s + e.amount, 0);
   const remaining = Number(d.amount) - spent;
   return {
@@ -113,7 +117,7 @@ export function mapCustody(d: any, expenses: Expense[]): Custody {
   };
 }
 
-export function mapRevenue(d: any): Revenue {
+export function mapRevenue(d: Tables<'revenues'>): Revenue {
   return {
     id: d.id, projectId: d.project_id, description: d.description,
     amount: Number(d.amount), date: d.date, month: d.month,
@@ -126,7 +130,7 @@ export function mapRevenue(d: any): Revenue {
   };
 }
 
-export function mapBaselineItem(d: any): BaselineItem {
+export function mapBaselineItem(d: Tables<'baseline_items'>): BaselineItem {
   return {
     id: d.id, baselineId: d.baseline_id, category: d.category as BaselineItem['category'],
     description: d.description, plannedAmount: Number(d.planned_amount),
@@ -137,7 +141,7 @@ export function mapBaselineItem(d: any): BaselineItem {
   };
 }
 
-export function mapMilestone(d: any): Milestone {
+export function mapMilestone(d: Tables<'milestones'>): Milestone {
   return {
     id: d.id, projectId: d.project_id, name: d.name,
     description: d.description || undefined,
@@ -154,7 +158,7 @@ export function mapMilestone(d: any): Milestone {
   };
 }
 
-export function mapChangeOrder(d: any): ChangeOrder {
+export function mapChangeOrder(d: Tables<'change_orders'>): ChangeOrder {
   let parsedBudgetItems: ChangeOrderBudgetItem[] = [];
   try {
     const raw = d.budget_items_json;
@@ -177,7 +181,7 @@ export function mapChangeOrder(d: any): ChangeOrder {
   };
 }
 
-export function mapRisk(d: any): Risk {
+export function mapRisk(d: Tables<'risks'>): Risk {
   return {
     id: d.id,
     projectId: d.project_id || undefined,
@@ -197,7 +201,7 @@ export function mapRisk(d: any): Risk {
   };
 }
 
-export function mapIndirectCost(d: any): IndirectCost {
+export function mapIndirectCost(d: Tables<'indirect_costs'>): IndirectCost {
   return {
     id: d.id,
     companyId: d.company_id,
@@ -211,19 +215,24 @@ export function mapIndirectCost(d: any): IndirectCost {
   };
 }
 
-export function mapSnapshot(d: any): PeriodicSnapshot {
+export function mapSnapshot(d: Tables<'periodic_snapshots'>): PeriodicSnapshot {
   return {
     id: d.id,
     entityType: d.entity_type,
     entityId: d.entity_id,
     period: d.period,
     snapshotDate: d.snapshot_date,
-    metrics: d.metrics || {},
+    // `metrics` is a Json column, so it could in principle be a scalar or an
+    // array. Every writer stores an object; anything else is treated as empty
+    // rather than trusted into a shape the callers assume.
+    metrics: (d.metrics && typeof d.metrics === 'object' && !Array.isArray(d.metrics)
+      ? d.metrics
+      : {}) as PeriodicSnapshot['metrics'],
     createdAt: d.created_at,
   };
 }
 
-export function mapCommitment(d: any): Commitment {
+export function mapCommitment(d: Tables<'commitments'>): Commitment {
   return {
     id: d.id, projectId: d.project_id,
     budgetItemId: d.budget_item_id || undefined,
