@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { useStore } from '@/store/useStore';
+import { useStore, type AppState } from '@/store/useStore';
 import { ResourcePayablesSection } from '../ResourcePayablesSection';
 import {
   PROJECT_ID,
@@ -59,7 +59,7 @@ vi.mock('sonner', () => ({
  * Seed real state, and replace only the async actions — the component must not
  * reach the network, but everything it derives from state stays genuine.
  */
-function seedStore(over: Partial<Parameters<typeof useStore.setState>[0]> = {}) {
+function seedStore(over: Partial<AppState> = {}) {
   const noop = vi.fn().mockResolvedValue(undefined);
   useStore.setState({
     resources: [resource],
@@ -70,7 +70,7 @@ function seedStore(over: Partial<Parameters<typeof useStore.setState>[0]> = {}) 
     custodies: [],
     expenses: [],
     budgetItems: [],
-    settlementEvents: {},
+    settlementEvents: [],
     loadSettlementEventsForRequest: noop,
     settleAdvanceWithSplit: noop,
     createReimbursement: noop,
@@ -92,7 +92,7 @@ function seedStore(over: Partial<Parameters<typeof useStore.setState>[0]> = {}) 
     createResourceSettlement: noop,
     signResourceSettlement: noop,
     ...over,
-  } as Parameters<typeof useStore.setState>[0]);
+  } satisfies Partial<AppState>);
 }
 
 /**

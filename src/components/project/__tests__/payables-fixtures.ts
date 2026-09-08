@@ -49,9 +49,9 @@ function reimbursement(over: Partial<ResourceReimbursement>): ResourceReimbursem
  * So approved = 1,900 · paid = 400 · outstanding = 1,500.
  */
 export const resourceReimbursements: ResourceReimbursement[] = [
-  reimbursement({ id: 'res-approved', amount: 1500, status: 'approved' }),
-  reimbursement({ id: 'res-paid', amount: 400, status: 'reimbursed' }),
-  reimbursement({ id: 'res-pending', amount: 250, status: 'pending_review' }),
+  reimbursement({ id: 'res-approved', amount: 1500, status: 'approved', description: 'سفر معتمد' }),
+  reimbursement({ id: 'res-paid', amount: 400, status: 'reimbursed', description: 'اتصالات مدفوعة' }),
+  reimbursement({ id: 'res-pending', amount: 250, status: 'pending_review', description: 'قرطاسية قيد المراجعة' }),
 ];
 
 /**
@@ -66,6 +66,7 @@ export const vendorReimbursements: ResourceReimbursement[] = [
     resourceId: undefined,
     amount: 9000,
     status: 'approved',
+    description: 'توريد مواد',
   }),
   reimbursement({
     id: 'vendor-paid',
@@ -74,6 +75,7 @@ export const vendorReimbursements: ResourceReimbursement[] = [
     resourceId: undefined,
     amount: 3000,
     status: 'reimbursed',
+    description: 'توريد معدات',
   }),
 ];
 
@@ -107,9 +109,9 @@ export function paymentRequest(over: Partial<PaymentRequest>): PaymentRequest {
 
 /** Two count as pending (submitted, approved); paid and draft do not. */
 export const paymentRequests: PaymentRequest[] = [
-  paymentRequest({ id: 'req-submitted', amount: 500, status: 'submitted' }),
+  paymentRequest({ id: 'req-submitted', amount: 500, status: 'submitted', description: 'طلب مُرسل' }),
   paymentRequest({ id: 'req-approved', amount: 600, status: 'approved' }),
-  paymentRequest({ id: 'req-paid', amount: 700, status: 'paid' }),
+  paymentRequest({ id: 'req-paid', amount: 700, status: 'paid', description: 'طلب مدفوع' }),
   paymentRequest({ id: 'req-draft', amount: 800, status: 'draft' }),
 ];
 
