@@ -27,8 +27,6 @@ import {
 import { exportPayablesSummaryCSV } from '@/lib/payables-export';
 import {
   EXPENSE_CATEGORY_LABELS,
-  REIMBURSEMENT_STATUS_LABELS,
-  REIMBURSEMENT_STATUS_COLORS,
   PAYMENT_REQUEST_STATUS_LABELS,
   PAYMENT_REQUEST_STATUS_COLORS,
   PAYMENT_REQUEST_TYPE_LABELS,
@@ -58,7 +56,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { getFundRemaining, getCustodyCashTransfersIn, getCustodyOutstandingAdvances } from '@/lib/funds';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import {
-  Plus, HandCoins, CheckCircle2, XCircle, FileText, Send,
+  HandCoins, FileText, Send,
   CalendarClock, Pencil, RotateCcw, Undo2,
 } from 'lucide-react';
 import {
@@ -70,6 +68,7 @@ import { cn } from '@/lib/utils';
 import { usePayablesScope } from './payables/usePayablesScope';
 import { PayablesScopeBar } from './payables/PayablesScopeBar';
 import { PayablesSummaryCards } from './payables/PayablesSummaryCards';
+import { ReimbursementsTab } from './payables/ReimbursementsTab';
 
 interface Props {
   projectId: string;
@@ -87,7 +86,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     resources, reimbursements, paymentRequests, resourceSettlements,
     projectFunds, custodies, expenses, budgetItems,
     settlementEvents, loadSettlementEventsForRequest, settleAdvanceWithSplit,
-    createReimbursement, approveReimbursement, rejectReimbursement, deleteReimbursement,
+    rejectReimbursement,
     createPaymentRequest, submitPaymentRequest, reviewPaymentRequest,
     approvePaymentRequest, rejectPaymentRequest, schedulePaymentRequest,
     payPaymentRequest, cancelPaymentRequest, deletePaymentRequest, settleAdvance,
@@ -101,35 +100,6 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     projBudgetItems, projResources, projAllReimbs, projReimbs, projVendorReimbs,
     projReqs, projSettles, resourceSummary, vendorSummary, summary, scopedReimbs,
   } = usePayablesScope(projectId);
-
-  // ─── Reimbursement dialog state ───
-  const [reimbOpen, setReimbOpen] = useState(false);
-  const [rResourceId, setRResourceId] = useState('');
-  const [rCategory, setRCategory] = useState<ExpenseCategory>('equipment');
-  const [rDescription, setRDescription] = useState('');
-  const [rAmount, setRAmount] = useState('');
-  const [rDate, setRDate] = useState(new Date().toISOString().split('T')[0]);
-  const [rNotes, setRNotes] = useState('');
-
-  const resetReimb = () => {
-    setRResourceId(''); setRCategory('equipment'); setRDescription('');
-    setRAmount(''); setRDate(new Date().toISOString().split('T')[0]); setRNotes('');
-  };
-
-  const handleCreateReimb = async () => {
-    if (!rResourceId || !rDescription.trim() || !rAmount) {
-      toast.error('يرجى تعبئة الحقول المطلوبة'); return;
-    }
-    try {
-      await createReimbursement({
-        projectId, resourceId: rResourceId, category: rCategory,
-        description: rDescription, amount: parseFloat(rAmount),
-        expenseDate: rDate, notes: rNotes,
-      });
-      toast.success('تم تسجيل الاسترداد، بانتظار الاعتماد');
-      resetReimb(); setReimbOpen(false);
-    } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
-  };
 
   // ─── Payment request dialog state ───
   const [reqOpen, setReqOpen] = useState(false);
@@ -907,139 +877,17 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
         {/* ─── Reimbursements Tab ─── */}
         <TabsContent value="reimbursements" className="space-y-3">
-          <div className="flex justify-between items-center">
-            <h3 className="text-base font-semibold">قائمة الاستردادات</h3>
-            {canEdit && projResources.length > 0 && (
-              <Dialog open={reimbOpen} onOpenChange={(o) => { setReimbOpen(o); if (!o) resetReimb(); }}>
-                <DialogTrigger asChild>
-                  <Button size="sm"><Plus className="h-4 w-4 ml-1" /> تسجيل استرداد</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>تسجيل مصروف صرفه المورد من حسابه</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3">
-                    <div>
-                      <Label>المورد *</Label>
-                      <Select value={rResourceId} onValueChange={setRResourceId}>
-                        <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
-                        <SelectContent>
-                          {projResources.map((r) => (
-                            <SelectItem key={r.id} value={r.id}>{r.name}{r.role && ` — ${r.role}`}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>الفئة *</Label>
-                      <Select value={rCategory} onValueChange={(v) => setRCategory(v as ExpenseCategory)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
-                            <SelectItem key={k} value={k}>{v}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>وصف المصروف *</Label>
-                      <Input value={rDescription} onChange={(e) => setRDescription(e.target.value)} placeholder="لابتوب للمشروع" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>المبلغ *</Label>
-                        <Input type="number" inputMode="decimal" value={rAmount} onChange={(e) => setRAmount(e.target.value)} placeholder="4500" />
-                      </div>
-                      <div>
-                        <Label>تاريخ الصرف *</Label>
-                        <Input type="date" value={rDate} onChange={(e) => setRDate(e.target.value)} />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>ملاحظات</Label>
-                      <Textarea value={rNotes} onChange={(e) => setRNotes(e.target.value)} rows={2} />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setReimbOpen(false)}>إلغاء</Button>
-                    <Button onClick={handleCreateReimb}>حفظ</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-
-          {scopedReimbs.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-6 text-center">لا توجد استردادات مسجلة.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="text-right py-2">التاريخ</th>
-                    <th className="text-right py-2">{scope === 'resource' ? 'المورد' : 'المورّد الخارجي'}</th>
-                    <th className="text-right py-2">الفئة</th>
-                    <th className="text-right py-2">الوصف</th>
-                    <th className="text-right py-2">المبلغ</th>
-                    <th className="text-right py-2">الحالة</th>
-                    <th className="text-right py-2">إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scopedReimbs.map((r) => {
-                    const res = projResources.find((x) => x.id === r.resourceId);
-                    return (
-                      <tr key={r.id} className="border-b hover:bg-muted/30">
-                        <td className="py-2">{r.expenseDate}</td>
-                        <td className="py-2">{(r.sourceKind ?? 'resource') === 'vendor' ? (r.vendorName || '—') : (res?.name || '—')}</td>
-                        <td className="py-2">{EXPENSE_CATEGORY_LABELS[r.category as ExpenseCategory] || r.category}</td>
-                        <td className="py-2">{r.description}</td>
-                        <td className="py-2 font-medium">{formatCurrency(r.amount)}</td>
-                        <td className="py-2">
-                          <Badge className={REIMBURSEMENT_STATUS_COLORS[r.status]}>
-                            {REIMBURSEMENT_STATUS_LABELS[r.status]}
-                          </Badge>
-                          {r.rejectionReason && (
-                            <div className="text-xs text-muted-foreground mt-1">السبب: {r.rejectionReason}</div>
-                          )}
-                        </td>
-                        <td className="py-2 space-x-2 space-x-reverse">
-                          {isAdmin && r.status === 'pending_review' && (
-                            <>
-                              <Button size="sm" variant="outline"
-                                onClick={async () => {
-                                  try { await approveReimbursement(r.id); toast.success('تم الاعتماد'); }
-                                  catch (e: any) { toast.error(e.message); }
-                                }}>
-                                <CheckCircle2 className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="outline"
-                                onClick={() => setRejectId({ id: r.id, kind: 'reimb' })}>
-                                <XCircle className="h-4 w-4 text-red-600" />
-                              </Button>
-                            </>
-                          )}
-                          {canEdit && (r.status === 'pending_review' || r.status === 'rejected') && (
-                            <ConfirmDeleteDialog
-                              title="حذف الاسترداد؟"
-                              description="سيتم حذف هذا الاسترداد نهائياً."
-                              onConfirm={async () => {
-                                try { await deleteReimbursement(r.id); toast.success('تم الحذف'); }
-                                catch (e: any) { toast.error(e.message); }
-                              }}
-                            />
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <ReimbursementsTab
+            projectId={projectId}
+            scope={scope}
+            scopedReimbs={scopedReimbs}
+            projResources={projResources}
+            canEdit={canEdit}
+            isAdmin={isAdmin}
+            onReject={setRejectId}
+          />
         </TabsContent>
 
-        {/* ─── Payment Requests Tab ─── */}
         <TabsContent value="requests" className="space-y-3">
           <div className="flex justify-between items-center">
             <h3 className="text-base font-semibold">طلبات صرف الدفعات</h3>
