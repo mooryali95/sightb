@@ -58,8 +58,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { getFundRemaining, getCustodyCashTransfersIn, getCustodyOutstandingAdvances } from '@/lib/funds';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import {
-  Plus, HandCoins, CheckCircle2, XCircle, FileText, Send, Clock,
-  CalendarClock, Wallet, Pencil, RotateCcw, Undo2,
+  Plus, HandCoins, CheckCircle2, XCircle, FileText, Send,
+  CalendarClock, Pencil, RotateCcw, Undo2,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -68,6 +68,8 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { usePayablesScope } from './payables/usePayablesScope';
+import { PayablesScopeBar } from './payables/PayablesScopeBar';
+import { PayablesSummaryCards } from './payables/PayablesSummaryCards';
 
 interface Props {
   projectId: string;
@@ -755,100 +757,31 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   return (
     <div className="space-y-6">
-      {/* Scope filter + CSV export */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="inline-flex rounded-lg border p-1 bg-muted/40">
-          <button
-            type="button"
-            onClick={() => setScope('resource')}
-            className={cn(
-              'px-3 py-1.5 text-sm rounded-md transition-colors',
-              scope === 'resource' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground',
-            )}
-          >
-            مستحقات الفريق ({projReimbs.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setScope('vendor')}
-            className={cn(
-              'px-3 py-1.5 text-sm rounded-md transition-colors',
-              scope === 'vendor' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground',
-            )}
-          >
-            مستحقات الموردين ({projVendorReimbs.length})
-          </button>
-        </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1.5"
-          onClick={() => exportPayablesSummaryCSV({
-            projectId,
-            projectName: projectName || 'Project',
-            resources: projResources,
-            reimbursements: projAllReimbs,
-            paymentRequests: projReqs,
-            settlements: projSettles,
-          })}
-        >
-          <Download className="h-4 w-4" /> تصدير CSV (فريق + موردون)
-        </Button>
-      </div>
+      <PayablesScopeBar
+        scope={scope}
+        onScopeChange={setScope}
+        resourceCount={projReimbs.length}
+        vendorCount={projVendorReimbs.length}
+        onExportCsv={() => exportPayablesSummaryCSV({
+          projectId,
+          projectName: projectName || 'Project',
+          resources: projResources,
+          reimbursements: projAllReimbs,
+          paymentRequests: projReqs,
+          settlements: projSettles,
+        })}
+      />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="col-span-2 md:col-span-5 text-xs text-muted-foreground">
-          الأرقام أدناه تخص: <strong>{scope === 'resource' ? 'دفتر مستحقات الفريق' : 'دفتر مستحقات الموردين'}</strong> فقط.
-        </div>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-            <HandCoins className="h-4 w-4" /> إجمالي المعتمد
-          </div>
-          <div className="text-2xl font-bold">{formatCurrency(summary.totalApprovedAmount)}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-            <CheckCircle2 className="h-4 w-4" /> إجمالي المدفوع
-          </div>
-          <div className="text-2xl font-bold text-emerald-600">{formatCurrency(summary.totalPaidAmount)}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-            <Wallet className="h-4 w-4" /> المستحق غير المدفوع
-          </div>
-          <div className="text-2xl font-bold text-amber-600">{formatCurrency(summary.totalOutstandingAmount)}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-            <Clock className="h-4 w-4" /> طلبات معلقة
-          </div>
-          <div className="text-2xl font-bold">{summary.pendingRequestsCount}</div>
-        </Card>
-        <Card className="p-4 border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20" title="السلف المدفوعة لم تُسوَّ بعد — أصل قابل للاسترداد لا يدخل CPI">
-          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm mb-1">
-            <FileText className="h-4 w-4" /> سلف قائمة (غير مسوّاة)
-          </div>
-          <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
-            {formatCurrency(outstandingAdvancesTotal)}
-          </div>
-          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-            <span>{outstandingAdvances.length} سلفة</span>
-            {oldestAdvanceDays > 0 && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  'text-xs',
-                  oldestAdvanceDays > 60 && 'border-destructive text-destructive',
-                  oldestAdvanceDays > 30 && oldestAdvanceDays <= 60 && 'border-amber-500 text-amber-700 dark:text-amber-400',
-                )}
-              >
-                أقدمها: {oldestAdvanceDays} يوم
-              </Badge>
-            )}
-          </div>
-        </Card>
-      </div>
+      <PayablesSummaryCards
+        scope={scope}
+        totalApprovedAmount={summary.totalApprovedAmount}
+        totalPaidAmount={summary.totalPaidAmount}
+        totalOutstandingAmount={summary.totalOutstandingAmount}
+        pendingRequestsCount={summary.pendingRequestsCount}
+        outstandingAdvancesTotal={outstandingAdvancesTotal}
+        outstandingAdvancesCount={outstandingAdvances.length}
+        oldestAdvanceDays={oldestAdvanceDays}
+      />
 
       {/* Export bar for advances and settlement events */}
       {(outstandingAdvances.length > 0 || settlementEvents.length > 0) && (
