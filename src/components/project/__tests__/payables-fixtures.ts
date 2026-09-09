@@ -116,3 +116,60 @@ export const paymentRequests: PaymentRequest[] = [
 ];
 
 export const settlements: ResourceSettlement[] = [];
+
+/**
+ * An advance that has been paid out and only partly refunded. Kept out of the
+ * shared `paymentRequests` list on purpose: adding it there would change the
+ * tab counter the existing tests assert, and editing a passing test to
+ * accommodate a new fixture is how a suite quietly stops meaning anything.
+ */
+export const partlyRefundedAdvance: PaymentRequest = paymentRequest({
+  id: 'req-advance',
+  requestType: 'advance',
+  status: 'paid',
+  amount: 5000,
+  refundedAmount: 2000,
+  isAdvanceOutstanding: true,
+  description: 'سلفة مدفوعة',
+  paidDate: '2026-03-10',
+});
+
+export const signedSettlement: ResourceSettlement = {
+  id: 'settlement-1',
+  resourceId: RESOURCE_ID,
+  projectId: PROJECT_ID,
+  periodFrom: '2026-01-01',
+  periodTo: '2026-03-31',
+  totalOwed: 1900,
+  totalPaid: 400,
+  balance: 1500,
+  linkedReimbursementIds: [],
+  linkedPaymentIds: [],
+  status: 'signed',
+  signedByResource: true,
+  createdBy: 'user-1',
+  createdAt: '2026-04-01T00:00:00Z',
+  updatedAt: '2026-04-01T00:00:00Z',
+};
+
+/**
+ * A vendor invoice that still carries a resourceId — the shape a row takes
+ * when it is switched from a team member to a supplier and the old link is
+ * left behind.
+ *
+ * Kept separate from `vendorReimbursements` so it does not move the vendor
+ * ledger totals the other layers assert. It exists because without it the
+ * `isResourceReimbursement` filter in getResourceBalance is unreachable:
+ * `r.resourceId === resourceId` already excludes a vendor row that has no
+ * resourceId, so deleting the filter broke nothing and the test passed for
+ * the wrong reason.
+ */
+export const vendorRowWithStrayResourceId: ResourceReimbursement = reimbursement({
+  id: 'vendor-with-stray-link',
+  sourceKind: 'vendor',
+  vendorName: 'مؤسسة التوريد',
+  resourceId: RESOURCE_ID,
+  amount: 7000,
+  status: 'approved',
+  description: 'توريد بربط قديم',
+});
