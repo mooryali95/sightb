@@ -217,3 +217,52 @@ describe('approval is the admin\'s alone', () => {
     expect(deleteControlsOn('طلب draft')).toBe(0);
   });
 });
+
+/**
+ * The "دفع المستحقات" button sits in the balances table, above the tabs, but
+ * the dialog it fills sits inside the requests tab — and Radix unmounts an
+ * inactive tab. So the seed has to survive a component that is not mounted
+ * when the button is clicked, which is the one piece of this tab's state that
+ * cannot live in it.
+ *
+ * The hand-off is asserted in two halves on purpose. Clicking the button shows
+ * nothing at all today: the dialog only appears once the user finds the
+ * requests tab themselves. That is worth recording as the behaviour it is,
+ * rather than leaving the second half to pass without the first being true.
+ */
+describe('the balances table seeds the new-request dialog', () => {
+  it('carries the resource, its approved rows and a description across the tab switch', () => {
+    seedStore([]);
+    render(<ResourcePayablesSection projectId={PROJECT_ID} projectName="مشروع" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /دفع المستحقات/ }));
+    expect(screen.queryByText('طلب صرف دفعة جديدة')).not.toBeInTheDocument();
+
+    const trigger = screen.getByRole('tab', { name: /طلبات الصرف/ });
+    fireEvent.mouseDown(trigger);
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('طلب صرف دفعة جديدة')).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText('استرداد مصاريف لابتوب'))
+      .toHaveValue(`دفع مستحقات ${resource.name}`);
+
+    // The one approved row is ticked and totalled; the paid and pending rows
+    // are not eligible and must not be offered at all.
+    const boxes = within(dialog).getAllByRole('checkbox');
+    expect(boxes).toHaveLength(1);
+    expect(boxes[0]).toBeChecked();
+    expect(within(dialog).getByText(/المجموع: 1,500\.00/)).toBeInTheDocument();
+  });
+
+  it('opens empty when raised from the tab\'s own button', () => {
+    seedStore([]);
+    openRequestsTab();
+
+    fireEvent.click(screen.getByRole('button', { name: /طلب صرف جديد/ }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByPlaceholderText('استرداد مصاريف لابتوب')).toHaveValue('');
+    expect(within(dialog).queryAllByRole('checkbox')).toHaveLength(0);
+  });
+});

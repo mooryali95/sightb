@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   exportOutstandingAdvancesExcel,
   exportOutstandingAdvancesPDF,
@@ -18,7 +18,6 @@ import {
   getProjectPayablesSummary,
   getVendorPayablesSummary,
   getResourceBalance,
-  buildTimeline,
   defaultSettlementText,
   calcSettlementTotals,
   filterResourceReimbursements,
@@ -26,18 +25,9 @@ import {
 } from '@/lib/resource-payables';
 import { exportPayablesSummaryCSV } from '@/lib/payables-export';
 import {
-  EXPENSE_CATEGORY_LABELS,
   PAYMENT_REQUEST_STATUS_LABELS,
-  PAYMENT_REQUEST_STATUS_COLORS,
-  PAYMENT_REQUEST_TYPE_LABELS,
-  PAYMENT_PRIORITY_LABELS,
-  PAYMENT_PRIORITY_COLORS,
   PAYMENT_METHOD_LABELS,
-  type ExpenseCategory,
   type PaymentMethod,
-  type PaymentPriority,
-  type PaymentRequestType,
-  type ReimbursementStatus,
 } from '@/types/project';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,16 +37,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { getFundRemaining, getCustodyCashTransfersIn, getCustodyOutstandingAdvances } from '@/lib/funds';
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
-import {
-  HandCoins, FileText, Send,
-  CalendarClock, Pencil, RotateCcw, Undo2,
-} from 'lucide-react';
+import { HandCoins, RotateCcw, Undo2 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -64,9 +50,12 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { usePayablesScope } from './payables/usePayablesScope';
+import { advanceAgeDays } from './payables/advanceAge';
 import { PayablesScopeBar } from './payables/PayablesScopeBar';
 import { PayablesSummaryCards } from './payables/PayablesSummaryCards';
 import { ReimbursementsTab } from './payables/ReimbursementsTab';
+import { PaymentRequestsTab } from './payables/PaymentRequestsTab';
+import type { NewRequestSeed } from './payables/newRequestSeed';
 import { SettlementsTab } from './payables/SettlementsTab';
 
 interface Props {
@@ -100,59 +89,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     projReqs, projSettles, resourceSummary, vendorSummary, summary, scopedReimbs,
   } = usePayablesScope(projectId);
 
-  // ─── Payment request dialog state ───
-  const [reqOpen, setReqOpen] = useState(false);
-  const [pResourceId, setPResourceId] = useState('');
-  const [pType, setPType] = useState<PaymentRequestType>('reimbursement');
-  const [pAmount, setPAmount] = useState('');
-  const [pDescription, setPDescription] = useState('');
-  const [pJustification, setPJustification] = useState('');
-  const [pPriority, setPPriority] = useState<PaymentPriority>('normal');
-  const [pSelectedReimbs, setPSelectedReimbs] = useState<string[]>([]);
-  const [pBudgetItemId, setPBudgetItemId] = useState<string>('');
-
-  const eligibleReimbs = useMemo(
-    () => projReimbs.filter(
-      (r) => r.resourceId === pResourceId && r.status === 'approved',
-    ),
-    [projReimbs, pResourceId],
-  );
-
-  const computedAmount = useMemo(() => {
-    if (pType !== 'reimbursement') return 0;
-    return eligibleReimbs
-      .filter((r) => pSelectedReimbs.includes(r.id))
-      .reduce((s, r) => s + r.amount, 0);
-  }, [pType, eligibleReimbs, pSelectedReimbs]);
-
-  const resetReq = () => {
-    setPResourceId(''); setPType('reimbursement'); setPAmount('');
-    setPDescription(''); setPJustification(''); setPPriority('normal');
-    setPSelectedReimbs([]); setPBudgetItemId('');
-  };
-
-  const handleCreateReq = async () => {
-    if (!pResourceId || !pDescription.trim()) {
-      toast.error('يرجى تعبئة الحقول المطلوبة'); return;
-    }
-    const finalAmount = pType === 'reimbursement' ? computedAmount : parseFloat(pAmount || '0');
-    if (finalAmount <= 0) {
-      toast.error('المبلغ يجب أن يكون أكبر من صفر'); return;
-    }
-    try {
-      const id = await createPaymentRequest({
-        projectId, resourceId: pResourceId, requestType: pType,
-        amount: finalAmount, description: pDescription,
-        justification: pJustification, priority: pPriority,
-        linkedReimbursementIds: pType === 'reimbursement' ? pSelectedReimbs : [],
-        budgetItemId: pBudgetItemId || undefined,
-      });
-      // Auto-submit if user wants? For now keep as draft, then submit
-      await submitPaymentRequest(id);
-      toast.success('تم إنشاء وإرسال طلب الصرف');
-      resetReq(); setReqOpen(false);
-    } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
-  };
+  /**
+   * What the new-request dialog opens with. It lives here rather than in the
+   * requests tab because the balances table below pre-fills it, and Radix
+   * unmounts an inactive tab — state held in the tab would not survive the
+   * click that seeds it.
+   */
+  const [newRequestSeed, setNewRequestSeed] = useState<NewRequestSeed | null>(null);
 
   // ─── Edit links dialog (re-link reimbursements to existing payment request) ───
   const [editLinksId, setEditLinksId] = useState<string | null>(null);
@@ -414,17 +357,6 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   // ─── Compute age days per advance ───
   // Closes over nothing, so an empty dep list keeps the identity stable and
   // lets the alert effect below depend on it without re-firing every render.
-  const advanceAgeDays = useCallback((req: typeof outstandingAdvances[number]): number => {
-    const t = req.paidDate ? new Date(req.paidDate).getTime() : new Date(req.createdAt).getTime();
-    return Math.max(0, Math.floor((Date.now() - t) / (1000 * 60 * 60 * 24)));
-  }, []);
-
-  const ageBadgeClasses = (days: number) =>
-    days >= 90 ? 'border-destructive text-destructive bg-destructive/10'
-    : days >= 60 ? 'border-warning text-warning-foreground bg-warning/15'
-    : days >= 30 ? 'border-amber-500 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30'
-    : 'border-muted text-muted-foreground';
-
   // ─── Aging toast alerts (once per session per advance/threshold) ───
   const agingAlerted = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -448,7 +380,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         }
       }
     });
-  }, [outstandingAdvances, projResources, advanceAgeDays]);
+  }, [outstandingAdvances, projResources]);
 
   // ─── Lazy-load settlement events for all advances of this project (once each) ───
   const eventsLoaded = useRef<Set<string>>(new Set());
@@ -839,12 +771,13 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                                   toast.info('لا توجد استردادات معتمدة قابلة للدفع لهذا المورد');
                                   return;
                                 }
-                                setPResourceId(res.id);
-                                setPType('reimbursement');
-                                setPSelectedReimbs(eligible.map((r) => r.id));
-                                setPDescription(`دفع مستحقات ${res.name}`);
-                                setPPriority('normal');
-                                setReqOpen(true);
+                                setNewRequestSeed({
+                                  resourceId: res.id,
+                                  requestType: 'reimbursement',
+                                  selectedReimbursementIds: eligible.map((r) => r.id),
+                                  description: `دفع مستحقات ${res.name}`,
+                                  priority: 'normal',
+                                });
                               }}
                             >
                               <HandCoins className="h-4 w-4 ml-1" />
@@ -887,278 +820,23 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           />
         </TabsContent>
 
+        {/* ─── Payment Requests Tab ─── */}
         <TabsContent value="requests" className="space-y-3">
-          <div className="flex justify-between items-center">
-            <h3 className="text-base font-semibold">طلبات صرف الدفعات</h3>
-            {canEdit && projResources.length > 0 && (
-              <Dialog open={reqOpen} onOpenChange={(o) => { setReqOpen(o); if (!o) resetReq(); }}>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="default"><Send className="h-4 w-4 ml-1" /> طلب صرف جديد</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>طلب صرف دفعة جديدة</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>المورد *</Label>
-                        <Select value={pResourceId} onValueChange={(v) => { setPResourceId(v); setPSelectedReimbs([]); }}>
-                          <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
-                          <SelectContent>
-                            {projResources.map((r) => (
-                              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>نوع الطلب *</Label>
-                        <Select value={pType} onValueChange={(v) => setPType(v as PaymentRequestType)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(PAYMENT_REQUEST_TYPE_LABELS).map(([k, v]) => (
-                              <SelectItem key={k} value={k}>{v}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {pType === 'reimbursement' && pResourceId && (
-                      <div className="border rounded p-3 bg-muted/20">
-                        <div className="text-sm font-medium mb-2">اختر الاستردادات المعتمدة لهذا المورد:</div>
-                        {eligibleReimbs.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">لا توجد استردادات معتمدة غير مدفوعة لهذا المورد.</p>
-                        ) : eligibleReimbs.map((r) => (
-                          <label key={r.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
-                            <input type="checkbox"
-                              checked={pSelectedReimbs.includes(r.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) setPSelectedReimbs([...pSelectedReimbs, r.id]);
-                                else setPSelectedReimbs(pSelectedReimbs.filter((x) => x !== r.id));
-                              }} />
-                            <span className="flex-1">{r.expenseDate} — {r.description}</span>
-                            <span className="font-medium">{formatCurrency(r.amount)}</span>
-                          </label>
-                        ))}
-                        <div className="text-sm font-bold mt-2 pt-2 border-t">
-                          المجموع: {formatCurrency(computedAmount)}
-                        </div>
-                      </div>
-                    )}
-
-                    {pType !== 'reimbursement' && (
-                      <div>
-                        <Label>المبلغ *</Label>
-                        <Input type="number" inputMode="decimal" value={pAmount} onChange={(e) => setPAmount(e.target.value)} />
-                      </div>
-                    )}
-
-                    <div>
-                      <Label>وصف الطلب *</Label>
-                      <Input value={pDescription} onChange={(e) => setPDescription(e.target.value)} placeholder="استرداد مصاريف لابتوب" />
-                    </div>
-                    <div>
-                      <Label>المبرر</Label>
-                      <Textarea value={pJustification} onChange={(e) => setPJustification(e.target.value)} rows={2} />
-                    </div>
-                    <div>
-                      <Label>الأولوية</Label>
-                      <Select value={pPriority} onValueChange={(v) => setPPriority(v as PaymentPriority)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(PAYMENT_PRIORITY_LABELS).map(([k, v]) => (
-                            <SelectItem key={k} value={k}>{v}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>بند الموازنة المرتبط (اختياري)</Label>
-                      <Select value={pBudgetItemId || 'none'} onValueChange={(v) => setPBudgetItemId(v === 'none' ? '' : v)}>
-                        <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">— بدون ربط —</SelectItem>
-                          {projBudgetItems.map((b: any) => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {EXPENSE_CATEGORY_LABELS[b.category as ExpenseCategory] || b.category} — {b.description} ({formatCurrency(b.plannedAmount)})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        ربط الطلب ببند موازنة يضمن ظهوره في تحليل الانحراف وتقارير CPI.
-                      </p>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setReqOpen(false)}>إلغاء</Button>
-                    <Button onClick={handleCreateReq}>إنشاء وإرسال للاعتماد</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-
-          {projReqs.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-6 text-center">لا توجد طلبات صرف.</p>
-          ) : (
-            <div className="space-y-3">
-              {projReqs.map((req) => {
-                const res = projResources.find((r) => r.id === req.resourceId);
-                const timeline = buildTimeline(req);
-                return (
-                  <Card key={req.id} className="p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
-                      <div>
-                        <div className="font-semibold">{req.description}</div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {res?.name || '—'} · {PAYMENT_REQUEST_TYPE_LABELS[req.requestType]} · {formatCurrency(req.amount)}
-                        </div>
-                      </div>
-                      <div className="flex gap-2 flex-wrap">
-                        {req.requestType === 'advance' && req.status === 'paid' && req.isAdvanceOutstanding && (() => {
-                          const days = advanceAgeDays(req as any);
-                          return (
-                            <Badge variant="outline" className={cn('text-xs', ageBadgeClasses(days))}>
-                              منذ {days} يوم
-                            </Badge>
-                          );
-                        })()}
-                        <Badge className={PAYMENT_PRIORITY_COLORS[req.priority]}>
-                          {PAYMENT_PRIORITY_LABELS[req.priority]}
-                        </Badge>
-                        <Badge className={PAYMENT_REQUEST_STATUS_COLORS[req.status]}>
-                          {PAYMENT_REQUEST_STATUS_LABELS[req.status]}
-                        </Badge>
-                      </div>
-
-                    </div>
-
-                    {/* Timeline */}
-                    <div className="flex flex-wrap items-center gap-1 text-xs my-3 overflow-x-auto pb-2">
-                      {timeline.map((step, i) => (
-                        <div key={step.key} className="flex items-center gap-1 shrink-0">
-                          <div className={cn(
-                            'flex flex-col items-center px-2 py-1 rounded',
-                            step.current && 'bg-primary/10 ring-1 ring-primary',
-                            step.done && !step.current && 'opacity-100',
-                            !step.done && 'opacity-40',
-                          )}>
-                            <div className="font-medium">{step.label}</div>
-                            {step.date && <div className="text-[10px] text-muted-foreground">{step.date.split('T')[0]}</div>}
-                          </div>
-                          {i < timeline.length - 1 && <div className="text-muted-foreground">←</div>}
-                        </div>
-                      ))}
-                    </div>
-
-                    {req.justification && (
-                      <div className="text-xs text-muted-foreground border-r-2 border-muted pr-2 mb-2">{req.justification}</div>
-                    )}
-                    {req.rejectionReason && (
-                      <div className="text-xs text-red-600 mb-2">سبب الرفض: {req.rejectionReason}</div>
-                    )}
-
-                    {/* Action buttons */}
-                    <div className="flex flex-wrap gap-2">
-                      {isAdmin && req.status === 'submitted' && (
-                        <>
-                          <Button size="sm" variant="outline"
-                            onClick={async () => {
-                              try { await reviewPaymentRequest(req.id); toast.success('قيد المراجعة'); }
-                              catch (e: any) { toast.error(e.message); }
-                            }}>بدء المراجعة</Button>
-                          <Button size="sm"
-                            onClick={async () => {
-                              try { await approvePaymentRequest(req.id); toast.success('تم الاعتماد'); }
-                              catch (e: any) { toast.error(e.message); }
-                            }}>اعتماد</Button>
-                          <Button size="sm" variant="outline"
-                            onClick={() => setRejectId({ id: req.id, kind: 'req' })}>رفض</Button>
-                        </>
-                      )}
-                      {isAdmin && req.status === 'under_review' && (
-                        <>
-                          <Button size="sm"
-                            onClick={async () => {
-                              try { await approvePaymentRequest(req.id); toast.success('تم الاعتماد'); }
-                              catch (e: any) { toast.error(e.message); }
-                            }}>اعتماد</Button>
-                          <Button size="sm" variant="outline"
-                            onClick={() => setRejectId({ id: req.id, kind: 'req' })}>رفض</Button>
-                        </>
-                      )}
-                      {(canEdit || isAdmin) && req.status === 'approved' && (
-                        <>
-                          <Button size="sm" variant="outline"
-                            onClick={async () => {
-                              const date = window.prompt('تاريخ الجدولة (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-                              if (!date) return;
-                              try { await schedulePaymentRequest(req.id, date); toast.success('تمت الجدولة'); }
-                              catch (e: any) { toast.error(e.message); }
-                            }}>
-                            <CalendarClock className="h-4 w-4 ml-1" /> جدولة
-                          </Button>
-                          <Button size="sm"
-                            onClick={() => openPayDialog(req.id)}>
-                            تأكيد الدفع
-                          </Button>
-                        </>
-                      )}
-                      {(canEdit || isAdmin) && req.status === 'scheduled' && (
-                        <Button size="sm"
-                          onClick={() => openPayDialog(req.id, req.scheduledDate)}>
-                          تأكيد الدفع
-                        </Button>
-                      )}
-
-                      {canEdit && req.status === 'paid' && req.requestType === 'advance' && req.isAdvanceOutstanding && (
-                        <Button size="sm" variant="default"
-                          onClick={() => openSettleAdvance(req.id)}>
-                          تسوية السلفة
-                        </Button>
-                      )}
-                      {req.status === 'paid' && req.requestType === 'advance' && !req.isAdvanceOutstanding && req.advanceSettledAt && (
-                        <Badge variant="outline" className="text-emerald-600 border-emerald-300">
-                          {req.settlementType === 'cash_refund' ? 'رد نقدي' :
-                           req.settlementType === 'payroll_deduction' ? 'خصم من راتب' :
-                           req.settlementType === 'written_off' ? 'مشطوبة' :
-                           'مسوّاة بمستندات'} — {String(req.advanceSettledAt).split('T')[0]}
-                        </Badge>
-                      )}
-                      {canEdit && (req.status === 'draft' || req.status === 'submitted') && (
-                        <Button size="sm" variant="ghost"
-                          onClick={async () => {
-                            try { await cancelPaymentRequest(req.id); toast.success('تم الإلغاء'); }
-                            catch (e: any) { toast.error(e.message); }
-                          }}>إلغاء</Button>
-                      )}
-                      {/* تعديل الربط — مسموح في كل الحالات لـ canEdit (في draft) أو admin (بعد الاعتماد) */}
-                      {((canEdit && req.status === 'draft') || (isAdmin && req.status !== 'cancelled' && req.status !== 'rejected')) && (
-                        <Button size="sm" variant="outline" onClick={() => openEditLinks(req.id)}>
-                          تعديل الربط
-                        </Button>
-                      )}
-
-                      {isAdmin && (req.status === 'draft' || req.status === 'cancelled' || req.status === 'rejected') && (
-                        <ConfirmDeleteDialog
-                          title="حذف طلب الصرف"
-                          description={`حذف طلب صرف "${req.description}" نهائياً؟`}
-                          onConfirm={async () => {
-                            try { await deletePaymentRequest(req.id); toast.success('تم الحذف'); }
-                            catch (e: any) { toast.error(e.message); }
-                          }}
-                        />
-                      )}
-                      {/* السلف المدفوعة تُغلق فقط عبر مسار التسوية أعلاه (لا حذف) */}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+          <PaymentRequestsTab
+            projectId={projectId}
+            projReqs={projReqs}
+            projResources={projResources}
+            projReimbs={projReimbs}
+            projBudgetItems={projBudgetItems}
+            canEdit={canEdit}
+            isAdmin={isAdmin}
+            newRequestSeed={newRequestSeed}
+            onNewRequestSeedChange={setNewRequestSeed}
+            onPay={openPayDialog}
+            onEditLinks={openEditLinks}
+            onSettleAdvance={openSettleAdvance}
+            onReject={setRejectId}
+          />
         </TabsContent>
 
         {/* ─── Settlements Tab ─── */}
