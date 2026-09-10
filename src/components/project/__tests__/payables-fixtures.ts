@@ -173,3 +173,42 @@ export const vendorRowWithStrayResourceId: ResourceReimbursement = reimbursement
   status: 'approved',
   description: 'توريد بربط قديم',
 });
+
+/**
+ * One payment request per status, so a test can assert which money actions a
+ * given status and role expose. Deliberately not added to the shared
+ * `paymentRequests` list — that would move the tab counter and the pending
+ * count the earlier layers assert.
+ */
+export function requestInStatus(
+  status: PaymentRequest['status'],
+  over: Partial<PaymentRequest> = {},
+): PaymentRequest {
+  return paymentRequest({
+    id: `req-${status}`,
+    status,
+    amount: 1000,
+    description: `طلب ${status}`,
+    ...over,
+  });
+}
+
+/** A paid advance still owed back — the only shape that offers settlement. */
+export const paidOutstandingAdvance: PaymentRequest = paymentRequest({
+  id: 'req-advance-open',
+  requestType: 'advance',
+  status: 'paid',
+  amount: 4000,
+  isAdvanceOutstanding: true,
+  description: 'سلفة قائمة',
+  paidDate: '2026-03-10',
+});
+
+/** A paid request that is not an advance — settlement must not be offered. */
+export const paidOrdinaryRequest: PaymentRequest = paymentRequest({
+  id: 'req-paid-ordinary',
+  requestType: 'reimbursement',
+  status: 'paid',
+  amount: 900,
+  description: 'صرف عادي مدفوع',
+});
