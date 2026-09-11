@@ -1,21 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { formatCurrency } from '@/lib/finance';
 import {
-  getProjectFundsSummary,
   getFundSpent,
-  getFundDirectSpent,
-  getFundCustodyDraw,
-  getFundOutstandingAdvances,
-  getFundCashTransfersOut,
   getFundRemaining,
-  getRemainingStatus,
-  calculateSettlementDifference,
   daysBetween,
   getSettlementForFund,
-  getFundOpenItems,
-  auditFundFinancialLinks,
 } from '@/lib/funds';
 import { generateFundAlerts, canCreateNewFund } from '@/lib/fund-alerts';
 import {
@@ -24,30 +15,23 @@ import {
   SETTLEMENT_STATUS_LABELS,
   SETTLEMENT_STATUS_COLORS,
   type ProjectFund,
-  type FundSettlementAttachment,
   type Expense,
 } from '@/types/project';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip,
-} from '@/components/ui/inspector-panel';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import {
-  Plus, Wallet, CheckCircle2, AlertTriangle, FileText, Send,
-  ThumbsUp, ThumbsDown, Paperclip, Trash2, X, Eye,
+  CheckCircle2, AlertTriangle, Send, ThumbsUp, ThumbsDown, Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, errorMessage } from '@/lib/utils';
 import { CashRepairDiffCard } from '@/components/project/CashRepairDiffCard';
+import { useDialogSession } from '@/hooks/useDialogSession';
+import { CreateFundDialog } from './funds/CreateFundDialog';
+import { EmergencyFundDialog } from './funds/EmergencyFundDialog';
+import { FundSettlementDialog } from './funds/FundSettlementDialog';
+import { RejectSettlementDialog } from './funds/RejectSettlementDialog';
+import { FundInspector } from './funds/FundInspector';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
 import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
@@ -63,8 +47,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const isAdmin = isAdminFor('project', projectId);
   const {
     projectFunds, fundSettlements, custodies, paymentRequests, cashTransfers,
-    createFund, acknowledgeFund, submitSettlement, approveSettlement,
-    rejectSettlement, deleteFund, updateSettlementDraft,
+    acknowledgeFund, approveSettlement, deleteFund,
   } = useStore();
   const projPRs = useMemo(
     () => paymentRequests.filter((p) => p.projectId === projectId),
@@ -85,11 +68,6 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
     [custodies, projectId],
   );
 
-  const summary = useMemo(
-    () => getProjectFundsSummary(projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies as any, projPRs, projTransfers),
-    [projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies, projPRs, projTransfers],
-  );
-
   const projectFundsList = useMemo(
     () => projectFunds.filter((f) => f.projectId === projectId)
       .sort((a, b) => b.fundNumber - a.fundNumber),
@@ -101,153 +79,15 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
     [projectId, projectFunds, fundSettlements, projectExpenses, projectCustodies, projPRs, projTransfers],
   );
 
-  const lastFundAmount = projectFundsList[0]?.amount ?? 0;
-  const remainingStatus = getRemainingStatus(summary.remainingInManagerHand, lastFundAmount);
-
   const canCreate = canCreateNewFund(projectId, projectFunds);
   const showCreate = isAdmin && !readOnly;
 
-  // ───── Create Fund Dialog ─────
-  const [createOpen, setCreateOpen] = useState(false);
-  const [newAmount, setNewAmount] = useState('');
-  const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newNotes, setNewNotes] = useState('');
-
-  // ───── Emergency Fund Dialog ─────
-  const [emergencyOpen, setEmergencyOpen] = useState(false);
-  const [emAmount, setEmAmount] = useState('');
-  const [emDate, setEmDate] = useState(new Date().toISOString().split('T')[0]);
-  const [emReason, setEmReason] = useState('');
-  const [emNotes, setEmNotes] = useState('');
-
-  const handleCreate = async () => {
-    const amt = parseFloat(newAmount);
-    if (!amt || amt <= 0) { toast.error('أدخل مبلغاً صحيحاً'); return; }
-    try {
-      await createFund(projectId, amt, newDate, newNotes.trim() || undefined);
-      toast.success('تم إنشاء الدفعة');
-      setCreateOpen(false);
-      setNewAmount(''); setNewNotes('');
-    } catch (e: any) {
-      toast.error(e.message || 'تعذّر إنشاء الدفعة');
-    }
-  };
-
-  const handleEmergency = async () => {
-    const amt = parseFloat(emAmount);
-    if (!amt || amt <= 0) { toast.error('أدخل مبلغاً صحيحاً'); return; }
-    if (!emReason.trim() || emReason.trim().length < 10) {
-      toast.error('سبب الدفعة الاستثنائية مطلوب (10 أحرف على الأقل)');
-      return;
-    }
-    try {
-      await createFund(projectId, amt, emDate, emNotes.trim() || undefined, {
-        emergency: true,
-        emergencyReason: emReason.trim(),
-      });
-      toast.success('تم إنشاء الدفعة الاستثنائية وتسجيلها في سجل التدقيق');
-      setEmergencyOpen(false);
-      setEmAmount(''); setEmNotes(''); setEmReason('');
-    } catch (e: any) {
-      toast.error(e.message || 'تعذّر إنشاء الدفعة الاستثنائية');
-    }
-  };
-
-  // ───── Settlement Dialog ─────
-  const [settleFor, setSettleFor] = useState<ProjectFund | null>(null);
-  const [remainingCash, setRemainingCash] = useState('');
-  const [diffReason, setDiffReason] = useState('');
-  const [attachments, setAttachments] = useState<FundSettlementAttachment[]>([]);
-  const [attachName, setAttachName] = useState('');
-  const [attachUrl, setAttachUrl] = useState('');
-
-  const openSettle = (fund: ProjectFund) => {
-    const existing = getSettlementForFund(fund.id, fundSettlements);
-    setSettleFor(fund);
-    setRemainingCash(existing ? String(existing.remainingCash) : '0');
-    setDiffReason(existing?.differenceReason || '');
-    setAttachments(existing?.attachments || []);
-    setAttachName(''); setAttachUrl('');
-  };
-
-  const closeSettle = () => {
-    setSettleFor(null); setRemainingCash(''); setDiffReason(''); setAttachments([]);
-  };
-
-  const settlementSpent = settleFor
-    ? getFundSpent(settleFor.id, projectExpenses, projectCustodies, projPRs, projTransfers)
-    : 0;
-  const settlementDiff = settleFor
-    ? calculateSettlementDifference(
-        settleFor.amount,
-        settlementSpent,
-        parseFloat(remainingCash) || 0,
-      )
-    : 0;
-
-  const addAttachment = () => {
-    if (!attachName.trim()) return;
-    setAttachments((a) => [...a, {
-      name: attachName.trim(),
-      url: attachUrl.trim() || undefined,
-      uploadedAt: new Date().toISOString(),
-    }]);
-    setAttachName(''); setAttachUrl('');
-  };
-
-  const removeAttachment = (idx: number) => {
-    setAttachments((a) => a.filter((_, i) => i !== idx));
-  };
-
-  const handleSubmitSettlement = async () => {
-    if (!settleFor) return;
-    // Pre-validation: لا تسوية مع وجود روابط مزدوجة (عهدة + دفعة على نفس البند)
-    const violations = auditFundFinancialLinks(settleFor.id, projectExpenses, projPRs);
-    if (violations.length > 0) {
-      const sample = violations.slice(0, 3).map((v) => `• ${v.description} (${formatCurrency(v.amount)})`).join('\n');
-      toast.error(
-        `لا يمكن إرسال التسوية: ${violations.length} بند مربوط بعهدة ودفعة معاً. صحّح الروابط أولاً.\n${sample}`,
-        { duration: 9000 },
-      );
-      return;
-    }
-    const cash = parseFloat(remainingCash) || 0;
-    if (Math.abs(settlementDiff) > 1 && !diffReason.trim()) {
-      toast.error('يجب توضيح سبب الفرق');
-      return;
-    }
-    try {
-      await submitSettlement(settleFor.id, cash, attachments, diffReason || undefined);
-      toast.success('تم إرسال التسوية للاعتماد');
-      closeSettle();
-    } catch (e: any) {
-      toast.error(e.message || 'تعذّر إرسال التسوية');
-    }
-  };
-
-  const handleSaveDraft = async () => {
-    if (!settleFor) return;
-    const existing = getSettlementForFund(settleFor.id, fundSettlements);
-    if (!existing) {
-      toast.error('لا توجد مسودة لحفظها — اضغط "إرسال للاعتماد" لإنشاء التسوية أولاً.');
-      return;
-    }
-    try {
-      await updateSettlementDraft(existing.id, {
-        remainingCash: parseFloat(remainingCash) || 0,
-        attachments,
-        differenceReason: diffReason || undefined,
-      });
-      toast.success('تم حفظ المسودة');
-    } catch (e: any) {
-      toast.error(e.message || 'تعذّر الحفظ');
-    }
-  };
-
-  // ───── Approve/Reject ─────
-  const [rejectFor, setRejectFor] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [inspectorId, setInspectorId] = useState<string | null>(null);
+  // ───── Dialogs ─────
+  // Each dialog owns its form and is remounted (via `key`) on every open, so
+  // it starts from the fund as it stands at that moment. See useDialogSession.
+  const settleDialog = useDialogSession<ProjectFund>();
+  const rejectDialog = useDialogSession<string>();
+  const inspector = useDialogSession<string>();
   const [density] = useTableDensity();
   const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
 
@@ -255,22 +95,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
     try {
       await approveSettlement(settlementId);
       toast.success('تم اعتماد التسوية');
-    } catch (e: any) {
-      toast.error(e.message || 'تعذّر الاعتماد');
-    }
-  };
-
-  const handleReject = async () => {
-    if (!rejectFor || !rejectReason.trim()) {
-      toast.error('سبب الرفض مطلوب');
-      return;
-    }
-    try {
-      await rejectSettlement(rejectFor, rejectReason.trim());
-      toast.success('تم رفض التسوية');
-      setRejectFor(null); setRejectReason('');
-    } catch (e: any) {
-      toast.error(e.message || 'تعذّر الرفض');
+    } catch (e) {
+      toast.error(errorMessage(e, 'تعذّر الاعتماد'));
     }
   };
 
@@ -309,47 +135,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
       <div className="stat-card">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="text-sm font-semibold">سجل الدفعات</h3>
-          {showCreate && (
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-1.5" disabled={!canCreate.allowed}>
-                  <Plus className="w-3.5 h-3.5" /> دفعة جديدة
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>إنشاء دفعة جديدة</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div>
-                    <Label>المبلغ المحوّل</Label>
-                    <Input
-                      type="number"
-                      value={newAmount}
-                      onChange={(e) => setNewAmount(e.target.value)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label>تاريخ التحويل</Label>
-                    <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>ملاحظات (اختياري)</Label>
-                    <Textarea
-                      value={newNotes}
-                      onChange={(e) => setNewNotes(e.target.value)}
-                      rows={2}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setCreateOpen(false)}>إلغاء</Button>
-                  <Button onClick={handleCreate}>اعتماد التحويل</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+          {showCreate && <CreateFundDialog projectId={projectId} disabled={!canCreate.allowed} />}
         </div>
 
         {!canCreate.allowed && showCreate && (
@@ -358,48 +144,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
             {isAdmin && (
               <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-200/60 dark:border-amber-700/30">
                 <span className="text-[11px] opacity-80">للحالات الاضطرارية فقط — يُسجَّل في سجل التدقيق</span>
-                <Dialog open={emergencyOpen} onOpenChange={setEmergencyOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1 border-destructive/40 text-destructive hover:bg-destructive/5">
-                      <AlertTriangle className="w-3 h-3" /> دفعة استثنائية
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="text-destructive">دفعة استثنائية (تجاوز قاعدة التسوية)</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-3">
-                      <div className="p-2 rounded-md bg-destructive/5 border border-destructive/30 text-xs text-destructive">
-                        ستنشئ دفعة جديدة قبل تسوية الدفعة #{canCreate.blockingFundNumber}. هذا الإجراء يُسجَّل في سجل التدقيق ويظهر باسم "دفعة استثنائية" في الملاحظات.
-                      </div>
-                      <div>
-                        <Label>المبلغ</Label>
-                        <Input type="number" value={emAmount} onChange={(e) => setEmAmount(e.target.value)} placeholder="0" />
-                      </div>
-                      <div>
-                        <Label>تاريخ التحويل</Label>
-                        <Input type="date" value={emDate} onChange={(e) => setEmDate(e.target.value)} />
-                      </div>
-                      <div>
-                        <Label>سبب الاستثناء <span className="text-destructive">*</span></Label>
-                        <Textarea
-                          value={emReason}
-                          onChange={(e) => setEmReason(e.target.value)}
-                          rows={3}
-                          placeholder="مثال: مدفوعات عاجلة لمورد حرج قبل اكتمال تسوية الدفعة السابقة..."
-                        />
-                      </div>
-                      <div>
-                        <Label>ملاحظات إضافية (اختياري)</Label>
-                        <Textarea value={emNotes} onChange={(e) => setEmNotes(e.target.value)} rows={2} />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setEmergencyOpen(false)}>إلغاء</Button>
-                      <Button variant="destructive" onClick={handleEmergency}>اعتماد الدفعة الاستثنائية</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <EmergencyFundDialog projectId={projectId} blockingFundNumber={canCreate.blockingFundNumber} />
               </div>
             )}
           </div>
@@ -478,7 +223,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                             size="icon"
                             variant="ghost"
                             className="h-7 w-7"
-                            onClick={() => setInspectorId(f.id)}
+                            onClick={() => inspector.open(f.id)}
                             title="عرض التفاصيل"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -490,7 +235,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               className="h-7 text-xs gap-1"
                               onClick={async () => {
                                 try { await acknowledgeFund(f.id); toast.success('تم الإقرار بالاستلام'); }
-                                catch (e: any) { toast.error(e.message); }
+                                catch (e) { toast.error(errorMessage(e)); }
                               }}
                             >
                               <CheckCircle2 className="w-3 h-3" /> إقرار استلام
@@ -501,7 +246,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               size="sm"
                               variant="outline"
                               className="h-7 text-xs gap-1"
-                              onClick={() => openSettle(f)}
+                              onClick={() => settleDialog.open(f)}
                             >
                               <Send className="w-3 h-3" /> تسوية
                             </Button>
@@ -520,7 +265,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                                 size="sm"
                                 variant="outline"
                                 className="h-7 text-xs gap-1 text-destructive border-destructive/30"
-                                onClick={() => setRejectFor(settlement.id)}
+                                onClick={() => rejectDialog.open(settlement.id)}
                               >
                                 <ThumbsDown className="w-3 h-3" /> رفض
                               </Button>
@@ -531,7 +276,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               size="sm"
                               variant="ghost"
                               className="h-7 text-xs"
-                              onClick={() => openSettle(f)}
+                              onClick={() => settleDialog.open(f)}
                             >
                               عرض
                             </Button>
@@ -542,8 +287,8 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               description={(() => {
                                 const linked = projectExpenses.filter((e) => e.fundId === f.id);
                                 const linkedTotal = linked.reduce((s, e) => s + e.amount, 0);
-                                const linkedCust = (useStore.getState().custodies || []).filter((c: any) => c.sourceFundId === f.id);
-                                const custTotal = linkedCust.reduce((s: number, c: any) => s + c.amount, 0);
+                                const linkedCust = projectCustodies.filter((c) => c.sourceFundId === f.id);
+                                const custTotal = linkedCust.reduce((s, c) => s + c.amount, 0);
                                 const parts: string[] = [];
                                 if (linked.length > 0) parts.push(`${linked.length} مصروف (${formatCurrency(linkedTotal)})`);
                                 if (linkedCust.length > 0) parts.push(`${linkedCust.length} عهدة (${formatCurrency(custTotal)})`);
@@ -552,7 +297,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               })()}
                               onConfirm={async () => {
                                 try { await deleteFund(f.id); toast.success('تم الحذف'); }
-                                catch (e: any) { toast.error(e.message); }
+                                catch (e) { toast.error(errorMessage(e)); }
                               }}
                             />
                           )}
@@ -568,355 +313,33 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
         )}
       </div>
 
-      {/* Settlement Dialog */}
-      <Dialog open={!!settleFor} onOpenChange={(v) => { if (!v) closeSettle(); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              تسوية الدفعة #{settleFor?.fundNumber}
-            </DialogTitle>
-          </DialogHeader>
-          {settleFor && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3 text-sm">
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground">المستلم</p>
-                  <p className="font-mono font-semibold">{formatCurrency(settleFor.amount)}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground">المصروف الموثق</p>
-                  <p className="font-mono font-semibold">{formatCurrency(settlementSpent)}</p>
-                </div>
-                <div className={cn(
-                  'p-3 rounded-lg border-2',
-                  Math.abs(settlementDiff) <= 1
-                    ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-300/40'
-                    : Math.abs(settlementDiff) > 1000
-                      ? 'bg-destructive/10 border-destructive/40 animate-pulse'
-                      : 'bg-amber-50 dark:bg-amber-900/10 border-amber-300/40',
-                )}>
-                  <p className="text-xs text-muted-foreground">الفرق</p>
-                  <p className={cn(
-                    'font-mono font-semibold',
-                    Math.abs(settlementDiff) <= 1
-                      ? 'text-emerald-700 dark:text-emerald-400'
-                      : Math.abs(settlementDiff) > 1000
-                        ? 'text-destructive text-lg'
-                        : 'text-amber-700 dark:text-amber-400',
-                  )}>
-                    {formatCurrency(settlementDiff)}
-                  </p>
-                  {Math.abs(settlementDiff) > 1000 && (
-                    <p className="text-xs text-destructive font-semibold mt-1">
-                      ⚠️ فرق كبير — يتطلب توضيحاً مفصّلاً
-                    </p>
-                  )}
-              </div>
+      <FundSettlementDialog
+        key={settleDialog.session}
+        fund={settleDialog.value ?? undefined}
+        existing={settleDialog.value ? getSettlementForFund(settleDialog.value.id, fundSettlements) ?? undefined : undefined}
+        projectExpenses={projectExpenses}
+        projectCustodies={projectCustodies}
+        projPRs={projPRs}
+        projTransfers={projTransfers}
+        readOnly={readOnly}
+        onClose={settleDialog.close}
+      />
 
-              {/* تفصيل مكوّنات المصروف الموثق */}
-              {settleFor && (() => {
-                const direct = getFundDirectSpent(settleFor.id, projectExpenses, projectCustodies);
-                const custDraw = getFundCustodyDraw(settleFor.id, projectCustodies);
-                const advances = getFundOutstandingAdvances(settleFor.id, projPRs);
-                const transOut = getFundCashTransfersOut(settleFor.id, projTransfers);
-                return (
-                  <div className="text-xs text-muted-foreground bg-muted/30 rounded-md p-2 grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <div>مصروف مباشر: <span className="font-mono text-foreground">{formatCurrency(direct)}</span></div>
-                    <div>عهد مسحوبة: <span className="font-mono text-foreground">{formatCurrency(custDraw)}</span></div>
-                    <div>سلف قائمة: <span className="font-mono text-foreground">{formatCurrency(advances)}</span></div>
-                    <div>تحويلات نقدية: <span className="font-mono text-foreground">{formatCurrency(transOut)}</span></div>
-                  </div>
-                );
-              })()}
+      <RejectSettlementDialog
+        key={rejectDialog.session}
+        settlementId={rejectDialog.value}
+        onClose={rejectDialog.close}
+      />
 
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label>المتبقي النقدي المُعاد</Label>
-                  {(() => {
-                    const open = getFundOpenItems(settleFor.id, projectCustodies, projPRs, projTransfers, projectExpenses);
-                    const computedRemaining = getFundRemaining(settleFor, projectExpenses, projectCustodies, projPRs, projTransfers);
-                    const existing = getSettlementForFund(settleFor.id, fundSettlements);
-                    const editable = !existing || existing.status === 'draft' || existing.status === 'rejected';
-                    if (!editable) return null;
-                    return (
-                      <Button
-                        type="button" size="sm" variant="outline"
-                        onClick={() => setRemainingCash(String(Math.max(computedRemaining, 0)))}
-                      >
-                        احتسب تلقائياً
-                      </Button>
-                    );
-                  })()}
-                </div>
-                <Input
-                  type="number"
-                  value={remainingCash}
-                  onChange={(e) => setRemainingCash(e.target.value)}
-                  disabled={!!getSettlementForFund(settleFor.id, fundSettlements) &&
-                    getSettlementForFund(settleFor.id, fundSettlements)!.status !== 'draft' &&
-                    getSettlementForFund(settleFor.id, fundSettlements)!.status !== 'rejected'}
-                />
-                {/* تفسير المتبقي: قائمة البنود غير المسوّاة */}
-                {(() => {
-                  const open = getFundOpenItems(settleFor.id, projectCustodies, projPRs, projTransfers, projectExpenses);
-                  const hasOpen = open.openCustodies.length > 0 || open.outstandingAdvances.length > 0;
-                  if (!hasOpen) {
-                    return (
-                      <div className="text-xs p-2 rounded-md bg-success/10 text-success border border-success/20">
-                        ✓ كل مكونات الدفعة موثّقة. لا توجد عهد مفتوحة أو سلف قائمة — المتبقي = 0 يعني الإقفال الكامل.
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="text-xs p-2 rounded-md bg-warning/10 border border-warning/20 space-y-1.5">
-                      <p className="font-semibold text-warning-foreground">بنود غير مسوّاة تمنع إقفال المتبقي عند 0:</p>
-                      {open.openCustodies.length > 0 && (
-                        <div>
-                          <p className="text-muted-foreground">عهد مفتوحة من هذه الدفعة:</p>
-                          <ul className="list-disc pr-4 mt-0.5">
-                            {open.openCustodies.map((c) => (
-                              <li key={c.id}>{c.resourceName} — متبقي فيها: <span className="font-mono">{formatCurrency(c.remaining)}</span></li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {open.outstandingAdvances.length > 0 && (
-                        <div>
-                          <p className="text-muted-foreground">سلف قائمة على موردين:</p>
-                          <ul className="list-disc pr-4 mt-0.5">
-                            {open.outstandingAdvances.map((a) => (
-                              <li key={a.id}>{a.description} — <span className="font-mono">{formatCurrency(a.remaining)}</span></li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {Math.abs(settlementDiff) > 1 && (
-                <div>
-                  <Label>سبب الفرق <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    value={diffReason}
-                    onChange={(e) => setDiffReason(e.target.value)}
-                    rows={2}
-                    placeholder="مثال: مصروف نقدي بدون فاتورة..."
-                    disabled={!!getSettlementForFund(settleFor.id, fundSettlements) &&
-                      getSettlementForFund(settleFor.id, fundSettlements)!.status !== 'draft' &&
-                      getSettlementForFund(settleFor.id, fundSettlements)!.status !== 'rejected'}
-                  />
-                </div>
-              )}
-
-              <div>
-                <Label>المرفقات (فواتير)</Label>
-                <div className="space-y-2 mt-2">
-                  {attachments.map((a, i) => (
-                    <div key={i} className="flex items-center gap-2 p-2 border rounded-md text-sm">
-                      <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="flex-1">{a.name}</span>
-                      {a.url && (
-                        <a href={a.url} target="_blank" rel="noopener" className="text-xs text-primary underline">
-                          فتح
-                        </a>
-                      )}
-                      <Button size="icon" variant="ghost" className="h-6 w-6"
-                        onClick={() => removeAttachment(i)}>
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="اسم المرفق"
-                      value={attachName}
-                      onChange={(e) => setAttachName(e.target.value)}
-                      className="text-xs"
-                    />
-                    <Input
-                      placeholder="رابط (اختياري)"
-                      value={attachUrl}
-                      onChange={(e) => setAttachUrl(e.target.value)}
-                      className="text-xs"
-                    />
-                    <Button size="sm" variant="outline" onClick={addAttachment}>إضافة</Button>
-                  </div>
-                </div>
-              </div>
-
-              {(() => {
-                const existing = getSettlementForFund(settleFor.id, fundSettlements);
-                if (!existing) return null;
-                if (existing.status === 'rejected' && existing.rejectionReason) {
-                  return (
-                    <div className="p-3 rounded-md border border-destructive/30 bg-destructive/5 text-sm text-destructive">
-                      <strong>سبب الرفض:</strong> {existing.rejectionReason}
-                    </div>
-                  );
-                }
-                if (existing.status === 'approved') {
-                  return (
-                    <div className="p-3 rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/10 text-sm text-emerald-700 dark:text-emerald-400">
-                      ✓ مُعتمدة في {existing.approvalDate?.split('T')[0]}
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-            </div>
-          )}
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeSettle}>إغلاق</Button>
-            {settleFor && (() => {
-              const existing = getSettlementForFund(settleFor.id, fundSettlements);
-              const editable = !existing || existing.status === 'draft' || existing.status === 'rejected';
-              if (!editable || readOnly) return null;
-              return (
-                <>
-                  <Button variant="outline" onClick={handleSaveDraft}>حفظ مسودة</Button>
-                  <Button onClick={handleSubmitSettlement}>إرسال للاعتماد</Button>
-                </>
-              );
-            })()}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Dialog */}
-      <Dialog open={!!rejectFor} onOpenChange={(v) => { if (!v) { setRejectFor(null); setRejectReason(''); } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>رفض التسوية</DialogTitle>
-          </DialogHeader>
-          <div>
-            <Label>سبب الرفض</Label>
-            <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={3} />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setRejectFor(null); setRejectReason(''); }}>إلغاء</Button>
-            <Button variant="destructive" onClick={handleReject}>رفض التسوية</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Inspector Panel — read-only fund details */}
-      <InspectorPanel
-        open={!!inspectorId}
-        onOpenChange={(v) => { if (!v) setInspectorId(null); }}
-        title={(() => {
-          const f = projectFundsList.find((x) => x.id === inspectorId);
-          return f ? `الدفعة #${f.fundNumber}` : 'تفاصيل الدفعة';
-        })()}
-        meta={(() => {
-          const f = projectFundsList.find((x) => x.id === inspectorId);
-          if (!f) return null;
-          return (
-            <Badge className={cn('text-xs', FUND_STATUS_COLORS[f.status])}>
-              {FUND_STATUS_LABELS[f.status]}
-            </Badge>
-          );
-        })()}
-        width="lg"
-      >
-        {(() => {
-          const f = projectFundsList.find((x) => x.id === inspectorId);
-          if (!f) return null;
-          const spent = getFundSpent(f.id, projectExpenses, projectCustodies, projPRs, projTransfers);
-          const calcRemaining = getFundRemaining(f, projectExpenses, projectCustodies, projPRs, projTransfers);
-          const settlement = getSettlementForFund(f.id, fundSettlements);
-          const isClosed = f.status === 'settled' || (settlement && settlement.status === 'approved');
-          const remaining = isClosed ? 0 : calcRemaining;
-          const ratio = f.amount > 0 ? Math.min(100, (spent / f.amount) * 100) : 0;
-          const direct = getFundDirectSpent(f.id, projectExpenses, projectCustodies);
-          const custDraw = getFundCustodyDraw(f.id, projectCustodies);
-          const advances = getFundOutstandingAdvances(f.id, projPRs);
-          const transOut = getFundCashTransfersOut(f.id, projTransfers);
-          const open = getFundOpenItems(f.id, projectCustodies, projPRs, projTransfers, projectExpenses);
-          const days = daysBetween(f.acknowledgedAt || f.transferDate);
-          return (
-            <>
-              <InspectorKpiStrip
-                items={[
-                  { label: 'المبلغ', value: formatCurrency(f.amount) },
-                  { label: 'المصروف', value: formatCurrency(spent) },
-                  { label: 'المتبقي', value: formatCurrency(remaining), tone: remaining < 0 ? 'destructive' : 'default' },
-                  { label: 'العمر', value: `${days} يوم` },
-                ]}
-              />
-              <div className="px-5 py-3">
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-                  <span>نسبة الصرف</span>
-                  <span className="tabular-nums">{ratio.toFixed(1)}%</span>
-                </div>
-                <Progress value={ratio} className="h-2" />
-              </div>
-
-              <InspectorSection title="تفصيل المصروف">
-                <InspectorField label="مصروف مباشر" value={formatCurrency(direct)} mono />
-                <InspectorField label="عهد مسحوبة" value={formatCurrency(custDraw)} mono />
-                <InspectorField label="سلف قائمة" value={formatCurrency(advances)} mono />
-                <InspectorField label="تحويلات نقدية" value={formatCurrency(transOut)} mono />
-              </InspectorSection>
-
-              <InspectorSection title="بيانات الدفعة">
-                <InspectorField label="تاريخ التحويل" value={f.transferDate} />
-                {f.acknowledgedAt && (
-                  <InspectorField label="تاريخ الاستلام" value={f.acknowledgedAt.split('T')[0]} />
-                )}
-                {f.notes && <InspectorField label="ملاحظات" value={f.notes} />}
-              </InspectorSection>
-
-              {settlement && (
-                <InspectorSection title="التسوية">
-                  <InspectorField
-                    label="الحالة"
-                    value={
-                      <Badge className={cn('text-xs', SETTLEMENT_STATUS_COLORS[settlement.status])}>
-                        {SETTLEMENT_STATUS_LABELS[settlement.status]}
-                      </Badge>
-                    }
-                  />
-                  <InspectorField label="المتبقي النقدي المُعاد" value={formatCurrency(settlement.remainingCash)} mono />
-                  {settlement.differenceReason && (
-                    <InspectorField label="سبب الفرق" value={settlement.differenceReason} />
-                  )}
-                  {settlement.rejectionReason && (
-                    <InspectorField label="سبب الرفض" value={settlement.rejectionReason} />
-                  )}
-                  {settlement.approvalDate && (
-                    <InspectorField label="تاريخ الاعتماد" value={settlement.approvalDate.split('T')[0]} />
-                  )}
-                </InspectorSection>
-              )}
-
-              {(open.openCustodies.length > 0 || open.outstandingAdvances.length > 0) && (
-                <InspectorSection title="بنود غير مسوّاة">
-                  {open.openCustodies.map((c) => (
-                    <InspectorField
-                      key={c.id}
-                      label={`عهدة — ${c.resourceName}`}
-                      value={formatCurrency(c.remaining)}
-                      mono
-                    />
-                  ))}
-                  {open.outstandingAdvances.map((a) => (
-                    <InspectorField
-                      key={a.id}
-                      label={`سلفة — ${a.description}`}
-                      value={formatCurrency(a.remaining)}
-                      mono
-                    />
-                  ))}
-                </InspectorSection>
-              )}
-            </>
-          );
-        })()}
-      </InspectorPanel>
+      <FundInspector
+        fund={projectFundsList.find((x) => x.id === inspector.value)}
+        settlement={inspector.value ? getSettlementForFund(inspector.value, fundSettlements) ?? undefined : undefined}
+        projectExpenses={projectExpenses}
+        projectCustodies={projectCustodies}
+        projPRs={projPRs}
+        projTransfers={projTransfers}
+        onClose={inspector.close}
+      />
     </div>
   );
 }

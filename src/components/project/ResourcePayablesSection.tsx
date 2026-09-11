@@ -35,7 +35,7 @@ import { PayDialog } from './payables/PayDialog';
 import { EditLinksDialog } from './payables/EditLinksDialog';
 import { RejectDialog } from './payables/RejectDialog';
 import { SettlementDraftDialog } from './payables/SettlementDraftDialog';
-import { useDialogSession } from './payables/useDialogSession';
+import { useDialogSession } from '@/hooks/useDialogSession';
 
 interface Props {
   projectId: string;
