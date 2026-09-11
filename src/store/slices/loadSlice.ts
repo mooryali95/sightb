@@ -79,6 +79,48 @@ async function fetchAll<T extends TableName>(
   return all;
 }
 
+/**
+ * Pure reducer for a realtime row event on one of the project-scoped tables.
+ *
+ * Exported so it can be tested directly, the same way
+ * `applyCashTransferRealtimeEvent` is: the logic used to live inside the
+ * subscription callback, where nothing could reach it.
+ */
+export interface ProjectRealtimePayload {
+  eventType: string;
+  new?: Record<string, unknown>;
+  old?: Record<string, unknown>;
+}
+
+export function applyProjectRealtimeEvent<T extends { id: string }>(
+  list: T[],
+  payload: ProjectRealtimePayload,
+  map: (d: never) => T,
+): T[] {
+  if (payload.eventType === 'INSERT' && payload.new) {
+    const mapped = map(payload.new as never);
+    // A client that just wrote this row receives its own INSERT back over
+    // realtime, and every caller here has already added the row optimistically.
+    // Without this the same expense sits in state twice, and every figure
+    // derived from the list — custody spend, fund remaining, dashboard totals,
+    // variance — counts it twice until the page is reloaded.
+    //
+    // `applyCashTransferRealtimeEvent` has carried this guard for its own table
+    // all along; the generic path beside it did not.
+    if (list.some((item) => item.id === mapped.id)) return list;
+    return [mapped, ...list];
+  }
+  if (payload.eventType === 'UPDATE' && payload.new) {
+    const mapped = map(payload.new as never);
+    return list.map((item) => (item.id === mapped.id ? mapped : item));
+  }
+  if (payload.eventType === 'DELETE' && payload.old?.id) {
+    const deletedId = payload.old.id;
+    return list.filter((item) => item.id !== deletedId);
+  }
+  return list;
+}
+
 export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, get) => ({
   loading: true,
   detailsLoading: false,
@@ -320,19 +362,13 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         const m = mappers[table];
         if (!m) return;
 
-        if (payload.eventType === 'INSERT') {
-          set((s: any) => ({ [m.key]: [m.map(payload.new), ...s[m.key]] }));
-        } else if (payload.eventType === 'UPDATE') {
-          set((s: any) => ({
-            [m.key]: s[m.key].map((item: any) =>
-              item.id === (payload.new as any).id ? m.map(payload.new) : item
-            ),
-          }));
-        } else if (payload.eventType === 'DELETE') {
-          set((s: any) => ({
-            [m.key]: s[m.key].filter((item: any) => item.id !== (payload.old as any).id),
-          }));
-        }
+        set((s: any) => ({
+          [m.key]: applyProjectRealtimeEvent(
+            s[m.key],
+            payload as unknown as ProjectRealtimePayload,
+            m.map,
+          ),
+        }));
       })
       .subscribe();
 
