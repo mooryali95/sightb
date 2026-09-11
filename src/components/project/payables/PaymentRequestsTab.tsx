@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { CalendarClock, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, errorMessage } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import { buildTimeline } from '@/lib/resource-payables';
 import {
@@ -87,7 +87,7 @@ export function PaymentRequestsTab({
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   {req.requestType === 'advance' && req.status === 'paid' && req.isAdvanceOutstanding && (() => {
-                    const days = advanceAgeDays(req as any);
+                    const days = advanceAgeDays(req);
                     return (
                       <Badge variant="outline" className={cn('text-xs', ageBadgeClasses(days))}>
                         منذ {days} يوم
@@ -136,12 +136,12 @@ export function PaymentRequestsTab({
                     <Button size="sm" variant="outline"
                       onClick={async () => {
                         try { await reviewPaymentRequest(req.id); toast.success('قيد المراجعة'); }
-                        catch (e: any) { toast.error(e.message); }
+                        catch (e) { toast.error(errorMessage(e)); }
                       }}>بدء المراجعة</Button>
                     <Button size="sm"
                       onClick={async () => {
                         try { await approvePaymentRequest(req.id); toast.success('تم الاعتماد'); }
-                        catch (e: any) { toast.error(e.message); }
+                        catch (e) { toast.error(errorMessage(e)); }
                       }}>اعتماد</Button>
                     <Button size="sm" variant="outline"
                       onClick={() => onReject({ id: req.id, kind: 'req' })}>رفض</Button>
@@ -152,7 +152,7 @@ export function PaymentRequestsTab({
                     <Button size="sm"
                       onClick={async () => {
                         try { await approvePaymentRequest(req.id); toast.success('تم الاعتماد'); }
-                        catch (e: any) { toast.error(e.message); }
+                        catch (e) { toast.error(errorMessage(e)); }
                       }}>اعتماد</Button>
                     <Button size="sm" variant="outline"
                       onClick={() => onReject({ id: req.id, kind: 'req' })}>رفض</Button>
@@ -165,7 +165,7 @@ export function PaymentRequestsTab({
                         const date = window.prompt('تاريخ الجدولة (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
                         if (!date) return;
                         try { await schedulePaymentRequest(req.id, date); toast.success('تمت الجدولة'); }
-                        catch (e: any) { toast.error(e.message); }
+                        catch (e) { toast.error(errorMessage(e)); }
                       }}>
                       <CalendarClock className="h-4 w-4 ml-1" /> جدولة
                     </Button>
@@ -200,7 +200,7 @@ export function PaymentRequestsTab({
                   <Button size="sm" variant="ghost"
                     onClick={async () => {
                       try { await cancelPaymentRequest(req.id); toast.success('تم الإلغاء'); }
-                      catch (e: any) { toast.error(e.message); }
+                      catch (e) { toast.error(errorMessage(e)); }
                     }}>إلغاء</Button>
                 )}
                 {/* تعديل الربط — مسموح في كل الحالات لـ canEdit (في draft) أو admin (بعد الاعتماد) */}
@@ -216,7 +216,7 @@ export function PaymentRequestsTab({
                     description={`حذف طلب صرف "${req.description}" نهائياً؟`}
                     onConfirm={async () => {
                       try { await deletePaymentRequest(req.id); toast.success('تم الحذف'); }
-                      catch (e: any) { toast.error(e.message); }
+                      catch (e) { toast.error(errorMessage(e)); }
                     }}
                   />
                 )}

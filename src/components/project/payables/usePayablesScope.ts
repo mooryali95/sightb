@@ -26,7 +26,7 @@ export function usePayablesScope(projectId: string) {
   const [scope, setScope] = useState<PayablesScope>('resource');
 
   const projBudgetItems = useMemo(
-    () => budgetItems.filter((b: any) => b.projectId === projectId),
+    () => budgetItems.filter((b) => b.projectId === projectId),
     [budgetItems, projectId],
   );
 

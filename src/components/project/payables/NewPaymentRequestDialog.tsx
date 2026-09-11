@@ -22,6 +22,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/finance';
+import { errorMessage } from '@/lib/utils';
 import {
   EXPENSE_CATEGORY_LABELS,
   PAYMENT_PRIORITY_LABELS,
@@ -99,7 +100,7 @@ export function NewPaymentRequestDialog({
       await submitPaymentRequest(id);
       toast.success('تم إنشاء وإرسال طلب الصرف');
       onOpenChange(false);
-    } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
+    } catch (e) { toast.error(errorMessage(e)); }
   };
 
   return (
@@ -189,7 +190,7 @@ export function NewPaymentRequestDialog({
               <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">— بدون ربط —</SelectItem>
-                {projBudgetItems.map((b: any) => (
+                {projBudgetItems.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     {EXPENSE_CATEGORY_LABELS[b.category as ExpenseCategory] || b.category} — {b.description} ({formatCurrency(b.plannedAmount)})
                   </SelectItem>

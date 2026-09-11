@@ -23,8 +23,13 @@ import { exportPayablesSummaryCSV } from '@/lib/payables-export';
 import {
   PAYMENT_REQUEST_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
+  type AdvanceSettlementType,
   type PaymentMethod,
+  type PaymentRequest,
 } from '@/types/project';
+
+/** The settle-advance dialog's modes: the four settlement types plus a refund-and-document compound. */
+type AdvanceSettlementMode = AdvanceSettlementType | 'compound';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +49,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, errorMessage } from '@/lib/utils';
 import { usePayablesScope } from './payables/usePayablesScope';
 import { PayablesScopeBar } from './payables/PayablesScopeBar';
 import { PayablesSummaryCards } from './payables/PayablesSummaryCards';
@@ -119,7 +124,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const handleSaveEditLinks = async () => {
     if (!editLinksId || !editingReq) return;
     try {
-      const updates: any = {
+      const updates: Partial<PaymentRequest> = {
         linkedReimbursementIds: editLinkedIds,
         description: editDescription.trim() || editingReq.description,
       };
@@ -133,8 +138,8 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       await updatePaymentRequest(editLinksId, updates);
       toast.success('تم تحديث ربط البنود');
       setEditLinksId(null);
-    } catch (e: any) {
-      toast.error(e.message || 'فشل التحديث');
+    } catch (e) {
+      toast.error(errorMessage(e, 'فشل التحديث'));
     }
   };
 
@@ -243,7 +248,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       toast.success('تم تأكيد الدفع وتسجيل المصروف تلقائياً');
       setPayDialogId(null); setPayRef('');
       setPaySourceFundId(''); setPaySourceCustodyId('');
-    } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
+    } catch (e) { toast.error(errorMessage(e)); }
   };
 
   // ─── Reject reason dialog ───
@@ -262,7 +267,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       }
       toast.success('تم الرفض');
       setRejectId(null); setRejectReason('');
-    } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
+    } catch (e) { toast.error(errorMessage(e)); }
   };
 
   // ─── Settlement dialog ───
@@ -327,7 +332,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       toast.success('تم إنشاء المخالصة كمسودة');
       // Auto-sign for admin? Leave for separate action
       setSettleOpen(false); setSResourceId(''); setSText('');
-    } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
+    } catch (e) { toast.error(errorMessage(e)); }
   };
 
   // ─── Outstanding advances (paid but not settled) ───
@@ -366,7 +371,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       const days = advanceAgeDays(req);
       const res = projResources.find((r) => r.id === req.resourceId);
       const name = res?.name || '—';
-      const thresholds: { key: string; min: number; fn: (msg: string, opts?: any) => any; label: string }[] = [
+      const thresholds: { key: string; min: number; fn: typeof toast.error; label: string }[] = [
         { key: `90-${req.id}`, min: 90, fn: toast.error, label: 'حرجة' },
         { key: `60-${req.id}`, min: 60, fn: toast.warning, label: 'متأخرة' },
         { key: `30-${req.id}`, min: 30, fn: toast.info, label: 'تحتاج متابعة' },
@@ -407,10 +412,10 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       const remaining = Math.max(req.amount - settled, 0);
       let source = '—';
       if (req.paidFromFundId) {
-        const f = projectFunds.find((x: any) => x.id === req.paidFromFundId);
+        const f = projectFunds.find((x) => x.id === req.paidFromFundId);
         source = `دفعة${f?.fundNumber ? ` #${f.fundNumber}` : ''}`;
       } else if (req.paidFromCustodyId) {
-        const c = custodies.find((x: any) => x.id === req.paidFromCustodyId);
+        const c = custodies.find((x) => x.id === req.paidFromCustodyId);
         source = `عهدة${c?.resourceName ? ` (${c.resourceName})` : ''}`;
       }
       return {
@@ -435,14 +440,14 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         let overflowAmount: number | undefined;
         let overflowSource: string | undefined;
         if (e.overflowExpenseId) {
-          const exp = expenses.find((x: any) => x.id === e.overflowExpenseId);
+          const exp = expenses.find((x) => x.id === e.overflowExpenseId);
           if (exp) {
             overflowAmount = Number(exp.amount);
             if (exp.fundId) {
-              const f = projectFunds.find((x: any) => x.id === exp.fundId);
+              const f = projectFunds.find((x) => x.id === exp.fundId);
               overflowSource = `دفعة${f?.fundNumber ? ` #${f.fundNumber}` : ''}`;
             } else if (exp.custodyId) {
-              const c = custodies.find((x: any) => x.id === exp.custodyId);
+              const c = custodies.find((x) => x.id === exp.custodyId);
               overflowSource = `عهدة${c?.resourceName ? ` (${c.resourceName})` : ''}`;
             }
           }
@@ -464,7 +469,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   // ─── Settle advance dialog state ───
   const [settleAdvanceId, setSettleAdvanceId] = useState<string | null>(null);
-  const [saType, setSaType] = useState<'documented' | 'cash_refund' | 'payroll_deduction' | 'written_off' | 'compound'>('documented');
+  const [saType, setSaType] = useState<AdvanceSettlementMode>('documented');
   const [saAmount, setSaAmount] = useState('');
   const [saRefundAmount, setSaRefundAmount] = useState('');
   const [saDocAmount, setSaDocAmount] = useState('');
@@ -489,8 +494,8 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       toast.success('تم التراجع عن الحدث وإعادة حساب السلفة');
       setReverseTarget(null);
       setReverseReason('');
-    } catch (e: any) {
-      toast.error(e?.message || 'تعذّر التراجع');
+    } catch (e) {
+      toast.error(errorMessage(e, 'تعذّر التراجع'));
     } finally {
       setReversing(false);
     }
@@ -505,7 +510,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     const req = projReqs.find((r) => r.id === id);
     const outstanding = req ? Math.max(req.amount - (req.refundedAmount ?? 0), 0) : 0;
     const linkedBudget = req?.budgetItemId
-      ? projBudgetItems.find((b: any) => b.id === req.budgetItemId)
+      ? projBudgetItems.find((b) => b.id === req.budgetItemId)
       : undefined;
     const defaultCategory = (linkedBudget?.category as string) || 'other';
     setSettleAdvanceId(id);
@@ -554,14 +559,14 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       let overflowAmount: number | undefined;
       let overflowSourceLabel: string | undefined;
       if (e.overflowExpenseId) {
-        const exp = expenses.find((x: any) => x.id === e.overflowExpenseId);
+        const exp = expenses.find((x) => x.id === e.overflowExpenseId);
         if (exp) {
           overflowAmount = Number(exp.amount);
           if (exp.fundId) {
-            const fund = projectFunds.find((f: any) => f.id === exp.fundId);
+            const fund = projectFunds.find((f) => f.id === exp.fundId);
             overflowSourceLabel = `دفعة${fund?.fundNumber ? ` #${fund.fundNumber}` : ''}`;
           } else if (exp.custodyId) {
-            const cust = custodies.find((c: any) => c.id === exp.custodyId);
+            const cust = custodies.find((c) => c.id === exp.custodyId);
             overflowSourceLabel = `عهدة${cust?.resourceName ? ` (${cust.resourceName})` : ''}`;
           }
         }
@@ -637,8 +642,8 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         if (docAmt > 0) {
           try {
             await settleAdvance(settleAdvanceId, { type: 'documented', notes: saNotes, settledAmount: docAmt, expenseCategory: saCategory });
-          } catch (e: any) {
-            if (refundDone) { toast.warning('تم الرد لكن فشل التوثيق: ' + (e.message || '')); return; }
+          } catch (e) {
+            if (refundDone) { toast.warning('تم الرد لكن فشل التوثيق: ' + errorMessage(e, '')); return; }
             throw e;
           }
         }
@@ -653,7 +658,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         toast.success('تمت تسوية السلفة');
       }
       setSettleAdvanceId(null);
-    } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
+    } catch (e) { toast.error(errorMessage(e)); }
   };
 
 
@@ -1265,7 +1270,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
               <div>
                 <Label className="mb-2 block">نوع التسوية</Label>
-                <RadioGroup value={saType} onValueChange={(v) => setSaType(v as any)} className="space-y-2">
+                <RadioGroup value={saType} onValueChange={(v) => setSaType(v as AdvanceSettlementMode)} className="space-y-2">
                   <label className="flex items-start gap-2 p-3 rounded border cursor-pointer hover:bg-muted/40">
                     <RadioGroupItem value="documented" className="mt-1" />
                     <div className="flex-1">

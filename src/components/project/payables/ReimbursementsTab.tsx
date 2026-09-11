@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { CheckCircle2, Plus, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { errorMessage } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS,
@@ -74,7 +75,7 @@ export function ReimbursementsTab({
       });
       toast.success('تم تسجيل الاسترداد، بانتظار الاعتماد');
       resetReimb(); setReimbOpen(false);
-    } catch (e: any) { toast.error(e.message || 'فشلت العملية'); }
+    } catch (e) { toast.error(errorMessage(e)); }
   };
 
   return (
@@ -181,7 +182,7 @@ export function ReimbursementsTab({
                         <Button size="sm" variant="outline"
                           onClick={async () => {
                             try { await approveReimbursement(r.id); toast.success('تم الاعتماد'); }
-                            catch (e: any) { toast.error(e.message); }
+                            catch (e) { toast.error(errorMessage(e)); }
                           }}>
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
@@ -197,7 +198,7 @@ export function ReimbursementsTab({
                         description="سيتم حذف هذا الاسترداد نهائياً."
                         onConfirm={async () => {
                           try { await deleteReimbursement(r.id); toast.success('تم الحذف'); }
-                          catch (e: any) { toast.error(e.message); }
+                          catch (e) { toast.error(errorMessage(e)); }
                         }}
                       />
                     )}
