@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   exportOutstandingAdvancesExcel,
   exportOutstandingAdvancesPDF,
@@ -14,34 +14,15 @@ import { Download, FileSpreadsheet, FileDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { formatCurrency } from '@/lib/finance';
-import {
-  getResourceBalance,
-  defaultSettlementText,
-  calcSettlementTotals,
-} from '@/lib/resource-payables';
+import { getResourceBalance } from '@/lib/resource-payables';
 import { exportPayablesSummaryCSV } from '@/lib/payables-export';
-import {
-  PAYMENT_REQUEST_STATUS_LABELS,
-  PAYMENT_METHOD_LABELS,
-  type PaymentMethod,
-  type PaymentRequest,
-} from '@/types/project';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { getFundRemaining, getCustodyCashTransfersIn, getCustodyOutstandingAdvances } from '@/lib/funds';
 import { HandCoins } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn, errorMessage } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { usePayablesScope } from './payables/usePayablesScope';
 import { PayablesScopeBar } from './payables/PayablesScopeBar';
 import { PayablesSummaryCards } from './payables/PayablesSummaryCards';
@@ -50,6 +31,11 @@ import { SettlementsTab } from './payables/SettlementsTab';
 import { PaymentRequestsTab } from './payables/PaymentRequestsTab';
 import { NewPaymentRequestDialog, type NewPaymentRequestPreset } from './payables/NewPaymentRequestDialog';
 import { SettleAdvanceDialog } from './payables/SettleAdvanceDialog';
+import { PayDialog } from './payables/PayDialog';
+import { EditLinksDialog } from './payables/EditLinksDialog';
+import { RejectDialog } from './payables/RejectDialog';
+import { SettlementDraftDialog } from './payables/SettlementDraftDialog';
+import { useDialogSession } from './payables/useDialogSession';
 
 interface Props {
   projectId: string;
@@ -65,8 +51,6 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   const {
     projectFunds, custodies, expenses, settlementEvents, loadSettlementEventsForRequest,
-    rejectReimbursement, rejectPaymentRequest, payPaymentRequest,
-    updatePaymentRequest, createResourceSettlement,
   } = useStore();
 
   const {
@@ -75,81 +59,40 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     projReqs, projSettles, summary, scopedReimbs,
   } = usePayablesScope(projectId);
 
-  // ─── New payment request dialog ───
-  // The dialog owns its form state; it remounts (via `key`) on every open so a
-  // preset from the balances table starts a clean form, and closing needs no
-  // explicit reset.
-  const [reqOpen, setReqOpen] = useState(false);
-  const [reqSession, setReqSession] = useState(0);
-  const [reqPreset, setReqPreset] = useState<NewPaymentRequestPreset | undefined>(undefined);
-  const openNewRequest = (preset?: NewPaymentRequestPreset) => {
-    setReqPreset(preset);
-    setReqSession((n) => n + 1);
-    setReqOpen(true);
-  };
+  // ─── Dialogs ───
+  // Each dialog owns its form state and is remounted (via `key`) on every
+  // open, so its starting values derive from what it was opened on and
+  // closing needs no reset. See useDialogSession.
+  const newRequest = useDialogSession<{ preset?: NewPaymentRequestPreset }>();
+  const editLinks = useDialogSession<string>();
+  const payDialog = useDialogSession<{ id: string; scheduledDate?: string }>();
+  const rejectDialog = useDialogSession<{ id: string; kind: 'reimb' | 'req' }>();
+  const settlementDraft = useDialogSession<string>();
+  const settleAdvance = useDialogSession<string>();
 
-  // ─── Edit links dialog (re-link reimbursements to existing payment request) ───
-  const [editLinksId, setEditLinksId] = useState<string | null>(null);
-  const [editLinkedIds, setEditLinkedIds] = useState<string[]>([]);
-  const [editDescription, setEditDescription] = useState('');
   const editingReq = useMemo(
-    () => projReqs.find((r) => r.id === editLinksId),
-    [projReqs, editLinksId],
+    () => projReqs.find((r) => r.id === editLinks.value),
+    [projReqs, editLinks.value],
   );
-  const editEligibleReimbs = useMemo(() => {
-    if (!editingReq) return [];
-    // Show approved reimbursements for the same resource, plus already-linked ones (even if not approved)
-    return projReimbs.filter(
-      (r) => r.resourceId === editingReq.resourceId
-        && (r.status === 'approved' || editLinkedIds.includes(r.id) || (editingReq.linkedReimbursementIds || []).includes(r.id)),
-    );
-  }, [editingReq, projReimbs, editLinkedIds]);
-
-  const openEditLinks = (reqId: string) => {
-    const req = projReqs.find((r) => r.id === reqId);
-    if (!req) return;
-    setEditLinksId(reqId);
-    setEditLinkedIds([...(req.linkedReimbursementIds || [])]);
-    setEditDescription(req.description || '');
-  };
-
-  const handleSaveEditLinks = async () => {
-    if (!editLinksId || !editingReq) return;
-    try {
-      const updates: Partial<PaymentRequest> = {
-        linkedReimbursementIds: editLinkedIds,
-        description: editDescription.trim() || editingReq.description,
-      };
-      // If reimbursement type and not yet paid, recompute amount from linked items
-      if (editingReq.requestType === 'reimbursement' && editingReq.status !== 'paid') {
-        const newAmount = projReimbs
-          .filter((r) => editLinkedIds.includes(r.id))
-          .reduce((s, r) => s + r.amount, 0);
-        if (newAmount > 0) updates.amount = newAmount;
-      }
-      await updatePaymentRequest(editLinksId, updates);
-      toast.success('تم تحديث ربط البنود');
-      setEditLinksId(null);
-    } catch (e) {
-      toast.error(errorMessage(e, 'فشل التحديث'));
-    }
-  };
-
-
-  // ─── Payment dialog ───
-  const [payDialogId, setPayDialogId] = useState<string | null>(null);
-  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
-  const [payMethod, setPayMethod] = useState<PaymentMethod>('bank_transfer');
-  const [payRef, setPayRef] = useState('');
-  const [paySource, setPaySource] = useState<'fund' | 'custody'>('fund');
-  const [paySourceFundId, setPaySourceFundId] = useState<string>('');
-  const [paySourceCustodyId, setPaySourceCustodyId] = useState<string>('');
-
   const payingReq = useMemo(
-    () => projReqs.find((r) => r.id === payDialogId),
-    [projReqs, payDialogId],
+    () => projReqs.find((r) => r.id === payDialog.value?.id),
+    [projReqs, payDialog.value],
   );
+  const settlementResource = useMemo(
+    () => projResources.find((r) => r.id === settlementDraft.value),
+    [projResources, settlementDraft.value],
+  );
+  const settlingAdvance = useMemo(
+    () => projReqs.find((r) => r.id === settleAdvance.value),
+    [projReqs, settleAdvance.value],
+  );
+  const openSettleAdvance = (id: string) => {
+    settleAdvance.open(id);
+    // Load settlement events for this PR
+    loadSettlementEventsForRequest(id).catch(console.warn);
+  };
 
+  // ─── Cash sources with a balance (shared by the pay and settle-advance dialogs) ───
   const cashTransfers = useStore((s) => s.cashTransfers);
   const projTransfers = useMemo(
     () => (cashTransfers || []).filter((t) => t.projectId === projectId),
@@ -188,144 +131,6 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       .filter((x) => x.remaining > 0);
   }, [custodies, expenses, projectId, projTransfers, projReqs]);
 
-
-  const openPayDialog = (reqId: string, scheduledDate?: string) => {
-    setPayDialogId(reqId);
-    setPayDate(scheduledDate || new Date().toISOString().split('T')[0]);
-    // auto-pick first available fund as default source
-    if (availableFunds.length > 0) {
-      setPaySource('fund');
-      setPaySourceFundId(availableFunds[0].fund.id);
-    } else if (availableCustodies.length > 0) {
-      setPaySource('custody');
-      setPaySourceCustodyId(availableCustodies[0].custody.id);
-    } else {
-      // Nothing to draw from. Leave the fund radio selected with no fund
-      // chosen, which keeps the confirm control disabled until a source exists.
-      setPaySource('fund');
-      setPaySourceFundId('');
-      setPaySourceCustodyId('');
-    }
-  };
-
-  const handlePay = async () => {
-    if (!payDialogId || !payingReq) return;
-    // Exactly one source: a fund or a custody. The database accepts a payment
-    // with neither, but an expense that belongs to no fund and no custody
-    // leaves cash integrity with nothing to reconcile it against — so the
-    // dialog never offers it.
-    // Balance check
-    if (paySource === 'fund') {
-      if (!paySourceFundId) { toast.error('اختر الدفعة المصدر'); return; }
-      const f = availableFunds.find((x) => x.fund.id === paySourceFundId);
-      if (!f) { toast.error('الدفعة المختارة غير متوفرة'); return; }
-      if (f.remaining < payingReq.amount) {
-        toast.error(`رصيد الدفعة غير كافٍ. المتاح: ${formatCurrency(f.remaining)}`); return;
-      }
-    } else if (paySource === 'custody') {
-      if (!paySourceCustodyId) { toast.error('اختر العهدة المصدر'); return; }
-      const c = availableCustodies.find((x) => x.custody.id === paySourceCustodyId);
-      if (!c) { toast.error('العهدة المختارة غير متوفرة'); return; }
-      if (c.remaining < payingReq.amount) {
-        toast.error(`رصيد العهدة غير كافٍ. المتاح: ${formatCurrency(c.remaining)}`); return;
-      }
-    }
-    try {
-      await payPaymentRequest(payDialogId, {
-        paidDate: payDate, paymentMethod: payMethod,
-        paymentReference: payRef,
-        paidFromFundId: paySource === 'fund' ? paySourceFundId : null,
-        paidFromCustodyId: paySource === 'custody' ? paySourceCustodyId : null,
-      });
-      toast.success('تم تأكيد الدفع وتسجيل المصروف تلقائياً');
-      setPayDialogId(null); setPayRef('');
-      setPaySourceFundId(''); setPaySourceCustodyId('');
-    } catch (e) { toast.error(errorMessage(e)); }
-  };
-
-  // ─── Reject reason dialog ───
-  const [rejectId, setRejectId] = useState<{ id: string; kind: 'reimb' | 'req' } | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-
-  const handleReject = async () => {
-    if (!rejectId || !rejectReason.trim()) {
-      toast.error('سبب الرفض مطلوب'); return;
-    }
-    try {
-      if (rejectId.kind === 'reimb') {
-        await rejectReimbursement(rejectId.id, rejectReason);
-      } else {
-        await rejectPaymentRequest(rejectId.id, rejectReason);
-      }
-      toast.success('تم الرفض');
-      setRejectId(null); setRejectReason('');
-    } catch (e) { toast.error(errorMessage(e)); }
-  };
-
-  // ─── Settlement dialog ───
-  const [settleOpen, setSettleOpen] = useState(false);
-  const [sResourceId, setSResourceId] = useState('');
-  const [sFrom, setSFrom] = useState('');
-  const [sTo, setSTo] = useState(new Date().toISOString().split('T')[0]);
-  const [sText, setSText] = useState('');
-
-  const sResource = useMemo(
-    () => projResources.find((r) => r.id === sResourceId),
-    [projResources, sResourceId],
-  );
-  const sReimbsForRes = useMemo(
-    () => projReimbs.filter((r) => r.resourceId === sResourceId
-      && (r.status === 'approved' || r.status === 'reimbursed')),
-    [projReimbs, sResourceId],
-  );
-  const sPaidReqs = useMemo(
-    () => projReqs.filter((p) => p.resourceId === sResourceId && p.status === 'paid'),
-    [projReqs, sResourceId],
-  );
-  const sTotals = useMemo(
-    () => calcSettlementTotals(
-      sReimbsForRes, sPaidReqs,
-      sReimbsForRes.map((r) => r.id),
-      sPaidReqs.map((p) => p.id),
-    ),
-    [sReimbsForRes, sPaidReqs],
-  );
-
-  const openSettlement = (resourceId: string) => {
-    setSResourceId(resourceId);
-    const res = projResources.find((r) => r.id === resourceId);
-    const reimbs = projReimbs.filter((r) => r.resourceId === resourceId
-      && (r.status === 'approved' || r.status === 'reimbursed'));
-    const paid = projReqs.filter((p) => p.resourceId === resourceId && p.status === 'paid');
-    const totals = calcSettlementTotals(reimbs, paid, reimbs.map((r) => r.id), paid.map((p) => p.id));
-    const txt = defaultSettlementText(
-      res?.name || '',
-      companyName,
-      projectName,
-      sFrom || '—',
-      sTo,
-      Math.abs(totals.balance) || totals.totalOwed,
-    );
-    setSText(txt);
-    setSettleOpen(true);
-  };
-
-  const handleCreateSettlement = async () => {
-    if (!sResourceId) return;
-    try {
-      await createResourceSettlement({
-        resourceId: sResourceId, projectId,
-        periodFrom: sFrom || undefined, periodTo: sTo || undefined,
-        linkedReimbursementIds: sReimbsForRes.map((r) => r.id),
-        linkedPaymentIds: sPaidReqs.map((p) => p.id),
-        totalOwed: sTotals.totalOwed, totalPaid: sTotals.totalPaid,
-        settlementTextAr: sText,
-      });
-      toast.success('تم إنشاء المخالصة كمسودة');
-      // Auto-sign for admin? Leave for separate action
-      setSettleOpen(false); setSResourceId(''); setSText('');
-    } catch (e) { toast.error(errorMessage(e)); }
-  };
 
   // ─── Outstanding advances (paid but not settled) ───
   const outstandingAdvances = useMemo(
@@ -459,22 +264,6 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
 
 
-  // ─── Settle advance dialog ───
-  // The dialog owns its form state and remounts (via `key`) on every open, so
-  // it starts from the advance's current remainder each time.
-  const [settleAdvanceId, setSettleAdvanceId] = useState<string | null>(null);
-  const [settleSession, setSettleSession] = useState(0);
-  const settlingAdvance = useMemo(
-    () => projReqs.find((r) => r.id === settleAdvanceId),
-    [projReqs, settleAdvanceId],
-  );
-  const openSettleAdvance = (id: string) => {
-    setSettleAdvanceId(id);
-    setSettleSession((n) => n + 1);
-    // Load settlement events for this PR
-    loadSettlementEventsForRequest(id).catch(console.warn);
-  };
-
   return (
     <div className="space-y-6">
       <PayablesScopeBar
@@ -590,11 +379,11 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                                   toast.info('لا توجد استردادات معتمدة قابلة للدفع لهذا المورد');
                                   return;
                                 }
-                                openNewRequest({
+                                newRequest.open({ preset: {
                                   resourceId: res.id,
                                   selectedReimbIds: eligible.map((r) => r.id),
                                   description: `دفع مستحقات ${res.name}`,
-                                });
+                                } });
                               }}
                             >
                               <HandCoins className="h-4 w-4 ml-1" />
@@ -602,7 +391,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                             </Button>
                           )}
                           {canEdit && bal.outstandingBalance > 0 && (
-                            <Button size="sm" variant="outline" onClick={() => openSettlement(res.id)}>
+                            <Button size="sm" variant="outline" onClick={() => settlementDraft.open(res.id)}>
                               مخالصة
                             </Button>
                           )}
@@ -633,7 +422,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
             projResources={projResources}
             canEdit={canEdit}
             isAdmin={isAdmin}
-            onReject={setRejectId}
+            onReject={rejectDialog.open}
           />
         </TabsContent>
 
@@ -644,11 +433,11 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
             canEdit={canEdit}
             isAdmin={isAdmin}
             advanceAgeDays={advanceAgeDays}
-            onNewRequest={() => openNewRequest()}
-            onReject={setRejectId}
-            onPay={openPayDialog}
+            onNewRequest={() => newRequest.open({})}
+            onReject={rejectDialog.open}
+            onPay={(id, scheduledDate) => payDialog.open({ id, scheduledDate })}
             onSettleAdvance={openSettleAdvance}
-            onEditLinks={openEditLinks}
+            onEditLinks={editLinks.open}
           />
         </TabsContent>
 
@@ -668,231 +457,54 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           from whichever tab is active. */}
       {canEdit && (
         <NewPaymentRequestDialog
-          key={reqSession}
-          open={reqOpen}
-          onOpenChange={setReqOpen}
+          key={newRequest.session}
+          open={newRequest.value !== null}
+          onOpenChange={(o) => { if (!o) newRequest.close(); }}
           projectId={projectId}
           projResources={projResources}
           projReimbs={projReimbs}
           projBudgetItems={projBudgetItems}
-          preset={reqPreset}
+          preset={newRequest.value?.preset}
         />
       )}
 
-      {/* Payment confirmation dialog */}
-      <Dialog open={!!payDialogId} onOpenChange={(o) => { if (!o) setPayDialogId(null); }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>تأكيد الدفع</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>تاريخ الدفع *</Label>
-              <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
-            </div>
-            <div>
-              <Label>طريقة الدفع *</Label>
-              <Select value={payMethod} onValueChange={(v) => setPayMethod(v as PaymentMethod)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PAYMENT_METHOD_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>مرجع الدفع (اختياري)</Label>
-              <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="رقم التحويل/الشيك" />
-            </div>
-            {/* ─── مصدر النقد ─── */}
-            <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
-              <Label className="font-semibold">مصدر النقد *</Label>
-              {payingReq && (
-                <p className="text-xs text-muted-foreground">
-                  المبلغ المطلوب: <strong className="text-foreground">{formatCurrency(payingReq.amount)}</strong>
-                </p>
-              )}
-              <RadioGroup value={paySource} onValueChange={(v) => setPaySource(v as 'fund' | 'custody')} className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <RadioGroupItem value="fund" id="src-fund" disabled={availableFunds.length === 0} className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="src-fund" className={cn('cursor-pointer', availableFunds.length === 0 && 'text-muted-foreground')}>
-                      من دفعة محددة {availableFunds.length === 0 && '(لا توجد دفعات بها رصيد)'}
-                    </Label>
-                    {paySource === 'fund' && availableFunds.length > 0 && (
-                      <Select value={paySourceFundId} onValueChange={setPaySourceFundId}>
-                        <SelectTrigger className="mt-1.5"><SelectValue placeholder="اختر الدفعة" /></SelectTrigger>
-                        <SelectContent>
-                          {availableFunds.map(({ fund, remaining }) => (
-                            <SelectItem key={fund.id} value={fund.id}>
-                              دفعة #{fund.fundNumber} — متاح {formatCurrency(remaining)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <RadioGroupItem value="custody" id="src-custody" disabled={availableCustodies.length === 0} className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="src-custody" className={cn('cursor-pointer', availableCustodies.length === 0 && 'text-muted-foreground')}>
-                      من عهدة قائمة {availableCustodies.length === 0 && '(لا توجد عُهد نشطة برصيد)'}
-                    </Label>
-                    {paySource === 'custody' && availableCustodies.length > 0 && (
-                      <Select value={paySourceCustodyId} onValueChange={setPaySourceCustodyId}>
-                        <SelectTrigger className="mt-1.5"><SelectValue placeholder="اختر العهدة" /></SelectTrigger>
-                        <SelectContent>
-                          {availableCustodies.map(({ custody, remaining }) => (
-                            <SelectItem key={custody.id} value={custody.id}>
-                              {custody.resourceName} — متاح {formatCurrency(remaining)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                </div>
-              </RadioGroup>
-              {availableFunds.length === 0 && availableCustodies.length === 0 && (
-                <p className="text-xs text-destructive">
-                  لا يوجد مصدر سيولة كافٍ. حرّر سلفة قائمة أو سجّل دفعة جديدة.
-                </p>
-              )}
-            </div>
+      <PayDialog
+        key={payDialog.session}
+        request={payingReq}
+        initialDate={payDialog.value?.scheduledDate}
+        onClose={payDialog.close}
+        availableFunds={availableFunds}
+        availableCustodies={availableCustodies}
+      />
 
-            <p className="text-xs text-muted-foreground">
-              عند التأكيد سيُنشأ مصروف تلقائياً مربوط بالمصدر المحدد ويُحسب ضمن رصيد الدفعة/العهدة.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPayDialogId(null)}>إلغاء</Button>
-            <Button onClick={handlePay} disabled={paySource === 'fund' ? !paySourceFundId : !paySourceCustodyId}>تأكيد الدفع</Button>
-          </DialogFooter>
+      <EditLinksDialog
+        key={editLinks.session}
+        request={editingReq}
+        projReimbs={projReimbs}
+        onClose={editLinks.close}
+      />
 
-        </DialogContent>
-      </Dialog>
+      <RejectDialog
+        key={rejectDialog.session}
+        target={rejectDialog.value}
+        onClose={rejectDialog.close}
+      />
 
-      {/* ─── Edit links dialog ─── */}
-      <Dialog open={!!editLinksId} onOpenChange={(o) => { if (!o) setEditLinksId(null); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>تعديل ربط البنود</DialogTitle>
-          </DialogHeader>
-          {editingReq && (
-            <div className="space-y-3">
-              <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
-                <p>طلب الصرف: <strong>{editingReq.description}</strong></p>
-                <p>الحالة: <Badge variant="outline" className="text-xs">{PAYMENT_REQUEST_STATUS_LABELS[editingReq.status]}</Badge></p>
-                {editingReq.status === 'paid' && (
-                  <p className="text-amber-600 mt-1">⚠ المبلغ ثابت لأن الطلب مدفوع — فقط الربط والوصف قابلان للتعديل.</p>
-                )}
-              </div>
-              <div>
-                <Label>الوصف</Label>
-                <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
-              </div>
-              {editingReq.requestType === 'reimbursement' && (
-                <div>
-                  <Label>البنود المرتبطة (مستحقات)</Label>
-                  <div className="border rounded-lg p-2 max-h-64 overflow-y-auto space-y-1.5 mt-1.5">
-                    {editEligibleReimbs.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-3">لا توجد مستحقات معتمدة قابلة للربط</p>
-                    ) : (
-                      editEligibleReimbs.map((r) => {
-                        const checked = editLinkedIds.includes(r.id);
-                        // Boolean(): paymentRequestId is optional, so `&&` would
-                        // otherwise yield '' | undefined and leak into `disabled`.
-                        const linkedElsewhere = Boolean(r.paymentRequestId) && r.paymentRequestId !== editLinksId;
-                        return (
-                          <label key={r.id} className={cn('flex items-start gap-2 p-1.5 rounded cursor-pointer hover:bg-muted/50', linkedElsewhere && 'opacity-60')}>
-                            <input
-                              type="checkbox"
-                              className="mt-1"
-                              checked={checked}
-                              disabled={linkedElsewhere && !checked}
-                              onChange={(e) => {
-                                setEditLinkedIds((prev) =>
-                                  e.target.checked ? [...prev, r.id] : prev.filter((x) => x !== r.id),
-                                );
-                              }}
-                            />
-                            <div className="flex-1 text-xs">
-                              <div className="font-medium">{r.description}</div>
-                              <div className="text-muted-foreground flex gap-2">
-                                <span>{formatCurrency(r.amount)}</span>
-                                <span>· {r.expenseDate}</span>
-                                {linkedElsewhere && <span className="text-amber-600">· مربوط بطلب آخر</span>}
-                              </div>
-                            </div>
-                          </label>
-                        );
-                      })
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    المجموع الجديد: <strong>{formatCurrency(projReimbs.filter((r) => editLinkedIds.includes(r.id)).reduce((s, r) => s + r.amount, 0))}</strong>
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditLinksId(null)}>إلغاء</Button>
-            <Button onClick={handleSaveEditLinks}>حفظ</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-
-      {/* Reject reason dialog */}
-      <Dialog open={!!rejectId} onOpenChange={(o) => { if (!o) { setRejectId(null); setRejectReason(''); } }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>سبب الرفض</DialogTitle></DialogHeader>
-          <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={4} placeholder="اكتب سبباً واضحاً..." />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectId(null)}>إلغاء</Button>
-            <Button variant="destructive" onClick={handleReject}>رفض</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Settlement creation dialog */}
-      <Dialog open={settleOpen} onOpenChange={setSettleOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>إنشاء مخالصة نهائية — {sResource?.name}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>الفترة من</Label>
-                <Input type="date" value={sFrom} onChange={(e) => setSFrom(e.target.value)} />
-              </div>
-              <div>
-                <Label>الفترة إلى</Label>
-                <Input type="date" value={sTo} onChange={(e) => setSTo(e.target.value)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3 p-3 bg-muted/30 rounded text-sm">
-              <div><div className="text-muted-foreground">المستحق</div><div className="font-bold">{formatCurrency(sTotals.totalOwed)}</div></div>
-              <div><div className="text-muted-foreground">المدفوع</div><div className="font-bold text-emerald-600">{formatCurrency(sTotals.totalPaid)}</div></div>
-              <div><div className="text-muted-foreground">الرصيد</div><div className="font-bold text-amber-600">{formatCurrency(sTotals.balance)}</div></div>
-            </div>
-            <div>
-              <Label>نص المخالصة</Label>
-              <Textarea value={sText} onChange={(e) => setSText(e.target.value)} rows={10} className="font-sans" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSettleOpen(false)}>إلغاء</Button>
-            <Button onClick={handleCreateSettlement}>إنشاء كمسودة</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SettlementDraftDialog
+        key={settlementDraft.session}
+        resource={settlementResource}
+        projectId={projectId}
+        companyName={companyName}
+        projectName={projectName}
+        projReimbs={projReimbs}
+        projReqs={projReqs}
+        onClose={settlementDraft.close}
+      />
 
       <SettleAdvanceDialog
-        key={settleSession}
+        key={settleAdvance.session}
         advance={settlingAdvance}
-        onClose={() => setSettleAdvanceId(null)}
+        onClose={settleAdvance.close}
         isAdmin={isAdmin}
         canEdit={canEdit}
         projResources={projResources}
