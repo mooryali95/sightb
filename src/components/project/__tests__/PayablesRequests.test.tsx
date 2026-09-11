@@ -78,11 +78,12 @@ const fundedFund: ProjectFund = {
   projectId: PROJECT_ID,
   fundNumber: 1,
   amount: 10000,
-  requestedBy: 'user-1',
+  transferDate: '2026-02-01',
   status: 'transferred',
+  createdBy: 'user-1',
   createdAt: '2026-02-01T00:00:00Z',
   updatedAt: '2026-02-01T00:00:00Z',
-} as ProjectFund;
+};
 
 function seedStore(over: Partial<AppState> = {}) {
   const noop = vi.fn().mockResolvedValue(undefined);

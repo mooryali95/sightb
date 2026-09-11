@@ -47,7 +47,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -207,7 +207,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
   const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
   const [payMethod, setPayMethod] = useState<PaymentMethod>('bank_transfer');
   const [payRef, setPayRef] = useState('');
-  const [paySource, setPaySource] = useState<'fund' | 'custody' | 'none'>('fund');
+  const [paySource, setPaySource] = useState<'fund' | 'custody'>('fund');
   const [paySourceFundId, setPaySourceFundId] = useState<string>('');
   const [paySourceCustodyId, setPaySourceCustodyId] = useState<string>('');
 
@@ -266,17 +266,20 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
       setPaySource('custody');
       setPaySourceCustodyId(availableCustodies[0].custody.id);
     } else {
-      setPaySource('none');
+      // Nothing to draw from. Leave the fund radio selected with no fund
+      // chosen, which keeps the confirm control disabled until a source exists.
+      setPaySource('fund');
+      setPaySourceFundId('');
+      setPaySourceCustodyId('');
     }
   };
 
   const handlePay = async () => {
     if (!payDialogId || !payingReq) return;
-    // XOR Guard: مصدر الدفع واحد فقط (دفعة أو عهدة)، ليس الاثنين وليس صفر
-    if (paySource !== 'fund' && paySource !== 'custody') {
-      toast.error('اختر مصدر الدفع: دفعة أو عهدة.');
-      return;
-    }
+    // Exactly one source: a fund or a custody. The database accepts a payment
+    // with neither, but an expense that belongs to no fund and no custody
+    // leaves cash integrity with nothing to reconcile it against — so the
+    // dialog never offers it.
     // Balance check
     if (paySource === 'fund') {
       if (!paySourceFundId) { toast.error('اختر الدفعة المصدر'); return; }
@@ -891,113 +894,9 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           <div className="flex justify-between items-center">
             <h3 className="text-base font-semibold">طلبات صرف الدفعات</h3>
             {canEdit && projResources.length > 0 && (
-              <Dialog open={reqOpen} onOpenChange={(o) => { setReqOpen(o); if (!o) resetReq(); }}>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="default"><Send className="h-4 w-4 ml-1" /> طلب صرف جديد</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>طلب صرف دفعة جديدة</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>المورد *</Label>
-                        <Select value={pResourceId} onValueChange={(v) => { setPResourceId(v); setPSelectedReimbs([]); }}>
-                          <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
-                          <SelectContent>
-                            {projResources.map((r) => (
-                              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>نوع الطلب *</Label>
-                        <Select value={pType} onValueChange={(v) => setPType(v as PaymentRequestType)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(PAYMENT_REQUEST_TYPE_LABELS).map(([k, v]) => (
-                              <SelectItem key={k} value={k}>{v}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {pType === 'reimbursement' && pResourceId && (
-                      <div className="border rounded p-3 bg-muted/20">
-                        <div className="text-sm font-medium mb-2">اختر الاستردادات المعتمدة لهذا المورد:</div>
-                        {eligibleReimbs.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">لا توجد استردادات معتمدة غير مدفوعة لهذا المورد.</p>
-                        ) : eligibleReimbs.map((r) => (
-                          <label key={r.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
-                            <input type="checkbox"
-                              checked={pSelectedReimbs.includes(r.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) setPSelectedReimbs([...pSelectedReimbs, r.id]);
-                                else setPSelectedReimbs(pSelectedReimbs.filter((x) => x !== r.id));
-                              }} />
-                            <span className="flex-1">{r.expenseDate} — {r.description}</span>
-                            <span className="font-medium">{formatCurrency(r.amount)}</span>
-                          </label>
-                        ))}
-                        <div className="text-sm font-bold mt-2 pt-2 border-t">
-                          المجموع: {formatCurrency(computedAmount)}
-                        </div>
-                      </div>
-                    )}
-
-                    {pType !== 'reimbursement' && (
-                      <div>
-                        <Label>المبلغ *</Label>
-                        <Input type="number" inputMode="decimal" value={pAmount} onChange={(e) => setPAmount(e.target.value)} />
-                      </div>
-                    )}
-
-                    <div>
-                      <Label>وصف الطلب *</Label>
-                      <Input value={pDescription} onChange={(e) => setPDescription(e.target.value)} placeholder="استرداد مصاريف لابتوب" />
-                    </div>
-                    <div>
-                      <Label>المبرر</Label>
-                      <Textarea value={pJustification} onChange={(e) => setPJustification(e.target.value)} rows={2} />
-                    </div>
-                    <div>
-                      <Label>الأولوية</Label>
-                      <Select value={pPriority} onValueChange={(v) => setPPriority(v as PaymentPriority)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(PAYMENT_PRIORITY_LABELS).map(([k, v]) => (
-                            <SelectItem key={k} value={k}>{v}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>بند الموازنة المرتبط (اختياري)</Label>
-                      <Select value={pBudgetItemId || 'none'} onValueChange={(v) => setPBudgetItemId(v === 'none' ? '' : v)}>
-                        <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">— بدون ربط —</SelectItem>
-                          {projBudgetItems.map((b: any) => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {EXPENSE_CATEGORY_LABELS[b.category as ExpenseCategory] || b.category} — {b.description} ({formatCurrency(b.plannedAmount)})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        ربط الطلب ببند موازنة يضمن ظهوره في تحليل الانحراف وتقارير CPI.
-                      </p>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setReqOpen(false)}>إلغاء</Button>
-                    <Button onClick={handleCreateReq}>إنشاء وإرسال للاعتماد</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button size="sm" variant="default" onClick={() => setReqOpen(true)}>
+                <Send className="h-4 w-4 ml-1" /> طلب صرف جديد
+              </Button>
             )}
           </div>
 
@@ -1171,6 +1070,117 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         </TabsContent>
       </Tabs>
 
+      {/* New payment request dialog. Mounted at section level, not inside the
+          requests tab panel: Radix unmounts an inactive panel, and the
+          "دفع المستحقات" button on the balances card above opens this dialog
+          from whichever tab is active. */}
+      {canEdit && (
+        <Dialog open={reqOpen} onOpenChange={(o) => { setReqOpen(o); if (!o) resetReq(); }}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>طلب صرف دفعة جديدة</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>المورد *</Label>
+                  <Select value={pResourceId} onValueChange={(v) => { setPResourceId(v); setPSelectedReimbs([]); }}>
+                    <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
+                    <SelectContent>
+                      {projResources.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>نوع الطلب *</Label>
+                  <Select value={pType} onValueChange={(v) => setPType(v as PaymentRequestType)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PAYMENT_REQUEST_TYPE_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {pType === 'reimbursement' && pResourceId && (
+                <div className="border rounded p-3 bg-muted/20">
+                  <div className="text-sm font-medium mb-2">اختر الاستردادات المعتمدة لهذا المورد:</div>
+                  {eligibleReimbs.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">لا توجد استردادات معتمدة غير مدفوعة لهذا المورد.</p>
+                  ) : eligibleReimbs.map((r) => (
+                    <label key={r.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
+                      <input type="checkbox"
+                        checked={pSelectedReimbs.includes(r.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setPSelectedReimbs([...pSelectedReimbs, r.id]);
+                          else setPSelectedReimbs(pSelectedReimbs.filter((x) => x !== r.id));
+                        }} />
+                      <span className="flex-1">{r.expenseDate} — {r.description}</span>
+                      <span className="font-medium">{formatCurrency(r.amount)}</span>
+                    </label>
+                  ))}
+                  <div className="text-sm font-bold mt-2 pt-2 border-t">
+                    المجموع: {formatCurrency(computedAmount)}
+                  </div>
+                </div>
+              )}
+
+              {pType !== 'reimbursement' && (
+                <div>
+                  <Label>المبلغ *</Label>
+                  <Input type="number" inputMode="decimal" value={pAmount} onChange={(e) => setPAmount(e.target.value)} />
+                </div>
+              )}
+
+              <div>
+                <Label>وصف الطلب *</Label>
+                <Input value={pDescription} onChange={(e) => setPDescription(e.target.value)} placeholder="استرداد مصاريف لابتوب" />
+              </div>
+              <div>
+                <Label>المبرر</Label>
+                <Textarea value={pJustification} onChange={(e) => setPJustification(e.target.value)} rows={2} />
+              </div>
+              <div>
+                <Label>الأولوية</Label>
+                <Select value={pPriority} onValueChange={(v) => setPPriority(v as PaymentPriority)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PAYMENT_PRIORITY_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>بند الموازنة المرتبط (اختياري)</Label>
+                <Select value={pBudgetItemId || 'none'} onValueChange={(v) => setPBudgetItemId(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— بدون ربط —</SelectItem>
+                    {projBudgetItems.map((b: any) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {EXPENSE_CATEGORY_LABELS[b.category as ExpenseCategory] || b.category} — {b.description} ({formatCurrency(b.plannedAmount)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ربط الطلب ببند موازنة يضمن ظهوره في تحليل الانحراف وتقارير CPI.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReqOpen(false)}>إلغاء</Button>
+              <Button onClick={handleCreateReq}>إنشاء وإرسال للاعتماد</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Payment confirmation dialog */}
       <Dialog open={!!payDialogId} onOpenChange={(o) => { if (!o) setPayDialogId(null); }}>
         <DialogContent>
@@ -1203,7 +1213,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                   المبلغ المطلوب: <strong className="text-foreground">{formatCurrency(payingReq.amount)}</strong>
                 </p>
               )}
-              <RadioGroup value={paySource} onValueChange={(v) => setPaySource(v as any)} className="space-y-2">
+              <RadioGroup value={paySource} onValueChange={(v) => setPaySource(v as 'fund' | 'custody')} className="space-y-2">
                 <div className="flex items-start gap-2">
                   <RadioGroupItem value="fund" id="src-fund" disabled={availableFunds.length === 0} className="mt-1" />
                   <div className="flex-1">
@@ -1244,16 +1254,10 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                     )}
                   </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <RadioGroupItem value="none" id="src-none" className="mt-1" />
-                  <Label htmlFor="src-none" className="cursor-pointer">
-                    خارج النظام (دفع مباشر بدون خصم من دفعة/عهدة)
-                  </Label>
-                </div>
               </RadioGroup>
-              {availableFunds.length === 0 && availableCustodies.length === 0 && paySource !== 'none' && (
+              {availableFunds.length === 0 && availableCustodies.length === 0 && (
                 <p className="text-xs text-destructive">
-                  لا يوجد مصدر سيولة كافٍ. حرّر سلفة قائمة، أو سجّل دفعة جديدة، أو اختر "خارج النظام".
+                  لا يوجد مصدر سيولة كافٍ. حرّر سلفة قائمة أو سجّل دفعة جديدة.
                 </p>
               )}
             </div>
@@ -1264,7 +1268,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPayDialogId(null)}>إلغاء</Button>
-            <Button onClick={handlePay} disabled={paySource === 'fund' ? !paySourceFundId : paySource === 'custody' ? !paySourceCustodyId : false}>تأكيد الدفع</Button>
+            <Button onClick={handlePay} disabled={paySource === 'fund' ? !paySourceFundId : !paySourceCustodyId}>تأكيد الدفع</Button>
           </DialogFooter>
 
         </DialogContent>
