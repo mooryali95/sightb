@@ -124,7 +124,18 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     if (project && project.status !== 'archived') {
       throw new Error('يجب أرشفة المشروع قبل حذفه نهائياً');
     }
-    const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies', 'commitments'] as const;
+    // `project_funds` sits last on purpose, and it is here at all because
+    // nothing else removes it: unlike every other table below, its `project_id`
+    // carries no foreign key to `projects`, so deleting the project cascades
+    // nothing. The local state at the bottom of this function has always
+    // cleared the funds and their settlements, which made the client and the
+    // database disagree — the rows looked gone and were not.
+    //
+    // Order matters for two of these. `custodies` must go before the funds
+    // because `cash_transfers.to_custody_id` cascades from it, which is what
+    // clears the transfers; and `fund_settlements` needs no entry of its own,
+    // cascading from `project_funds(id)`.
+    const tables = ['risks', 'change_orders', 'milestones', 'revenues', 'expenses', 'budget_items', 'resources', 'custodies', 'commitments', 'project_funds'] as const;
     for (const table of tables) {
       await db.from(table).delete().eq('project_id', id);
     }
