@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { errorMessage } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import {
   RESOURCE_SETTLEMENT_STATUS_COLORS,
@@ -67,7 +68,7 @@ export function SettlementsTab({ projSettles, projResources, isAdmin }: Props) {
                   <Button size="sm"
                     onClick={async () => {
                       try { await signResourceSettlement(s.id); toast.success('تم توقيع المخالصة'); }
-                      catch (e: any) { toast.error(e.message); }
+                      catch (e) { toast.error(errorMessage(e)); }
                     }}>
                     توقيع وإقفال المخالصة
                   </Button>

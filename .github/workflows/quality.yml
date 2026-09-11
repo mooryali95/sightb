@@ -52,7 +52,13 @@ jobs:
           #   introduced (cash_transfer_repairs, cash_transfers) and the test
           #   fixtures, which also surfaced a dead `userId` field and two casts
           #   that were never needed.
-          ERROR_BUDGET=336
+          #   336 → 301 (11 Sep): the payables section and everything under
+          #   components/project/payables/ are now `any`-free. Twenty-four
+          #   `catch (e: any)` blocks read `.message` off an unknown throw and
+          #   showed an empty toast when it was not an Error; they go through
+          #   lib/utils errorMessage() now. The rest were `(x: any) =>` filter
+          #   annotations on lists whose element type the store already knew.
+          ERROR_BUDGET=301
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.
