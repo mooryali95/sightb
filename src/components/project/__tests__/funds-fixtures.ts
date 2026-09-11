@@ -31,7 +31,7 @@ export function expense(over: Partial<Expense> = {}): Expense {
   return {
     id: 'exp',
     projectId: PROJECT_ID,
-    category: 'materials',
+    category: 'consulting',
     description: 'مواد',
     amount: 0,
     date: '2026-02-10',
@@ -62,6 +62,7 @@ export function settlement(over: Partial<FundSettlement> = {}): FundSettlement {
     status: 'draft',
     attachments: [],
     createdAt: '2026-02-02T00:00:00Z',
+    updatedAt: '2026-02-02T00:00:00Z',
     ...over,
   };
 }
