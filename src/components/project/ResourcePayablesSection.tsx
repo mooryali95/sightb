@@ -600,7 +600,9 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     if (saType === 'compound') {
       thisOp = (parseFloat(saRefundAmount) || 0) + (parseFloat(saDocAmount) || 0);
     } else if (saType === 'cash_refund' || saType === 'documented') {
-      thisOp = parseFloat(saAmount) || 0;
+      // A blank field means the whole remainder — that is what the
+      // placeholder shows, and the wire below sends this same number.
+      thisOp = saAmount.trim() === '' ? outstanding : (parseFloat(saAmount) || 0);
     } else {
       thisOp = outstanding;
     }
@@ -624,7 +626,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         if (!saOverflowSource) { toast.error('اختر مصدر تغطية الجزء الفائض'); return; }
         const [kind, srcId] = saOverflowSource.split(':');
         await settleAdvanceWithSplit(settleAdvanceId, {
-          invoiceAmount: parseFloat(saAmount),
+          invoiceAmount: settlementMath.thisOp,
           overflowSource: kind === 'fund' ? { fundId: srcId } : { custodyId: srcId },
           expenseCategory: saCategory,
           notes: saNotes,
@@ -652,7 +654,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         await settleAdvance(settleAdvanceId, {
           type: saType,
           notes: saNotes,
-          settledAmount: parseFloat(saAmount) || settlingAdvance.amount,
+          settledAmount: settlementMath.thisOp,
           expenseCategory: saCategory,
         });
         toast.success('تمت تسوية السلفة');
