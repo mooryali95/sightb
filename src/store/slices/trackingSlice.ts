@@ -128,6 +128,20 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   },
 
   updateChangeOrder: async (id, co) => {
+    // Applying budget items is a transition *into* `approved`, not a property
+    // of being approved — so the previous status has to be read before the
+    // merge below overwrites it.
+    //
+    // The edit dialog loads an order with its status and items intact and
+    // resends both on every save, so without this an ordinary typo fix on an
+    // approved order appended all of its items to the budget a second time and
+    // cut another baseline on top. Nothing downstream caught it: there is no
+    // unique constraint on budget_items and no applied-marker on change_orders.
+    const before = get().changeOrders.find((c) => c.id === id);
+    const wasApproved = before?.status === 'approved';
+    const itemsChanged = co.budgetItems !== undefined
+      && JSON.stringify(co.budgetItems) !== JSON.stringify(before?.budgetItems ?? []);
+
     const updates: Record<string, unknown> = {};
     if (co.description !== undefined) updates.description = co.description;
     if (co.changeType !== undefined) updates.change_type = co.changeType;
@@ -142,11 +156,20 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     const { error } = await db.from('change_orders').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ changeOrders: s.changeOrders.map((x) => (x.id === id ? { ...x, ...co } : x)) }));
-    if (co.status === 'approved') {
+    if (co.status === 'approved' && !wasApproved) {
       const changeOrder = get().changeOrders.find(c => c.id === id);
       if (changeOrder && (changeOrder.budgetItems || []).length > 0) {
         await get().applyApprovedChangeOrder(changeOrder.projectId, changeOrder);
       }
+    } else if (co.status === 'approved' && wasApproved && itemsChanged) {
+      // The items moved on an order whose items were already applied. Re-running
+      // would duplicate the originals, and doing nothing quietly would lose the
+      // new ones — so neither is chosen silently.
+      const { toast } = await import('sonner');
+      toast.warning(
+        'لم تُطبَّق بنود أمر التغيير مجدداً — البنود السابقة مضافة بالفعل إلى الموازنة. '
+        + 'أضف أي بند جديد يدوياً من تبويب الموازنة.',
+      );
     }
   },
 
