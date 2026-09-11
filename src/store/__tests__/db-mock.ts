@@ -23,6 +23,12 @@ export interface DbCall {
   op: 'select' | 'insert' | 'update' | 'delete';
   payload?: unknown;
   filters: Array<[string, unknown]>;
+  /**
+   * The second argument to `db.from`. Recorded rather than ignored because
+   * `{ offline: true }` is what decides whether a write is queued when the
+   * device has no network — a behaviour no assertion could reach otherwise.
+   */
+  options?: Record<string, unknown>;
 }
 
 export type DbResponder = (call: DbCall) => { data?: unknown; error?: unknown };
@@ -52,20 +58,20 @@ export function makeDbMock() {
   }
 
   const db = {
-    from: vi.fn((table: string) => {
-      const base: DbCall = { table, op: 'select', filters: [] };
+    from: vi.fn((table: string, options?: Record<string, unknown>) => {
+      const base: DbCall = { table, op: 'select', filters: [], options };
       return {
         select: (..._a: unknown[]) => { calls.push(base); return chain(base); },
         insert: (payload: unknown) => {
-          const c: DbCall = { table, op: 'insert', payload, filters: [] };
+          const c: DbCall = { table, op: 'insert', payload, filters: [], options };
           calls.push(c); return chain(c);
         },
         update: (payload: unknown) => {
-          const c: DbCall = { table, op: 'update', payload, filters: [] };
+          const c: DbCall = { table, op: 'update', payload, filters: [], options };
           calls.push(c); return chain(c);
         },
         delete: () => {
-          const c: DbCall = { table, op: 'delete', filters: [] };
+          const c: DbCall = { table, op: 'delete', filters: [], options };
           calls.push(c); return chain(c);
         },
       };
