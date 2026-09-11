@@ -146,6 +146,15 @@ describe('request actions follow status and role', () => {
   });
 
   it('wires approve to the row it sits in', () => {
+    // A different request goes first on purpose. With the submitted request
+    // at index 0, a handler wired to `projReqs[0]` instead of its own row
+    // passed this test — which is exactly the mistake it exists to catch.
+    seedStore({
+      paymentRequests: [
+        paymentRequest({ id: 'first', status: 'draft', description: 'طلب أول' }),
+        ...paymentRequests,
+      ],
+    });
     renderSection();
     openTab(/طلبات الصرف/);
 
