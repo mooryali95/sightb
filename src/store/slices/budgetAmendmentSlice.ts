@@ -5,6 +5,7 @@ import {
   BudgetAmendmentSnapshotItem,
   BudgetItem,
 } from '@/types/project';
+import { getTotalPlanned } from '@/lib/finance';
 import { getUserId } from '../helpers';
 import type { AppState } from '../useStore';
 
@@ -34,13 +35,24 @@ function snapshotFromBudgetItems(items: BudgetItem[]): BudgetAmendmentSnapshotIt
   }));
 }
 
+/**
+ * The total of a snapshot, through the same function the rest of the app uses.
+ *
+ * This used to carry its own copy of the recurring-months arithmetic, and the
+ * copy disagreed with `getTotalPlanned` on one shape: a recurring item with an
+ * `endMonth` and no `startMonth`. `getTotalPlanned` reads the missing start as
+ * month 1 and counts the span; this counted the amount once. For a 2,000/month
+ * line ending in month 6 that is 12,000 against 2,000 — the same budget
+ * reporting two different totals depending on which screen asked.
+ *
+ * No UI produces that shape today: the budget form derives `endMonth` from
+ * `startMonth`, and the change-order form never binds its month inputs at all.
+ * But nothing prevents it either — not the type, not the database, and not the
+ * change-order payload, which already passes the two months independently. One
+ * function is cheaper than a rule that everyone has to keep remembering.
+ */
 function totalOfSnapshot(items: BudgetAmendmentSnapshotItem[]): number {
-  return items.reduce((s, it) => {
-    if (it.costType === 'recurring' && it.startMonth && it.endMonth && it.endMonth >= it.startMonth) {
-      return s + it.plannedAmount * (it.endMonth - it.startMonth + 1);
-    }
-    return s + it.plannedAmount;
-  }, 0);
+  return getTotalPlanned(items);
 }
 
 function mapAmendment(d: any): BudgetAmendment {
