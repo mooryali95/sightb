@@ -1,12 +1,17 @@
 /**
- * The seventh layer: change orders.
+ * Change orders and custodies — the two money-shaped parts of this slice.
  *
  * A change order is the one mechanism that edits an approved budget after the
- * fact, so it carries more money risk per line than anything else in this
- * slice. Approving one with budget items appends those items to the project
- * and — unless explicitly disabled — cuts a new baseline version.
+ * fact, so it carries more money risk per line than anything else here.
+ * Approving one with budget items appends those items to the project and —
+ * unless explicitly disabled — cuts a new baseline version. The first half of
+ * this file is about when that application runs, and when it must not.
  *
- * The tests below are about when that application runs, and when it must not.
+ * A custody is cash in a named person's hands. Its `spent` and `remaining` are
+ * not stored: they are derived from the expense list every time the row is
+ * mapped, so the balance shown for one is only ever as right as that
+ * derivation. The second half is about that, and about the database guard that
+ * refuses a custody larger than the fund behind it.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useStore } from '@/store/useStore';
@@ -77,6 +82,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   useStore.setState({
     changeOrders: [], budgetItems: [], baselines: [],
+    custodies: [], expenses: [],
     addBudgetItem, createBaseline,
   } as never);
 });
@@ -254,5 +260,155 @@ describe('approval applies on the transition, not on every save', () => {
 
     expect(addBudgetItem).not.toHaveBeenCalled();
     expect(vi.mocked(toast.warning)).not.toHaveBeenCalled();
+  });
+});
+
+function custodyRow(over: Record<string, unknown> = {}) {
+  return {
+    id: 'cust-1', project_id: PROJECT, resource_name: 'سالم',
+    amount: 10000, status: 'active', received_date: '2026-01-01',
+    source_fund_id: 'fund-1', created_at: '2026-01-01T00:00:00.000Z',
+    ...over,
+  };
+}
+
+function expense(over: Record<string, unknown> = {}) {
+  return { id: 'exp-1', projectId: PROJECT, amount: 2500, custodyId: 'cust-1', ...over } as never;
+}
+
+describe('a custody balance is derived, never stored', () => {
+  it('counts the expenses already booked against it', async () => {
+    useStore.setState({
+      expenses: [expense({ id: 'e1', amount: 2500 }), expense({ id: 'e2', amount: 1500 })],
+    } as never);
+    mock.on('custodies', 'insert', () => ({ data: custodyRow({ amount: 10000 }) }));
+
+    await store().addCustody({ projectId: PROJECT, resourceName: 'سالم', amount: 10000 } as never);
+
+    const c = store().custodies[0];
+    expect(c.spent).toBe(4000);
+    expect(c.remaining).toBe(6000);
+  });
+
+  /**
+   * Two people can hold custody on the same project at once. Summing the
+   * project's expenses instead of this custody's would charge each of them for
+   * the other's spending and show both short.
+   */
+  it('counts only its own expenses, not the project\'s', async () => {
+    useStore.setState({
+      expenses: [
+        expense({ id: 'mine', amount: 2500, custodyId: 'cust-1' }),
+        expense({ id: 'theirs', amount: 9000, custodyId: 'cust-2' }),
+        expense({ id: 'unattached', amount: 7000, custodyId: undefined }),
+      ],
+    } as never);
+    mock.on('custodies', 'insert', () => ({ data: custodyRow({ amount: 10000 }) }));
+
+    await store().addCustody({ projectId: PROJECT, resourceName: 'سالم', amount: 10000 } as never);
+
+    expect(store().custodies[0].spent).toBe(2500);
+    expect(store().custodies[0].remaining).toBe(7500);
+  });
+
+  it('opens a custody with nothing spent when no expenses point at it', async () => {
+    mock.on('custodies', 'insert', () => ({ data: custodyRow() }));
+
+    await store().addCustody({ projectId: PROJECT, resourceName: 'سالم', amount: 10000 } as never);
+
+    expect(store().custodies[0]).toMatchObject({ spent: 0, remaining: 10000, status: 'active' });
+  });
+});
+
+describe('the over-limit refusal comes from the database and must reach the user', () => {
+  /**
+   * A custody larger than the fund behind it is refused by a database trigger,
+   * and that trigger's message is the only thing saying by how much. Replacing
+   * it with a generic failure leaves the user guessing at a number the system
+   * already knows.
+   */
+  it('surfaces the trigger message verbatim', async () => {
+    mock.on('custodies', 'insert', () => ({
+      error: { message: 'مبلغ العهدة يتجاوز رصيد الدفعة المتاح (7,500.00 ر.س)' },
+    }));
+
+    await expect(store().addCustody({
+      projectId: PROJECT, resourceName: 'سالم', amount: 10000,
+    } as never)).rejects.toThrow('مبلغ العهدة يتجاوز رصيد الدفعة المتاح (7,500.00 ر.س)');
+
+    expect(store().custodies).toHaveLength(0);
+  });
+
+  it('still throws on an unrelated database error', async () => {
+    mock.on('custodies', 'insert', () => ({ error: { message: 'connection reset' } }));
+
+    await expect(store().addCustody({
+      projectId: PROJECT, resourceName: 'سالم', amount: 10000,
+    } as never)).rejects.toBeDefined();
+
+    expect(store().custodies).toHaveLength(0);
+  });
+});
+
+/**
+ * `sourceFundId` is three-valued on the way in and two-valued in the store:
+ * a value sets it, `null` means "clear it", and absent means "leave it alone".
+ * The Custody type spells "cleared" as absent, so the three have to collapse to
+ * two without the absent case being mistaken for a clear.
+ */
+describe('clearing a custody\'s source fund is distinct from not touching it', () => {
+  beforeEach(() => {
+    useStore.setState({
+      custodies: [{
+        id: 'cust-1', projectId: PROJECT, resourceName: 'سالم', amount: 10000,
+        spent: 2500, remaining: 7500, status: 'active', sourceFundId: 'fund-1',
+      }],
+    } as never);
+  });
+
+  it('clears it when the patch says null, on the wire and in the store', async () => {
+    await store().updateCustody('cust-1', { sourceFundId: null });
+
+    expect(mock.find('custodies', 'update')?.payload).toMatchObject({ source_fund_id: null });
+    expect(store().custodies[0].sourceFundId).toBeUndefined();
+  });
+
+  it('leaves it alone when the patch does not mention it', async () => {
+    await store().updateCustody('cust-1', { notes: 'ملاحظة' });
+
+    expect(mock.find('custodies', 'update')?.payload).not.toHaveProperty('source_fund_id');
+    expect(store().custodies[0].sourceFundId).toBe('fund-1');
+  });
+
+  it('moves it when the patch names another fund', async () => {
+    await store().updateCustody('cust-1', { sourceFundId: 'fund-2' });
+
+    expect(mock.find('custodies', 'update')?.payload).toMatchObject({ source_fund_id: 'fund-2' });
+    expect(store().custodies[0].sourceFundId).toBe('fund-2');
+  });
+
+  /**
+   * An update patches fields; it does not re-derive. Zeroing the balance here
+   * would make a closing edit look like an unspent custody.
+   */
+  it('keeps the derived balance while patching other fields', async () => {
+    await store().updateCustody('cust-1', { status: 'closed', closedDate: '2026-03-01' });
+
+    expect(store().custodies[0]).toMatchObject({
+      status: 'closed', spent: 2500, remaining: 7500,
+    });
+  });
+
+  it('removes only the custody asked for', async () => {
+    useStore.setState({
+      custodies: [
+        { id: 'cust-1', resourceName: 'سالم' },
+        { id: 'cust-2', resourceName: 'خالد' },
+      ],
+    } as never);
+
+    await store().deleteCustody('cust-1');
+
+    expect(store().custodies.map((c) => c.id)).toEqual(['cust-2']);
   });
 });

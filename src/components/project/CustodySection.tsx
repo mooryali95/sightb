@@ -495,7 +495,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                                   }
 
                                   try {
-                                    await updateCustody(c.id, { sourceFundId: fid } as any);
+                                    await updateCustody(c.id, { sourceFundId: fid });
                                     toast.success(`تم ربط العهدة بالدفعة #${f.fundNumber}`);
                                   } catch (e: any) {
                                     toast.error(e.message || 'تعذّر الربط');
