@@ -24,6 +24,8 @@ export function getTotalPlanned(
 export function getExpensesByCategory(expenses: Expense[]) {
   const map: Record<string, number> = {};
   expenses.forEach((e) => {
+    // The same rows getProjectSummary counts as spend.
+    if (e.approvalStatus === 'rejected' || e.isOutstandingAdvance) return;
     map[e.category] = (map[e.category] || 0) + e.amount;
   });
   return map;

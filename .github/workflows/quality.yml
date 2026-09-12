@@ -90,7 +90,9 @@ jobs:
           #   210 → 153 (12 Sep): the tab badges, the three dashboard cards and
           #   the summary library read typed fields; their `any[]` props and
           #   `(x as any).field` reads were all on fields the types carry.
-          ERROR_BUDGET=153
+          #   153 → 149 (12 Sep): useProjectDetailData reads the store typed and
+          #   takes a BudgetItem where it took `any`.
+          ERROR_BUDGET=149
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.
