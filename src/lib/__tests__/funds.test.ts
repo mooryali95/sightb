@@ -13,7 +13,7 @@ import {
   auditFundFinancialLinks,
 } from '../funds';
 import { generateFundAlerts, canCreateNewFund } from '../fund-alerts';
-import type { ProjectFund, FundSettlement, Expense } from '@/types/project';
+import type { ProjectFund, FundSettlement, Expense, PaymentRequest, Custody, CashTransfer } from '@/types/project';
 
 const PID = 'project-1';
 
@@ -42,6 +42,22 @@ const makeExpense = (overrides: Partial<Expense> = {}): Expense => ({
   isVatExempt: false,
   ...overrides,
 });
+
+const makeRequest = (overrides: Partial<PaymentRequest> = {}): PaymentRequest => ({
+  id: 'pr1', projectId: PID, resourceId: 'r1', requestType: 'advance', amount: 0, currency: 'SAR',
+  description: '', linkedReimbursementIds: [], priority: 'normal', status: 'paid', requestedBy: 'u1',
+  paymentAttachments: [], refundedAmount: 0, createdAt: '', updatedAt: '', ...overrides,
+});
+
+const makeCustody = (overrides: Partial<Custody> = {}): Custody => ({
+  id: 'c1', projectId: PID, resourceName: 'X', amount: 0, spent: 0, remaining: 0,
+  status: 'active', receivedDate: '2026-01-02', createdAt: '2026-01-02', ...overrides,
+});
+
+const makeTransfer = (overrides: Partial<CashTransfer> = {}): CashTransfer => ({
+  id: 't1', projectId: PID, fromFundId: 'f1', toCustodyId: 'c1', amount: 0, transferDate: '2026-01-03', createdAt: '2026-01-03', ...overrides,
+});
+
 
 const makeSettlement = (overrides: Partial<FundSettlement> = {}): FundSettlement => ({
   id: 's1',
@@ -111,7 +127,7 @@ describe('getActiveFund', () => {
   });
 
   it('returns null when no transferred or acknowledged fund exists', () => {
-    const funds = [makeFund({ status: 'settled' as any })];
+    const funds = [makeFund({ status: 'settled' })];
     expect(getActiveFund(PID, funds)).toBeNull();
   });
 
@@ -276,16 +292,7 @@ describe('settlement spent includes advances and cash transfers', () => {
     const fund = makeFund({ id: 'f1', amount: 67000, status: 'acknowledged' });
     // 65,000 expensed directly + 2,000 outstanding advance
     const expenses = [makeExpense({ id: 'e1', amount: 65000, fundId: 'f1' })];
-    const prs: any = [{
-      id: 'pr1',
-      projectId: PID,
-      paidFromFundId: 'f1',
-      requestType: 'advance',
-      status: 'paid',
-      isAdvanceOutstanding: true,
-      amount: 2000,
-      refundedAmount: 0,
-    }];
+    const prs = [makeRequest({ id: 'pr1', paidFromFundId: 'f1', isAdvanceOutstanding: true, amount: 2000 })];
     const spent = getFundSpent('f1', expenses, [], prs, []);
     expect(spent).toBe(67000);
     expect(getFundRemaining(fund, expenses, [], prs, [])).toBe(0);
@@ -314,9 +321,9 @@ describe('getFundOpenItems & auditFundFinancialLinks', () => {
   });
 
   it('detects payment_request double-linked source', () => {
-    const prs: any[] = [
-      { id: 'pr-bad', description: 'x', amount: 100, paidFromFundId: 'f1', paidFromCustodyId: 'c1' },
-      { id: 'pr-ok', description: 'y', amount: 200, paidFromFundId: 'f1', paidFromCustodyId: null },
+    const prs = [
+      makeRequest({ id: 'pr-bad', description: 'x', amount: 100, paidFromFundId: 'f1', paidFromCustodyId: 'c1' }),
+      makeRequest({ id: 'pr-ok', description: 'y', amount: 200, paidFromFundId: 'f1', paidFromCustodyId: undefined }),
     ];
     const violations = auditFundFinancialLinks('f1', [], prs);
     expect(violations).toHaveLength(1);
@@ -327,14 +334,8 @@ describe('getFundOpenItems & auditFundFinancialLinks', () => {
 describe('Cash transfers — single source of truth', () => {
   it('cash transfer from fund drains manager cash and shows on custody side', () => {
     const fund = makeFund({ id: 'f1', amount: 5000, status: 'acknowledged' });
-    const custody: any = {
-      id: 'c1', projectId: PID, resourceName: 'X', amount: 0,
-      status: 'active', receivedDate: '2026-01-02', createdAt: '2026-01-02',
-    };
-    const transfer: any = {
-      id: 't1', projectId: PID, fromFundId: 'f1', toCustodyId: 'c1',
-      amount: 5000, transferDate: '2026-01-03', createdAt: '2026-01-03',
-    };
+    const custody = makeCustody({ amount: 0 });
+    const transfer = makeTransfer({ amount: 5000 });
     const summary = getProjectFundsSummary(PID, [fund], [], [], [custody], [], [transfer]);
     expect(summary.totalTransferred).toBe(5000);
     expect(summary.remainingInManagerHand).toBe(0);
@@ -344,14 +345,8 @@ describe('Cash transfers — single source of truth', () => {
 
   it('conservation: sum of buckets equals totalTransferred', () => {
     const fund = makeFund({ id: 'f1', amount: 10000, status: 'acknowledged' });
-    const custody: any = {
-      id: 'c1', projectId: PID, resourceName: 'X', amount: 2000,
-      sourceFundId: 'f1', status: 'active', receivedDate: '2026-01-02', createdAt: '2026-01-02',
-    };
-    const transfer: any = {
-      id: 't1', projectId: PID, fromFundId: 'f1', toCustodyId: 'c1',
-      amount: 3000, transferDate: '2026-01-03', createdAt: '2026-01-03',
-    };
+    const custody = makeCustody({ amount: 2000, sourceFundId: 'f1' });
+    const transfer = makeTransfer({ amount: 3000 });
     const directExpense = makeExpense({ id: 'e1', fundId: 'f1', amount: 1000 });
     const summary = getProjectFundsSummary(PID, [fund], [], [directExpense], [custody], [], [transfer]);
     // buckets: direct spent + custody draw + cash-in-holders + manager hand
@@ -367,8 +362,8 @@ describe('Cash transfers — single source of truth', () => {
 describe('getFundRemainingBreakdown — SSOT unification', () => {
   it('breakdown.remaining === fund.amount − Σ(direct + custodyDraw + advances + cashOut)', () => {
     const fund = makeFund({ id: 'f1', amount: 5000 });
-    const custody = { id: 'cu1', projectId: PID, resourceId: 'r1', resourceName: 'R', amount: 0, sourceFundId: 'f1', createdAt: '', status: 'active', spentAmount: 0 } as any;
-    const transfer = { id: 't1', projectId: PID, fromFundId: 'f1', toCustodyId: 'cu1', amount: 5000, transferDate: '2026-01-02', createdAt: '' } as any;
+    const custody = makeCustody({ id: 'cu1', resourceName: 'R', amount: 0, sourceFundId: 'f1' });
+    const transfer = makeTransfer({ toCustodyId: 'cu1', amount: 5000, transferDate: '2026-01-02' });
     const bd = getFundRemainingBreakdown(fund, [], [custody], [], [transfer]);
     expect(bd.direct).toBe(0);
     expect(bd.custodyDraw).toBe(0); // custody amount is 0

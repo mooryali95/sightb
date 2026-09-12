@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { BaselineItem, ChangeOrder, Expense } from '@/types/project';
 import { getTotalPlanned, calculateEVM, getEffectiveContractValue, getCurrentMonth, calcVAT, addVAT, removeVAT } from '../finance';
 
 describe('getTotalPlanned', () => {
@@ -35,28 +36,29 @@ describe('getTotalPlanned', () => {
 });
 
 describe('calculateEVM', () => {
-  const baselineItems = [
-    { id: '1', baselineId: 'b1', category: 'salary', description: 'Test', plannedAmount: 25000, costType: 'fixed' as const },
+  const baselineItems: BaselineItem[] = [
+    { id: '1', baselineId: 'b1', category: 'salary', description: 'Test', plannedAmount: 25000, costType: 'fixed' },
+  ];
+  const spend = (amount: number): Expense[] => [
+    { projectId: 'p1', amount, month: 1, category: 'salary', id: '1', description: '', date: '', approvalStatus: 'approved', isVatExempt: false },
   ];
 
   it('should compute EV independently from AC', () => {
-    const expenses = [{ projectId: 'p1', amount: 30000, month: 1, category: 'salary', id: '1', description: '', date: '', approvalStatus: 'approved' as const }];
-    const result = calculateEVM(baselineItems as any, expenses as any, 4, 1, 50, 0);
+    const result = calculateEVM(baselineItems, spend(30000), 4, 1, 50, 0);
     expect(result.ev).toBe(12500);
     expect(result.ac).toBe(30000);
     expect(result.cpi).toBeCloseTo(0.417, 2);
   });
 
   it('should subtract managementReserve from BAC', () => {
-    const expenses = [{ projectId: 'p1', amount: 10000, month: 1, category: 'salary', id: '1', description: '', date: '', approvalStatus: 'approved' as const }];
-    const withReserve = calculateEVM(baselineItems as any, expenses as any, 4, 1, 40, 5000);
-    const withoutReserve = calculateEVM(baselineItems as any, expenses as any, 4, 1, 40, 0);
+    const withReserve = calculateEVM(baselineItems, spend(10000), 4, 1, 40, 5000);
+    const withoutReserve = calculateEVM(baselineItems, spend(10000), 4, 1, 40, 0);
     expect(withReserve.bac).toBe(20000);
     expect(withoutReserve.bac).toBe(25000);
   });
 
   it('should return CPI=1 when AC=0 and EV=0', () => {
-    const result = calculateEVM(baselineItems as any, [] as any, 4, 1, 0, 0);
+    const result = calculateEVM(baselineItems, [], 4, 1, 0, 0);
     expect(result.cpi).toBe(1); // no spend, no work → no deviation
     // SPI: EV=0, PV>0 → SPI=0 (behind schedule)
     expect(result.spi).toBe(0);
@@ -65,12 +67,12 @@ describe('calculateEVM', () => {
 
 describe('getEffectiveContractValue', () => {
   it('should only include approved change orders', () => {
-    const cos = [
-      { status: 'approved', amountImpact: 20000 },
-      { status: 'rejected', amountImpact: -5000 },
-      { status: 'proposed', amountImpact: 10000 },
-    ];
-    expect(getEffectiveContractValue(250000, cos as any)).toBe(270000);
+    const co = (status: ChangeOrder['status'], amountImpact: number): ChangeOrder => ({
+      id: `${status}-${amountImpact}`, projectId: 'p1', description: '', changeType: 'other',
+      amountImpact, durationImpact: 0, status, createdAt: '',
+    });
+    const cos = [co('approved', 20000), co('rejected', -5000), co('proposed', 10000)];
+    expect(getEffectiveContractValue(250000, cos)).toBe(270000);
   });
 });
 

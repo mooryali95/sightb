@@ -95,7 +95,10 @@ jobs:
           #   149 → 133 (12 Sep): the baseline section, the smart notifications,
           #   the company management card and the amendment manager read typed
           #   fields; their catch blocks take `unknown`.
-          ERROR_BUDGET=133
+          #   133 → 104 (12 Sep): the budget slice reads its own store typed and
+          #   names the optimistic insert row once; the finance, funds and
+          #   payables-export tests build their fixtures through typed helpers.
+          ERROR_BUDGET=104
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

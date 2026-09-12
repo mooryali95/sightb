@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { buildPayablesCSV } from '@/lib/payables-export';
+import type { PaymentRequest, Resource, ResourceReimbursement, ResourceSettlement } from '@/types/project';
 
 const base = {
   projectId: 'p1',
   projectName: 'مشروع أ',
-  resources: [{ id: 'r1', projectId: 'p1', name: 'أحمد', monthlyCost: 0 } as any],
-  paymentRequests: [] as any[],
-  settlements: [] as any[],
+  resources: [{ id: 'r1', projectId: 'p1', name: 'أحمد', role: '', monthlyCost: 0, createdAt: '' }] as Resource[],
+  paymentRequests: [] as PaymentRequest[],
+  settlements: [] as ResourceSettlement[],
 };
 
-const reimb = (over: any) => ({
+const reimb = (over: Partial<ResourceReimbursement>): ResourceReimbursement => ({
   id: Math.random().toString(),
   projectId: 'p1',
   resourceId: 'r1',
@@ -17,10 +18,13 @@ const reimb = (over: any) => ({
   description: 'بند',
   amount: 100,
   expenseDate: '2026-01-01',
+  receiptAttachments: [],
   status: 'approved',
   sourceKind: 'resource',
+  createdAt: '',
+  updatedAt: '',
   ...over,
-} as any);
+});
 
 describe('buildPayablesCSV', () => {
   it('separates resource and vendor ledgers', () => {
@@ -28,7 +32,7 @@ describe('buildPayablesCSV', () => {
       ...base,
       reimbursements: [
         reimb({ amount: 300 }),
-        reimb({ sourceKind: 'vendor', resourceId: null, vendorName: 'مؤسسة ب', amount: 700 }),
+        reimb({ sourceKind: 'vendor', resourceId: undefined, vendorName: 'مؤسسة ب', amount: 700 }),
       ],
     });
     expect(csv).toContain('مستحقات الفريق (Resource)');
