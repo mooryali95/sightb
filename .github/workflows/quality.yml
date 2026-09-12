@@ -81,7 +81,10 @@ jobs:
           #   link or an invoice field goes through a typed RevenueUpdate.
           #   229 → 228 (12 Sep): getMonthlyBreakdown read the outstanding-advance
           #   flag through `as any`; the field is on the Expense type.
-          ERROR_BUDGET=228
+          #   228 → 225 (12 Sep): the mobile capture page and everything under
+          #   pages/mobile/ are `any`-free; its two catch blocks go through
+          #   errorMessage() and the expense payload needs no cast.
+          ERROR_BUDGET=225
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.
