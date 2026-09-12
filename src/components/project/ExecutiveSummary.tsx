@@ -76,9 +76,9 @@ export function ExecutiveSummary({
   // - المصروف الفعلي (AC)
   // - الملتزم وغير المصروف = max(0, totalCommitted − totalActual)
   // - المتاح = max(0, BAC − max(totalCommitted, totalActual))
-  // BAC = خط الأساس بعد أوامر التغيير المعتمدة (totalPlanned يشمل الاحتياطي الإداري)
-  const approvedCOImpact = changeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
-  const bacEffective = summary.totalPlanned + approvedCOImpact;
+  // BAC = totalPlanned كما هو: بنود أمر التغيير المعتمد تُضاف إلى الموازنة عند
+  // اعتماده فهي داخل totalPlanned أصلاً، وأثر الأمر على العقد رقم إيراد لا موازنة.
+  const bacEffective = summary.totalPlanned;
   const committedRemaining = Math.max(0, totalCommitted - summary.totalActual);
   const usedOrCommitted = Math.max(summary.totalActual, totalCommitted);
   const trulyAvailable = Math.max(0, bacEffective - usedOrCommitted);
