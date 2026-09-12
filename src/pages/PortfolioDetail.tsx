@@ -83,10 +83,10 @@ export default function PortfolioDetail() {
     try {
       await updatePortfolio(id!, {
         name: editName,
-        description: editDescription || undefined,
+        description: editDescription || null,
         targetRevenue: parseFloat(editTargetRevenue) || 0,
         targetMargin: parseFloat(editTargetMargin) || 0,
-        fiscalYear: editFiscalYear || undefined,
+        fiscalYear: editFiscalYear || null,
       });
       toast.success('تم تحديث بيانات المحفظة');
       setEditOpen(false);
