@@ -148,9 +148,10 @@ export default function Dashboard() {
   const expenseChange = prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : null;
   const revenueChange = prevRevenue > 0 ? ((collectedRevenue - prevRevenue) / prevRevenue) * 100 : null;
 
+  // The same rows as the total expenses card: visible projects, counted, in the period.
   const companyData = companies.map((c) => {
     const compProjects = filteredProjects.filter((p) => p.companyId === c.id);
-    const total = expenses.filter((e) => compProjects.some((p) => p.id === e.projectId) && isCountedExpense(e)).reduce((s, e) => s + e.amount, 0);
+    const total = filteredExpenses.filter((e) => compProjects.some((p) => p.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
     return { name: c.name, value: total };
   }).filter((d) => d.value > 0);
 
