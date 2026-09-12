@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import type { Tables } from '@/integrations/supabase/types';
 import { db } from '@/services/db';
 import { logger } from '@/lib/logger';
 import { BudgetItem, Expense, Revenue } from '@/types/project';
@@ -112,20 +113,25 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
       invoice_ref: e.invoiceRef || null,
       is_vat_exempt: e.isVatExempt ?? false,
       fund_id: e.fundId || null,
-      reimburses_payable_id: (e as any).reimbursesPayableId || null,
+      reimburses_payable_id: e.reimbursesPayableId || null,
     };
-    const res: any = await db.from('expenses', { offline: true }).insert(row).select();
+    const res = (await db.from('expenses', { offline: true }).insert(row).select()) as {
+      error?: unknown; data?: Tables<'expenses'>[] | null; queuedOffline?: boolean;
+    };
     if (res.error) throw res.error;
-    const mapped = mapExpense(res.queuedOffline ? row : (res.data?.[0] ?? row));
+    // Offline, the optimistic row stands in for the table row until replay;
+    // it lacks the server-filled columns, which mapExpense tolerates.
+    const optimistic = row as unknown as Tables<'expenses'>;
+    const mapped = mapExpense(res.queuedOffline ? optimistic : (res.data?.[0] ?? optimistic));
     set((s) => ({ expenses: [mapped, ...s.expenses] }));
     if (res.queuedOffline) return mapped.id;
     // Reload fund settlements + payables so DB-trigger-updated totals reflect in UI
     if (mapped.fundId) {
-      try { await (get() as any).loadFundsForProject?.(e.projectId); }
+      try { await get().loadFundsForProject(e.projectId); }
       catch (err) { logger.warn('store.budget', 'تعذّرت إعادة تحميل العهد بعد إضافة مصروف', { projectId: e.projectId, err: String(err) }); }
     }
     if (mapped.reimbursesPayableId) {
-      try { await (get() as any).loadResourcePayablesForProject?.(e.projectId); }
+      try { await get().loadResourcePayablesForProject(e.projectId); }
       catch (err) { logger.warn('store.budget', 'تعذّرت إعادة تحميل المستحقات بعد إضافة مصروف', { projectId: e.projectId, err: String(err) }); }
     }
     return mapped.id;
@@ -156,7 +162,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...withoutNulls(e) } : x)) }));
     const projectId = existing?.projectId;
     if (projectId && (e.fundId !== undefined || e.amount !== undefined)) {
-      try { await (get() as any).loadFundsForProject?.(projectId); }
+      try { await get().loadFundsForProject(projectId); }
       catch (err) { logger.warn('store.budget', 'تعذّرت إعادة تحميل العهد بعد تعديل مصروف', { projectId, err: String(err) }); }
     }
   },
@@ -167,7 +173,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) }));
     if (existing?.fundId && existing?.projectId) {
-      try { await (get() as any).loadFundsForProject?.(existing.projectId); }
+      try { await get().loadFundsForProject(existing.projectId); }
       catch (err) { logger.warn('store.budget', 'تعذّرت إعادة تحميل العهد بعد حذف مصروف', { projectId: existing.projectId, err: String(err) }); }
     }
   },

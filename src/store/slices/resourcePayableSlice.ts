@@ -18,6 +18,7 @@ import type {
   SettlementEventType,
 } from '@/types/project';
 import { getUserId } from '../helpers';
+import { getProjectMonth } from '@/lib/finance';
 import type { AppState } from '../useStore';
 
 export interface ResourcePayableSlice {
@@ -455,6 +456,12 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
       || input.type === 'payroll_deduction'
       || input.type === 'written_off';
 
+    // The project's month, which every monthly figure buckets by; not the
+    // calendar month of the day the settlement is recorded.
+    const project = get().projects.find((p) => p.id === cur.projectId);
+    const today = new Date();
+    const projectMonth = project ? getProjectMonth(project.startDate, today, project.durationMonths) : today.getMonth() + 1;
+
     if (needsExpense) {
       const descPrefix = input.type === 'documented' ? 'تسوية سلفة بمستندات: '
         : input.type === 'payroll_deduction' ? 'خصم سلفة من مستحقات: '
@@ -468,8 +475,8 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
         category,
         description: descPrefix + cur.description,
         amount: settledAmount,
-        date: new Date().toISOString().split('T')[0],
-        month: new Date().getMonth() + 1,
+        date: today.toISOString().split('T')[0],
+        month: projectMonth,
         approval_status: 'approved',
         approved_by: userId,
         notes: 'تسوية سلفة #' + id + ' (' + input.type + ')' + (input.notes ? ' — ' + input.notes : ''),
@@ -534,9 +541,15 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     }
     const overflow = input.invoiceAmount - outstanding;
 
+    // The project's month for the overflow expense, as for a plain settlement.
+    const project = get().projects.find((p) => p.id === cur.projectId);
+    const today = new Date();
+
     // Delegate to the advance settlement service (SSOT for the RPC).
     const result = await advanceSettlementService.splitSettle({
       paymentRequestId: id,
+      date: today.toISOString().split('T')[0],
+      month: project ? getProjectMonth(project.startDate, today, project.durationMonths) : today.getMonth() + 1,
       settleAmount: outstanding,
       overflowAmount: overflow,
       overflowSource: {
