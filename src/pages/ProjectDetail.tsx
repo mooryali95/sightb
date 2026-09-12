@@ -150,10 +150,8 @@ export default function ProjectDetail() {
             }} />
             <ExecutiveSummary
               project={project} summary={summary} milestones={pMilestones} risks={pRisks}
-              changeOrders={pChangeOrders} expenses={pExpenses} revenues={pRevenues}
-              budgetItems={pBudget} commitments={pCommitments} baselines={projectBaselines}
-              evm={evm} currentMonth={currentMonth} daysRemaining={daysRemaining}
-              totalCommitted={totalCommitted} availableBudget={availableBudget} healthScore={healthScore}
+              changeOrders={pChangeOrders} expenses={pExpenses} budgetItems={pBudget}
+              currentMonth={currentMonth} totalCommitted={totalCommitted}
             />
           </>
         );
