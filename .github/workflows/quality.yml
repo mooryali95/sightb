@@ -102,7 +102,11 @@ jobs:
           #   pages name the JSON bag they render, the offline queue reads the
           #   client through a small structural interface, the fund service uses
           #   the typed client, and the window flags and catch blocks are typed.
-          ERROR_BUDGET=74
+          #   74 → 53 (12 Sep): the payables data layer returns the generated
+          #   table rows and the slice maps them typed; the realtime mapper in
+          #   the load slice types each table's row. One `as any` remains in
+          #   resourcePayableService, disabled inline with its reason.
+          ERROR_BUDGET=53
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

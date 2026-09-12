@@ -9,26 +9,26 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
-export async function getPaymentRequestRaw(id: string): Promise<Record<string, unknown> | null> {
-  const { data, error } = await (supabase as any)
+export async function getPaymentRequestRaw(id: string): Promise<Tables<'payment_requests'> | null> {
+  const { data, error } = await supabase
     .from('payment_requests')
     .select('*')
     .eq('id', id)
     .maybeSingle();
   if (error) throw new Error(error.message || 'فشل تحميل طلب الصرف');
-  return (data ?? null) as Record<string, unknown> | null;
+  return data ?? null;
 }
 
 export async function listSettlementEventsRaw(
   paymentRequestId: string,
-): Promise<Record<string, unknown>[]> {
-  const { data, error } = await (supabase as any)
+): Promise<Tables<'settlement_events'>[]> {
+  const { data, error } = await supabase
     .from('settlement_events')
     .select('*')
     .eq('payment_request_id', paymentRequestId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message || 'فشل تحميل أحداث التسوية');
-  return (data ?? []) as Record<string, unknown>[];
+  return data ?? [];
 }
 
 export async function getExpenseRaw(id: string): Promise<Tables<'expenses'> | null> {

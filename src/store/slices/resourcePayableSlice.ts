@@ -7,6 +7,7 @@ import type {
   PaymentRequest,
   ResourceSettlement,
   ReceiptAttachment,
+  ReimbursementSourceKind,
   ReimbursementStatus,
   PaymentRequestStatus,
   PaymentRequestType,
@@ -18,7 +19,9 @@ import type {
   SettlementEventType,
 } from '@/types/project';
 import { getUserId } from '../helpers';
+import type { Tables } from '@/integrations/supabase/types';
 import { getProjectMonth } from '@/lib/finance';
+import { errorMessage } from '@/lib/utils';
 import type { AppState } from '../useStore';
 
 export interface ResourcePayableSlice {
@@ -132,18 +135,18 @@ export interface ResourcePayableSlice {
   deleteResourceSettlement: (id: string) => Promise<void>;
 }
 
-function mapReimb(d: any): ResourceReimbursement {
+function mapReimb(d: Tables<'resource_reimbursements'>): ResourceReimbursement {
   return {
     id: d.id,
     projectId: d.project_id,
     resourceId: d.resource_id || undefined,
-    sourceKind: (d.source_kind as any) || 'resource',
+    sourceKind: (d.source_kind as ReimbursementSourceKind) || 'resource',
     vendorName: d.vendor_name || undefined,
     category: d.category,
     description: d.description,
     amount: Number(d.amount),
     expenseDate: d.expense_date,
-    receiptAttachments: Array.isArray(d.receipt_attachments) ? d.receipt_attachments : [],
+    receiptAttachments: Array.isArray(d.receipt_attachments) ? (d.receipt_attachments as unknown as ReceiptAttachment[]) : [],
     budgetItemId: d.budget_item_id || undefined,
     status: d.status as ReimbursementStatus,
     notes: d.notes || undefined,
@@ -158,7 +161,7 @@ function mapReimb(d: any): ResourceReimbursement {
   };
 }
 
-function mapReq(d: any): PaymentRequest {
+function mapReq(d: Tables<'payment_requests'>): PaymentRequest {
   return {
     id: d.id,
     projectId: d.project_id,
@@ -168,7 +171,7 @@ function mapReq(d: any): PaymentRequest {
     currency: d.currency || 'ر.س',
     description: d.description,
     justification: d.justification || undefined,
-    linkedReimbursementIds: Array.isArray(d.linked_reimbursement_ids) ? d.linked_reimbursement_ids : [],
+    linkedReimbursementIds: Array.isArray(d.linked_reimbursement_ids) ? (d.linked_reimbursement_ids as string[]) : [],
     linkedFundId: d.linked_fund_id || undefined,
     paidFromFundId: d.paid_from_fund_id || undefined,
     paidFromCustodyId: d.paid_from_custody_id || undefined,
@@ -187,7 +190,7 @@ function mapReq(d: any): PaymentRequest {
     paidDate: d.paid_date || undefined,
     paymentMethod: (d.payment_method as PaymentMethod) || undefined,
     paymentReference: d.payment_reference || undefined,
-    paymentAttachments: Array.isArray(d.payment_attachments) ? d.payment_attachments : [],
+    paymentAttachments: Array.isArray(d.payment_attachments) ? (d.payment_attachments as unknown as ReceiptAttachment[]) : [],
     rejectionReason: d.rejection_reason || undefined,
     autoCreatedExpenseId: d.auto_created_expense_id || undefined,
     isAdvanceOutstanding: d.is_advance_outstanding ?? false,
@@ -204,7 +207,7 @@ function mapReq(d: any): PaymentRequest {
   };
 }
 
-function mapSettle(d: any): ResourceSettlement {
+function mapSettle(d: Tables<'resource_settlements'>): ResourceSettlement {
   return {
     id: d.id,
     resourceId: d.resource_id,
@@ -214,8 +217,8 @@ function mapSettle(d: any): ResourceSettlement {
     totalOwed: Number(d.total_owed ?? 0),
     totalPaid: Number(d.total_paid ?? 0),
     balance: Number(d.balance ?? 0),
-    linkedReimbursementIds: Array.isArray(d.linked_reimbursement_ids) ? d.linked_reimbursement_ids : [],
-    linkedPaymentIds: Array.isArray(d.linked_payment_ids) ? d.linked_payment_ids : [],
+    linkedReimbursementIds: Array.isArray(d.linked_reimbursement_ids) ? (d.linked_reimbursement_ids as string[]) : [],
+    linkedPaymentIds: Array.isArray(d.linked_payment_ids) ? (d.linked_payment_ids as string[]) : [],
     settlementTextAr: d.settlement_text_ar || undefined,
     status: d.status as ResourceSettlementStatus,
     signedByResource: !!d.signed_by_resource,
@@ -425,9 +428,9 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
             expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)],
           }));
         }
-      } catch (e: any) {
+      } catch (e) {
         console.error('Failed to load auto-created expense:', e);
-        throw new Error('تم تسجيل الدفع لكن فشل تحميل المصروف التلقائي: ' + (e?.message || 'خطأ غير معروف'));
+        throw new Error('تم تسجيل الدفع لكن فشل تحميل المصروف التلقائي: ' + errorMessage(e, 'خطأ غير معروف'));
       }
     }
   },
@@ -580,11 +583,11 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
   },
 
   loadSettlementEventsForRequest: async (paymentRequestId) => {
-    let rows: Record<string, any>[] = [];
+    let rows: Tables<'settlement_events'>[] = [];
     try {
       rows = await paymentRequestService.listSettlementEventsRaw(paymentRequestId);
     } catch (e) { console.warn(e); return; }
-    const mapped: SettlementEvent[] = rows.map((d: any) => ({
+    const mapped: SettlementEvent[] = rows.map((d) => ({
       id: d.id,
       paymentRequestId: d.payment_request_id,
       projectId: d.project_id,
