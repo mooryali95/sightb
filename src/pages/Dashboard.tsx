@@ -2,7 +2,7 @@ import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { formatCurrency, getProjectSummary, getTotalPlanned } from '@/lib/finance';
-import { PROJECT_STATUS_LABELS } from '@/types/project';
+import { PROJECT_STATUS_LABELS, type Expense, type ProjectStatus } from '@/types/project';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -32,7 +32,7 @@ import { useCoreData, useDetailsData } from '@/hooks/useAppData';
  * scope: a literal declared inside the body is a fresh array every render, so
  * every `useMemo` closing over it silently lost its memoization.
  */
-const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'] as const;
+const INACTIVE_STATUSES: ProjectStatus[] = ['completed', 'archived', 'cancelled'];
 
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
@@ -101,7 +101,7 @@ export default function Dashboard() {
       }
       if (filterCompany !== 'all' && p.companyId !== filterCompany) return false;
       if (filterStatus !== 'all' && p.status !== filterStatus) return false;
-      if (filterStatus === 'all' && !showInactive && INACTIVE_STATUSES.includes(p.status as any)) return false;
+      if (filterStatus === 'all' && !showInactive && INACTIVE_STATUSES.includes(p.status)) return false;
       if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
@@ -110,7 +110,7 @@ export default function Dashboard() {
   const visibleProjectIds = useMemo(() => new Set(filteredProjects.map((project) => project.id)), [filteredProjects]);
   const filteredBudgetItems = useMemo(() => budgetItems.filter((b) => visibleProjectIds.has(b.projectId)), [budgetItems, visibleProjectIds]);
   // SSOT: exclude rejected expenses and outstanding (unsettled) advances — matches getProjectSummary in finance.ts
-  const isCountedExpense = (e: any) => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance;
+  const isCountedExpense = (e: Expense) => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance;
   const filteredExpenses = useMemo(() => expenses.filter((e) => visibleProjectIds.has(e.projectId) && isCountedExpense(e) && isInRange(e.date, currentRange)), [expenses, visibleProjectIds, isInRange, currentRange]);
   const filteredAllExpenses = useMemo(() => expenses.filter((e) => visibleProjectIds.has(e.projectId) && isCountedExpense(e)), [expenses, visibleProjectIds]);
   const filteredRevenues = useMemo(() => revenues.filter((r) => visibleProjectIds.has(r.projectId) && isInRange(r.date, currentRange)), [revenues, visibleProjectIds, isInRange, currentRange]);
@@ -127,7 +127,7 @@ export default function Dashboard() {
         if (company?.status === 'archived') return false;
       }
       if (filterCompany !== 'all' && project.companyId !== filterCompany) return false;
-      return !INACTIVE_STATUSES.includes(project.status as any);
+      return !INACTIVE_STATUSES.includes(project.status);
     }).length;
   }, [projects, companies, filterCompany, filterStatus, showInactive]);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ComponentType } from 'react';
 import { listSystemAuditEntries } from '@/services/auditService';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
@@ -12,6 +12,17 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/**
+ * What the audit trigger records for an entry: a loose bag of fields, of
+ * which the page names the ones it renders. Anything else stays unknown.
+ */
+interface AuditDetails {
+  target_email?: string; role?: string; old_role?: string; new_role?: string; scope_type?: string;
+  invited_email?: string; old_status?: string; new_status?: string; name?: string;
+  old?: Record<string, unknown>; new?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 interface AuditEntry {
   id: string;
   userId: string;
@@ -20,11 +31,11 @@ interface AuditEntry {
   entityType: string;
   entityId: string | null;
   entityName: string | null;
-  details: any;
+  details: AuditDetails | null;
   createdAt: string;
 }
 
-const entityTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
+const entityTypeConfig: Record<string, { label: string; icon: ComponentType<{ className?: string }>; color: string }> = {
   company: { label: 'شركة', icon: Building2, color: 'bg-primary/10 text-primary' },
   portfolio: { label: 'محفظة', icon: FolderKanban, color: 'bg-accent/15 text-accent-foreground' },
   project: { label: 'مشروع', icon: Briefcase, color: 'bg-success/10 health-good' },
@@ -32,7 +43,7 @@ const entityTypeConfig: Record<string, { label: string; icon: any; color: string
   user_invite: { label: 'دعوة', icon: Mail, color: 'bg-muted text-muted-foreground' },
 };
 
-const actionConfig: Record<string, { label: string; icon: any; color: string }> = {
+const actionConfig: Record<string, { label: string; icon: ComponentType<{ className?: string }>; color: string }> = {
   insert: { label: 'إضافة', icon: Plus, color: 'health-good' },
   update: { label: 'تعديل', icon: Pencil, color: 'health-warning' },
   delete: { label: 'حذف', icon: Trash2, color: 'text-destructive' },
@@ -57,7 +68,9 @@ export default function SystemAuditLog() {
   const loadEntries = async () => {
     setLoading(true);
     try {
-      setEntries(await listSystemAuditEntries(500));
+      const rows = await listSystemAuditEntries(500);
+      // The trigger writes a JSON bag; the page names the fields it renders.
+      setEntries(rows.map((r) => ({ ...r, details: (r.details ?? null) as AuditDetails | null })));
     } catch {
       setEntries([]);
     }

@@ -28,7 +28,7 @@ export interface CashTransferRow {
 }
 
 export async function listFundsForProject(projectId: string): Promise<FundRow[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('project_funds')
     .select('*')
     .eq('project_id', projectId)
@@ -38,7 +38,7 @@ export async function listFundsForProject(projectId: string): Promise<FundRow[]>
 }
 
 export async function getFundById(id: string): Promise<FundRow | null> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('project_funds')
     .select('*')
     .eq('id', id)
@@ -48,7 +48,7 @@ export async function getFundById(id: string): Promise<FundRow | null> {
 }
 
 export async function listCashTransfersForFund(fundId: string): Promise<CashTransferRow[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('cash_transfers')
     .select('*')
     .eq('from_fund_id', fundId)

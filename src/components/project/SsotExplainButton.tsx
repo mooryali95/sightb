@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, Code2, AlertTriangle } from 'lucide-react';
-import { explainSsotKey } from '@/services/ssotService';
+import { explainSsotKey, type SsotExplanation } from '@/services/ssotService';
+import { errorMessage } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import { toast } from '@/hooks/use-toast';
 
@@ -16,16 +17,16 @@ interface Props {
 export function SsotExplainButton({ ssotKey, label, projectId, currency }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<{ sql: string; result: number; plan: any } | null>(null);
+  const [data, setData] = useState<SsotExplanation | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true); setError(null); setData(null);
     try {
       const r = await explainSsotKey(ssotKey, projectId);
-      setData(r as any);
-    } catch (e: any) {
-      const msg = e?.message || 'تعذّر جلب المصدر.';
+      setData(r);
+    } catch (e) {
+      const msg = errorMessage(e, 'تعذّر جلب المصدر.');
       setError(msg);
       toast({ title: 'مصدر الحقيقة', description: msg, variant: 'destructive' });
     } finally {

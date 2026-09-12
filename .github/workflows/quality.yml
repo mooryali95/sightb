@@ -98,7 +98,11 @@ jobs:
           #   133 → 104 (12 Sep): the budget slice reads its own store typed and
           #   names the optimistic insert row once; the finance, funds and
           #   payables-export tests build their fixtures through typed helpers.
-          ERROR_BUDGET=104
+          #   104 → 74 (12 Sep): the user service reads table rows typed, the audit
+          #   pages name the JSON bag they render, the offline queue reads the
+          #   client through a small structural interface, the fund service uses
+          #   the typed client, and the window flags and catch blocks are typed.
+          ERROR_BUDGET=74
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

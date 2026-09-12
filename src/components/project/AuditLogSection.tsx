@@ -121,10 +121,12 @@ const FIELD_LABELS: Record<string, string> = {
 
 const SKIP_FIELDS = new Set(['id', 'user_id', 'project_id', 'company_id', 'portfolio_id', 'created_at', 'baseline_id', 'budget_item_id', 'resource_id', 'custody_id']);
 
-function UpdateDiff({ oldData, newData }: { oldData: any; newData: any }) {
+type Row = Record<string, unknown> | null | undefined;
+
+function UpdateDiff({ oldData, newData }: { oldData: Row; newData: Row }) {
   if (!oldData || !newData) return <p className="text-muted-foreground">بيانات التعديل غير متوفرة</p>;
 
-  const changes: { field: string; from: any; to: any }[] = [];
+  const changes: { field: string; from: unknown; to: unknown }[] = [];
   for (const key of Object.keys(newData)) {
     if (SKIP_FIELDS.has(key)) continue;
     if (JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])) {
@@ -148,7 +150,7 @@ function UpdateDiff({ oldData, newData }: { oldData: any; newData: any }) {
   );
 }
 
-function formatValue(val: any): string {
+function formatValue(val: unknown): string {
   if (val === null || val === undefined) return '—';
   if (typeof val === 'number') {
     return val.toLocaleString('en-US', { maximumFractionDigits: 2 });
