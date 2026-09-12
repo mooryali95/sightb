@@ -36,7 +36,7 @@ export function ExecutiveSummary({
   budgetItems, commitments, baselines, evm, currentMonth, daysRemaining,
   totalCommitted, availableBudget, healthScore,
 }: Props) {
-  const vatRate = project.taxPercent || 15;
+  const vatRate = project.taxPercent;
   const openRisks = risks.filter(r => r.status === 'open' || r.status === 'mitigating');
   const highRisks = openRisks.filter(r => r.impact === 'high' || r.impact === 'very_high');
   const riskExposure = openRisks.reduce((s, r) => s + r.financialImpact, 0);

@@ -6,7 +6,7 @@ import {
   getProjectSummary, getExpensesByCategory, getMonthlyBreakdown,
   calculateEVM, getCurrentMonth,
 } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@/types/project';
+import { EXPENSE_CATEGORY_LABELS, type BudgetItem, type ExpenseCategory } from '@/types/project';
 
 /**
  * Single data entry point for the project detail page.
@@ -24,8 +24,7 @@ export function useProjectDetailData(id: string | undefined) {
     loadAll, updateProject, archiveProject, deleteProject,
   } = useStore();
 
-  const { detailsLoaded, loadProjectData, subscribeToProject, ensureProjectCashData } =
-    useStore() as any;
+  const { detailsLoaded, subscribeToProject, ensureProjectCashData } = useStore();
 
   useCoreData();
   useProjectData(detailsLoaded ? undefined : id);
@@ -34,7 +33,7 @@ export function useProjectDetailData(id: string | undefined) {
   // وبدون تحميله تظهر أرصدة وهمية للدفعات والعُهد.
   useEffect(() => {
     if (!id) return;
-    ensureProjectCashData?.(id).catch((e: any) => console.warn('[ProjectDetail] cash data', e));
+    ensureProjectCashData(id).catch((e: unknown) => console.warn('[ProjectDetail] cash data', e));
   }, [id, ensureProjectCashData]);
 
 
@@ -73,8 +72,11 @@ export function useProjectDetailData(id: string | undefined) {
   }));
   const barData = monthlyData.map((v, i) => ({ month: `شهر ${i + 1}`, مصروفات: v }));
 
-  const getActualForItem = (item: any) =>
-    pExpenses.filter((e) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
+  // Spend against an item is what the summary counts as spend: not a
+  // rejected expense, not an advance still outstanding.
+  const countedExpenses = pExpenses.filter((e) => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
+  const getActualForItem = (item: BudgetItem) =>
+    countedExpenses.filter((e) => e.budgetItemId === item.id).reduce((s, e) => s + e.amount, 0);
 
   const projectBaselines = baselines.filter((b) => b.projectId === project.id);
   const activeBaseline = projectBaselines.find((b) => b.isActive);
@@ -96,7 +98,9 @@ export function useProjectDetailData(id: string | undefined) {
     : null;
   const monthsRemaining = summary.burnRate > 0 ? Math.max(0, summary.budgetRemaining / summary.burnRate) : null;
 
-  const vatRate = project.taxPercent || 15;
+  // The project's own rate; the row mapper already defaults a missing one
+  // to 15, so zero here means zero.
+  const vatRate = project.taxPercent;
 
   const healthScore = (() => {
     let score = 0;
