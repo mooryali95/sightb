@@ -117,7 +117,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
           title={editingId ? 'تعديل أمر التغيير' : 'أمر تغيير جديد'}
           desktopWidthClassName="max-w-lg"
           trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />أمر تغيير</Button>}
-          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة أمر التغيير'} />}
+          footer={<FormFooter onCancel={() => { setOpen(false); resetForm(); }} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة أمر التغيير'} />}
         >
           <div className="space-y-4">
               <div className="space-y-2">
