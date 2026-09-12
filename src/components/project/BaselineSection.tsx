@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getBaselineMonthlyPV, getMonthlyBreakdown, calculateEVM, getCurrentMonth } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type CostType, type CostBaseline, type Project } from '@/types/project';
+import {
+  EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS,
+  type ExpenseCategory, type CostType, type CostBaseline, type BaselineItem, type BudgetItem, type Expense, type Project,
+} from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,13 +18,13 @@ import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 interface BaselineSectionProps {
   projectId: string;
   durationMonths: number;
-  expenses: any[];
-  budgetItems: any[];
+  expenses: Expense[];
+  budgetItems: BudgetItem[];
   project: Project;
   readOnly?: boolean;
 }
 
-function buildSCurveData(baseline: CostBaseline, expenses: any[], durationMonths: number) {
+function buildSCurveData(baseline: CostBaseline, expenses: Expense[], durationMonths: number) {
   const monthlyPV = getBaselineMonthlyPV(baseline.items, durationMonths);
   const monthlyAC = getMonthlyBreakdown(expenses, durationMonths);
   let cumPV = 0;
@@ -55,7 +58,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
       toast.success('تم إنشاء خط الأساس بنجاح');
       setBaselineName('');
       setOpenDialog(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('[baseline]', err);
       toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
@@ -71,11 +74,14 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
 
   const sCurveData = activeBaseline ? buildSCurveData(activeBaseline, expenses, durationMonths) : [];
 
-  // Management reserve tracking
-  const contingencySpent = expenses.filter(e => e.category === 'contingency').reduce((s, e) => s + e.amount, 0);
+  // Management reserve tracking: charged with the contingency spend the
+  // summary counts, so not a rejected expense and not an outstanding advance.
+  const contingencySpent = expenses
+    .filter(e => e.category === 'contingency' && e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance)
+    .reduce((s, e) => s + e.amount, 0);
   const managementReserveRemaining = (project.managementReserve || 0) - contingencySpent;
 
-  const getMonthDisplay = (item: any) => {
+  const getMonthDisplay = (item: BaselineItem) => {
     if (item.startMonth && item.endMonth && item.startMonth !== item.endMonth) {
       return `شهر ${item.startMonth} → ${item.endMonth}`;
     }

@@ -92,7 +92,10 @@ jobs:
           #   `(x as any).field` reads were all on fields the types carry.
           #   153 → 149 (12 Sep): useProjectDetailData reads the store typed and
           #   takes a BudgetItem where it took `any`.
-          ERROR_BUDGET=149
+          #   149 → 133 (12 Sep): the baseline section, the smart notifications,
+          #   the company management card and the amendment manager read typed
+          #   fields; their catch blocks take `unknown`.
+          ERROR_BUDGET=133
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

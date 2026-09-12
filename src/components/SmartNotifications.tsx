@@ -75,7 +75,7 @@ export function SmartNotifications() {
       else if (util > 90)
         items.push({ id: `bw-${p.id}`, type: 'budget', severity: 'warning', title: `قارب الميزانية: ${p.name}`, description: `${util.toFixed(0)}%`, link: `/project/${p.id}` });
 
-      const pending = pE.filter(e => (e as any).approvalStatus === 'pending').length;
+      const pending = pE.filter(e => e.approvalStatus === 'pending').length;
       if (pending > 0)
         items.push({ id: `pe-${p.id}`, type: 'approval', severity: 'warning', title: `${pending} مصروف بانتظار الاعتماد`, description: p.name, link: `/project/${p.id}` });
 
@@ -96,12 +96,12 @@ export function SmartNotifications() {
 
       // سلف قائمة متقادمة (> 60 يوم حرج، 30-60 تحذير)
       const now = Date.now();
-      const outstandingAdv = paymentRequests.filter((r: any) =>
+      const outstandingAdv = paymentRequests.filter((r) =>
         r.projectId === p.id && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding
       );
       let oldestDays = 0;
       for (const adv of outstandingAdv) {
-        const ref = (adv as any).paidDate || adv.createdAt;
+        const ref = adv.paidDate || adv.createdAt;
         if (!ref) continue;
         const days = Math.floor((now - new Date(ref).getTime()) / 86400000);
         if (days > oldestDays) oldestDays = days;
