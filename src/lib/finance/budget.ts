@@ -32,7 +32,9 @@ export function getExpensesByCategory(expenses: Expense[]) {
 export function getMonthlyBreakdown(expenses: Expense[], months: number) {
   const result: number[] = Array(months).fill(0);
   expenses.forEach((e) => {
-    if ((e as any).isOutstandingAdvance) return; // exclude unsettled advances
+    // The same rows getProjectSummary leaves out of totalActual: a rejected
+    // expense is not spend, and an advance still outstanding is a receivable.
+    if (e.approvalStatus === 'rejected' || e.isOutstandingAdvance) return;
     if (e.month >= 1 && e.month <= months) {
       result[e.month - 1] += e.amount;
     }

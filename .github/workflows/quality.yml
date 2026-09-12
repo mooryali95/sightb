@@ -79,7 +79,9 @@ jobs:
           #   components/project/revenue/ are `any`-free; its `revenues: any[]`
           #   prop is typed Revenue[], and an edit that clears a milestone
           #   link or an invoice field goes through a typed RevenueUpdate.
-          ERROR_BUDGET=229
+          #   229 → 228 (12 Sep): getMonthlyBreakdown read the outstanding-advance
+          #   flag through `as any`; the field is on the Expense type.
+          ERROR_BUDGET=228
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

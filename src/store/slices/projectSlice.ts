@@ -4,11 +4,30 @@ import { Portfolio, Project } from '@/types/project';
 import { getUserId, logDeletion, mapPortfolio, mapProject } from '../helpers';
 import type { AppState } from '../useStore';
 
+/**
+ * An edit to a portfolio. A `null` on an optional text field clears it;
+ * `undefined` leaves it as it is, so an emptied field has to travel as `null`.
+ */
+export type PortfolioUpdate = Omit<Partial<Portfolio>, 'description' | 'fiscalYear' | 'notes'> & {
+  description?: string | null;
+  fiscalYear?: string | null;
+  notes?: string | null;
+};
+
+function withoutNulls(p: PortfolioUpdate): Partial<Portfolio> {
+  return {
+    ...p,
+    description: p.description === null ? undefined : p.description,
+    fiscalYear: p.fiscalYear === null ? undefined : p.fiscalYear,
+    notes: p.notes === null ? undefined : p.notes,
+  };
+}
+
 export interface ProjectSlice {
   portfolios: Portfolio[];
   projects: Project[];
   addPortfolio: (p: Omit<Portfolio, 'id' | 'createdAt'>) => Promise<string>;
-  updatePortfolio: (id: string, p: Partial<Portfolio>) => Promise<void>;
+  updatePortfolio: (id: string, p: PortfolioUpdate) => Promise<void>;
   deletePortfolio: (id: string) => Promise<void>;
   addProject: (p: Omit<Project, 'id' | 'createdAt'>) => Promise<string>;
   updateProject: (id: string, p: Partial<Project>) => Promise<void>;
@@ -48,7 +67,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     if (p.notes !== undefined) updates.notes = p.notes;
     const { error } = await db.from('portfolios').update(updates).eq('id', id);
     if (error) throw error;
-    set((s) => ({ portfolios: s.portfolios.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
+    set((s) => ({ portfolios: s.portfolios.map((x) => (x.id === id ? { ...x, ...withoutNulls(p) } : x)) }));
   },
 
   deletePortfolio: async (id) => {
