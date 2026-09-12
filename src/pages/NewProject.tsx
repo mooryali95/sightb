@@ -49,7 +49,9 @@ export default function NewProject() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const rawValue = parseFloat(contractValue) || 0;
-    const rate = parseFloat(taxPercent) || 15;
+    // 0 is a rate, not a missing one: only an unparsable field falls back to 15.
+    const parsedRate = parseFloat(taxPercent);
+    const rate = Number.isFinite(parsedRate) ? parsedRate : 15;
     const finalContractValue = vatInclusive ? removeVAT(rawValue, rate) : rawValue;
 
     const result = projectSchema.safeParse({
@@ -85,7 +87,7 @@ export default function NewProject() {
         contractType,
         retentionPercent: parseFloat(retentionPercent) || 0,
         managementReserve: 0,
-        taxPercent: parseFloat(taxPercent) || 15,
+        taxPercent: rate,
         vatInclusive: false,
       });
       navigate('/');
