@@ -1,26 +1,30 @@
+/**
+ * The revenue section: the total and its VAT-inclusive figure, one card per
+ * status, the filters, the table, and the two dialogs (form and inspector)
+ * that live under revenue/. Both dialogs are remounted on open through a
+ * dialog session, so the form derives its values from the row it was opened
+ * on and there is no reset handler.
+ */
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency, calcVAT, addVAT, removeVAT } from '@/lib/finance';
+import { useDialogSession } from '@/hooks/useDialogSession';
+import { formatCurrency, calcVAT, addVAT } from '@/lib/finance';
 import {
-  REVENUE_TYPE_LABELS, REVENUE_STATUS_LABELS, REVENUE_STATUS_COLORS,
-  MILESTONE_STATUS_LABELS, MILESTONE_STATUS_COLORS,
-  type RevenueType, type RevenueStatus, type Milestone, type MilestoneStatus,
+  REVENUE_TYPE_LABELS, REVENUE_STATUS_LABELS, REVENUE_STATUS_COLORS, MILESTONE_STATUS_COLORS,
+  type RevenueType, type RevenueStatus, type Revenue, type Milestone, type MilestoneStatus,
 } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
-import { FormFooter } from '@/components/FormFooter';
-import { Plus, Pencil, Eye } from 'lucide-react';
-import { toast } from 'sonner';
+import { Pencil, Eye } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
-import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
+import { RevenueFormDialog } from './revenue/RevenueFormDialog';
+import { RevenueInspector } from './revenue/RevenueInspector';
 
 interface RevenueSectionProps {
   projectId: string;
-  revenues: any[];
+  revenues: Revenue[];
   durationMonths: number;
   readOnly?: boolean;
   taxPercent?: number;
@@ -28,79 +32,30 @@ interface RevenueSectionProps {
 }
 
 export function RevenueSection({ projectId, revenues, durationMonths, readOnly = false, taxPercent = 0, milestones }: RevenueSectionProps) {
-  const { addRevenue, deleteRevenue, updateRevenue } = useStore();
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [month, setMonth] = useState('1');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [revenueType, setRevenueType] = useState<RevenueType>('milestone');
-  const [status, setStatus] = useState<RevenueStatus>('collected');
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState('');
-  const [collectionDate, setCollectionDate] = useState('');
-  const [milestoneId, setMilestoneId] = useState('');
-  const [inputInclusive, setInputInclusive] = useState(false);
+  const { deleteRevenue } = useStore();
+  const form = useDialogSession<{ revenue?: Revenue }>();
+  const inspector = useDialogSession<string>();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [inspectorId, setInspectorId] = useState<string | null>(null);
-  const inspected = inspectorId ? revenues.find((r: any) => r.id === inspectorId) : null;
-  const inspectedMilestone = inspected?.milestoneId && milestones
-    ? milestones.find((m: any) => m.id === inspected.milestoneId)
-    : null;
+  const inspected = inspector.value ? revenues.find((r) => r.id === inspector.value) : undefined;
 
-  const resetForm = () => {
-    setEditingId(null); setDescription(''); setAmount(''); setMonth('1');
-    setDate(new Date().toISOString().split('T')[0]); setRevenueType('milestone');
-    setStatus('collected'); setInvoiceNumber(''); setInvoiceDate('');
-    setCollectionDate(''); setMilestoneId(''); setInputInclusive(false);
-  };
-
-  const openEdit = (rev: any) => {
-    setEditingId(rev.id); setDescription(rev.description); setAmount(String(rev.amount));
-    setMonth(String(rev.month)); setDate(rev.date); setRevenueType(rev.revenueType || 'milestone');
-    setStatus(rev.status || 'collected'); setInvoiceNumber(rev.invoiceNumber || '');
-    setInvoiceDate(rev.invoiceDate || ''); setCollectionDate(rev.collectionDate || '');
-    setMilestoneId(rev.milestoneId || ''); setInputInclusive(false); setOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!description.trim() || !amount) return;
-    const rawAmount = parseFloat(amount);
-    const finalAmount = inputInclusive && taxPercent > 0 ? removeVAT(rawAmount, taxPercent) : rawAmount;
-    const data = {
-      description: description.trim(), amount: finalAmount, date,
-      month: parseInt(month), revenueType, status,
-      invoiceNumber: invoiceNumber || undefined, invoiceDate: invoiceDate || undefined,
-      collectionDate: collectionDate || undefined,
-      milestoneId: milestoneId && milestoneId !== 'none' ? milestoneId : undefined,
-    };
-    if (editingId) {
-      await updateRevenue(editingId, data);
-      toast.success('تم تعديل الإيراد');
-    } else {
-      await addRevenue({ projectId, ...data });
-      toast.success('تمت إضافة الإيراد');
-    }
-    resetForm(); setOpen(false);
-  };
-
-  const filteredRevenues = revenues.filter((rev: any) => {
+  const filteredRevenues = revenues.filter((rev) => {
     const matchesSearch = !searchQuery || rev.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesMonth = filterMonth === 'all' || String(rev.month) === filterMonth;
     const matchesStatus = filterStatus === 'all' || rev.status === filterStatus;
     return matchesSearch && matchesMonth && matchesStatus;
   });
 
-  const total = revenues.reduce((s: number, r: any) => s + r.amount, 0);
+  const total = revenues.reduce((s, r) => s + r.amount, 0);
   const totalTax = taxPercent > 0 ? total * (taxPercent / 100) : 0;
   const totalWithTax = total + totalTax;
-  const collectedTotal = revenues.filter((r: any) => r.status === 'collected').reduce((s: number, r: any) => s + r.amount, 0);
-  const invoicedTotal = revenues.filter((r: any) => r.status === 'invoiced').reduce((s: number, r: any) => s + r.amount, 0);
-  const plannedTotal = revenues.filter((r: any) => r.status === 'planned').reduce((s: number, r: any) => s + r.amount, 0);
+  const collectedTotal = revenues.filter((r) => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
+  // Statuses never overlap, so the invoiced total is the receivable, as in
+  // the summary library; nothing is subtracted from it.
+  const invoicedTotal = revenues.filter((r) => r.status === 'invoiced').reduce((s, r) => s + r.amount, 0);
+  const plannedTotal = revenues.filter((r) => r.status === 'planned').reduce((s, r) => s + r.amount, 0);
 
   const showVAT = taxPercent > 0;
 
@@ -115,117 +70,17 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
           </p>
         </div>
         {!readOnly && (
-        <ResponsiveFormDialog
-          open={open}
-          onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
-          title={editingId ? 'تعديل الإيراد' : 'إضافة إيراد'}
-          trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة إيراد</Button>}
-          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
-        >
-          <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>الوصف</Label>
-                <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: دفعة أولى من العميل" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>المبلغ</Label>
-                  <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>الشهر</Label>
-                  <Select value={month} onValueChange={setMonth}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: durationMonths }, (_, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {/* VAT inclusive toggle */}
-              {showVAT && (
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <input type="checkbox" checked={inputInclusive} onChange={(e) => setInputInclusive(e.target.checked)} className="rounded" />
-                    المبلغ شامل الضريبة
-                  </label>
-                </div>
-              )}
-              {parseFloat(amount) > 0 && showVAT && (
-                <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
-                  {inputInclusive
-                    ? `بدون ضريبة: ${formatCurrency(removeVAT(parseFloat(amount), taxPercent))} · الضريبة: ${formatCurrency(parseFloat(amount) - removeVAT(parseFloat(amount), taxPercent))}`
-                    : `شامل الضريبة: ${formatCurrency(addVAT(parseFloat(amount), taxPercent))} · الضريبة: ${formatCurrency(calcVAT(parseFloat(amount), taxPercent))}`
-                  }
-                </p>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>نوع الإيراد</Label>
-                  <Select value={revenueType} onValueChange={(v) => setRevenueType(v as RevenueType)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(REVENUE_TYPE_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>الحالة</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as RevenueStatus)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(REVENUE_STATUS_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>التاريخ</Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-              </div>
-              {/* Milestone link */}
-              {milestones && milestones.length > 0 && (
-                <div className="space-y-2">
-                  <Label>ربط بمرحلة / تسليمة</Label>
-                  <Select value={milestoneId} onValueChange={setMilestoneId}>
-                    <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">بدون ربط</SelectItem>
-                      {milestones.map(m => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name} ({MILESTONE_STATUS_LABELS[m.status as MilestoneStatus]}) — وزن {(m.weight * 100).toFixed(0)}%
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {(status === 'invoiced' || status === 'collected') && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>رقم الفاتورة</Label>
-                    <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="INV-001" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>تاريخ الفاتورة</Label>
-                    <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
-                  </div>
-                </div>
-              )}
-              {status === 'collected' && (
-                <div className="space-y-2">
-                  <Label>تاريخ التحصيل</Label>
-                  <Input type="date" value={collectionDate} onChange={(e) => setCollectionDate(e.target.value)} />
-                </div>
-              )}
-          </div>
-        </ResponsiveFormDialog>
+          <RevenueFormDialog
+            key={form.session}
+            open={form.value !== null}
+            onOpenChange={(v) => { if (!v) form.close(); }}
+            onRequestOpen={() => form.open({})}
+            editing={form.value?.revenue}
+            projectId={projectId}
+            durationMonths={durationMonths}
+            taxPercent={taxPercent}
+            milestones={milestones}
+          />
         )}
       </div>
 
@@ -246,7 +101,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
           </div>
           <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
             <p className="text-xs text-muted-foreground">غير محصّل</p>
-            <p className="text-xs font-mono font-bold">{formatCurrency(Math.max(0, invoicedTotal - collectedTotal))}</p>
+            <p className="text-xs font-mono font-bold">{formatCurrency(invoicedTotal)}</p>
           </div>
         </div>
       )}
@@ -317,7 +172,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                     <td className="text-xs">
                       {(() => {
                         if (!r.milestoneId || !milestones) return '—';
-                        const m = milestones.find((ms: any) => ms.id === r.milestoneId);
+                        const m = milestones.find((ms) => ms.id === r.milestoneId);
                         if (!m) return '—';
                         return (
                           <Badge className={`text-xs ${MILESTONE_STATUS_COLORS[m.status as MilestoneStatus] || ''}`}>
@@ -330,14 +185,14 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   <td>شهر {r.month}</td>
                   <td className="text-muted-foreground text-sm">{r.date}</td>
                   <td>
-                    <Button variant="ghost" size="icon" onClick={() => setInspectorId(r.id)} title="عرض التفاصيل">
+                    <Button variant="ghost" size="icon" onClick={() => inspector.open(r.id)} title="عرض التفاصيل">
                       <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                     </Button>
                   </td>
                   {!readOnly && (
                   <td>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
+                      <Button variant="ghost" size="icon" onClick={() => form.open({ revenue: r })}>
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
                       <ConfirmDeleteDialog title="حذف الإيراد" description="هل أنت متأكد من حذف هذا الإيراد؟" onConfirm={() => deleteRevenue(r.id)} />
@@ -351,66 +206,15 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
         </div>
       )}
 
-      {/* Inspector — slide-over with full revenue detail */}
-      <InspectorPanel
-        open={!!inspected}
-        onOpenChange={(o) => { if (!o) setInspectorId(null); }}
-        title={inspected?.description || 'تفاصيل الإيراد'}
-        description={inspected ? `${REVENUE_TYPE_LABELS[inspected.revenueType as RevenueType] || inspected.revenueType} · شهر ${inspected.month}` : undefined}
-        meta={inspected ? (
-          <Badge className={`text-xs ${REVENUE_STATUS_COLORS[inspected.status as RevenueStatus] || ''}`}>
-            {REVENUE_STATUS_LABELS[inspected.status as RevenueStatus] || inspected.status}
-          </Badge>
-        ) : null}
-        width="md"
-        footer={!readOnly && inspected ? (
-          <>
-            <Button variant="outline" size="sm" onClick={() => setInspectorId(null)}>إغلاق</Button>
-            <Button size="sm" onClick={() => { openEdit(inspected); setInspectorId(null); }}>
-              <Pencil className="w-3.5 h-3.5 ml-1.5" />تعديل
-            </Button>
-          </>
-        ) : null}
-      >
-        {inspected && (
-          <>
-            <InspectorKpiStrip items={[
-              { label: 'المبلغ', value: formatCurrency(inspected.amount) },
-              ...(showVAT ? [
-                { label: `ضريبة ${taxPercent}%`, value: formatCurrency(calcVAT(inspected.amount, taxPercent)), tone: 'info' as const },
-                { label: 'شامل الضريبة', value: formatCurrency(addVAT(inspected.amount, taxPercent)) },
-              ] : []),
-              { label: 'الشهر', value: `شهر ${inspected.month}` },
-            ]} />
-
-            <InspectorSection title="بيانات الفاتورة">
-              <InspectorField label="رقم الفاتورة" value={inspected.invoiceNumber || '—'} mono />
-              <InspectorField label="تاريخ الفاتورة" value={inspected.invoiceDate || '—'} mono />
-              <InspectorField label="تاريخ التحصيل" value={inspected.collectionDate || '—'} mono />
-              <InspectorField label="تاريخ التسجيل" value={inspected.date || '—'} mono />
-            </InspectorSection>
-
-            {inspectedMilestone && (
-              <InspectorSection title="التسليمة المرتبطة">
-                <InspectorField
-                  label={inspectedMilestone.name}
-                  value={
-                    <Badge className={`text-xs ${MILESTONE_STATUS_COLORS[inspectedMilestone.status as MilestoneStatus] || ''}`}>
-                      {MILESTONE_STATUS_LABELS[inspectedMilestone.status as MilestoneStatus]}
-                    </Badge>
-                  }
-                />
-                <InspectorField label="الوزن" value={`${(inspectedMilestone.weight * 100).toFixed(0)}%`} mono />
-              </InspectorSection>
-            )}
-
-            <InspectorSection title="بيانات وصفية">
-              <InspectorField label="النوع" value={REVENUE_TYPE_LABELS[inspected.revenueType as RevenueType] || inspected.revenueType} />
-              <InspectorField label="الحالة" value={REVENUE_STATUS_LABELS[inspected.status as RevenueStatus] || inspected.status} />
-            </InspectorSection>
-          </>
-        )}
-      </InspectorPanel>
+      <RevenueInspector
+        key={inspector.session}
+        revenue={inspected}
+        milestones={milestones}
+        taxPercent={taxPercent}
+        readOnly={readOnly}
+        onEdit={(r) => { form.open({ revenue: r }); inspector.close(); }}
+        onClose={inspector.close}
+      />
     </div>
   );
 }

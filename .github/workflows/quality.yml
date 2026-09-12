@@ -75,7 +75,11 @@ jobs:
           #   262 → 242 (12 Sep): the budget section and everything under
           #   components/project/budget/ are `any`-free; its three list props
           #   are typed and the `(x: any) =>` callbacks over them went with it.
-          ERROR_BUDGET=242
+          #   242 → 229 (12 Sep): the revenue section and everything under
+          #   components/project/revenue/ are `any`-free; its `revenues: any[]`
+          #   prop is typed Revenue[], and an edit that clears a milestone
+          #   link or an invoice field goes through a typed RevenueUpdate.
+          ERROR_BUDGET=229
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

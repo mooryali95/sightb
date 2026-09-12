@@ -18,10 +18,23 @@ export type ExpenseUpdate =
     fundId?: string | null;
   };
 
-function withoutNulls(e: ExpenseUpdate): Partial<Expense> {
-  const out: Record<string, unknown> = { ...e };
+/**
+ * An edit to a revenue. A `null` on a link or invoice field clears it; the
+ * form sends `null` for a milestone link removed and for the invoice and
+ * collection fields a status hides, because `undefined` means "unchanged".
+ */
+export type RevenueUpdate =
+  Omit<Partial<Revenue>, 'milestoneId' | 'invoiceNumber' | 'invoiceDate' | 'collectionDate'> & {
+    milestoneId?: string | null;
+    invoiceNumber?: string | null;
+    invoiceDate?: string | null;
+    collectionDate?: string | null;
+  };
+
+function withoutNulls<T extends object>(e: T): { [K in keyof T]: Exclude<T[K], null> } {
+  const out: Record<string, unknown> = { ...(e as Record<string, unknown>) };
   for (const k of Object.keys(out)) if (out[k] === null) out[k] = undefined;
-  return out as Partial<Expense>;
+  return out as { [K in keyof T]: Exclude<T[K], null> };
 }
 
 export interface BudgetSlice {
@@ -35,7 +48,7 @@ export interface BudgetSlice {
   updateExpense: (id: string, e: ExpenseUpdate) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   addRevenue: (r: Omit<Revenue, 'id'>) => Promise<string>;
-  updateRevenue: (id: string, r: Partial<Revenue>) => Promise<void>;
+  updateRevenue: (id: string, r: RevenueUpdate) => Promise<void>;
   deleteRevenue: (id: string) => Promise<void>;
 }
 
@@ -191,7 +204,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (r.collectionDate !== undefined) updates.collection_date = r.collectionDate;
     const { error } = await db.from('revenues').update(updates).eq('id', id);
     if (error) throw error;
-    set((s) => ({ revenues: s.revenues.map((x) => (x.id === id ? { ...x, ...r } : x)) }));
+    set((s) => ({ revenues: s.revenues.map((x) => (x.id === id ? { ...x, ...withoutNulls(r) } : x)) }));
   },
 
   deleteRevenue: async (id) => {
