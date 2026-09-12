@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { buildSpendTree, buildSpendTreeCSV } from '@/lib/expense-analytics';
+import { buildSpendTree, buildSpendTreeCSV, buildSpendReport, buildSpendReportCSV } from '@/lib/expense-analytics';
 import { buildSpendConsistency } from '@/lib/spend-consistency';
 import { saveSpendTemplate, listSpendTemplates, deleteSpendTemplate } from '@/lib/spend-templates';
 import type { Expense, Resource } from '@/types/project';
@@ -98,5 +98,39 @@ describe('spend templates', () => {
     const list = listSpendTemplates('p1');
     expect(list).toHaveLength(1);
     expect(list[0].dimensions).toEqual(['vendor']);
+  });
+});
+
+describe('outstanding advances in the spend tree', () => {
+  // Same rows plus an advance still outstanding on أيمن: money handed over,
+  // not yet spent, which no summary in the app counts as cost.
+  const withAdvance = [
+    ...expenses,
+    one<Expense>({ id: 'e5', projectId: 'p1', resourceId: 'r1', category: 'salary', description: 'سلفة قائمة', amount: 4000, date: '2026-03-05', month: 3, approvalStatus: 'approved', isOutstandingAdvance: true }),
+  ];
+
+  it('keeps an outstanding advance out of every total and count, and reports it apart', () => {
+    const tree = buildSpendTree(withAdvance, ['resource', 'category'], {}, { resources });
+    expect(tree.grandTotal).toBe(35500);
+    expect(tree.grandCount).toBe(4);
+    expect(tree.outstandingAdvanceTotal).toBe(4000);
+    const ayman = tree.nodes.find((n) => n.label === 'أيمن أصلان')!;
+    expect(ayman.total).toBe(12000);
+    expect(ayman.count).toBe(2);
+    expect(ayman.expenses.map((e) => e.id)).not.toContain('e5');
+  });
+
+  it('keeps it out of the flat report the same way', () => {
+    const report = buildSpendReport(withAdvance, 'resource', {}, { resources });
+    expect(report.grandTotal).toBe(35500);
+    expect(report.outstandingAdvanceTotal).toBe(4000);
+    expect(report.groups.find((g) => g.label === 'أيمن أصلان')!.total).toBe(12000);
+  });
+
+  it('writes the figure into both exports, outside the grand total', () => {
+    const tree = buildSpendTree(withAdvance, ['resource'], {}, { resources });
+    expect(buildSpendTreeCSV(tree, 'مشروع')).toContain('سلف قائمة (خارج الإجمالي),4000');
+    const report = buildSpendReport(withAdvance, 'resource', {}, { resources });
+    expect(buildSpendReportCSV(report, 'مشروع')).toContain('سلف قائمة (خارج الإجمالي),4000');
   });
 });
