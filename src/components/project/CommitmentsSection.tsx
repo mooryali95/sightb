@@ -1,24 +1,22 @@
+/**
+ * The commitments section: what active commitments bind of the budget,
+ * what they have spent, and the table. The form and the inspector live
+ * under commitments/; the form is remounted on open through a dialog
+ * session.
+ */
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { useDialogSession } from '@/hooks/useDialogSession';
 import { formatCurrency } from '@/lib/finance';
-import {
-  COMMITMENT_STATUS_LABELS, COMMITMENT_STATUS_COLORS,
-  type Commitment, type CommitmentStatus,
-} from '@/types/project';
+import { COMMITMENT_STATUS_LABELS, COMMITMENT_STATUS_COLORS, type Commitment } from '@/types/project';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
-import { FormFooter } from '@/components/FormFooter';
-import { Plus, Pencil, Eye } from 'lucide-react';
-import { toast } from 'sonner';
+import { Pencil, Eye } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
-import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
-import { Progress } from '@/components/ui/progress';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
 import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
+import { CommitmentFormDialog } from './commitments/CommitmentFormDialog';
+import { CommitmentInspector } from './commitments/CommitmentInspector';
 
 interface Props {
   projectId: string;
@@ -28,83 +26,18 @@ interface Props {
 }
 
 export function CommitmentsSection({ projectId, commitments, totalPlanned, readOnly = false }: Props) {
-  const { addCommitment, updateCommitment, deleteCommitment } = useStore();
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const deleteCommitment = useStore((s) => s.deleteCommitment);
+  // Remounted on open so an edit starts from the row and an add starts blank; see useDialogSession.
+  const form = useDialogSession<{ commitment?: Commitment }>();
   const [inspectorId, setInspectorId] = useState<string | null>(null);
   const [density] = useTableDensity();
   const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
-  const [description, setDescription] = useState('');
-  const [vendorName, setVendorName] = useState('');
-  const [contractRef, setContractRef] = useState('');
-  const [totalAmount, setTotalAmount] = useState('');
-  const [spentAmount, setSpentAmount] = useState('0');
-  const [status, setStatus] = useState<CommitmentStatus>('active');
-  const [notes, setNotes] = useState('');
-
-  const resetForm = () => {
-    setEditingId(null); setDescription(''); setVendorName(''); setContractRef('');
-    setTotalAmount(''); setSpentAmount('0'); setStatus('active'); setNotes('');
-  };
-
-  const openEdit = (c: Commitment) => {
-    setEditingId(c.id); setDescription(c.description);
-    setVendorName(c.vendorName || ''); setContractRef(c.contractRef || '');
-    setTotalAmount(String(c.totalAmount)); setSpentAmount(String(c.spentAmount));
-    setStatus(c.status); setNotes(c.notes || '');
-    setOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!description.trim() || !totalAmount) return;
-    const spent = parseFloat(spentAmount) || 0;
-    const total = parseFloat(totalAmount) || 0;
-
-    // Budget overrun validation (only for new commitments)
-    if (!editingId) {
-      const currentTotalCommitted = commitments
-        .filter(c => c.status === 'active')
-        .reduce((s, c) => s + c.totalAmount, 0);
-      const newTotal = currentTotalCommitted + total;
-      if (newTotal > totalPlanned && totalPlanned > 0) {
-        const over = newTotal - totalPlanned;
-        const confirmed = window.confirm(
-          `هذا الالتزام يتجاوز الميزانية بمقدار ${formatCurrency(over)}. هل تريد المتابعة؟`
-        );
-        if (!confirmed) return;
-      }
-    }
-
-    // Auto-complete if fully spent
-    let autoStatus = status;
-    if (spent >= total && total > 0 && status === 'active') {
-      autoStatus = 'completed';
-      toast.success('✓ الالتزام اكتمل تلقائياً — المبلغ صُرف بالكامل');
-    }
-
-    const data = {
-      description: description.trim(),
-      vendorName: vendorName.trim() || undefined,
-      contractRef: contractRef.trim() || undefined,
-      totalAmount: total,
-      spentAmount: spent,
-      status: autoStatus,
-      notes: notes.trim() || undefined,
-    };
-    if (editingId) {
-      await updateCommitment(editingId, data);
-      toast.success('تم تعديل الالتزام');
-    } else {
-      await addCommitment({ projectId, ...data });
-      toast.success('تمت إضافة الالتزام');
-    }
-    resetForm(); setOpen(false);
-  };
 
   const activeCommitments = commitments.filter(c => c.status === 'active');
   const totalCommitted = activeCommitments.reduce((s, c) => s + c.totalAmount, 0);
   const totalSpent = activeCommitments.reduce((s, c) => s + c.spentAmount, 0);
   const availableBudget = totalPlanned - totalCommitted;
+  const inspected = inspectorId ? commitments.find(c => c.id === inspectorId) : undefined;
 
   return (
     <div className="stat-card">
@@ -116,55 +49,16 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
           </p>
         </div>
         {!readOnly && (
-          <ResponsiveFormDialog
-            open={open}
-            onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
-            title={editingId ? 'تعديل الالتزام' : 'إضافة التزام'}
-            trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />التزام جديد</Button>}
-            footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
-          >
-            <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>الوصف</Label>
-                  <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: عقد توريد معدات" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>المورّد</Label>
-                    <Input value={vendorName} onChange={(e) => setVendorName(e.target.value)} placeholder="اختياري" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>مرجع العقد</Label>
-                    <Input value={contractRef} onChange={(e) => setContractRef(e.target.value)} placeholder="اختياري" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>إجمالي المبلغ</Label>
-                    <Input type="number" inputMode="decimal" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} placeholder="0" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>المصروف حتى الآن</Label>
-                    <Input type="number" inputMode="decimal" value={spentAmount} onChange={(e) => setSpentAmount(e.target.value)} placeholder="0" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>الحالة</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as CommitmentStatus)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(COMMITMENT_STATUS_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>ملاحظات (اختياري)</Label>
-                  <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
-                </div>
-            </div>
-          </ResponsiveFormDialog>
+          <CommitmentFormDialog
+            key={form.session}
+            open={form.value !== null}
+            onOpenChange={(v) => { if (!v) form.close(); }}
+            onRequestOpen={() => form.open({})}
+            editing={form.value?.commitment}
+            projectId={projectId}
+            commitments={commitments}
+            totalPlanned={totalPlanned}
+          />
         )}
       </div>
 
@@ -236,7 +130,7 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
                         </Button>
                         {!readOnly && (
                           <>
-                            <Button variant="ghost" size="icon" aria-label="تعديل" onClick={() => openEdit(c)}>
+                            <Button variant="ghost" size="icon" aria-label="تعديل" onClick={() => form.open({ commitment: c })}>
                               <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                             </Button>
                             <ConfirmDeleteDialog title="حذف الالتزام" description="هل أنت متأكد من حذف هذا الالتزام؟" onConfirm={() => deleteCommitment(c.id)} />
@@ -253,55 +147,14 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
         </>
       )}
 
-      {/* Inspector Panel */}
-      {(() => {
-        const inspected = inspectorId ? commitments.find(c => c.id === inspectorId) : null;
-        if (!inspected) return null;
-        const remaining = inspected.totalAmount - inspected.spentAmount;
-        const spentRatio = inspected.totalAmount > 0 ? (inspected.spentAmount / inspected.totalAmount) * 100 : 0;
-        return (
-          <InspectorPanel
-            open={!!inspectorId}
-            onOpenChange={(v) => { if (!v) setInspectorId(null); }}
-            title={inspected.description}
-            description={inspected.vendorName ? `المورّد: ${inspected.vendorName}` : undefined}
-            meta={
-              <span className={`text-xs px-2 py-1 rounded-full ${COMMITMENT_STATUS_COLORS[inspected.status]}`}>
-                {COMMITMENT_STATUS_LABELS[inspected.status]}
-              </span>
-            }
-            footer={!readOnly ? (
-              <Button size="sm" onClick={() => { openEdit(inspected); setInspectorId(null); }}>
-                <Pencil className="w-3.5 h-3.5 ml-1.5" /> تعديل
-              </Button>
-            ) : undefined}
-          >
-            <InspectorKpiStrip
-              items={[
-                { label: 'إجمالي', value: formatCurrency(inspected.totalAmount) },
-                { label: 'مصروف', value: formatCurrency(inspected.spentAmount) },
-                { label: 'متبقي', value: formatCurrency(remaining), tone: remaining >= 0 ? 'success' : 'destructive' },
-                { label: 'نسبة الصرف', value: `${spentRatio.toFixed(1)}%`, tone: spentRatio >= 90 ? 'warning' : 'default' },
-              ]}
-            />
-            <InspectorSection title="الصرف">
-              <Progress value={Math.min(spentRatio, 100)} className="h-2" />
-              <p className="text-[11px] text-muted-foreground mt-1 tabular-nums">
-                {formatCurrency(inspected.spentAmount)} من {formatCurrency(inspected.totalAmount)}
-              </p>
-            </InspectorSection>
-            <InspectorSection title="بيانات العقد">
-              <InspectorField label="المورّد" value={inspected.vendorName || '—'} />
-              <InspectorField label="مرجع العقد" value={inspected.contractRef || '—'} mono />
-            </InspectorSection>
-            {inspected.notes && (
-              <InspectorSection title="ملاحظات">
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{inspected.notes}</p>
-              </InspectorSection>
-            )}
-          </InspectorPanel>
-        );
-      })()}
+      {inspected && (
+        <CommitmentInspector
+          commitment={inspected}
+          readOnly={readOnly}
+          onClose={() => setInspectorId(null)}
+          onEdit={() => { form.open({ commitment: inspected }); setInspectorId(null); }}
+        />
+      )}
     </div>
   );
 }
