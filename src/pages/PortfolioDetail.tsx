@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useDialogSession } from '@/hooks/useDialogSession';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { useCoreData } from '@/hooks/useAppData';
@@ -7,34 +8,25 @@ import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { getPortfolioSummary } from '@/lib/portfolio';
-import { getProjectSummary, getCashFlowForecast } from '@/lib/finance';
 import { exportPortfolioToExcel, exportPortfolioToPDF } from '@/lib/export-lazy';
-import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, RISK_PROBABILITY_LABELS, RISK_STATUS_LABELS, type ProjectStatus } from '@/types/project';
+import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS } from '@/types/project';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { motion } from 'framer-motion';
-import {
-  DollarSign, TrendingUp, TrendingDown, Target,
-  FileSpreadsheet, ArrowLeft, AlertTriangle,
-  FolderKanban, Pencil, Trash2,
-} from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Target, FileSpreadsheet, FolderKanban, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, LineChart, Line, Legend,
-} from 'recharts';
 import { RisksSection } from '@/components/project/RisksSection';
 import { PortfolioPayablesSection } from '@/components/portfolio/PortfolioPayablesSection';
 import { PageHeader } from '@/components/ui/page-header';
 import { MixedCurrencyNotice } from '@/components/MixedCurrencyNotice';
+import { EditPortfolioDialog } from './portfolio/EditPortfolioDialog';
+import { ProjectComparisonTable } from './portfolio/ProjectComparisonTable';
+import { PortfolioCharts } from './portfolio/PortfolioCharts';
+import { buildPortfolioExport } from './portfolio/buildPortfolioExport';
+import { rankProjects, aggregateCashFlow } from './portfolio/portfolioFigures';
 
-const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)', 'hsl(200, 70%, 50%)'];
 
 export default function PortfolioDetail() {
   const { id } = useParams<{ id: string }>();
@@ -42,8 +34,7 @@ export default function PortfolioDetail() {
   const { isAdmin, canEdit } = useRole();
   const {
     portfolios, companies, projects, budgetItems, expenses, revenues,
-    changeOrders, milestones, risks, loading, loadAll,
-    updatePortfolio, deletePortfolio,
+    changeOrders, milestones, risks, loading, deletePortfolio,
   } = useStore();
 
   const { loadProjectData } = useStore();
@@ -59,39 +50,8 @@ export default function PortfolioDetail() {
   const portfolio = portfolios.find(p => p.id === id);
   const company = portfolio ? companies.find(c => c.id === portfolio.companyId) : null;
 
-  // Edit state
-  const [editOpen, setEditOpen] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editTargetRevenue, setEditTargetRevenue] = useState('');
-  const [editTargetMargin, setEditTargetMargin] = useState('');
-  const [editFiscalYear, setEditFiscalYear] = useState('');
-
-  const openEdit = () => {
-    if (portfolio) {
-      setEditName(portfolio.name);
-      setEditDescription(portfolio.description || '');
-      setEditTargetRevenue(String(portfolio.targetRevenue || 0));
-      setEditTargetMargin(String(portfolio.targetMargin || 0));
-      setEditFiscalYear(portfolio.fiscalYear || '');
-      setEditOpen(true);
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editName.trim()) { toast.error('اسم المحفظة مطلوب'); return; }
-    try {
-      await updatePortfolio(id!, {
-        name: editName,
-        description: editDescription || null,
-        targetRevenue: parseFloat(editTargetRevenue) || 0,
-        targetMargin: parseFloat(editTargetMargin) || 0,
-        fiscalYear: editFiscalYear || null,
-      });
-      toast.success('تم تحديث بيانات المحفظة');
-      setEditOpen(false);
-    } catch { toast.error('فشل التحديث'); }
-  };
+  // Remounted on open so the form starts from the portfolio; see useDialogSession.
+  const edit = useDialogSession<true>();
 
   const summary = useMemo(() => {
     if (!portfolio) return null;
@@ -106,20 +66,10 @@ export default function PortfolioDetail() {
     return projects.filter(p => p.portfolioId === portfolio.id);
   }, [portfolio, projects]);
 
-  const projectSummaries = useMemo(() => {
-    return portfolioProjects.map(project => {
-      const pBudget = budgetItems.filter(b => b.projectId === project.id);
-      const pExpenses = expenses.filter(e => e.projectId === project.id);
-      const pRevenues = revenues.filter(r => r.projectId === project.id);
-      const pCO = changeOrders.filter(co => co.projectId === project.id);
-      const s = getProjectSummary(project, pBudget, pExpenses, pRevenues, pCO);
-      const health = s.spendRate > 100 || project.status === 'on-hold' || project.status === 'cancelled' ? 'critical' : s.spendRate > 90 ? 'warning' : 'healthy';
-      return { project, summary: s, health };
-    }).sort((a, b) => {
-      const order = { critical: 0, warning: 1, healthy: 2 };
-      return (order[a.health as keyof typeof order] ?? 2) - (order[b.health as keyof typeof order] ?? 2);
-    });
-  }, [portfolioProjects, budgetItems, expenses, revenues, changeOrders]);
+  const projectSummaries = useMemo(
+    () => rankProjects(portfolioProjects, budgetItems, expenses, revenues, changeOrders),
+    [portfolioProjects, budgetItems, expenses, revenues, changeOrders],
+  );
 
   const pieData = useMemo(() =>
     projectSummaries.filter(ps => ps.summary.totalActual > 0).map(ps => ({
@@ -132,24 +82,10 @@ export default function PortfolioDetail() {
       'الربح المخطط': ps.summary.plannedProfit,
     })), [projectSummaries]);
 
-  const cashFlowData = useMemo(() => {
-    if (portfolioProjects.length === 0) return [];
-    const maxMonths = Math.max(...portfolioProjects.map(p => p.durationMonths), 1);
-    const aggregated: { month: number; مخطط: number; فعلي: number }[] = [];
-    for (let m = 1; m <= maxMonths; m++) {
-      let planned = 0, actual = 0;
-      portfolioProjects.forEach(project => {
-        const pBudget = budgetItems.filter(b => b.projectId === project.id);
-        const pExpenses = expenses.filter(e => e.projectId === project.id);
-        const pRevenues = revenues.filter(r => r.projectId === project.id);
-        const cf = getCashFlowForecast(pBudget, pExpenses, pRevenues, project.durationMonths);
-        const entry = cf.find(c => c.month === m);
-        if (entry) { planned += entry.cumulativePlanned; actual += entry.cumulativeActual; }
-      });
-      aggregated.push({ month: m, مخطط: planned, فعلي: actual });
-    }
-    return aggregated;
-  }, [portfolioProjects, budgetItems, expenses, revenues]);
+  const cashFlowData = useMemo(
+    () => aggregateCashFlow(portfolioProjects, budgetItems, expenses, revenues),
+    [portfolioProjects, budgetItems, expenses, revenues],
+  );
 
   const portfolioRisks = useMemo(() => {
     if (!portfolio) return [];
@@ -215,58 +151,18 @@ export default function PortfolioDetail() {
           actions={
             <>
               {(isAdmin || canEdit('company', portfolio.companyId)) && (
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => edit.open(true)}>
                   <Pencil className="w-3.5 h-3.5" />تعديل
                 </Button>
               )}
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                exportPortfolioToExcel({
-                  portfolioName: portfolio.name,
-                  summary: { ...summary },
-                  projectSummaries: projectSummaries.map(ps => ({
-                    name: ps.project.name,
-                    contractValue: ps.summary.effectiveContractValue,
-                    planned: ps.summary.totalPlanned,
-                    actual: ps.summary.totalActual,
-                    plannedProfit: ps.summary.plannedProfit,
-                    percentComplete: ps.project.percentComplete,
-                    health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
-                  })),
-                  risks: portfolioRisks.map(r => ({
-                    title: r.title,
-                    project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
-                    probability: RISK_PROBABILITY_LABELS[r.probability],
-                    impact: r.impact,
-                    financialImpact: r.financialImpact,
-                    status: RISK_STATUS_LABELS[r.status],
-                  })),
-                });
+                exportPortfolioToExcel(buildPortfolioExport(portfolio, summary, projectSummaries, portfolioRisks, projects));
                 toast.success('تم تصدير تقرير المحفظة');
               }}>
                 <FileSpreadsheet className="w-3.5 h-3.5" />Excel
               </Button>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                exportPortfolioToPDF({
-                  portfolioName: portfolio.name,
-                  summary: { ...summary },
-                  projectSummaries: projectSummaries.map(ps => ({
-                    name: ps.project.name,
-                    contractValue: ps.summary.effectiveContractValue,
-                    planned: ps.summary.totalPlanned,
-                    actual: ps.summary.totalActual,
-                    plannedProfit: ps.summary.plannedProfit,
-                    percentComplete: ps.project.percentComplete,
-                    health: HEALTH_STATUS_LABELS[ps.health as keyof typeof HEALTH_STATUS_LABELS] || ps.health,
-                  })),
-                  risks: portfolioRisks.map(r => ({
-                    title: r.title,
-                    project: (r.projectId ? projects.find(p => p.id === r.projectId)?.name : portfolio.name) || '-',
-                    probability: RISK_PROBABILITY_LABELS[r.probability],
-                    impact: r.impact,
-                    financialImpact: r.financialImpact,
-                    status: RISK_STATUS_LABELS[r.status],
-                  })),
-                });
+                exportPortfolioToPDF(buildPortfolioExport(portfolio, summary, projectSummaries, portfolioRisks, projects));
                 toast.success('تم تصدير تقرير PDF');
               }}>
                 <FileSpreadsheet className="w-3.5 h-3.5" />PDF
@@ -291,37 +187,7 @@ export default function PortfolioDetail() {
 
         <MixedCurrencyNotice currencies={summary.currencies} scopeLabel="هذه المحفظة" />
 
-        {/* Edit Dialog */}
-        <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>تعديل بيانات المحفظة</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label>اسم المحفظة *</Label>
-                <Input value={editName} onChange={e => setEditName(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label>الوصف</Label>
-                <Textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={2} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>هدف الإيراد</Label>
-                  <Input type="number" value={editTargetRevenue} onChange={e => setEditTargetRevenue(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label>هامش الربح المستهدف %</Label>
-                  <Input type="number" value={editTargetMargin} onChange={e => setEditTargetMargin(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label>السنة المالية</Label>
-                <Input value={editFiscalYear} onChange={e => setEditFiscalYear(e.target.value)} placeholder="مثال: 2026" />
-              </div>
-              <Button onClick={handleSaveEdit} className="w-full">حفظ</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <EditPortfolioDialog key={edit.session} portfolio={portfolio} open={edit.value !== null} onOpenChange={(v) => { if (!v) edit.close(); }} />
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -343,96 +209,9 @@ export default function PortfolioDetail() {
           </div>
         )}
 
-        {/* Project comparison table */}
-        {projectSummaries.length > 0 && (
-          <div className="stat-card mb-6">
-            <h3 className="text-sm font-semibold mb-4">مقارنة المشاريع</h3>
-            <div className="overflow-x-auto">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>المشروع</th>
-                    <th>القيمة</th>
-                    <th className="hidden md:table-cell">المخطط</th>
-                    <th>المصروف</th>
-                    <th>الربح المخطط</th>
-                    <th>الإنجاز%</th>
-                    <th>الصحة</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projectSummaries.map(({ project, summary: ps, health }) => (
-                    <tr key={project.id} className="cursor-pointer" onClick={() => navigate(`/project/${project.id}`)}>
-                      <td className="font-medium">{project.name}</td>
-                      <td className="font-mono text-sm">{formatCurrency(ps.effectiveContractValue)}</td>
-                      <td className="font-mono text-sm hidden md:table-cell">{formatCurrency(ps.totalPlanned)}</td>
-                      <td className="font-mono text-sm">{formatCurrency(ps.totalActual)}</td>
-                      <td><span className={ps.plannedProfit >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(ps.plannedProfit)}</span></td>
-                      <td className="text-sm">{project.percentComplete}%</td>
-                      <td>
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${HEALTH_STATUS_COLORS[health as keyof typeof HEALTH_STATUS_COLORS]}`}>
-                          {HEALTH_STATUS_LABELS[health as keyof typeof HEALTH_STATUS_LABELS]}
-                        </span>
-                      </td>
-                      <td><ArrowLeft className="w-4 h-4 text-muted-foreground" /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        <ProjectComparisonTable rows={projectSummaries} />
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {pieData.length > 0 && (
-            <div className="stat-card">
-              <h3 className="text-sm font-semibold mb-4">توزيع المصروفات حسب المشروع</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" label={({ name, value }) => `${name}: ${(value / 1000).toFixed(0)}k`}>
-                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {barData.length > 0 && (
-            <div className="stat-card">
-              <h3 className="text-sm font-semibold mb-4">الربح المخطط لكل مشروع</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={barData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }} />
-                  <Bar dataKey="الربح المخطط" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
-
-        {/* Cash flow chart */}
-        {cashFlowData.length > 0 && (
-          <div className="stat-card mb-6">
-            <h3 className="text-sm font-semibold mb-4">التدفق النقدي المجمّع (تراكمي)</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={cashFlowData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" tickFormatter={v => `${v}`} />
-                <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }} />
-                <Legend />
-                <Line type="monotone" dataKey="مخطط" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="فعلي" stroke="hsl(160, 60%, 42%)" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <PortfolioCharts pieData={pieData} barData={barData} cashFlowData={cashFlowData} />
 
         {/* Payables across the portfolio */}
         <div className="mb-6">
