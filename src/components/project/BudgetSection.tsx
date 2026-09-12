@@ -1,27 +1,26 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { useDialogSession } from '@/hooks/useDialogSession';
 import { formatCurrency, getTotalPlanned } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type Resource,
-  type CostType, type CostClass, type BudgetAmendment,
+  type BudgetAmendment, type BudgetItem, type Expense, type Revenue,
 } from '@/types/project';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
-import { FormFooter } from '@/components/FormFooter';
-import { Plus, BarChart3, Pencil, Unlock } from 'lucide-react';
+import { Pencil, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { MonthlyBudgetPlan } from './MonthlyBudgetPlan';
 import { BudgetAmendmentManager } from './BudgetAmendmentManager';
+import { BudgetItemFormDialog } from './budget/BudgetItemFormDialog';
+import { BudgetPlanningSummary } from './budget/BudgetPlanningSummary';
+import { ReservesCard } from './budget/ReservesCard';
 
 interface BudgetSectionProps {
   projectId: string;
-  budgetItems: any[];
-  expenses: any[];
-  revenues?: any[];
+  budgetItems: BudgetItem[];
+  expenses: Expense[];
+  revenues?: Revenue[];
   durationMonths: number;
   resources: Resource[];
   contractValue: number;
@@ -34,116 +33,38 @@ interface BudgetSectionProps {
 }
 
 export function BudgetSection({ projectId, budgetItems, expenses, revenues = [], durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false, taxPercent = 15, startDate }: BudgetSectionProps) {
-  const { addBudgetItem, deleteBudgetItem, updateBudgetItem, updateExpense, paymentRequests } = useStore();
+  const { deleteBudgetItem, updateExpense, paymentRequests } = useStore();
   const outstandingAdvancesTotal = paymentRequests
-    .filter((r: any) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding)
-    .reduce((s: number, r: any) => s + r.amount, 0);
+    .filter((r) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding)
+    .reduce((s, r) => s + r.amount, 0);
   const outstandingAdvancesCount = paymentRequests
-    .filter((r: any) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding).length;
+    .filter((r) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding).length;
   const [activeDraft, setActiveDraft] = useState<BudgetAmendment | null>(null);
   // الموازنة مفتوحة للتعديل عند: عدم القفل، أو وجود مسودة تعديل نشطة
   const isLocked = readOnly || (baselineLocked && !activeDraft);
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [category, setCategory] = useState<ExpenseCategory>('salary');
-  const [description, setDescription] = useState('');
-  const [plannedAmount, setPlannedAmount] = useState('');
-  const [startMonth, setStartMonth] = useState<string>('');
-  const [endMonth, setEndMonth] = useState<string>('');
-  const [costType, setCostType] = useState<CostType>('fixed');
-  const [resourceId, setResourceId] = useState<string>('');
+  // ─── The item form (add and edit) ───
+  // Owns its own state; remounted (via `key`) on every open so an edit starts
+  // from the row and an add starts blank. See useDialogSession.
+  const form = useDialogSession<{ item?: BudgetItem }>();
 
-  const resetForm = () => {
-    setEditingId(null);
-    setCategory('salary');
-    setDescription('');
-    setPlannedAmount('');
-    setStartMonth('');
-    setEndMonth('');
-    setCostType('fixed');
-    setResourceId('');
-  };
-
-  const openEdit = (item: any) => {
-    setEditingId(item.id);
-    setCategory(item.category);
-    setDescription(item.description);
-    setPlannedAmount(String(item.plannedAmount));
-    setStartMonth(item.startMonth ? String(item.startMonth) : '');
-    setEndMonth(item.endMonth ? String(item.endMonth) : '');
-    setCostType(item.costType || 'fixed');
-    setResourceId(item.resourceId || '');
-    setOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!description.trim() || !plannedAmount) return;
-    const sm = startMonth && startMonth !== 'all' ? parseInt(startMonth) : undefined;
-    const em = endMonth && endMonth !== 'all' ? parseInt(endMonth) : undefined;
-    const data = {
-      category,
-      description: description.trim(),
-      plannedAmount: parseFloat(plannedAmount),
-      startMonth: sm,
-      endMonth: em || sm,
-      month: sm,
-      costType,
-      costClass: 'direct' as CostClass,
-      resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
-    };
-    if (editingId) {
-      await updateBudgetItem(editingId, data);
-      toast.success('تم تعديل بند الموازنة');
-    } else {
-      await addBudgetItem({ projectId, ...data });
-      toast.success('تمت إضافة بند الموازنة');
-    }
-    resetForm();
-    setOpen(false);
-  };
+  // A rejected expense is not spend, here as on every other screen. Every
+  // actual figure below reads this list.
+  const countedExpenses = expenses.filter((e) => e.approvalStatus !== 'rejected');
 
   const totalPlanned = getTotalPlanned(budgetItems);
-  const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
-  const taxAmount = contractValue > 0 && taxPercent > 0 ? contractValue * (taxPercent / 100) : 0;
-  const contractValueInclTax = contractValue + taxAmount;
-  const unallocated = contractValue - totalPlanned;
-  const plannedProfit = contractValue - totalPlanned;
-  const plannedProfitMargin = contractValue > 0 ? (plannedProfit / contractValue) * 100 : 0;
-
-  const categoryMap = new Map<string, { planned: number; actual: number }>();
-  budgetItems.forEach((b: any) => {
-    const entry = categoryMap.get(b.category) || { planned: 0, actual: 0 };
-    // Account for recurring items
-    if (b.costType === 'recurring') {
-      const start = b.startMonth || 1;
-      const end = b.endMonth || b.startMonth || 1;
-      const months = Math.max(1, end - start + 1);
-      entry.planned += b.plannedAmount * months;
-    } else {
-      entry.planned += b.plannedAmount;
-    }
-    categoryMap.set(b.category, entry);
-  });
-  expenses.forEach((e: any) => {
-    const entry = categoryMap.get(e.category) || { planned: 0, actual: 0 };
-    entry.actual += e.amount;
-    categoryMap.set(e.category, entry);
-  });
-
-  const getActualForItem = (item: any) => {
-    return expenses.filter((e: any) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
+  const totalActual = countedExpenses.reduce((s, e) => s + e.amount, 0);
+  const getActualForItem = (item: BudgetItem) => {
+    return countedExpenses.filter((e) => e.budgetItemId === item.id).reduce((s, e) => s + e.amount, 0);
   };
 
-  const unlinkedExpenses = expenses.filter((e: any) => !e.budgetItemId);
+  const unlinkedExpenses = expenses.filter((e) => !e.budgetItemId);
   const unlinkedByCategory = new Map<string, number>();
-  unlinkedExpenses.forEach((e: any) => {
+  unlinkedExpenses.forEach((e) => {
     unlinkedByCategory.set(e.category, (unlinkedByCategory.get(e.category) || 0) + e.amount);
   });
 
-  const budgetUtilization = contractValue > 0 ? (totalPlanned / contractValue) * 100 : 0;
-  const spendRate = totalPlanned > 0 ? (totalActual / totalPlanned) * 100 : 0;
 
-  const getMonthDisplay = (item: any) => {
+  const getMonthDisplay = (item: BudgetItem) => {
     if (item.startMonth && item.endMonth && item.startMonth !== item.endMonth) {
       return `شهر ${item.startMonth} → ${item.endMonth}`;
     }
@@ -162,119 +83,13 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
       />
 
       {budgetItems.length > 0 && (
-        <div className="stat-card">
-          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-primary" />
-            ملخص تخطيط الموازنة
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">قيمة العقد (بدون ضريبة)</p>
-              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contractValue)}</p>
-            </div>
-            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">الضريبة ({taxPercent}%)</p>
-              <p className="text-sm font-mono font-bold mt-1 health-warning">{formatCurrency(taxAmount)}</p>
-            </div>
-            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">شامل الضريبة</p>
-              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contractValueInclTax)}</p>
-            </div>
-            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">إجمالي المخطط</p>
-              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(totalPlanned)}</p>
-            </div>
-            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">غير مخصص</p>
-              <p className={`text-sm font-mono font-bold mt-1 ${unallocated >= 0 ? 'health-good' : 'text-destructive'}`}>
-                {formatCurrency(unallocated)}
-              </p>
-            </div>
-            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">الربح المخطط</p>
-              <p className={`text-sm font-mono font-bold mt-1 ${plannedProfit >= 0 ? 'health-good' : 'text-destructive'}`}>
-                {formatCurrency(plannedProfit)} <span className="text-xs">({plannedProfitMargin.toFixed(1)}%)</span>
-              </p>
-            </div>
-          </div>
-
-          {outstandingAdvancesTotal > 0 && (
-            <div className="mb-4 p-3 rounded-lg border border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20 flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold">سلف قائمة (لم تُسوَّ بعد)</p>
-                <p className="text-[11px] text-muted-foreground">
-                  أصول قابلة للاسترداد — لا تدخل في التكلفة الفعلية (AC) ولا في حساب CPI حتى تتم تسويتها.
-                </p>
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-mono font-bold text-amber-700 dark:text-amber-400">
-                  {formatCurrency(outstandingAdvancesTotal)}
-                </p>
-                <p className="text-[11px] text-muted-foreground">{outstandingAdvancesCount} سلفة</p>
-              </div>
-            </div>
-          )}
-
-          <div className="mb-4">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>نسبة ما خُطط للصرف من الموازنة ({budgetUtilization.toFixed(1)}%)</span>
-              <span>{formatCurrency(totalPlanned)} / {formatCurrency(contractValue)}</span>
-            </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all bg-primary" style={{ width: `${Math.min(budgetUtilization, 100)}%` }} />
-            </div>
-          </div>
-
-          {totalActual > 0 && (
-            <div className="mb-4">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>نسبة ما صُرف من الموازنة المخططة ({spendRate.toFixed(1)}%)</span>
-                <span>{formatCurrency(totalActual)} / {formatCurrency(totalPlanned)}</span>
-              </div>
-              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(spendRate, 100)}%`, backgroundColor: spendRate > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
-              </div>
-            </div>
-          )}
-
-          {categoryMap.size > 0 && (
-            <div className="overflow-x-auto">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>الفئة</th>
-                    <th>المخطط</th>
-                    <th>الفعلي</th>
-                    <th>المتبقي</th>
-                    <th>النسبة من العقد</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from(categoryMap.entries()).map(([cat, { planned, actual }]) => {
-                    const rem = planned - actual;
-                    const pctOfContract = contractValue > 0 ? (planned / contractValue) * 100 : 0;
-                    return (
-                      <tr key={cat}>
-                        <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[cat as ExpenseCategory] || cat}</span></td>
-                        <td className="font-mono text-sm">{formatCurrency(planned)}</td>
-                        <td className="font-mono text-sm">{formatCurrency(actual)}</td>
-                        <td><span className={rem >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(rem)}</span></td>
-                        <td className="text-xs text-muted-foreground">{pctOfContract.toFixed(1)}%</td>
-                      </tr>
-                    );
-                  })}
-                  <tr className="font-semibold border-t-2 border-border">
-                    <td>الإجمالي</td>
-                    <td className="font-mono text-sm">{formatCurrency(totalPlanned)}</td>
-                    <td className="font-mono text-sm">{formatCurrency(totalActual)}</td>
-                    <td><span className={totalPlanned - totalActual >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(totalPlanned - totalActual)}</span></td>
-                    <td className="text-xs">{budgetUtilization.toFixed(1)}%</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <BudgetPlanningSummary
+          budgetItems={budgetItems}
+          countedExpenses={countedExpenses}
+          contractValue={contractValue}
+          taxPercent={taxPercent}
+          outstandingAdvances={{ total: outstandingAdvancesTotal, count: outstandingAdvancesCount }}
+        />
       )}
 
       {budgetItems.length > 0 && (
@@ -313,97 +128,16 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
             </p>
           </div>
           {!isLocked && (
-          <ResponsiveFormDialog
-            open={open}
-            onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
-            title={editingId ? 'تعديل بند الموازنة' : 'إضافة بند موازنة'}
-            trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />بند جديد</Button>}
-            footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
-          >
-            <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>الفئة</Label>
-                  <Select value={category} onValueChange={(v) => setCategory(v as ExpenseCategory)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>الوصف</Label>
-                  <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب أحمد × 4 أشهر" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>المبلغ المخطط</Label>
-                    <Input type="number" inputMode="decimal" value={plannedAmount} onChange={(e) => setPlannedAmount(e.target.value)} placeholder="0" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>نوع التكلفة</Label>
-                    <Select value={costType} onValueChange={(v) => setCostType(v as CostType)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(COST_TYPE_LABELS).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {costType === 'recurring' && (
-                  <p className="text-xs text-muted-foreground">
-                    هذا المبلغ سيتكرر كل شهر — الإجمالي: {formatCurrency(
-                      (parseFloat(plannedAmount) || 0) * Math.max(1, ((parseInt(endMonth) || parseInt(startMonth) || 1) - (parseInt(startMonth) || 1) + 1))
-                    )}
-                  </p>
-                )}
-                {costType === 'fixed' && startMonth && endMonth && startMonth !== endMonth && startMonth !== 'all' && (
-                  <p className="text-xs text-muted-foreground">سيُوزّع بالتساوي على الأشهر المحددة</p>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>من شهر <span className="text-muted-foreground text-xs">(اختياري)</span></Label>
-                    <Select value={startMonth} onValueChange={setStartMonth}>
-                      <SelectTrigger><SelectValue placeholder="موزع على الكل" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">موزع على كل الأشهر</SelectItem>
-                        {Array.from({ length: durationMonths }, (_, i) => (
-                          <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>إلى شهر</Label>
-                    <Select value={endMonth} onValueChange={setEndMonth} disabled={!startMonth || startMonth === 'all'}>
-                      <SelectTrigger><SelectValue placeholder="نفس الشهر" /></SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: durationMonths }, (_, i) => (
-                          <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {resources.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>المورد (اختياري)</Label>
-                    <Select value={resourceId} onValueChange={setResourceId}>
-                      <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">بدون مورد</SelectItem>
-                        {resources.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>{r.name} {r.role ? `(${r.role})` : ''}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-            </div>
-          </ResponsiveFormDialog>
+          <BudgetItemFormDialog
+            key={form.session}
+            open={form.value !== null}
+            onOpenChange={(v) => { if (!v) form.close(); }}
+            onRequestOpen={() => form.open({})}
+            editing={form.value?.item}
+            projectId={projectId}
+            durationMonths={durationMonths}
+            resources={resources}
+          />
           )}
         </div>
 
@@ -422,7 +156,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
               onClick={async () => {
                 let linked = 0;
                 for (const exp of unlinkedExpenses) {
-                  const match = budgetItems.find((b: any) => b.category === exp.category && b.projectId === exp.projectId);
+                  const match = budgetItems.find((b) => b.category === exp.category && b.projectId === exp.projectId);
                   if (match) {
                     await updateExpense(exp.id, { budgetItemId: match.id });
                     linked++;
@@ -470,7 +204,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
                   const resource = resources.find(r => r.id === item.resourceId);
                   return (
                     <tr key={item.id} className={spentPct > 100 ? 'bg-destructive/5' : ''}>
-                      <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[item.category as ExpenseCategory]}</span></td>
+                      <td><span className="badge-gold">{EXPENSE_CATEGORY_LABELS[item.category]}</span></td>
                       <td>
                         {item.description.startsWith('[أمر تغيير]') ? (
                           <span className="flex items-center gap-1">
@@ -481,7 +215,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
                       </td>
                       <td className="text-xs">{resource?.name || '—'}</td>
                       <td className="text-xs text-muted-foreground">{getMonthDisplay(item)}</td>
-                      <td className="text-xs text-muted-foreground">{COST_TYPE_LABELS[item.costType as CostType] || 'ثابت'}</td>
+                      <td className="text-xs text-muted-foreground">{COST_TYPE_LABELS[item.costType] || 'ثابت'}</td>
                       <td className="font-mono text-sm">
                         {formatCurrency(item.plannedAmount)}
                         {item.costType === 'recurring' && item.startMonth && item.endMonth && item.endMonth > item.startMonth && (
@@ -503,7 +237,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
                       {!isLocked && (
                       <td>
                         <div className="flex items-center gap-0.5">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
+                          <Button variant="ghost" size="icon" onClick={() => form.open({ item })}>
                             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                           </Button>
                           <ConfirmDeleteDialog title="حذف بند الموازنة" description="هل أنت متأكد من حذف هذا البند؟" onConfirm={() => deleteBudgetItem(item.id)} />
@@ -519,45 +253,13 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
         )}
       </div>
 
-      {/* Reserves Analysis */}
       {budgetItems.length > 0 && (
-        <div className="stat-card">
-          <h3 className="text-sm font-semibold mb-4">تحليل الاحتياطيات</h3>
-          {(() => {
-            const contingencyPlanned = getTotalPlanned(budgetItems.filter((b: any) => b.category === 'contingency'));
-            const contingencyActual = expenses.filter((e: any) => e.category === 'contingency').reduce((s: number, e: any) => s + e.amount, 0);
-            const contingencyRemaining = contingencyPlanned - contingencyActual;
-            const budgetWithoutReserve = totalPlanned - contingencyPlanned;
-
-            return (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                  <p className="text-xs text-muted-foreground">الموازنة بدون احتياطي</p>
-                  <p className="text-sm font-mono font-bold mt-1">{formatCurrency(budgetWithoutReserve)}</p>
-                </div>
-                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                  <p className="text-xs text-muted-foreground">احتياطي الطوارئ (مخطط)</p>
-                  <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contingencyPlanned)}</p>
-                </div>
-                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                  <p className="text-xs text-muted-foreground">احتياطي الطوارئ (مصروف)</p>
-                  <p className="text-sm font-mono font-bold mt-1 text-destructive">{formatCurrency(contingencyActual)}</p>
-                </div>
-                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                  <p className="text-xs text-muted-foreground">المتبقي من الاحتياطي</p>
-                  <p className={`text-sm font-mono font-bold mt-1 ${contingencyRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                    {formatCurrency(contingencyRemaining)}
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-                  <p className="text-xs text-muted-foreground">الاحتياطي الإداري</p>
-                  <p className="text-sm font-mono font-bold mt-1">{formatCurrency(managementReserve)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">محجوز لا يُصرف إلا بموافقة خاصة</p>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
+        <ReservesCard
+          budgetItems={budgetItems}
+          countedExpenses={countedExpenses}
+          totalPlanned={totalPlanned}
+          managementReserve={managementReserve}
+        />
       )}
     </div>
   );
