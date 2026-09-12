@@ -7,6 +7,19 @@ import {
 } from '../helpers';
 import type { AppState } from '../useStore';
 
+/**
+ * What a custody edit may carry. `sourceFundId` and `notes` accept `null` so
+ * an edit can clear them (the column goes to NULL); the local row stores a
+ * cleared field as `undefined`, which is what `Custody` declares. Declared
+ * with Omit rather than an intersection: intersecting `string | undefined`
+ * with `string | null` narrows to `string`, which is why the old signature
+ * only ever accepted null through a cast.
+ */
+export type CustodyUpdate = Partial<Omit<Custody, 'sourceFundId' | 'notes'>> & {
+  sourceFundId?: string | null;
+  notes?: string | null;
+};
+
 export interface TrackingSlice {
   milestones: Milestone[];
   changeOrders: ChangeOrder[];
@@ -28,7 +41,7 @@ export interface TrackingSlice {
   updateResource: (id: string, r: Partial<Resource>) => Promise<void>;
   deleteResource: (id: string) => Promise<void>;
   addCustody: (c: Omit<Custody, 'id' | 'createdAt' | 'spent' | 'remaining'>) => Promise<string>;
-  updateCustody: (id: string, c: Partial<Custody> & { sourceFundId?: string | null }) => Promise<void>;
+  updateCustody: (id: string, c: CustodyUpdate) => Promise<void>;
   deleteCustody: (id: string) => Promise<void>;
   addCommitment: (c: Omit<Commitment, 'id' | 'createdAt'>) => Promise<string>;
   updateCommitment: (id: string, c: Partial<Commitment>) => Promise<void>;
@@ -309,13 +322,18 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (c.closedDate !== undefined) updates.closed_date = c.closedDate || null;
     const { error } = await db.from('custodies').update(updates).eq('id', id);
     if (error) throw error;
-    // The patch accepts `sourceFundId: null` to mean "clear it", which the
-    // Custody type spells as absent. Normalising here keeps the stored shape
-    // honest instead of casting the mismatch away.
-    const { sourceFundId, ...rest } = c;
+    // The patch accepts `sourceFundId: null` and `notes: null` to mean
+    // "clear it", which the Custody type spells as absent. Normalising here
+    // keeps the stored shape honest instead of casting the mismatch away.
+    const { sourceFundId, notes, ...rest } = c;
     set((s) => ({
       custodies: s.custodies.map((x) =>
-        x.id === id ? { ...x, ...rest, ...(sourceFundId === undefined ? {} : { sourceFundId: sourceFundId ?? undefined }) } : x),
+        x.id === id ? {
+          ...x,
+          ...rest,
+          ...(sourceFundId === undefined ? {} : { sourceFundId: sourceFundId ?? undefined }),
+          ...(notes === undefined ? {} : { notes: notes ?? undefined }),
+        } : x),
     }));
   },
 
