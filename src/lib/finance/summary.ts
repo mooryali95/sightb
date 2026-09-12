@@ -13,7 +13,7 @@ export function getProjectSummary(
   const totalPlanned = getTotalPlanned(budgetItems);
   // استبعاد المرفوضات + السلف غير المسوّاة (Outstanding Advances) من AC
   const totalActual = expenses
-    .filter(e => (e as any).approvalStatus !== 'rejected' && !(e as any).isOutstandingAdvance)
+    .filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance)
     .reduce((sum, e) => sum + e.amount, 0);
 
   const effectiveContractValue = getEffectiveContractValue(project.contractValue, changeOrders);
@@ -44,14 +44,14 @@ export function getProjectSummary(
   const bacWithoutReserve = totalPlanned - managementReserve;
 
   // === VAT ===
-  const vatRate = (project as any).taxPercent || 0;
-  const vatInclusive = (project as any).vatInclusive === true;
+  const vatRate = project.taxPercent || 0;
+  const vatInclusive = project.vatInclusive === true;
   const contractValueInclVAT = vatRate > 0 && !vatInclusive
     ? addVAT(effectiveContractValue, vatRate)
     : effectiveContractValue;
 
   const totalVATOnExpenses = expenses
-    .filter(e => (e as any).approvalStatus !== 'rejected' && !(e as any).isOutstandingAdvance && !(e as any).isVatExempt)
+    .filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance && !e.isVatExempt)
     .reduce((sum, e) => sum + calcVAT(e.amount, vatRate), 0);
   const totalActualInclVAT = totalActual + totalVATOnExpenses;
 
