@@ -93,14 +93,22 @@ export function enqueueMutation(
   return item;
 }
 
+/** The slice of the query builder the replay uses; the table name is data, so the client is read loosely. */
+interface LooseFilter { eq(column: string, value: unknown): LooseFilter & PromiseLike<{ error: unknown }> }
+interface LooseTable {
+  insert(payload: unknown): PromiseLike<{ error: unknown }>;
+  update(payload: unknown): LooseFilter & PromiseLike<{ error: unknown }>;
+  delete(): LooseFilter & PromiseLike<{ error: unknown }>;
+}
+
 async function apply(item: QueuedMutation): Promise<void> {
-  const table = (supabase as any).from(item.table);
+  const table = (supabase as unknown as { from(table: string): LooseTable }).from(item.table);
   if (item.op === 'insert') {
     const { error } = await table.insert(item.payload);
     if (error) throw error;
     return;
   }
-  let query = item.op === 'update' ? table.update(item.payload) : table.delete();
+  let query: LooseFilter & PromiseLike<{ error: unknown }> = item.op === 'update' ? table.update(item.payload) : table.delete();
   for (const [k, v] of Object.entries(item.match ?? {})) query = query.eq(k, v);
   const { error } = await query;
   if (error) throw error;
@@ -145,8 +153,8 @@ export async function flushQueue(): Promise<{ flushed: number; remaining: number
 /** Wires automatic flushing on reconnect (called once from main.tsx). */
 export function installOfflineQueue() {
   if (typeof window === 'undefined') return;
-  if ((window as any).__rouyaOfflineQueueInstalled) return;
-  (window as any).__rouyaOfflineQueueInstalled = true;
+  if (window.__rouyaOfflineQueueInstalled) return;
+  window.__rouyaOfflineQueueInstalled = true;
   window.addEventListener('online', () => {
     void flushQueue();
   });

@@ -125,7 +125,7 @@ export default function Login() {
       } else {
         await finalizeSuccessfulAccess();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('[login]', error);
       toast.error('بيانات الدخول غير صحيحة');
     } finally {
@@ -158,7 +158,7 @@ export default function Login() {
 
       toast.success('تم التحقق بنجاح');
       await finalizeSuccessfulAccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('[otp-verify]', error);
       toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
@@ -215,7 +215,7 @@ export default function Login() {
       if (error) throw error;
       toast.success('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني');
       setIsForgotPassword(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('[forgot-password]', error);
       toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {

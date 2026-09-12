@@ -27,7 +27,7 @@ const buffer: LogEvent[] = [];
 let remoteSink: Sink | null = null;
 const listeners = new Set<(events: LogEvent[]) => void>();
 
-const isDev = typeof import.meta !== 'undefined' && Boolean((import.meta as any).env?.DEV);
+const isDev = typeof import.meta !== 'undefined' && Boolean(import.meta.env?.DEV);
 
 function push(event: LogEvent) {
   buffer.unshift(event);
@@ -89,8 +89,8 @@ export const logger = {
 /** Registers global handlers once (called from main.tsx). */
 export function installGlobalErrorHandlers() {
   if (typeof window === 'undefined') return;
-  if ((window as any).__rouyaLoggerInstalled) return;
-  (window as any).__rouyaLoggerInstalled = true;
+  if (window.__rouyaLoggerInstalled) return;
+  window.__rouyaLoggerInstalled = true;
 
   window.addEventListener('error', (e) => {
     logger.error('window.error', e.message, { source: e.filename, line: e.lineno });

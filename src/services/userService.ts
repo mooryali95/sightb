@@ -6,6 +6,7 @@
  * database client directly — they call these functions.
  */
 
+import type { Tables } from '@/integrations/supabase/types';
 import { db, unwrap } from './db';
 
 export interface ProfileRow {
@@ -52,7 +53,7 @@ export interface InvitePayload {
 
 export async function listProfiles(): Promise<ProfileRow[]> {
   const res = await db.from('profiles').select('*').order('created_at', { ascending: false });
-  const rows = unwrap<any[]>(res, 'تعذّر تحميل المستخدمين');
+  const rows = unwrap<Tables<'profiles'>[]>(res, 'تعذّر تحميل المستخدمين');
   return (rows || []).map((p) => ({
     id: p.id,
     email: p.email,
@@ -63,7 +64,7 @@ export async function listProfiles(): Promise<ProfileRow[]> {
 
 export async function listRoles(): Promise<RoleRow[]> {
   const res = await db.from('user_roles').select('*');
-  const rows = unwrap<any[]>(res, 'تعذّر تحميل الصلاحيات');
+  const rows = unwrap<Tables<'user_roles'>[]>(res, 'تعذّر تحميل الصلاحيات');
   return (rows || []).map((r) => ({
     id: r.id,
     userId: r.user_id,
@@ -75,7 +76,7 @@ export async function listRoles(): Promise<RoleRow[]> {
 
 export async function listRolesForUser(userId: string): Promise<RoleRow[]> {
   const res = await db.from('user_roles').select('*').eq('user_id', userId);
-  const rows = unwrap<any[]>(res, 'تعذّر تحميل صلاحيات المستخدم');
+  const rows = unwrap<Tables<'user_roles'>[]>(res, 'تعذّر تحميل صلاحيات المستخدم');
   return (rows || []).map((r) => ({
     id: r.id,
     userId: r.user_id,
@@ -87,7 +88,7 @@ export async function listRolesForUser(userId: string): Promise<RoleRow[]> {
 
 export async function listInvites(): Promise<InviteRow[]> {
   const res = await db.from('user_invites').select('*').order('created_at', { ascending: false });
-  const rows = unwrap<any[]>(res, 'تعذّر تحميل الدعوات');
+  const rows = unwrap<Tables<'user_invites'>[]>(res, 'تعذّر تحميل الدعوات');
   return (rows || []).map((i) => ({
     id: i.id,
     email: i.email,
