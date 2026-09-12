@@ -66,7 +66,13 @@ jobs:
           #   `expenses: any[]` and `revenues: any[]` props are typed, and an
           #   edit that clears a link goes through a typed ExpenseUpdate
           #   instead of `as any`.
-          ERROR_BUDGET=276
+          #   276 → 262 (12 Sep): the custody section and everything under
+          #   components/project/custody/ are `any`-free. The section's
+          #   `expenses: any[]` prop is typed, and a custody edit clears its
+          #   fund link or notes through a typed CustodyUpdate — the old
+          #   signature intersected `string | undefined` with `string | null`,
+          #   which narrows to `string`, so null only ever got through a cast.
+          ERROR_BUDGET=262
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

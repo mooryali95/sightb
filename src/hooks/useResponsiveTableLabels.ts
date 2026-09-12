@@ -29,7 +29,11 @@ export function useResponsiveTableLabels<T extends HTMLTableElement = HTMLTableE
 
     const rows = table.querySelectorAll('tbody tr');
     rows.forEach((row) => {
-      const cells = row.querySelectorAll(':scope > td');
+      // Direct children only, without `:scope > td`: browsers resolve that
+      // fine, but jsdom's selector engine rebuilds `:scope` from the row's
+      // own classes and chokes on a Tailwind slash (`bg-destructive/5`),
+      // which made any over-spent row throw under test.
+      const cells = Array.from(row.children).filter((el): el is HTMLTableCellElement => el.tagName === 'TD');
       cells.forEach((cell, idx) => {
         const label = headers[idx] ?? '';
         if (!cell.getAttribute('data-label')) {
