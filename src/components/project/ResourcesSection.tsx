@@ -1,19 +1,23 @@
+/**
+ * The resources section: the people on a project, each against the plan
+ * behind them and the spend charged to them. The form, the inspector, the
+ * budget-item prompt and the per-resource figures live under resources/.
+ */
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency, getTotalPlanned } from '@/lib/finance';
+import { useDialogSession } from '@/hooks/useDialogSession';
+import { formatCurrency } from '@/lib/finance';
 import { type Resource, type BudgetItem, type Expense } from '@/types/project';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Pencil, Eye } from 'lucide-react';
-import { toast } from 'sonner';
+import { Pencil, Eye } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
-import { InspectorPanel, InspectorSection, InspectorField, InspectorKpiStrip } from '@/components/ui/inspector-panel';
-import { Progress } from '@/components/ui/progress';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
 import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
+import { ResourceFormDialog, type AddedResource } from './resources/ResourceFormDialog';
+import { ResourceInspector } from './resources/ResourceInspector';
+import { BudgetItemPrompt } from './resources/BudgetItemPrompt';
+import { resourceFigures } from './resources/resourceFigures';
 
 interface ResourcesSectionProps {
   projectId: string;
@@ -25,59 +29,24 @@ interface ResourcesSectionProps {
 }
 
 export function ResourcesSection({ projectId, resources, budgetItems = [], expenses: propExpenses, readOnly = false, durationMonths = 0 }: ResourcesSectionProps) {
-  const { addResource, updateResource, deleteResource, addBudgetItem, expenses: storeExpenses } = useStore();
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('');
-  const [monthlyCost, setMonthlyCost] = useState('');
+  const { deleteResource, expenses: storeExpenses } = useStore();
+  // Remounted on open so an edit starts from the row and an add starts blank; see useDialogSession.
+  const form = useDialogSession<{ resource?: Resource }>();
   const [inspectorId, setInspectorId] = useState<string | null>(null);
+  const [budgetPrompt, setBudgetPrompt] = useState<AddedResource | null>(null);
   const [density] = useTableDensity();
   const mobileTableRef = useResponsiveTableLabels<HTMLTableElement>();
 
-  // Budget prompt
-  const [budgetPrompt, setBudgetPrompt] = useState<{ resourceId: string; name: string; role: string; monthlyCost: number } | null>(null);
-
   const pExpenses = propExpenses || storeExpenses.filter(e => e.projectId === projectId);
-
-  const resetForm = () => {
-    setEditingId(null); setName(''); setRole(''); setMonthlyCost('');
-  };
-
-  const openEdit = (r: Resource) => {
-    setEditingId(r.id); setName(r.name); setRole(r.role || '');
-    setMonthlyCost(String(r.monthlyCost)); setOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!name.trim()) return;
-    if (editingId) {
-      await updateResource(editingId, {
-        name: name.trim(), role: role.trim() || undefined,
-        monthlyCost: parseFloat(monthlyCost) || 0,
-      });
-      toast.success('تم تعديل المورد');
-    } else {
-      const newId = await addResource({
-        projectId, name: name.trim(),
-        role: role.trim() || undefined, monthlyCost: parseFloat(monthlyCost) || 0,
-      });
-      toast.success('تمت إضافة المورد');
-      if (parseFloat(monthlyCost) > 0 && durationMonths > 0) {
-        setBudgetPrompt({
-          resourceId: newId, name: name.trim(),
-          role: role.trim(), monthlyCost: parseFloat(monthlyCost),
-        });
-      }
-    }
-    resetForm(); setOpen(false);
-  };
+  // What a resource is charged with is what every summary counts as spend:
+  // not a rejected expense, not an advance still outstanding.
+  const countedExpenses = pExpenses.filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
+  const figuresFor = (r: Resource) => resourceFigures(r, budgetItems, countedExpenses, durationMonths);
 
   const totalMonthlyCost = resources.reduce((s, r) => s + r.monthlyCost, 0);
-  const hasBudgetData = budgetItems.length > 0;
-
-  // Check if any resource has estimated (no linked budget item) planned cost
+  // Any resource whose plan is the estimate gets the footnote under the table.
   const hasEstimated = resources.some(r => budgetItems.filter(b => b.resourceId === r.id).length === 0 && r.monthlyCost > 0);
+  const inspected = resources.find(x => x.id === inspectorId);
 
   return (
     <div className="stat-card">
@@ -87,29 +56,15 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
           <p className="text-xs text-muted-foreground">{resources.length} مورد · التكلفة الشهرية: {formatCurrency(totalMonthlyCost)}</p>
         </div>
         {!readOnly && (
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة مورد</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>{editingId ? 'تعديل المورد' : 'إضافة مورد جديد'}</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>الاسم</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: أحمد محمد" />
-              </div>
-              <div className="space-y-2">
-                <Label>الدور / المسمى الوظيفي</Label>
-                <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="مثال: مدير مشروع" />
-              </div>
-              <div className="space-y-2">
-                <Label>التكلفة الشهرية</Label>
-                <Input type="number" value={monthlyCost} onChange={(e) => setMonthlyCost(e.target.value)} placeholder="0" />
-              </div>
-              <Button onClick={handleSubmit} className="w-full">{editingId ? 'حفظ التعديلات' : 'إضافة'}</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          <ResourceFormDialog
+            key={form.session}
+            open={form.value !== null}
+            onOpenChange={(v) => { if (!v) form.close(); }}
+            onRequestOpen={() => form.open({})}
+            editing={form.value?.resource}
+            projectId={projectId}
+            onAdded={(added) => { if (added.monthlyCost > 0 && durationMonths > 0) setBudgetPrompt(added); }}
+          />
         )}
       </div>
 
@@ -137,14 +92,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
             </thead>
             <tbody>
               {resources.map((r) => {
-                const totalSpent = pExpenses.filter(e => e.resourceId === r.id).reduce((s, e) => s + e.amount, 0);
-                const linkedBudget = budgetItems.filter(b => b.resourceId === r.id);
-                const plannedForResource = linkedBudget.length > 0
-                  ? getTotalPlanned(linkedBudget)
-                  : r.monthlyCost * (durationMonths || 1);
-                const isEstimated = linkedBudget.length === 0 && r.monthlyCost > 0;
-                const variance = plannedForResource - totalSpent;
-                const spentPct = plannedForResource > 0 ? (totalSpent / plannedForResource) * 100 : 0;
+                const { plannedForResource, isEstimated, totalSpent, variance, spentPct } = figuresFor(r);
 
                 return (
                   <tr key={r.id}>
@@ -181,7 +129,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                         </Button>
                         {!readOnly && (
                           <>
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(r)}>
+                            <Button variant="ghost" size="icon" onClick={() => form.open({ resource: r })}>
                               <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                             </Button>
                             <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />
@@ -201,120 +149,19 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
         </>
       )}
 
-      {/* Inspector Panel */}
-      {(() => {
-        const r = resources.find(x => x.id === inspectorId);
-        if (!r) return null;
-        const linkedExpenses = pExpenses.filter(e => e.resourceId === r.id);
-        const totalSpent = linkedExpenses.reduce((s, e) => s + e.amount, 0);
-        const linkedBudget = budgetItems.filter(b => b.resourceId === r.id);
-        const plannedForResource = linkedBudget.length > 0
-          ? getTotalPlanned(linkedBudget)
-          : r.monthlyCost * (durationMonths || 1);
-        const isEstimated = linkedBudget.length === 0 && r.monthlyCost > 0;
-        const variance = plannedForResource - totalSpent;
-        const spentPct = plannedForResource > 0 ? (totalSpent / plannedForResource) * 100 : 0;
-        return (
-          <InspectorPanel
-            open={!!inspectorId}
-            onOpenChange={(v) => { if (!v) setInspectorId(null); }}
-            title={r.name}
-            description={r.role || 'بدون مسمى وظيفي'}
-            width="md"
-            footer={!readOnly ? (
-              <Button size="sm" onClick={() => { setInspectorId(null); openEdit(r); }} className="gap-1.5">
-                <Pencil className="w-3.5 h-3.5" /> تعديل
-              </Button>
-            ) : undefined}
-          >
-            <InspectorKpiStrip items={[
-              { label: 'شهرية', value: formatCurrency(r.monthlyCost) },
-              { label: 'مخطط', value: plannedForResource > 0 ? formatCurrency(plannedForResource) : '—' },
-              { label: 'مصروف', value: formatCurrency(totalSpent), tone: 'info' },
-              { label: 'انحراف', value: plannedForResource > 0 ? formatCurrency(variance) : '—', tone: variance >= 0 ? 'success' : 'destructive' },
-            ]} />
+      {inspected && (
+        <ResourceInspector
+          resource={inspected}
+          figures={figuresFor(inspected)}
+          linkedExpenses={pExpenses.filter(e => e.resourceId === inspected.id)}
+          durationMonths={durationMonths}
+          readOnly={readOnly}
+          onClose={() => setInspectorId(null)}
+          onEdit={() => { setInspectorId(null); form.open({ resource: inspected }); }}
+        />
+      )}
 
-            {plannedForResource > 0 && (
-              <InspectorSection title="نسبة الصرف">
-                <Progress value={Math.min(spentPct, 100)} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1 tabular-nums">{spentPct.toFixed(1)}% من المخطط</p>
-              </InspectorSection>
-            )}
-
-            <InspectorSection title="البيانات">
-              <InspectorField label="المدة المعتمدة" value={`${durationMonths || 0} شهر`} mono />
-              <InspectorField label="بنود الموازنة المرتبطة" value={linkedBudget.length} mono />
-              {isEstimated && (
-                <p className="text-[11px] text-warning mt-1">* المخطط محسوب تقديرياً — لم يُربط ببند موازنة بعد.</p>
-              )}
-            </InspectorSection>
-
-            <InspectorSection title={`المصروفات (${linkedExpenses.length})`}>
-              {linkedExpenses.length === 0 ? (
-                <p className="text-xs text-muted-foreground">لا توجد مصروفات مرتبطة بهذا المورد.</p>
-              ) : (
-                <div className="rounded-lg border border-border divide-y divide-border max-h-[280px] overflow-y-auto">
-                  {linkedExpenses.slice(0, 50).map((e) => (
-                    <div key={e.id} className="flex items-center justify-between px-3 py-2 text-xs">
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium">{e.description || '—'}</p>
-                        <p className="text-muted-foreground text-[10px] tabular-nums">{e.date}</p>
-                      </div>
-                      <span className="tabular-nums font-medium">{formatCurrency(e.amount)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </InspectorSection>
-          </InspectorPanel>
-        );
-      })()}
-
-
-
-      {/* Budget auto-generate dialog */}
-      <Dialog open={!!budgetPrompt} onOpenChange={(v) => { if (!v) setBudgetPrompt(null); }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>إنشاء بند موازنة؟</DialogTitle>
-          </DialogHeader>
-          {budgetPrompt && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                هل تريد إنشاء بند موازنة تلقائي لهذا المورد؟
-              </p>
-              <div className="p-3 rounded-lg border border-border bg-muted/30">
-                <p className="text-sm font-medium">{budgetPrompt.name} {budgetPrompt.role && `— ${budgetPrompt.role}`}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formatCurrency(budgetPrompt.monthlyCost)} × {durationMonths} شهر = {formatCurrency(budgetPrompt.monthlyCost * (durationMonths || 1))}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={async () => {
-                  await addBudgetItem({
-                    projectId,
-                    category: 'salary',
-                    description: `${budgetPrompt.name}${budgetPrompt.role ? ` — ${budgetPrompt.role}` : ''}`,
-                    plannedAmount: budgetPrompt.monthlyCost,
-                    costType: 'recurring',
-                    costClass: 'direct',
-                    startMonth: 1,
-                    endMonth: durationMonths || 1,
-                    resourceId: budgetPrompt.resourceId,
-                  });
-                  toast.success('تم إنشاء بند الموازنة');
-                  setBudgetPrompt(null);
-                }}>
-                  نعم — أنشئ البند
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setBudgetPrompt(null)}>
-                  لا — يدوياً لاحقاً
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <BudgetItemPrompt prompt={budgetPrompt} projectId={projectId} durationMonths={durationMonths} onClose={() => setBudgetPrompt(null)} />
     </div>
   );
 }
