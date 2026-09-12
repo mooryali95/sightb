@@ -393,7 +393,7 @@ export function ExpenseSpendExplorer({
       </div>
 
       {/* الإجماليات */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="p-3 rounded-lg border border-border bg-muted/30">
           <p className="text-xs text-muted-foreground">إجمالي المطابق</p>
           <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(tree.grandTotal)}</p>
@@ -409,6 +409,10 @@ export function ExpenseSpendExplorer({
         <div className="p-3 rounded-lg border border-border bg-muted/30">
           <p className="text-xs text-muted-foreground">مرفوض (خارج الإجمالي)</p>
           <p className="text-sm font-mono font-semibold mt-1 text-destructive">{formatCurrency(tree.rejectedTotal)}</p>
+        </div>
+        <div className="p-3 rounded-lg border border-border bg-muted/30">
+          <p className="text-xs text-muted-foreground">سلف قائمة (خارج الإجمالي)</p>
+          <p className="text-sm font-mono font-semibold mt-1 text-warning">{formatCurrency(tree.outstandingAdvanceTotal)}</p>
         </div>
       </div>
 

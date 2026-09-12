@@ -66,6 +66,8 @@ export interface SpendReport {
   grandCount: number;
   /** إجمالي المرفوض — معروض للشفافية وليس ضمن grandTotal. */
   rejectedTotal: number;
+  /** السلف القائمة (لم تُسوَّ بعد): مال سُلِّم ولم يُصرف، خارج الإجمالي والمجموعات كما في كل ملخّص. */
+  outstandingAdvanceTotal: number;
 }
 
 export interface SpendFilters {
@@ -192,7 +194,7 @@ export function buildSpendReport(
   sort: SpendSort = DEFAULT_SPEND_SORT,
 ): SpendReport {
 
-  const rows = filterExpenses(expenses, filters, look, dimension);
+  const { spend: rows, outstandingAdvanceTotal } = splitOutstandingAdvances(filterExpenses(expenses, filters, look, dimension));
   const map = new Map<string, SpendGroup>();
   let rejectedTotal = 0;
 
@@ -248,6 +250,7 @@ export function buildSpendReport(
     grandTotal,
     grandCount: rows.length,
     rejectedTotal,
+    outstandingAdvanceTotal,
   };
 }
 
@@ -308,6 +311,7 @@ export function buildSpendReportCSV(report: SpendReport, projectName: string, me
   lines.push('');
   lines.push(['الإجمالي العام', report.grandTotal].map(esc).join(','));
   lines.push(['إجمالي المرفوض (خارج الإجمالي)', report.rejectedTotal].map(esc).join(','));
+  lines.push(['سلف قائمة (خارج الإجمالي)', report.outstandingAdvanceTotal].map(esc).join(','));
   return lines.join('\n');
 }
 
@@ -339,6 +343,23 @@ export interface SpendTree {
   grandTotal: number;
   grandCount: number;
   rejectedTotal: number;
+  /** السلف القائمة (لم تُسوَّ بعد): خارج الإجمالي والعدّ والمجموعات كما في كل ملخّص. */
+  outstandingAdvanceTotal: number;
+}
+
+/**
+ * An advance still outstanding is money handed over, not spent: no summary
+ * in the app counts it, so the explorer leaves it out of every group and
+ * reports its total apart, the way the rejected total is shown.
+ */
+function splitOutstandingAdvances(rows: Expense[]): { spend: Expense[]; outstandingAdvanceTotal: number } {
+  let outstandingAdvanceTotal = 0;
+  const spend: Expense[] = [];
+  for (const e of rows) {
+    if (e.isOutstandingAdvance) outstandingAdvanceTotal += e.amount;
+    else spend.push(e);
+  }
+  return { spend, outstandingAdvanceTotal };
 }
 
 function buildLevel(
@@ -399,7 +420,7 @@ export function buildSpendTree(
   sort: SpendSort = DEFAULT_SPEND_SORT,
 ): SpendTree {
   const dims = dimensions.length ? dimensions : (['resource'] as SpendDimension[]);
-  const rows = filterExpenses(expenses, filters, look, dims[0]);
+  const { spend: rows, outstandingAdvanceTotal } = splitOutstandingAdvances(filterExpenses(expenses, filters, look, dims[0]));
   let grandTotal = 0, rejectedTotal = 0;
   for (const e of rows) {
     if ((e.approvalStatus || 'approved') === 'rejected') rejectedTotal += e.amount;
@@ -411,6 +432,7 @@ export function buildSpendTree(
     grandTotal,
     grandCount: rows.length,
     rejectedTotal,
+    outstandingAdvanceTotal,
   };
 }
 
@@ -447,5 +469,6 @@ export function buildSpendTreeCSV(tree: SpendTree, projectName: string, meta: Sp
   lines.push('');
   lines.push(['الإجمالي العام', tree.grandTotal].map(esc).join(','));
   lines.push(['إجمالي المرفوض (خارج الإجمالي)', tree.rejectedTotal].map(esc).join(','));
+  lines.push(['سلف قائمة (خارج الإجمالي)', tree.outstandingAdvanceTotal].map(esc).join(','));
   return lines.join('\n');
 }
