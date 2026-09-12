@@ -39,6 +39,9 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
   const [budgetPrompt, setBudgetPrompt] = useState<{ resourceId: string; name: string; role: string; monthlyCost: number } | null>(null);
 
   const pExpenses = propExpenses || storeExpenses.filter(e => e.projectId === projectId);
+  // What a resource is charged with is what every summary counts as spend:
+  // not a rejected expense, not an advance still outstanding.
+  const countedExpenses = pExpenses.filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
 
   const resetForm = () => {
     setEditingId(null); setName(''); setRole(''); setMonthlyCost('');
@@ -137,7 +140,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
             </thead>
             <tbody>
               {resources.map((r) => {
-                const totalSpent = pExpenses.filter(e => e.resourceId === r.id).reduce((s, e) => s + e.amount, 0);
+                const totalSpent = countedExpenses.filter(e => e.resourceId === r.id).reduce((s, e) => s + e.amount, 0);
                 const linkedBudget = budgetItems.filter(b => b.resourceId === r.id);
                 const plannedForResource = linkedBudget.length > 0
                   ? getTotalPlanned(linkedBudget)
@@ -206,7 +209,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
         const r = resources.find(x => x.id === inspectorId);
         if (!r) return null;
         const linkedExpenses = pExpenses.filter(e => e.resourceId === r.id);
-        const totalSpent = linkedExpenses.reduce((s, e) => s + e.amount, 0);
+        const totalSpent = countedExpenses.filter(e => e.resourceId === r.id).reduce((s, e) => s + e.amount, 0);
         const linkedBudget = budgetItems.filter(b => b.resourceId === r.id);
         const plannedForResource = linkedBudget.length > 0
           ? getTotalPlanned(linkedBudget)
