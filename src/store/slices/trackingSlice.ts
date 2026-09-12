@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
-import { Milestone, ChangeOrder, Risk, Resource, Custody, Commitment, RiskUpdate } from '@/types/project';
+import { Milestone, ChangeOrder, Risk, Resource, Custody, Commitment, RiskUpdate, MilestoneUpdate } from '@/types/project';
 import {
   getUserId, logDeletion,
   mapMilestone, mapChangeOrder, mapRisk, mapResource, mapCustody, mapCommitment,
@@ -28,7 +28,7 @@ export interface TrackingSlice {
   custodies: Custody[];
   commitments: Commitment[];
   addMilestone: (m: Omit<Milestone, 'id' | 'createdAt'>) => Promise<string>;
-  updateMilestone: (id: string, m: Partial<Milestone>) => Promise<void>;
+  updateMilestone: (id: string, m: MilestoneUpdate) => Promise<void>;
   deleteMilestone: (id: string) => Promise<void>;
   addChangeOrder: (co: Omit<ChangeOrder, 'id' | 'createdAt'>) => Promise<string>;
   updateChangeOrder: (id: string, co: Partial<ChangeOrder>) => Promise<void>;
@@ -64,6 +64,20 @@ function applyRiskUpdate(current: Risk, update: RiskUpdate): Risk {
     description: merged.description || undefined,
     mitigationPlan: merged.mitigationPlan || undefined,
     owner: merged.owner || undefined,
+  };
+}
+
+/** Same collapse for a milestone: a cleared column is `null` on the wire and `undefined` in the row. */
+function applyMilestoneUpdate(current: Milestone, update: MilestoneUpdate): Milestone {
+  const merged = { ...current, ...update };
+  return {
+    ...merged,
+    description: merged.description || undefined,
+    plannedStart: merged.plannedStart || undefined,
+    plannedEnd: merged.plannedEnd || undefined,
+    actualStart: merged.actualStart || undefined,
+    actualEnd: merged.actualEnd || undefined,
+    linkedRevenueId: merged.linkedRevenueId || undefined,
   };
 }
 
@@ -107,7 +121,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (m.linkedRevenueId !== undefined) updates.linked_revenue_id = m.linkedRevenueId;
     const { error } = await db.from('milestones').update(updates).eq('id', id);
     if (error) throw error;
-    set((s) => ({ milestones: s.milestones.map((x) => (x.id === id ? { ...x, ...m } : x)) }));
+    set((s) => ({ milestones: s.milestones.map((x) => (x.id === id ? applyMilestoneUpdate(x, m) : x)) }));
   },
 
   deleteMilestone: async (id) => {

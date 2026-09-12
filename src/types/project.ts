@@ -315,6 +315,21 @@ export type RiskUpdate =
     owner?: string | null;
   };
 
+/**
+ * What a milestone edit may carry. The optional text and date columns and
+ * the revenue link accept `null` so an edit can clear them; the store
+ * reads `undefined` as "unchanged".
+ */
+export type MilestoneUpdate =
+  Partial<Omit<Milestone, 'id' | 'createdAt' | 'description' | 'plannedStart' | 'plannedEnd' | 'actualStart' | 'actualEnd' | 'linkedRevenueId'>> & {
+    description?: string | null;
+    plannedStart?: string | null;
+    plannedEnd?: string | null;
+    actualStart?: string | null;
+    actualEnd?: string | null;
+    linkedRevenueId?: string | null;
+  };
+
 // ======== Indirect Cost Types ========
 export type IndirectCostCategory = 'rent' | 'admin_salary' | 'utilities' | 'insurance' | 'marketing' | 'other';
 

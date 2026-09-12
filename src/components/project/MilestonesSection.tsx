@@ -3,7 +3,7 @@ import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
 import {
   MILESTONE_STATUS_LABELS, MILESTONE_STATUS_COLORS, REVENUE_STATUS_LABELS,
-  type MilestoneStatus, type Milestone, type Project, type Revenue,
+  type MilestoneStatus, type Milestone, type MilestoneUpdate, type Project, type Revenue,
 } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,16 +83,25 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     return Math.round(weighted / totalWeight);
   };
 
-  const checkRevenuePrompt = (milestoneId: string, pct: number, statusVal?: string) => {
+  // The link is passed in rather than read from the row: an edit may set the
+  // link and the completion together, and the row still carries the old one.
+  const checkRevenuePrompt = (milestoneId: string, pct: number, statusVal: string | undefined, linkedRevenueId: string | undefined) => {
     if (pct === 100 || statusVal === 'completed') {
-      const milestone = milestones.find(m => m.id === milestoneId);
-      if (milestone?.linkedRevenueId) {
-        const linkedRevenue = revenues.find(r => r.id === milestone.linkedRevenueId);
+      if (linkedRevenueId) {
+        const linkedRevenue = revenues.find(r => r.id === linkedRevenueId);
         if (linkedRevenue && linkedRevenue.status === 'planned') {
           setRevenuePrompt({ milestoneId, revenue: linkedRevenue });
         }
       }
     }
+  };
+
+  // Every write that moves a milestone leaves the project row's percent
+  // consistent with the milestones, since EVM and the dashboard read it there.
+  const syncProject = async (updated: Milestone[]) => {
+    const projectPct = recalcProjectPercent(updated);
+    await updateProject(projectId, { percentComplete: projectPct });
+    await checkProjectAutoComplete(updated, projectPct);
   };
 
   const checkProjectAutoComplete = async (updatedMilestones: Milestone[], projectPct: number) => {
@@ -117,55 +126,69 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     if (pct === 100 && st !== 'completed') st = 'completed';
     if (pct > 0 && pct < 100 && st === 'planned') st = 'in_progress';
 
-    const data = {
-      name: name.trim(),
-      description: description || undefined,
-      weight: parseFloat(weight) || 0,
-      status: st,
-      percentComplete: pct,
-      plannedStart: plannedStart || undefined,
-      plannedEnd: plannedEnd || undefined,
-      sortOrder: milestones.length,
-      linkedRevenueId: linkedRevenueId && linkedRevenueId !== 'none' ? linkedRevenueId : undefined,
+    const link = linkedRevenueId && linkedRevenueId !== 'none' ? linkedRevenueId : '';
+    const form = {
+      name: name.trim(), weight: parseFloat(weight) || 0, status: st, percentComplete: pct,
+      description: description.trim(), plannedStart, plannedEnd, linkedRevenueId: link,
     };
 
     if (editingId) {
+      const current = milestones.find(m => m.id === editingId);
+      // A cleared field goes as null so the store writes it; undefined would mean "unchanged".
+      const data: MilestoneUpdate = {
+        ...form,
+        description: form.description || null,
+        plannedStart: form.plannedStart || null,
+        plannedEnd: form.plannedEnd || null,
+        linkedRevenueId: form.linkedRevenueId || null,
+        sortOrder: current?.sortOrder ?? milestones.length,
+      };
       await updateMilestone(editingId, data);
-      const updated = milestones.map(m => m.id === editingId ? { ...m, ...data } : m);
-      const newPct = recalcProjectPercent(updated);
-      await updateProject(projectId, { percentComplete: newPct });
+      const updated = milestones.map(m => m.id === editingId ? { ...m, ...form, linkedRevenueId: link || undefined } : m);
       toast.success('تم تعديل المرحلة');
-      checkRevenuePrompt(editingId, data.percentComplete, data.status);
-      await checkProjectAutoComplete(updated, newPct);
+      await syncProject(updated);
+      checkRevenuePrompt(editingId, pct, st, link || undefined);
     } else {
-      await addMilestone({ projectId, ...data, actualStart: undefined, actualEnd: undefined });
+      const data = {
+        ...form,
+        description: form.description || undefined,
+        plannedStart: form.plannedStart || undefined,
+        plannedEnd: form.plannedEnd || undefined,
+        linkedRevenueId: form.linkedRevenueId || undefined,
+        sortOrder: milestones.length,
+        actualStart: undefined, actualEnd: undefined,
+      };
+      const newId = await addMilestone({ projectId, ...data });
       toast.success('تمت إضافة المرحلة');
+      await syncProject([...milestones, { id: newId, projectId, createdAt: '', ...data }]);
     }
     resetForm();
     setOpen(false);
   };
 
+  const handleDelete = async (m: Milestone) => {
+    await deleteMilestone(m.id);
+    await syncProject(milestones.filter(x => x.id !== m.id));
+  };
+
   const handlePercentChange = async (m: Milestone, newPct: number) => {
     const updates: Partial<Milestone> = { percentComplete: newPct };
 
-    // Auto status transitions
-    if (newPct === 100 && m.status !== 'completed') {
-      updates.status = 'completed';
-      toast.success(`✓ المرحلة "${m.name}" اكتملت تلقائياً`);
-    }
-    if (newPct < 100 && newPct > 0 && m.status === 'completed') {
-      updates.status = 'in_progress';
-    }
-    if (newPct > 0 && m.status === 'planned') {
+    // Auto status transitions. 100 wins: a planned milestone typed straight
+    // to 100 is completed, not "in progress".
+    if (newPct === 100) {
+      if (m.status !== 'completed') {
+        updates.status = 'completed';
+        toast.success(`✓ المرحلة "${m.name}" اكتملت تلقائياً`);
+      }
+    } else if (newPct > 0 && (m.status === 'completed' || m.status === 'planned')) {
       updates.status = 'in_progress';
     }
 
     await updateMilestone(m.id, updates);
     const updated = milestones.map(ms => ms.id === m.id ? { ...ms, ...updates } : ms);
-    const projectPct = recalcProjectPercent(updated);
-    await updateProject(projectId, { percentComplete: projectPct });
-    await checkProjectAutoComplete(updated, projectPct);
-    checkRevenuePrompt(m.id, newPct, updates.status);
+    await syncProject(updated);
+    checkRevenuePrompt(m.id, newPct, updates.status, m.linkedRevenueId);
   };
 
   // Sort milestones by planned start date, then planned end date
@@ -199,7 +222,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
           title={editingId ? 'تعديل المرحلة' : 'إضافة مرحلة'}
           trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />مرحلة جديدة</Button>}
-          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
+          footer={<FormFooter onCancel={() => { setOpen(false); resetForm(); }} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
         >
           <div className="space-y-4">
               <div className="space-y-2">
@@ -315,7 +338,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
                   <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
                     <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   </Button>
-                  <ConfirmDeleteDialog title="حذف المرحلة" description="هل أنت متأكد من حذف هذه المرحلة؟" onConfirm={() => deleteMilestone(m.id)} />
+                  <ConfirmDeleteDialog title="حذف المرحلة" description="هل أنت متأكد من حذف هذه المرحلة؟" onConfirm={() => handleDelete(m)} />
                 </div>
                 )}
               </div>
