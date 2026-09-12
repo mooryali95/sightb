@@ -330,6 +330,17 @@ export type MilestoneUpdate =
     linkedRevenueId?: string | null;
   };
 
+/**
+ * What a commitment edit may carry. The optional text columns accept `null`
+ * so an edit can clear them; the store reads `undefined` as "unchanged".
+ */
+export type CommitmentUpdate =
+  Partial<Omit<Commitment, 'id' | 'createdAt' | 'vendorName' | 'contractRef' | 'notes'>> & {
+    vendorName?: string | null;
+    contractRef?: string | null;
+    notes?: string | null;
+  };
+
 // ======== Indirect Cost Types ========
 export type IndirectCostCategory = 'rent' | 'admin_salary' | 'utilities' | 'insurance' | 'marketing' | 'other';
 

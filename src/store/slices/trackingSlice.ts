@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
-import { Milestone, ChangeOrder, Risk, Resource, Custody, Commitment, RiskUpdate, MilestoneUpdate } from '@/types/project';
+import { Milestone, ChangeOrder, Risk, Resource, Custody, Commitment, RiskUpdate, MilestoneUpdate, CommitmentUpdate } from '@/types/project';
 import {
   getUserId, logDeletion,
   mapMilestone, mapChangeOrder, mapRisk, mapResource, mapCustody, mapCommitment,
@@ -44,7 +44,7 @@ export interface TrackingSlice {
   updateCustody: (id: string, c: CustodyUpdate) => Promise<void>;
   deleteCustody: (id: string) => Promise<void>;
   addCommitment: (c: Omit<Commitment, 'id' | 'createdAt'>) => Promise<string>;
-  updateCommitment: (id: string, c: Partial<Commitment>) => Promise<void>;
+  updateCommitment: (id: string, c: CommitmentUpdate) => Promise<void>;
   deleteCommitment: (id: string) => Promise<void>;
 }
 
@@ -78,6 +78,17 @@ function applyMilestoneUpdate(current: Milestone, update: MilestoneUpdate): Mile
     actualStart: merged.actualStart || undefined,
     actualEnd: merged.actualEnd || undefined,
     linkedRevenueId: merged.linkedRevenueId || undefined,
+  };
+}
+
+/** And for a commitment. */
+function applyCommitmentUpdate(current: Commitment, update: CommitmentUpdate): Commitment {
+  const merged = { ...current, ...update };
+  return {
+    ...merged,
+    vendorName: merged.vendorName || undefined,
+    contractRef: merged.contractRef || undefined,
+    notes: merged.notes || undefined,
   };
 }
 
@@ -384,7 +395,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     if (c.notes !== undefined) updates.notes = c.notes;
     const { error } = await db.from('commitments').update(updates).eq('id', id);
     if (error) throw error;
-    set((s) => ({ commitments: s.commitments.map((x) => (x.id === id ? { ...x, ...c } : x)) }));
+    set((s) => ({ commitments: s.commitments.map((x) => (x.id === id ? applyCommitmentUpdate(x, c) : x)) }));
   },
 
   deleteCommitment: async (id) => {

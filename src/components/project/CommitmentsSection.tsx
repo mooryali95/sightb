@@ -82,20 +82,21 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
       toast.success('✓ الالتزام اكتمل تلقائياً — المبلغ صُرف بالكامل');
     }
 
-    const data = {
-      description: description.trim(),
-      vendorName: vendorName.trim() || undefined,
-      contractRef: contractRef.trim() || undefined,
-      totalAmount: total,
-      spentAmount: spent,
-      status: autoStatus,
-      notes: notes.trim() || undefined,
+    const form = {
+      description: description.trim(), totalAmount: total, spentAmount: spent, status: autoStatus,
+      vendorName: vendorName.trim(), contractRef: contractRef.trim(), notes: notes.trim(),
     };
     if (editingId) {
-      await updateCommitment(editingId, data);
+      // A cleared field goes as null so the store writes it; undefined would mean "unchanged".
+      await updateCommitment(editingId, {
+        ...form, vendorName: form.vendorName || null, contractRef: form.contractRef || null, notes: form.notes || null,
+      });
       toast.success('تم تعديل الالتزام');
     } else {
-      await addCommitment({ projectId, ...data });
+      await addCommitment({
+        projectId, ...form,
+        vendorName: form.vendorName || undefined, contractRef: form.contractRef || undefined, notes: form.notes || undefined,
+      });
       toast.success('تمت إضافة الالتزام');
     }
     resetForm(); setOpen(false);
@@ -121,7 +122,7 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
             onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
             title={editingId ? 'تعديل الالتزام' : 'إضافة التزام'}
             trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />التزام جديد</Button>}
-            footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
+            footer={<FormFooter onCancel={() => { setOpen(false); resetForm(); }} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
           >
             <div className="space-y-4">
                 <div className="space-y-2">
