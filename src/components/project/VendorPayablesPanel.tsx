@@ -16,8 +16,10 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Wallet, CheckCircle } from 'lucide-react';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@/types/project';
-import { getFundRemainingBreakdown } from '@/lib/funds';
+import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type ResourceReimbursement } from '@/types/project';
+import { getCustodyBreakdown, getFundRemainingBreakdown } from '@/lib/funds';
+import { getProjectMonth } from '@/lib/finance';
+import { errorMessage } from '@/lib/utils';
 
 interface Props {
   projectId: string;
@@ -30,16 +32,19 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
 
   const {
     reimbursements, createReimbursement,
-    projectFunds, custodies, expenses, cashTransfers,
+    projectFunds, custodies, expenses, cashTransfers, paymentRequests, projects,
     addExpense,
-  } = useStore() as any;
+  } = useStore();
+  const project = projects.find((p) => p.id === projectId);
 
   const vendorPayables = useMemo(
     () => (reimbursements || []).filter(
-      (r: any) => r.projectId === projectId && r.sourceKind === 'vendor',
+      (r) => r.projectId === projectId && r.sourceKind === 'vendor',
     ),
     [reimbursements, projectId],
   );
+  const projTransfers = useMemo(() => (cashTransfers || []).filter((t) => t.projectId === projectId), [cashTransfers, projectId]);
+  const projRequests = useMemo(() => (paymentRequests || []).filter((q) => q.projectId === projectId), [paymentRequests, projectId]);
 
   // ── Create dialog state ──
   const [open, setOpen] = useState(false);
@@ -77,31 +82,31 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
       });
       toast({ title: 'تم تسجيل الذمة', description: 'أُضيفت كذمة مدينة على المشروع تنتظر السداد.' });
       setOpen(false); reset();
-    } catch (e: any) {
-      toast({ title: 'فشل الحفظ', description: e?.message || 'خطأ غير معروف', variant: 'destructive' });
+    } catch (e) {
+      toast({ title: 'فشل الحفظ', description: errorMessage(e, 'خطأ غير معروف'), variant: 'destructive' });
     } finally { setSaving(false); }
   };
 
   // ── Settle dialog state ──
-  const [settleFor, setSettleFor] = useState<any | null>(null);
+  const [settleFor, setSettleFor] = useState<ResourceReimbursement | null>(null);
   const [source, setSource] = useState<'fund' | 'custody'>('fund');
   const [sourceId, setSourceId] = useState<string>('');
   const [settling, setSettling] = useState(false);
 
   const activeFunds = useMemo(
     () => (projectFunds || []).filter(
-      (f: any) => f.projectId === projectId && (f.status === 'transferred' || f.status === 'acknowledged'),
+      (f) => f.projectId === projectId && (f.status === 'transferred' || f.status === 'acknowledged'),
     ),
     [projectFunds, projectId],
   );
   const activeCustodies = useMemo(
     () => (custodies || []).filter(
-      (c: any) => c.projectId === projectId && c.status === 'active',
+      (c) => c.projectId === projectId && c.status === 'active',
     ),
     [custodies, projectId],
   );
 
-  const openSettle = (p: any) => {
+  const openSettle = (p: ResourceReimbursement) => {
     setSettleFor(p);
     setSource(activeFunds.length ? 'fund' : 'custody');
     setSourceId('');
@@ -111,33 +116,38 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
     if (!settleFor || !sourceId) {
       toast({ title: 'اختر المصدر', variant: 'destructive' }); return;
     }
+    if (!project) { toast({ title: 'المشروع غير موجود', variant: 'destructive' }); return; }
     setSettling(true);
     try {
       const now = new Date();
       await addExpense({
         projectId,
-        category: settleFor.category,
+        category: settleFor.category as ExpenseCategory,
         description: `سداد ذمة مورد: ${settleFor.vendorName} — ${settleFor.description}`,
         amount: settleFor.amount,
         date: now.toISOString().slice(0, 10),
-        month: now.getMonth() + 1,
+        // The project's month, which every monthly figure buckets by.
+        month: getProjectMonth(project.startDate, now, project.durationMonths),
         vendor: settleFor.vendorName,
         approvalStatus: 'approved',
         isVatExempt: false,
         fundId: source === 'fund' ? sourceId : undefined,
         custodyId: source === 'custody' ? sourceId : undefined,
         reimbursesPayableId: settleFor.id,
-      } as any);
+      });
       toast({ title: 'تم السداد', description: 'أُقفلت الذمة وسُجِّل المصروف على المصدر المختار.' });
       setSettleFor(null);
-    } catch (e: any) {
-      toast({ title: 'فشل السداد', description: e?.message || 'خطأ غير معروف', variant: 'destructive' });
+    } catch (e) {
+      toast({ title: 'فشل السداد', description: errorMessage(e, 'خطأ غير معروف'), variant: 'destructive' });
     } finally { setSettling(false); }
   };
 
+  // Settled is the ledger's word (status), not only the expense link one
+  // path of settling leaves behind.
+  const isSettled = (p: ResourceReimbursement) => p.status === 'reimbursed' || !!p.settledExpenseId;
   const totalOutstanding = vendorPayables
-    .filter((p: any) => !p.settledExpenseId)
-    .reduce((s: number, p: any) => s + Number(p.amount), 0);
+    .filter((p) => !isSettled(p))
+    .reduce((s, p) => s + Number(p.amount), 0);
 
   return (
     <Card>
@@ -218,8 +228,8 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {vendorPayables.map((p: any) => {
-                const isSettled = !!p.settledExpenseId;
+              {vendorPayables.map((p) => {
+                const settled = isSettled(p);
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.vendorName}</TableCell>
@@ -227,12 +237,12 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
                     <TableCell>{Number(p.amount).toLocaleString('en-US')}</TableCell>
                     <TableCell>{p.expenseDate}</TableCell>
                     <TableCell>
-                      {isSettled
+                      {settled
                         ? <Badge variant="secondary"><CheckCircle className="h-3 w-3 ml-1" /> مسدّدة</Badge>
                         : <Badge variant="destructive">مستحقة</Badge>}
                     </TableCell>
                     <TableCell className="text-left">
-                      {!isSettled && canEdit && (
+                      {!settled && canEdit && (
                         <Button size="sm" variant="outline" onClick={() => openSettle(p)}>سداد</Button>
                       )}
                     </TableCell>
@@ -258,7 +268,7 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
               </div>
               <div>
                 <Label>مصدر السداد</Label>
-                <Select value={source} onValueChange={(v) => { setSource(v as any); setSourceId(''); }}>
+                <Select value={source} onValueChange={(v) => { setSource(v as 'fund' | 'custody'); setSourceId(''); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="fund" disabled={activeFunds.length === 0}>دفعة نشطة</SelectItem>
@@ -271,9 +281,10 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
                 <Select value={sourceId} onValueChange={setSourceId}>
                   <SelectTrigger><SelectValue placeholder="اختر…" /></SelectTrigger>
                   <SelectContent>
-                    {source === 'fund' && activeFunds.map((f: any) => {
+                    {source === 'fund' && activeFunds.map((f) => {
+                      // Advances still out of the fund are not available to it.
                       const br = getFundRemainingBreakdown(
-                        f, expenses || [], custodies || [], [], cashTransfers || [],
+                        f, expenses || [], custodies || [], projRequests, projTransfers,
                       );
                       return (
                         <SelectItem
@@ -285,15 +296,19 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
                         </SelectItem>
                       );
                     })}
-                    {source === 'custody' && activeCustodies.map((c: any) => (
-                      <SelectItem
-                        key={c.id}
-                        value={c.id}
-                        disabled={(c.remaining ?? 0) < Number(settleFor.amount)}
-                      >
-                        {c.resourceName} — متبقي: {Number(c.remaining ?? 0).toLocaleString('en-US')}
-                      </SelectItem>
-                    ))}
+                    {source === 'custody' && activeCustodies.map((c) => {
+                      // The ledger's balance (transfers in, advances out), not the row's.
+                      const { remaining } = getCustodyBreakdown(c, expenses || [], projTransfers, projRequests);
+                      return (
+                        <SelectItem
+                          key={c.id}
+                          value={c.id}
+                          disabled={remaining < Number(settleFor.amount)}
+                        >
+                          {c.resourceName} — متبقي: {remaining.toLocaleString('en-US')}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
