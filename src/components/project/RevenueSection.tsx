@@ -71,18 +71,31 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
     if (!description.trim() || !amount) return;
     const rawAmount = parseFloat(amount);
     const finalAmount = inputInclusive && taxPercent > 0 ? removeVAT(rawAmount, taxPercent) : rawAmount;
-    const data = {
+    const base = {
       description: description.trim(), amount: finalAmount, date,
       month: parseInt(month), revenueType, status,
-      invoiceNumber: invoiceNumber || undefined, invoiceDate: invoiceDate || undefined,
-      collectionDate: collectionDate || undefined,
-      milestoneId: milestoneId && milestoneId !== 'none' ? milestoneId : undefined,
+    };
+    // What the form hides for this status is cleared, not left as it was:
+    // a planned revenue has no invoice, and only a collected one has a
+    // collection date. `null` clears on the wire; `undefined` would keep.
+    const hasInvoice = status === 'invoiced' || status === 'collected';
+    const links = {
+      milestoneId: milestoneId && milestoneId !== 'none' ? milestoneId : null,
+      invoiceNumber: hasInvoice && invoiceNumber ? invoiceNumber : null,
+      invoiceDate: hasInvoice && invoiceDate ? invoiceDate : null,
+      collectionDate: status === 'collected' && collectionDate ? collectionDate : null,
     };
     if (editingId) {
-      await updateRevenue(editingId, data);
+      await updateRevenue(editingId, { ...base, ...links });
       toast.success('تم تعديل الإيراد');
     } else {
-      await addRevenue({ projectId, ...data });
+      await addRevenue({
+        projectId, ...base,
+        milestoneId: links.milestoneId ?? undefined,
+        invoiceNumber: links.invoiceNumber ?? undefined,
+        invoiceDate: links.invoiceDate ?? undefined,
+        collectionDate: links.collectionDate ?? undefined,
+      });
       toast.success('تمت إضافة الإيراد');
     }
     resetForm(); setOpen(false);
@@ -120,7 +133,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
           onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
           title={editingId ? 'تعديل الإيراد' : 'إضافة إيراد'}
           trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />إضافة إيراد</Button>}
-          footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
+          footer={<FormFooter onCancel={() => { setOpen(false); resetForm(); }} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
         >
           <div className="space-y-4">
               <div className="space-y-2">
@@ -246,7 +259,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
           </div>
           <div className="p-2 rounded-lg border border-border bg-muted/30 text-center">
             <p className="text-xs text-muted-foreground">غير محصّل</p>
-            <p className="text-xs font-mono font-bold">{formatCurrency(Math.max(0, invoicedTotal - collectedTotal))}</p>
+            <p className="text-xs font-mono font-bold">{formatCurrency(invoicedTotal)}</p>
           </div>
         </div>
       )}
