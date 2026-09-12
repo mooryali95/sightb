@@ -128,7 +128,7 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
         title={editingRisk ? 'تعديل الخطر' : 'إضافة خطر جديد'}
         desktopWidthClassName="max-w-lg"
         trigger={<Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة خطر</Button>}
-        footer={<FormFooter onCancel={() => setOpen(false)} onSubmit={handleSubmit} submitLabel={editingRisk ? 'تحديث' : 'إضافة'} />}
+        footer={<FormFooter onCancel={() => { setOpen(false); resetForm(); }} onSubmit={handleSubmit} submitLabel={editingRisk ? 'تحديث' : 'إضافة'} />}
       >
         <div className="space-y-3">
           <div className="space-y-1">
