@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useMemo, useState } from 'react';
+import { useDialogSession } from '@/hooks/useDialogSession';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { useCoreData, useCompanyData } from '@/hooks/useAppData';
@@ -8,31 +9,26 @@ import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
 import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export-lazy';
-import {
-  HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS,
-  INDIRECT_COST_CATEGORY_LABELS, type IndirectCostCategory,
-  PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS,
-} from '@/types/project';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import {
-  Building2, DollarSign, TrendingUp, AlertTriangle, Plus,
-  FolderKanban, ArrowLeft, Briefcase, FileSpreadsheet, Pencil, Trash2,
-  Archive, ChevronDown, Eye, EyeOff,
+  Building2, DollarSign, TrendingUp, AlertTriangle,
+  FileSpreadsheet, Pencil, Trash2, Archive, Eye, EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { PageHeader } from '@/components/ui/page-header';
+import { EditCompanyDialog } from './company/EditCompanyDialog';
+import { IndirectCostsCard } from './company/IndirectCostsCard';
+import { PortfolioCards } from './company/PortfolioCards';
+import { StandaloneProjectCards } from './company/StandaloneProjectCards';
+import { buildCompanyExport } from './company/buildCompanyExport';
 
 /** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
 const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
+const CHART_COLORS = ['hsl(var(--primary))', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#6366f1'];
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -41,11 +37,10 @@ export default function CompanyDetail() {
   const {
     companies, portfolios, projects, budgetItems, expenses, revenues,
     changeOrders, milestones, risks, indirectCosts,
-    loading, loadAll, addIndirectCost, deleteIndirectCost,
-    updateCompany, deleteCompany, archiveCompany,
+    loading, deleteCompany, archiveCompany,
   } = useStore();
 
-  const { detailsLoaded, loadCompanyData } = useStore();
+  const detailsLoaded = useStore((s) => s.detailsLoaded);
 
   useCoreData();
   useCompanyData(detailsLoaded ? undefined : id);
@@ -64,31 +59,27 @@ export default function CompanyDetail() {
   const standaloneProjects = useMemo(() => companyProjects.filter(p => !p.portfolioId), [companyProjects]);
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
-  const totalIndirect = compIndirectCosts.reduce((s, ic) => s + ic.amount, 0);
-
-  const CHART_COLORS = ['hsl(var(--primary))', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#6366f1'];
+  // The stat card above counts spend through the summary library, which
+  // leaves out rejected expenses and advances still outstanding. The chart
+  // and the project cards must count the same rows or the page disagrees
+  // with itself.
+  const countedExpenses = useMemo(
+    () => expenses.filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance),
+    [expenses],
+  );
 
   const expensesByPortfolio = useMemo(() => {
     const data: { name: string; value: number }[] = [];
     compPortfolios.forEach(p => {
       const portfolioProjectIds = companyProjects.filter(pr => pr.portfolioId === p.id).map(pr => pr.id);
-      const total = expenses.filter(e => portfolioProjectIds.includes(e.projectId)).reduce((s, e) => s + e.amount, 0);
+      const total = countedExpenses.filter(e => portfolioProjectIds.includes(e.projectId)).reduce((s, e) => s + e.amount, 0);
       if (total > 0) data.push({ name: p.name, value: total });
     });
-    const standaloneTotal = expenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
+    const standaloneTotal = countedExpenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
     if (standaloneTotal > 0) data.push({ name: 'مشاريع مستقلة', value: standaloneTotal });
     return data;
-  }, [compPortfolios, companyProjects, standaloneProjects, expenses]);
+  }, [compPortfolios, companyProjects, standaloneProjects, countedExpenses]);
 
-  // Add indirect cost form
-  const [icOpen, setIcOpen] = useState(false);
-  const [icCategory, setIcCategory] = useState<IndirectCostCategory>('other');
-  const [icDescription, setIcDescription] = useState('');
-  const [icAmount, setIcAmount] = useState('');
-  const [icMonth, setIcMonth] = useState('1');
-  const [icDate, setIcDate] = useState(new Date().toISOString().split('T')[0]);
-
-  const [expandedPortfolios, setExpandedPortfolios] = useState<Record<string, boolean>>({});
   const [showInactive, setShowInactive] = useState(false);
 
   const visibleCompanyProjects = useMemo(() => {
@@ -102,48 +93,8 @@ export default function CompanyDetail() {
 
   const inactiveCount = companyProjects.filter(p => INACTIVE_STATUSES.includes(p.status)).length;
 
-  const togglePortfolio = (portfolioId: string) => {
-    setExpandedPortfolios(prev => ({ ...prev, [portfolioId]: !prev[portfolioId] }));
-  };
-
-  // Edit company form
-  const [editOpen, setEditOpen] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-
-  const openEdit = () => {
-    if (company) {
-      setEditName(company.name);
-      setEditDescription(company.description || '');
-      setEditOpen(true);
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editName.trim()) { toast.error('اسم الشركة مطلوب'); return; }
-    try {
-      await updateCompany(id!, { name: editName, description: editDescription || undefined });
-      toast.success('تم تحديث بيانات الشركة');
-      setEditOpen(false);
-    } catch { toast.error('فشل التحديث'); }
-  };
-
-  const handleAddIndirectCost = async () => {
-    if (!icDescription.trim()) { toast.error('الوصف مطلوب'); return; }
-    try {
-      await addIndirectCost({
-        companyId: id!,
-        category: icCategory,
-        description: icDescription,
-        amount: parseFloat(icAmount) || 0,
-        month: parseInt(icMonth) || 1,
-        date: icDate,
-        allocationMethod: 'equal',
-      });
-      toast.success('تم إضافة التكلفة');
-      setIcDescription(''); setIcAmount(''); setIcOpen(false);
-    } catch { toast.error('حدث خطأ'); }
-  };
+  // Remounted on open so the form starts from the company; see useDialogSession.
+  const edit = useDialogSession<true>();
 
   if (loading || !company) {
     return (
@@ -207,31 +158,13 @@ export default function CompanyDetail() {
                 </Button>
               )}
               {(isAdmin || canEdit('company', id!)) && (
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={openEdit}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => edit.open(true)}>
                   <Pencil className="w-3.5 h-3.5" />تعديل
                 </Button>
               )}
               {summary && (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                  exportCompanyToExcel({
-                    companyName: company.name,
-                    summary,
-                    portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
-                      name: ps.portfolioName,
-                      projects: ps.projectCount,
-                      contractValue: ps.totalEffectiveValue,
-                      actual: ps.totalActual,
-                      profit: ps.aggregatePlannedProfit,
-                      completion: ps.weightedPercentComplete,
-                      health: HEALTH_STATUS_LABELS[ps.healthStatus],
-                    })),
-                    indirectCosts: compIndirectCosts.map(ic => ({
-                      category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
-                      description: ic.description,
-                      amount: ic.amount,
-                      month: ic.month,
-                    })),
-                  });
+                  exportCompanyToExcel(buildCompanyExport(company.name, summary, compIndirectCosts));
                   toast.success('تم تصدير تقرير الشركة');
                 }}>
                   <FileSpreadsheet className="w-3.5 h-3.5" />Excel
@@ -239,25 +172,7 @@ export default function CompanyDetail() {
               )}
               {summary && (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                  exportCompanyToPDF({
-                    companyName: company.name,
-                    summary,
-                    portfolioSummaries: (summary.portfolioSummaries || []).map(ps => ({
-                      name: ps.portfolioName,
-                      projects: ps.projectCount,
-                      contractValue: ps.totalEffectiveValue,
-                      actual: ps.totalActual,
-                      profit: ps.aggregatePlannedProfit,
-                      completion: ps.weightedPercentComplete,
-                      health: HEALTH_STATUS_LABELS[ps.healthStatus],
-                    })),
-                    indirectCosts: compIndirectCosts.map(ic => ({
-                      category: INDIRECT_COST_CATEGORY_LABELS[ic.category],
-                      description: ic.description,
-                      amount: ic.amount,
-                      month: ic.month,
-                    })),
-                  });
+                  exportCompanyToPDF(buildCompanyExport(company.name, summary, compIndirectCosts));
                   toast.success('تم تصدير تقرير PDF');
                 }}>
                   <FileSpreadsheet className="w-3.5 h-3.5" />PDF
@@ -290,23 +205,7 @@ export default function CompanyDetail() {
           }
         />
 
-        {/* Edit Dialog */}
-        <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>تعديل بيانات الشركة</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label>اسم الشركة *</Label>
-                <Input value={editName} onChange={e => setEditName(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label>الوصف</Label>
-                <Textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} />
-              </div>
-              <Button onClick={handleSaveEdit} className="w-full">حفظ</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <EditCompanyDialog key={edit.session} company={company} open={edit.value !== null} onOpenChange={(v) => { if (!v) edit.close(); }} />
 
         {/* Stats */}
         {summary && (
@@ -360,266 +259,11 @@ export default function CompanyDetail() {
           </div>
         )}
 
-        {compPortfolios.length > 0 && (
-          <div className="mb-6 space-y-4">
-            <div className="flex items-center gap-2 mb-1">
-              <FolderKanban className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-semibold">المحافظ ({compPortfolios.length})</h3>
-            </div>
-            {summary?.portfolioSummaries.map(ps => {
-              const portfolioProjects = visibleCompanyProjects.filter(p => p.portfolioId === ps.portfolioId);
-              return (
-                <div key={ps.portfolioId} className="rounded-xl border border-border bg-card overflow-hidden">
-                  {/* Portfolio header */}
-                  <div className="p-4 border-b border-border/50">
-                    <div className="flex items-center justify-between mb-3">
-                      <div
-                        className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1"
-                        onClick={() => navigate(`/portfolio/${ps.portfolioId}`)}
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <FolderKanban className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold">{ps.portfolioName}</h4>
-                          <p className="text-[11px] text-muted-foreground">{ps.projectCount} مشروع</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${HEALTH_STATUS_COLORS[ps.healthStatus]}`}>
-                          {HEALTH_STATUS_LABELS[ps.healthStatus]}
-                        </span>
-                        {portfolioProjects.length > 0 && (
-                          <button
-                            onClick={() => togglePortfolio(ps.portfolioId)}
-                            className="w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center transition-colors"
-                          >
-                            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${expandedPortfolios[ps.portfolioId] ? 'rotate-180' : ''}`} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-4 gap-3">
-                      <div className="text-center p-2 rounded-lg bg-muted/40">
-                        <p className="text-xs text-muted-foreground mb-0.5">العقود</p>
-                        <p className="text-xs font-mono font-bold">{formatCurrency(ps.totalEffectiveValue)}</p>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-muted/40">
-                        <p className="text-xs text-muted-foreground mb-0.5">المصروفات</p>
-                        <p className="text-xs font-mono font-bold">{formatCurrency(ps.totalActual)}</p>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-muted/40">
-                        <p className="text-xs text-muted-foreground mb-0.5">الإنجاز</p>
-                        <p className="text-sm font-bold">{ps.weightedPercentComplete.toFixed(0)}%</p>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-muted/40">
-                        <p className="text-xs text-muted-foreground mb-0.5">الربح</p>
-                        <p className={`text-xs font-mono font-bold ${ps.aggregatePlannedProfit >= 0 ? 'health-good' : 'text-destructive'}`}>
-                          {formatCurrency(ps.aggregatePlannedProfit)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Collapsible nested projects */}
-                  {portfolioProjects.length > 0 && expandedPortfolios[ps.portfolioId] && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="divide-y divide-border/40"
-                    >
-                      {portfolioProjects.map(project => {
-                        const projExpenses = expenses.filter(e => e.projectId === project.id);
-                        const totalSpent = projExpenses.reduce((s, e) => s + e.amount, 0);
-                        const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
-                        return (
-                          <div
-                            key={project.id}
-                            className="px-4 py-3 hover:bg-muted/20 cursor-pointer transition-colors flex items-center gap-4"
-                            onClick={() => navigate(`/project/${project.id}`)}
-                          >
-                            <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                              <Briefcase className="w-3.5 h-3.5 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm font-medium truncate">{project.name}</span>
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${PROJECT_STATUS_COLORS[project.status]}`}>
-                                  {PROJECT_STATUS_LABELS[project.status]}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                                <span>العقد: {formatCurrency(project.contractValue)}</span>
-                                <span>·</span>
-                                <span>المصروف: {formatCurrency(totalSpent)}</span>
-                                <span>·</span>
-                                <span>الإنجاز: {project.percentComplete}%</span>
-                              </div>
-                              <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all ${spentPercent > 90 ? 'bg-destructive' : spentPercent > 70 ? 'bg-warning' : 'bg-primary'}`}
-                                  style={{ width: `${spentPercent}%` }}
-                                />
-                              </div>
-                            </div>
-                            <ArrowLeft className="w-4 h-4 text-muted-foreground shrink-0" />
-                          </div>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <PortfolioCards summaries={summary?.portfolioSummaries ?? []} projects={visibleCompanyProjects} countedExpenses={countedExpenses} />
 
-        {/* Indirect Costs */}
-        <div className="stat-card mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold">التكاليف غير المباشرة</h3>
-            {(isAdmin || canEdit('company', id!)) && (
-              <Dialog open={icOpen} onOpenChange={setIcOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="gap-1"><Plus className="w-3.5 h-3.5" />إضافة</Button>
-                </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>إضافة تكلفة غير مباشرة</DialogTitle></DialogHeader>
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <Label>الفئة</Label>
-                    <Select value={icCategory} onValueChange={v => setIcCategory(v as IndirectCostCategory)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(INDIRECT_COST_CATEGORY_LABELS).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label>الوصف *</Label>
-                    <Input value={icDescription} onChange={e => setIcDescription(e.target.value)} placeholder="وصف التكلفة" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label>المبلغ</Label>
-                      <Input type="number" value={icAmount} onChange={e => setIcAmount(e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>الشهر</Label>
-                      <Input type="number" value={icMonth} onChange={e => setIcMonth(e.target.value)} min="1" max="12" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label>التاريخ</Label>
-                    <Input type="date" value={icDate} onChange={e => setIcDate(e.target.value)} />
-                  </div>
-                  <Button onClick={handleAddIndirectCost} className="w-full">إضافة</Button>
-                </div>
-              </DialogContent>
-              </Dialog>
-            )}
-          </div>
+        <IndirectCostsCard companyId={id!} costs={compIndirectCosts} canEdit={isAdmin || canEdit('company', id!)} />
 
-          {compIndirectCosts.length > 0 ? (
-            <>
-              <div className="overflow-x-auto">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>الفئة</th>
-                      <th>الوصف</th>
-                      <th>المبلغ</th>
-                      <th>الشهر</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {compIndirectCosts.map(ic => (
-                      <tr key={ic.id}>
-                        <td className="text-xs">{INDIRECT_COST_CATEGORY_LABELS[ic.category]}</td>
-                        <td className="font-medium">{ic.description}</td>
-                        <td className="font-mono text-sm">{formatCurrency(ic.amount)}</td>
-                        <td className="text-xs">شهر {ic.month}</td>
-                        {(isAdmin || canEdit('company', id!)) && (
-                          <td>
-                            <ConfirmDeleteDialog onConfirm={async () => {
-                              try { await deleteIndirectCost(ic.id); toast.success('تم الحذف'); } catch { toast.error('فشل الحذف'); }
-                            }} title="حذف التكلفة" description={`هل أنت متأكد من حذف "${ic.description}"؟`} />
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-3 p-3 rounded-lg bg-muted/30 flex items-center justify-between">
-                <span className="text-sm font-semibold">إجمالي التكاليف غير المباشرة</span>
-                <span className="font-mono font-bold text-destructive">{formatCurrency(totalIndirect)}</span>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground text-sm">لا توجد تكاليف غير مباشرة</div>
-          )}
-        </div>
-
-        {/* Standalone projects */}
-        {visibleStandaloneProjects.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Briefcase className="w-4 h-4 text-muted-foreground" />
-              <h3 className="text-sm font-semibold">مشاريع مستقلة ({visibleStandaloneProjects.length})</h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {visibleStandaloneProjects.map(project => {
-                const projExpenses = expenses.filter(e => e.projectId === project.id);
-                const totalSpent = projExpenses.reduce((s, e) => s + e.amount, 0);
-                const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
-                return (
-                  <div
-                    key={project.id}
-                    className="rounded-xl border border-border bg-card p-4 cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all"
-                    onClick={() => navigate(`/project/${project.id}`)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Briefcase className="w-4 h-4 text-primary" />
-                        </div>
-                        <span className="text-sm font-semibold truncate">{project.name}</span>
-                      </div>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${PROJECT_STATUS_COLORS[project.status]}`}>
-                        {PROJECT_STATUS_LABELS[project.status]}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-center mb-3">
-                      <div className="p-1.5 rounded bg-muted/40">
-                        <p className="text-xs text-muted-foreground">العقد</p>
-                        <p className="text-xs font-mono font-bold">{formatCurrency(project.contractValue)}</p>
-                      </div>
-                      <div className="p-1.5 rounded bg-muted/40">
-                        <p className="text-xs text-muted-foreground">المصروف</p>
-                        <p className="text-xs font-mono font-bold">{formatCurrency(totalSpent)}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
-                      <span>الإنجاز: {project.percentComplete}%</span>
-                      <span>الصرف: {spentPercent.toFixed(0)}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${spentPercent > 90 ? 'bg-destructive' : spentPercent > 70 ? 'bg-warning' : 'bg-primary'}`}
-                        style={{ width: `${spentPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <StandaloneProjectCards projects={visibleStandaloneProjects} countedExpenses={countedExpenses} />
       </motion.div>
     </AppLayout>
   );
