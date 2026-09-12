@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { generateExecutiveSummary, type AISummary } from '@/services/aiService';
 import { toast } from 'sonner';
+import { errorMessage } from '@/lib/utils';
 
 interface Props {
   context: Record<string, unknown>;
@@ -24,8 +25,8 @@ export function AIExecutiveInsights({ context }: Props) {
       } else {
         setSummary(data);
       }
-    } catch (e: any) {
-      const msg = e?.message || 'فشل توليد الملخص الذكي';
+    } catch (e) {
+      const msg = errorMessage(e, 'فشل توليد الملخص الذكي');
       toast.error(msg);
       setSummary({ error: msg });
     } finally {

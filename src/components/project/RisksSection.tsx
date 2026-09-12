@@ -15,6 +15,7 @@ import { FormFooter } from '@/components/FormFooter';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Plus, AlertTriangle, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { errorMessage } from '@/lib/utils';
 
 interface RisksSectionProps {
   projectId?: string;
@@ -82,9 +83,9 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
         toast.success('تم إضافة الخطر');
       }
       resetForm(); setOpen(false);
-    } catch (e: any) {
+    } catch (e) {
       console.error('[updateRisk]', e);
-      toast.error(e.message || 'حدث خطأ عند تحديث الخطر');
+      toast.error(errorMessage(e, 'حدث خطأ عند تحديث الخطر'));
     }
   };
 

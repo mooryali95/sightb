@@ -1,5 +1,5 @@
 import { formatCurrency, getPlannedMonthlyCashFlow, getMonthlyBreakdown } from '@/lib/finance';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type Expense } from '@/types/project';
+import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type Expense, type BudgetItem } from '@/types/project';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, ReferenceLine, Legend,
@@ -17,7 +17,7 @@ interface ChartsSectionProps {
   expenses?: Expense[];
   totalPlanned?: number;
   durationMonths?: number;
-  budgetItems?: any[];
+  budgetItems?: BudgetItem[];
 }
 
 export function ChartsSection({ pieData, barData, expenses = [], totalPlanned = 0, durationMonths = 0, budgetItems = [] }: ChartsSectionProps) {

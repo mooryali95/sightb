@@ -6,6 +6,7 @@
  */
 
 import { db, unwrap } from './db';
+import type { Tables } from '@/integrations/supabase/types';
 
 export interface SystemAuditEntry {
   id: string;
@@ -25,7 +26,7 @@ export async function listSystemAuditEntries(limit = 500): Promise<SystemAuditEn
     .select('*')
     .order('created_at', { ascending: false })
     .limit(limit);
-  const rows = unwrap<any[]>(res, 'تعذّر تحميل سجل التدقيق');
+  const rows = unwrap<Tables<'system_audit_log'>[]>(res, 'تعذّر تحميل سجل التدقيق');
   return (rows || []).map((e) => ({
     id: e.id,
     userId: e.user_id,

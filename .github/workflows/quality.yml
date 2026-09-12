@@ -106,7 +106,13 @@ jobs:
           #   table rows and the slice maps them typed; the realtime mapper in
           #   the load slice types each table's row. One `as any` remains in
           #   resourcePayableService, disabled inline with its reason.
-          ERROR_BUDGET=53
+          #   53 → 26 (12 Sep): every leftover `any` outside two intended
+          #   boundaries is gone (JSON bags named where they are rendered,
+          #   catch blocks on `unknown`, row mappers on the generated table
+          #   types). What remains: services/db.ts (12, the dynamic proxy around
+          #   the client), lib/export.ts (12), and a Lovable-authored edge
+          #   function (2).
+          ERROR_BUDGET=26
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

@@ -87,8 +87,8 @@ export function getMonthlyBudgetPlan(
 
   const actualPerMonth: number[] = Array(months).fill(0);
   expenses.forEach((exp) => {
-    if ((exp as any).approvalStatus === 'rejected') return;
-    if ((exp as any).isOutstandingAdvance) return;
+    if (exp.approvalStatus === 'rejected') return;
+    if (exp.isOutstandingAdvance) return;
     if (exp.month >= 1 && exp.month <= months) {
       actualPerMonth[exp.month - 1] += exp.amount;
     }

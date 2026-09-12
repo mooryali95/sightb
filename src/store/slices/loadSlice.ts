@@ -14,7 +14,7 @@ import {
   mapCommitment,
 } from '../helpers';
 import { applyCashTransferRealtimeEvent, type CashTransferRealtimePayload } from './cashTransferSlice';
-import type { AppState, AuditLogEntry } from '../useStore';
+import type { AppState, AuditLogEntry, AuditRecord } from '../useStore';
 
 export interface LoadSlice {
   loading: boolean;
@@ -277,7 +277,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         auditLog: (data as AuditLogRow[] | null ?? []).map((d) => ({
           id: d.id, userId: d.user_id, action: d.action,
           tableName: d.table_name, recordId: d.record_id,
-          recordData: d.record_data, projectId: d.project_id || undefined,
+          recordData: (d.record_data ?? null) as AuditRecord | null, projectId: d.project_id || undefined,
           createdAt: d.created_at,
         })),
       });

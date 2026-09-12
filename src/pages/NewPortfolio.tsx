@@ -38,7 +38,7 @@ export default function NewPortfolio() {
     try {
       await addPortfolio({ name: result.data.name, companyId: result.data.companyId, description: result.data.description, targetRevenue: 0, targetMargin: 0 });
       navigate('/');
-    } catch (error: any) {
+    } catch (error) {
       console.error('[add-portfolio]', error);
       toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {

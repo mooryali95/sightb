@@ -72,7 +72,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
 
   const handleSubmit = async () => {
     if (!description.trim()) return;
-    const data: any = {
+    const data: Omit<ChangeOrder, 'id' | 'projectId' | 'createdAt'> = {
       description: description.trim(), changeType,
       amountImpact: parseFloat(amountImpact) || 0,
       durationImpact: parseInt(durationImpact) || 0,
@@ -91,7 +91,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
         toast.success('تمت إضافة أمر التغيير');
       }
       resetForm(); setOpen(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('[change-order]', err);
       toast.error('حدث خطأ أثناء حفظ أمر التغيير. يرجى المحاولة مرة أخرى.');
     }

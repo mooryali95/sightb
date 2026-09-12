@@ -48,6 +48,7 @@ import { SsotHealthBanner } from '@/components/project/SsotHealthBanner';
 
 import { PerformanceComparisonSection } from '@/components/project/PerformanceComparisonSection';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
+import { errorMessage } from '@/lib/utils';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -116,7 +117,7 @@ export default function ProjectDetail() {
   };
   const handleDelete = async () => {
     try { await deleteProject(project.id); toast.success('تم حذف المشروع نهائياً'); navigate('/'); }
-    catch (e: any) { toast.error(e?.message || 'فشل حذف المشروع — تأكد من أرشفته أولاً'); }
+    catch (e) { toast.error(errorMessage(e, 'فشل حذف المشروع — تأكد من أرشفته أولاً')); }
   };
 
   const exportPayload = () => ({

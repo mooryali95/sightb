@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useStore } from '@/store/useStore';
+import { useStore, type AuditRecord } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@/types/project';
 
@@ -62,7 +62,7 @@ export function AuditLogSection({ projectId }: AuditLogSectionProps) {
         <div className="space-y-3">
           {auditLog.map((entry) => {
             const isUpdate = entry.action === 'update';
-            const data = entry.recordData;
+            const data: AuditRecord = entry.recordData ?? {};
             return (
               <div key={entry.id} className="p-3 rounded-lg border border-border bg-muted/20">
                 <div className="flex items-center justify-between mb-2">
