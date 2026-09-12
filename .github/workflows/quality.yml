@@ -72,7 +72,10 @@ jobs:
           #   fund link or notes through a typed CustodyUpdate — the old
           #   signature intersected `string | undefined` with `string | null`,
           #   which narrows to `string`, so null only ever got through a cast.
-          ERROR_BUDGET=262
+          #   262 → 242 (12 Sep): the budget section and everything under
+          #   components/project/budget/ are `any`-free; its three list props
+          #   are typed and the `(x: any) =>` callbacks over them went with it.
+          ERROR_BUDGET=242
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.
