@@ -44,12 +44,15 @@ export function useTabBadges(projectId?: string): TabBadges {
     const pCO = changeOrders.filter(co => co.projectId === projectId);
 
     // === FINANCE ===
-    const pendingExpenses = pExp.filter(e => (e as any).approvalStatus === 'pending').length;
+    const pendingExpenses = pExp.filter(e => e.approvalStatus === 'pending').length;
+    // Spend against an item is what the finance tab counts as spend: not a
+    // rejected expense, not an advance still outstanding.
+    const countedExpenses = pExp.filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
     const overBudgetItems = pBud.filter(b => {
-      const actual = pExp
-        .filter(e => (e as any).budgetItemId === b.id)
+      const actual = countedExpenses
+        .filter(e => e.budgetItemId === b.id)
         .reduce((s, e) => s + (e.amount || 0), 0);
-      const planned = (b as any).plannedAmount || (b as any).planned || 0;
+      const planned = b.plannedAmount || 0;
       return planned > 0 && actual / planned >= 0.9;
     }).length;
     const financeCount = pendingExpenses + overBudgetItems;
@@ -57,18 +60,18 @@ export function useTabBadges(projectId?: string): TabBadges {
       overBudgetItems > 0 ? 'critical' : pendingExpenses > 0 ? 'warning' : 'info';
 
     // === PLANNING ===
-    const hasActiveBaseline = pBaselines.some(b => (b as any).isActive);
-    const delayedMilestones = pMil.filter(m => (m as any).status === 'delayed').length;
+    const hasActiveBaseline = pBaselines.some(b => b.isActive);
+    const delayedMilestones = pMil.filter(m => m.status === 'delayed').length;
     const planningCount = (hasActiveBaseline ? 0 : 1) + delayedMilestones;
     const planningLevel: TabBadgeInfo['level'] =
       delayedMilestones > 0 ? 'warning' : !hasActiveBaseline ? 'info' : 'info';
 
     // === TRACKING ===
     const highRisks = pRisks.filter(r =>
-      ((r as any).status === 'open' || (r as any).status === 'mitigating') &&
-      ((r as any).impact === 'high' || (r as any).impact === 'very_high')
+      (r.status === 'open' || r.status === 'mitigating') &&
+      (r.impact === 'high' || r.impact === 'very_high')
     ).length;
-    const proposedCO = pCO.filter(co => (co as any).status === 'proposed').length;
+    const proposedCO = pCO.filter(co => co.status === 'proposed').length;
     const trackingCount = highRisks + proposedCO;
     const trackingLevel: TabBadgeInfo['level'] =
       highRisks > 0 ? 'critical' : proposedCO > 0 ? 'warning' : 'info';

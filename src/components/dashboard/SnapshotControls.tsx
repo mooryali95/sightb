@@ -4,19 +4,22 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { getProjectSummary } from '@/lib/finance';
 import { getPortfolioSummary, getCompanySummary } from '@/lib/portfolio';
+import type {
+  BudgetItem, ChangeOrder, Company, Expense, IndirectCost, Milestone, PeriodicSnapshot, Portfolio, Project, Revenue, Risk,
+} from '@/types/project';
 
 interface SnapshotControlsProps {
-  projects: any[];
-  portfolios: any[];
-  companies: any[];
-  budgetItems: any[];
-  expenses: any[];
-  revenues: any[];
-  changeOrders: any[];
-  milestones: any[];
-  risks: any[];
-  indirectCosts: any[];
-  saveSnapshot: (data: any) => Promise<any>;
+  projects: Project[];
+  portfolios: Portfolio[];
+  companies: Company[];
+  budgetItems: BudgetItem[];
+  expenses: Expense[];
+  revenues: Revenue[];
+  changeOrders: ChangeOrder[];
+  milestones: Milestone[];
+  risks: Risk[];
+  indirectCosts: IndirectCost[];
+  saveSnapshot: (data: Omit<PeriodicSnapshot, 'id' | 'createdAt'>) => Promise<string>;
 }
 
 export function SnapshotControls({
@@ -39,22 +42,22 @@ export function SnapshotControls({
           const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
           let count = 0;
           for (const p of projects) {
-            const pBud = budgetItems.filter((b: any) => b.projectId === p.id);
-            const pExp = expenses.filter((e: any) => e.projectId === p.id);
-            const pRev = revenues.filter((r: any) => r.projectId === p.id);
-            const pCO = changeOrders.filter((co: any) => co.projectId === p.id);
+            const pBud = budgetItems.filter((b) => b.projectId === p.id);
+            const pExp = expenses.filter((e) => e.projectId === p.id);
+            const pRev = revenues.filter((r) => r.projectId === p.id);
+            const pCO = changeOrders.filter((co) => co.projectId === p.id);
             const s = getProjectSummary(p, pBud, pExp, pRev, pCO);
-            await saveSnapshot({ entityType: 'project', entityId: p.id, period, snapshotDate: now.toISOString(), metrics: s as any });
+            await saveSnapshot({ entityType: 'project', entityId: p.id, period, snapshotDate: now.toISOString(), metrics: { ...s } });
             count++;
           }
           for (const port of portfolios) {
             const ps = getPortfolioSummary(port, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks);
-            await saveSnapshot({ entityType: 'portfolio', entityId: port.id, period, snapshotDate: now.toISOString(), metrics: ps as any });
+            await saveSnapshot({ entityType: 'portfolio', entityId: port.id, period, snapshotDate: now.toISOString(), metrics: { ...ps } });
             count++;
           }
           for (const comp of companies) {
             const cs = getCompanySummary(comp, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts);
-            await saveSnapshot({ entityType: 'company', entityId: comp.id, period, snapshotDate: now.toISOString(), metrics: cs as any });
+            await saveSnapshot({ entityType: 'company', entityId: comp.id, period, snapshotDate: now.toISOString(), metrics: { ...cs } });
             count++;
           }
           toast.success(`تم حفظ ${count} لقطة للفترة ${period}`);

@@ -87,7 +87,10 @@ jobs:
           #   225 → 210 (12 Sep): the vendor payables panel and everything under
           #   components/project/vendor/ are `any`-free; the store is read typed
           #   instead of through `useStore() as any`.
-          ERROR_BUDGET=210
+          #   210 → 153 (12 Sep): the tab badges, the three dashboard cards and
+          #   the summary library read typed fields; their `any[]` props and
+          #   `(x as any).field` reads were all on fields the types carry.
+          ERROR_BUDGET=153
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

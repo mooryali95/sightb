@@ -4,17 +4,20 @@ import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS } from '@/types/project';
 import { FolderKanban } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import type {
+  BudgetItem, ChangeOrder, Company, Expense, Milestone, Portfolio, Project, Revenue, Risk,
+} from '@/types/project';
 
 interface PortfolioPerformanceProps {
-  portfolios: any[];
-  companies: any[];
-  projects: any[];
-  budgetItems: any[];
-  expenses: any[];
-  revenues: any[];
-  changeOrders: any[];
-  milestones: any[];
-  risks: any[];
+  portfolios: Portfolio[];
+  companies: Company[];
+  projects: Project[];
+  budgetItems: BudgetItem[];
+  expenses: Expense[];
+  revenues: Revenue[];
+  changeOrders: ChangeOrder[];
+  milestones: Milestone[];
+  risks: Risk[];
 }
 
 export function PortfolioPerformance({
@@ -22,8 +25,8 @@ export function PortfolioPerformance({
 }: PortfolioPerformanceProps) {
   const navigate = useNavigate();
   const activePortfolios = portfolios.filter(p => {
-    const comp = companies.find((c: any) => c.id === p.companyId);
-    const hasVisibleProjects = projects.some((project: any) => project.portfolioId === p.id);
+    const comp = companies.find((c) => c.id === p.companyId);
+    const hasVisibleProjects = projects.some((project) => project.portfolioId === p.id);
     return comp && comp.status !== 'archived' && hasVisibleProjects;
   });
 

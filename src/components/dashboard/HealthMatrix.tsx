@@ -4,21 +4,22 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
 } from 'recharts';
+import type { BudgetItem, ChangeOrder, Expense, Project, Revenue } from '@/types/project';
 
 interface HealthMatrixProps {
-  filteredProjects: any[];
-  expenses: any[];
-  budgetItems: any[];
-  revenues: any[];
-  changeOrders: any[];
+  filteredProjects: Project[];
+  expenses: Expense[];
+  budgetItems: BudgetItem[];
+  revenues: Revenue[];
+  changeOrders: ChangeOrder[];
 }
 
 export function HealthMatrix({ filteredProjects, expenses, budgetItems, revenues, changeOrders }: HealthMatrixProps) {
   const healthData = filteredProjects.map(p => {
-    const pExp = expenses.filter((e: any) => e.projectId === p.id);
-    const pBud = budgetItems.filter((b: any) => b.projectId === p.id);
-    const pRev = revenues.filter((r: any) => r.projectId === p.id);
-    const pCO = changeOrders.filter((co: any) => co.projectId === p.id);
+    const pExp = expenses.filter((e) => e.projectId === p.id);
+    const pBud = budgetItems.filter((b) => b.projectId === p.id);
+    const pRev = revenues.filter((r) => r.projectId === p.id);
+    const pCO = changeOrders.filter((co) => co.projectId === p.id);
     const s = getProjectSummary(p, pBud, pExp, pRev, pCO);
     return {
       name: p.name,
