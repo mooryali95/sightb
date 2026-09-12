@@ -94,7 +94,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       management_reserve: p.managementReserve || 0,
       tax_percent: p.taxPercent ?? 15,
       vat_inclusive: p.vatInclusive ?? false,
-    } as any).select().single();
+    }).select().single();
     if (error) throw error;
     const mapped = mapProject(data);
     set((s) => ({ projects: [mapped, ...s.projects] }));

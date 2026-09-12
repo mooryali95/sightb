@@ -1,4 +1,4 @@
-import type { ResourceReimbursement, Resource } from '@/types/project';
+import type { ResourceReimbursement, Resource, PaymentRequest, ResourceSettlement } from '@/types/project';
 import {
   filterResourceReimbursements,
   filterVendorReimbursements,
@@ -32,8 +32,8 @@ export interface PayablesCsvInput {
   projectName: string;
   resources: Resource[];
   reimbursements: ResourceReimbursement[];
-  paymentRequests: any[];
-  settlements: any[];
+  paymentRequests: PaymentRequest[];
+  settlements: ResourceSettlement[];
 }
 
 /**

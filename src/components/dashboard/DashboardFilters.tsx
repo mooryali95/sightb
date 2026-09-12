@@ -125,7 +125,7 @@ export function DashboardFilters({
 
             <Select value={filterStatus} onValueChange={(v) => {
               setFilterStatus(v);
-              if (INACTIVE_STATUSES.includes(v as any)) {
+              if ((INACTIVE_STATUSES as readonly string[]).includes(v)) {
                 setShowInactive(true);
               }
             }}>

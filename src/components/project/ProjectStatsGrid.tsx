@@ -2,7 +2,7 @@ import { StatCard } from '@/components/StatCard';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { formatCurrency, addVAT } from '@/lib/finance';
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type Project } from '@/types/project';
+import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type Project, type ProjectSummary, type EVMMetrics } from '@/types/project';
 import {
   DollarSign, TrendingUp, TrendingDown, Target, Receipt, PiggyBank,
   BarChart3, Shield, Clock, FileEdit,
@@ -10,8 +10,8 @@ import {
 
 interface Props {
   project: Project;
-  summary: any;
-  evm: any;
+  summary: ProjectSummary;
+  evm: EVMMetrics | null;
   currentMonth: number;
   daysRemaining: number | null;
   monthsRemaining: number | null;

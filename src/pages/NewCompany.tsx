@@ -34,7 +34,7 @@ export default function NewCompany() {
     try {
       await addCompany({ name: result.data.name, description: result.data.description, status: 'active' });
       navigate('/');
-    } catch (error: any) {
+    } catch (error) {
       console.error('[add-company]', error);
       toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {

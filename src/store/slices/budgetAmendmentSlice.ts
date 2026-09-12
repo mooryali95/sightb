@@ -3,10 +3,12 @@ import { db } from '@/services/db';
 import {
   BudgetAmendment,
   BudgetAmendmentSnapshotItem,
+  BudgetAmendmentStatus,
   BudgetItem,
 } from '@/types/project';
 import { getUserId } from '../helpers';
 import type { AppState } from '../useStore';
+import type { Tables } from '@/integrations/supabase/types';
 
 export interface BudgetAmendmentSlice {
   budgetAmendments: BudgetAmendment[];
@@ -43,16 +45,16 @@ function totalOfSnapshot(items: BudgetAmendmentSnapshotItem[]): number {
   }, 0);
 }
 
-function mapAmendment(d: any): BudgetAmendment {
+function mapAmendment(d: Tables<'budget_amendments'>): BudgetAmendment {
   return {
     id: d.id,
     projectId: d.project_id,
     reason: d.reason,
-    snapshotBefore: (d.snapshot_before || []) as BudgetAmendmentSnapshotItem[],
-    snapshotAfter: d.snapshot_after ? (d.snapshot_after as BudgetAmendmentSnapshotItem[]) : undefined,
+    snapshotBefore: (d.snapshot_before || []) as unknown as BudgetAmendmentSnapshotItem[],
+    snapshotAfter: d.snapshot_after ? (d.snapshot_after as unknown as BudgetAmendmentSnapshotItem[]) : undefined,
     totalBefore: Number(d.total_before ?? 0),
     totalAfter: d.total_after !== null && d.total_after !== undefined ? Number(d.total_after) : undefined,
-    status: d.status,
+    status: d.status as BudgetAmendmentStatus,
     approvedBy: d.approved_by || undefined,
     approvedAt: d.approved_at || undefined,
     createdAt: d.created_at,

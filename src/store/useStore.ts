@@ -10,9 +10,20 @@ import { createFundSlice, FundSlice } from './slices/fundSlice';
 import { createResourcePayableSlice, ResourcePayableSlice } from './slices/resourcePayableSlice';
 import { createCashTransferSlice, CashTransferSlice } from './slices/cashTransferSlice';
 
+/**
+ * The row the audit trigger captured, as a loose bag: the fields the audit
+ * section renders are named, the rest stay unknown.
+ */
+export interface AuditRecord {
+  name?: string; title?: string; description?: string; resource_name?: string;
+  amount?: number; planned_amount?: number; category?: string;
+  old?: Record<string, unknown>; new?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface AuditLogEntry {
   id: string; userId: string; action: string; tableName: string;
-  recordId: string; recordData: any; projectId?: string; createdAt: string;
+  recordId: string; recordData: AuditRecord | null; projectId?: string; createdAt: string;
 }
 
 export type AppState = LoadSlice & CompanySlice & ProjectSlice & BudgetSlice & TrackingSlice & BaselineSlice & BudgetAmendmentSlice & FundSlice & ResourcePayableSlice & CashTransferSlice;

@@ -10,6 +10,7 @@ import {
 } from '@/types/project';
 import { getUserId } from '../helpers';
 import type { AppState } from '../useStore';
+import type { Tables } from '@/integrations/supabase/types';
 
 export interface FundSlice {
   projectFunds: ProjectFund[];
@@ -53,7 +54,7 @@ export interface FundSlice {
   deleteFund: (fundId: string) => Promise<void>;
 }
 
-function mapFund(d: any): ProjectFund {
+function mapFund(d: Tables<'project_funds'>): ProjectFund {
   return {
     id: d.id,
     projectId: d.project_id,
@@ -70,7 +71,7 @@ function mapFund(d: any): ProjectFund {
   };
 }
 
-function mapSettlement(d: any): FundSettlement {
+function mapSettlement(d: Tables<'fund_settlements'>): FundSettlement {
   return {
     id: d.id,
     fundId: d.fund_id,
@@ -86,7 +87,7 @@ function mapSettlement(d: any): FundSettlement {
     status: d.status as SettlementStatus,
     rejectionReason: d.rejection_reason || undefined,
     differenceReason: d.difference_reason || undefined,
-    attachments: Array.isArray(d.attachments) ? d.attachments : [],
+    attachments: Array.isArray(d.attachments) ? (d.attachments as unknown as FundSettlementAttachment[]) : [],
     createdAt: d.created_at,
     updatedAt: d.updated_at,
   };
@@ -396,7 +397,7 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
       projectFunds: s.projectFunds.filter((f) => f.id !== fundId),
       fundSettlements: s.fundSettlements.filter((st) => st.fundId !== fundId),
       expenses: s.expenses.map((e) => (e.fundId === fundId ? { ...e, fundId: undefined } : e)),
-      custodies: s.custodies.map((c) => (c.sourceFundId === fundId ? { ...c, sourceFundId: undefined } as any : c)),
+      custodies: s.custodies.map((c) => (c.sourceFundId === fundId ? { ...c, sourceFundId: undefined } : c)),
     }));
   },
 });

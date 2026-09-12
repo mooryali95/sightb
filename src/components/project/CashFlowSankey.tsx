@@ -130,8 +130,14 @@ export function CashFlowSankey({
   );
 }
 
-function SankeyNodeRenderer(props: any) {
-  const { x, y, width, height, index, payload } = props;
+/** What recharts injects into the node element; all optional because the element is created empty. */
+interface SankeyNodeProps {
+  x?: number; y?: number; width?: number; height?: number; index?: number;
+  payload?: { name?: string };
+}
+
+function SankeyNodeRenderer(props: SankeyNodeProps) {
+  const { x = 0, y = 0, width = 0, height = 0, index = 0, payload } = props;
   const isSource = payload?.name?.startsWith('دفعة');
   const isCustody = payload?.name?.startsWith('عهدة');
   const fill = isSource

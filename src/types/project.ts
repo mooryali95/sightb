@@ -342,7 +342,7 @@ export interface PeriodicSnapshot {
   entityId: string;
   period: string;
   snapshotDate: string;
-  metrics: Record<string, any>;
+  metrics: Record<string, unknown>;
   createdAt: string;
 }
 

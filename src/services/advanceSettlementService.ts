@@ -13,7 +13,7 @@
  *                an approved expense against the chosen fund/custody.
  */
 
-import { supabase } from '@/integrations/supabase/client';
+import { db } from './db';
 
 export interface SplitSettleAdvanceInput {
   paymentRequestId: string;
@@ -66,7 +66,7 @@ export async function splitSettle(
   const date = input.date ?? today.toISOString().split('T')[0];
   const month = input.month ?? today.getMonth() + 1;
 
-  const { data, error } = await (supabase as any).rpc('split_settle_advance', {
+  const { data, error } = await db.rpc<Record<string, unknown>>('split_settle_advance', {
     _payment_request_id: input.paymentRequestId,
     _settle_amount: input.settleAmount,
     _overflow_amount: input.overflowAmount,
@@ -82,7 +82,7 @@ export async function splitSettle(
   });
 
   if (error) {
-    throw mapSplitSettleError(error);
+    throw mapSplitSettleError(error as { message?: string });
   }
   const d = (data ?? {}) as Record<string, unknown>;
   return {

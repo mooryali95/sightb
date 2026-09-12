@@ -230,7 +230,7 @@ export function buildTimeline(req: PaymentRequest): PaymentRequestTimelineStep[]
     ];
   }
 
-  const currentIdx = order.indexOf(req.status as any);
+  const currentIdx = (order as readonly string[]).indexOf(req.status);
   return order.map((k, i) => ({
     key: k,
     label: labels[k],

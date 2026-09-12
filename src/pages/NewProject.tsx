@@ -89,7 +89,7 @@ export default function NewProject() {
         vatInclusive: false,
       });
       navigate('/');
-    } catch (error: any) {
+    } catch (error) {
       console.error('[add-project]', error);
       toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
