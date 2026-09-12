@@ -19,6 +19,8 @@ import {
   type Expense,
 } from '@/types/project';
 import { getActiveFund, getFundRemaining } from '@/lib/funds';
+import { formatCurrency, getProjectMonth, removeVAT } from '@/lib/finance';
+import { errorMessage } from '@/lib/utils';
 
 interface ExtractedReceipt {
   vendor_name?: string | null;
@@ -41,7 +43,7 @@ export default function MobileExpenseCapture() {
   const [params] = useSearchParams();
   const preselectedProject = params.get('project') || '';
   const { user } = useAuth();
-  const { projects, addExpense, expenses, projectFunds } = useStore();
+  const { projects, addExpense, expenses, projectFunds, custodies, paymentRequests, cashTransfers } = useStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>('capture');
@@ -65,11 +67,14 @@ export default function MobileExpenseCapture() {
     [projects],
   );
 
+  const selectedProject = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
   const activeFund = useMemo(
     () => (projectId ? getActiveFund(projectId, projectFunds) : undefined),
     [projectId, projectFunds],
   );
-  const fundRemaining = activeFund ? getFundRemaining(activeFund, expenses, useStore.getState().custodies || [], useStore.getState().paymentRequests || []) : 0;
+  const fundRemaining = activeFund
+    ? getFundRemaining(activeFund, expenses, custodies || [], paymentRequests || [], cashTransfers || [])
+    : 0;
 
   useEffect(() => {
     if (!projectId && activeProjects.length === 1) {
@@ -121,9 +126,9 @@ export default function MobileExpenseCapture() {
       setIsVatInclusive(!!ext.is_vat_inclusive);
       setStep('review');
       toast.success(`تم استخراج البيانات (دقة ${Math.round(ext.confidence * 100)}%)`);
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error(e.message || 'فشل تحليل الصورة. أدخل البيانات يدوياً.');
+      toast.error(errorMessage(e, 'فشل تحليل الصورة. أدخل البيانات يدوياً.'));
       setStep('review');
     }
   };
@@ -147,6 +152,21 @@ export default function MobileExpenseCapture() {
     if (!description.trim()) { toast.error('أدخل وصفاً'); return; }
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) { toast.error('أدخل مبلغاً صحيحاً'); return; }
+    if (!selectedProject) { toast.error('اختر المشروع'); return; }
+
+    // Net amount (the database stores VAT-exclusive figures). Stripped at
+    // the project's own rate, the way the desktop form does; a receipt on a
+    // project with no VAT, or an exempt one, is taken whole.
+    const vatRate = isVatInclusive && !isVatExempt ? selectedProject.taxPercent || 0 : 0;
+    const finalAmount = vatRate > 0 ? +removeVAT(amt, vatRate).toFixed(2) : amt;
+
+    // The same rule as the desktop form: never more than the fund still holds.
+    if (activeFund && finalAmount > fundRemaining) {
+      toast.error(
+        `المبلغ (${formatCurrency(finalAmount)}) يتجاوز المتبقي في الدفعة #${activeFund.fundNumber} (${formatCurrency(fundRemaining)}). قسّم المصروف، أو سجّل دفعة جديدة.`,
+      );
+      return;
+    }
 
     setStep('saving');
     try {
@@ -157,27 +177,22 @@ export default function MobileExpenseCapture() {
         if (!receipt) toast.warning('تعذّر رفع الصورة، سيتم حفظ المصروف بدونها');
       }
 
-      // 2) Net amount (DB stores VAT-exclusive per Net Storage Policy)
-      // VAT removal happens here if the captured total is VAT-inclusive
-      let finalAmount = amt;
-      if (isVatInclusive && !isVatExempt) {
-        finalAmount = +(amt / 1.15).toFixed(2);
-      }
-
+      // 2) The project's month, not the calendar month: every monthly
+      // figure in the app buckets by it.
       const expenseData: Omit<Expense, 'id'> = {
         projectId,
         category,
         description: description.trim(),
         amount: finalAmount,
         date,
-        month: new Date(date).getMonth() + 1,
+        month: getProjectMonth(selectedProject.startDate, date, selectedProject.durationMonths),
         responsible: user?.email,
         approvalStatus: 'pending',
         vendor: vendor.trim() || undefined,
         invoiceRef: invoiceRef.trim() || undefined,
         isVatExempt,
         fundId: activeFund?.id,
-      } as any;
+      };
 
       const newId = await addExpense(expenseData);
 
@@ -192,9 +207,9 @@ export default function MobileExpenseCapture() {
       } else {
         navigate(`/project/${projectId}`);
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error(e.message || 'تعذّر الحفظ');
+      toast.error(errorMessage(e, 'تعذّر الحفظ'));
       setStep('review');
     }
   };
