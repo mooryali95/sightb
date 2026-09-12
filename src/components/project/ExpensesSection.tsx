@@ -319,14 +319,19 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     toast.success('تم رفض المصروف');
   };
 
+  // A rejected expense is not spend. Every figure on this screen reads the
+  // same list, so the per-resource and per-responsible cards cannot disagree
+  // with the total above them.
+  const countedExpenses = expenses.filter((e) => e.approvalStatus !== 'rejected');
+
   const responsibleMap = new Map<string, number>();
-  expenses.forEach((e) => {
+  countedExpenses.forEach((e) => {
     const key = e.responsible || 'غير محدد';
     responsibleMap.set(key, (responsibleMap.get(key) || 0) + e.amount);
   });
 
   const resourceSpendMap = new Map<string, number>();
-  expenses.forEach((e) => {
+  countedExpenses.forEach((e) => {
     if (e.resourceId) {
       const res = resources.find(r => r.id === e.resourceId);
       const key = res?.name || e.resourceId;
@@ -334,7 +339,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     }
   });
 
-  const totalExpenses = expenses.filter(e => e.approvalStatus !== 'rejected').reduce((s: number, e: any) => s + e.amount, 0);
+  const totalExpenses = countedExpenses.reduce((s: number, e: any) => s + e.amount, 0);
   const totalRevenue = revenues.reduce((s: number, r: any) => s + r.amount, 0);
   const spendFromRevenue = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0;
   const spendFromContract = contractValue > 0 ? (totalExpenses / contractValue) * 100 : 0;
