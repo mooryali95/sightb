@@ -102,8 +102,12 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
     setOpen(false);
   };
 
+  // A rejected expense is not spend, here as on every other screen. Every
+  // actual figure below reads this list.
+  const countedExpenses = expenses.filter((e: any) => e.approvalStatus !== 'rejected');
+
   const totalPlanned = getTotalPlanned(budgetItems);
-  const totalActual = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+  const totalActual = countedExpenses.reduce((s: number, e: any) => s + e.amount, 0);
   const taxAmount = contractValue > 0 && taxPercent > 0 ? contractValue * (taxPercent / 100) : 0;
   const contractValueInclTax = contractValue + taxAmount;
   const unallocated = contractValue - totalPlanned;
@@ -124,14 +128,14 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
     }
     categoryMap.set(b.category, entry);
   });
-  expenses.forEach((e: any) => {
+  countedExpenses.forEach((e: any) => {
     const entry = categoryMap.get(e.category) || { planned: 0, actual: 0 };
     entry.actual += e.amount;
     categoryMap.set(e.category, entry);
   });
 
   const getActualForItem = (item: any) => {
-    return expenses.filter((e: any) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
+    return countedExpenses.filter((e: any) => e.budgetItemId === item.id).reduce((s: number, e: any) => s + e.amount, 0);
   };
 
   const unlinkedExpenses = expenses.filter((e: any) => !e.budgetItemId);
@@ -525,7 +529,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
           <h3 className="text-sm font-semibold mb-4">تحليل الاحتياطيات</h3>
           {(() => {
             const contingencyPlanned = getTotalPlanned(budgetItems.filter((b: any) => b.category === 'contingency'));
-            const contingencyActual = expenses.filter((e: any) => e.category === 'contingency').reduce((s: number, e: any) => s + e.amount, 0);
+            const contingencyActual = countedExpenses.filter((e: any) => e.category === 'contingency').reduce((s: number, e: any) => s + e.amount, 0);
             const contingencyRemaining = contingencyPlanned - contingencyActual;
             const budgetWithoutReserve = totalPlanned - contingencyPlanned;
 
