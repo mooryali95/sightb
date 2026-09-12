@@ -4,10 +4,27 @@ import { Company } from '@/types/project';
 import { getUserId, logDeletion, mapCompany } from '../helpers';
 import type { AppState } from '../useStore';
 
+/**
+ * An edit to a company. A `null` description or logo clears it; `undefined`
+ * leaves it as it is, so an emptied field has to travel as `null`.
+ */
+export type CompanyUpdate = Omit<Partial<Company>, 'description' | 'logo'> & {
+  description?: string | null;
+  logo?: string | null;
+};
+
+function withoutNulls(c: CompanyUpdate): Partial<Company> {
+  return {
+    ...c,
+    description: c.description === null ? undefined : c.description,
+    logo: c.logo === null ? undefined : c.logo,
+  };
+}
+
 export interface CompanySlice {
   companies: Company[];
   addCompany: (c: Omit<Company, 'id' | 'createdAt'>) => Promise<string>;
-  updateCompany: (id: string, c: Partial<Company>) => Promise<void>;
+  updateCompany: (id: string, c: CompanyUpdate) => Promise<void>;
   deleteCompany: (id: string) => Promise<void>;
   archiveCompany: (id: string) => Promise<void>;
   unarchiveCompany: (id: string) => Promise<void>;
@@ -35,7 +52,7 @@ export const createCompanySlice: StateCreator<AppState, [], [], CompanySlice> = 
     if (c.status !== undefined) updates.status = c.status;
     const { error } = await db.from('companies').update(updates).eq('id', id);
     if (error) throw error;
-    set((s) => ({ companies: s.companies.map((x) => (x.id === id ? { ...x, ...c } : x)) }));
+    set((s) => ({ companies: s.companies.map((x) => (x.id === id ? { ...x, ...withoutNulls(c) } : x)) }));
   },
 
   deleteCompany: async (id) => {

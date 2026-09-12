@@ -64,6 +64,14 @@ export default function CompanyDetail() {
   const standaloneProjects = useMemo(() => companyProjects.filter(p => !p.portfolioId), [companyProjects]);
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
+  // The stat card above counts spend through the summary library, which
+  // leaves out rejected expenses and advances still outstanding. The chart
+  // and the project cards must count the same rows or the page disagrees
+  // with itself.
+  const countedExpenses = useMemo(
+    () => expenses.filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance),
+    [expenses],
+  );
   const totalIndirect = compIndirectCosts.reduce((s, ic) => s + ic.amount, 0);
 
   const CHART_COLORS = ['hsl(var(--primary))', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#6366f1'];
@@ -72,13 +80,13 @@ export default function CompanyDetail() {
     const data: { name: string; value: number }[] = [];
     compPortfolios.forEach(p => {
       const portfolioProjectIds = companyProjects.filter(pr => pr.portfolioId === p.id).map(pr => pr.id);
-      const total = expenses.filter(e => portfolioProjectIds.includes(e.projectId)).reduce((s, e) => s + e.amount, 0);
+      const total = countedExpenses.filter(e => portfolioProjectIds.includes(e.projectId)).reduce((s, e) => s + e.amount, 0);
       if (total > 0) data.push({ name: p.name, value: total });
     });
-    const standaloneTotal = expenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
+    const standaloneTotal = countedExpenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
     if (standaloneTotal > 0) data.push({ name: 'مشاريع مستقلة', value: standaloneTotal });
     return data;
-  }, [compPortfolios, companyProjects, standaloneProjects, expenses]);
+  }, [compPortfolios, companyProjects, standaloneProjects, countedExpenses]);
 
   // Add indirect cost form
   const [icOpen, setIcOpen] = useState(false);
@@ -122,7 +130,7 @@ export default function CompanyDetail() {
   const handleSaveEdit = async () => {
     if (!editName.trim()) { toast.error('اسم الشركة مطلوب'); return; }
     try {
-      await updateCompany(id!, { name: editName, description: editDescription || undefined });
+      await updateCompany(id!, { name: editName, description: editDescription || null });
       toast.success('تم تحديث بيانات الشركة');
       setEditOpen(false);
     } catch { toast.error('فشل التحديث'); }
@@ -430,7 +438,7 @@ export default function CompanyDetail() {
                       className="divide-y divide-border/40"
                     >
                       {portfolioProjects.map(project => {
-                        const projExpenses = expenses.filter(e => e.projectId === project.id);
+                        const projExpenses = countedExpenses.filter(e => e.projectId === project.id);
                         const totalSpent = projExpenses.reduce((s, e) => s + e.amount, 0);
                         const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
                         return (
@@ -574,7 +582,7 @@ export default function CompanyDetail() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {visibleStandaloneProjects.map(project => {
-                const projExpenses = expenses.filter(e => e.projectId === project.id);
+                const projExpenses = countedExpenses.filter(e => e.projectId === project.id);
                 const totalSpent = projExpenses.reduce((s, e) => s + e.amount, 0);
                 const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
                 return (
