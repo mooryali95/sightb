@@ -12,7 +12,7 @@ import {
   SETTLEMENT_STATUS_COLORS,
   PAYMENT_REQUEST_TYPE_LABELS,
 } from '@/types/project';
-import { getProjectFundsSummary, getSettlementForFund, getFundRemainingBreakdown, getCustodyCashTransfersIn, getCustodyBreakdown } from '@/lib/funds';
+import { getProjectFundsSummary, getSettlementForFund, getFundRemainingBreakdown, getCustodyBreakdown } from '@/lib/funds';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
 import { useStore } from '@/store/useStore';
@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   ChevronDown, ChevronLeft, Wallet, HandCoins, Banknote, Receipt, Clock,
-  ArrowDownToLine, FileCheck2, Send,
+  FileCheck2, Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -94,13 +94,9 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
 
   const custodyBd = (c: typeof projectCustodies[number]) =>
     getCustodyBreakdown(c, projectExpenses, projectTransfers, projectPayReqs);
-  const custodySpent = (id: string) =>
-    projectExpenses.filter((e) => e.custodyId === id && e.approvalStatus !== 'rejected').reduce((s, e) => s + e.amount, 0);
 
   const activeCustodies = projectCustodies.filter((c) => c.status === 'active');
   // SSOT: كل الأرقام من getCustodyBreakdown (المتاح = المبلغ + التحويلات الواردة)
-  const activeCustodyAmount = activeCustodies.reduce((s, c) => s + custodyBd(c).availableAmount, 0);
-  const activeCustodySpent = activeCustodies.reduce((s, c) => s + custodyBd(c).spent, 0);
   const inHandsOfHolders = activeCustodies.reduce((s, c) => s + custodyBd(c).remaining, 0);
 
   const directSpend = summary.totalDocumentedSpend;
@@ -396,7 +392,8 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
                               <div className="space-y-1">
                                 <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">عُهد مسحوبة من هذه الدفعة:</p>
                                 {fundCustodies.map((cu) => {
-                                  const cuSpent = projectExpenses.filter(e => e.custodyId === cu.id).reduce((s, e) => s + e.amount, 0);
+                                  // The same figure the custody's own row shows: rejected rows excluded.
+                                  const cuSpent = custodyBd(cu).spent;
                                   return (
                                     <div key={cu.id} className="flex items-center justify-between text-xs bg-amber-50 dark:bg-amber-900/10 px-2 py-1.5 rounded">
                                       <span className="flex items-center gap-1.5"><HandCoins className="w-3 h-3" />{cu.resourceName}</span>
