@@ -194,7 +194,7 @@ export function SourceOfTruthSection({
             <Row
               label="الإيرادات المُحصَّلة"
               value={collectedRevenue}
-              formula="Σ revenues.amount WHERE status = 'received'"
+              formula="Σ revenues.amount WHERE status = 'collected'"
               sources={[{ kind: 'db', label: 'revenues' }]}
               currency={currency}
               ssotKey="collected_revenue" projectId={project.id}
@@ -203,7 +203,7 @@ export function SourceOfTruthSection({
             <Row
               label="الإيرادات المُفوترة (شاملة المحصَّل)"
               value={invoicedRevenue}
-              formula="Σ revenues.amount WHERE status IN ('invoiced','received')"
+              formula="Σ revenues.amount WHERE status IN ('invoiced','collected')"
               sources={[{ kind: 'db', label: 'revenues' }]}
               currency={currency}
             />
