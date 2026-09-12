@@ -61,7 +61,12 @@ jobs:
           #   301 → 290 (11 Sep): the funds section and everything under
           #   components/project/funds/ are `any`-free too, by the same two
           #   moves (errorMessage() in catch blocks, typed list callbacks).
-          ERROR_BUDGET=290
+          #   290 → 276 (12 Sep): the expenses section and everything under
+          #   components/project/expenses/ are `any`-free; the section's
+          #   `expenses: any[]` and `revenues: any[]` props are typed, and an
+          #   edit that clears a link goes through a typed ExpenseUpdate
+          #   instead of `as any`.
+          ERROR_BUDGET=276
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

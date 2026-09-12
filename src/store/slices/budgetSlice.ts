@@ -5,6 +5,25 @@ import { BudgetItem, Expense, Revenue } from '@/types/project';
 import { getUserId, mapBudgetItem, mapExpense, mapRevenue } from '../helpers';
 import type { AppState } from '../useStore';
 
+/**
+ * What an expense edit may carry. The four link fields accept `null` so an
+ * edit can clear a link (the database column goes to NULL); the local row
+ * stores the cleared link as `undefined`, which is what `Expense` declares.
+ */
+export type ExpenseUpdate =
+  Partial<Omit<Expense, 'resourceId' | 'custodyId' | 'budgetItemId' | 'fundId'>> & {
+    resourceId?: string | null;
+    custodyId?: string | null;
+    budgetItemId?: string | null;
+    fundId?: string | null;
+  };
+
+function withoutNulls(e: ExpenseUpdate): Partial<Expense> {
+  const out: Record<string, unknown> = { ...e };
+  for (const k of Object.keys(out)) if (out[k] === null) out[k] = undefined;
+  return out as Partial<Expense>;
+}
+
 export interface BudgetSlice {
   budgetItems: BudgetItem[];
   expenses: Expense[];
@@ -13,7 +32,7 @@ export interface BudgetSlice {
   updateBudgetItem: (id: string, b: Partial<BudgetItem>) => Promise<void>;
   deleteBudgetItem: (id: string) => Promise<void>;
   addExpense: (e: Omit<Expense, 'id'>) => Promise<string>;
-  updateExpense: (id: string, e: Partial<Expense>) => Promise<void>;
+  updateExpense: (id: string, e: ExpenseUpdate) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   addRevenue: (r: Omit<Revenue, 'id'>) => Promise<string>;
   updateRevenue: (id: string, r: Partial<Revenue>) => Promise<void>;
@@ -121,7 +140,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     const { error } = await db.from('expenses').update(updates).eq('id', id);
     if (error) throw error;
     const existing = get().expenses.find((x) => x.id === id);
-    set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...e } : x)) }));
+    set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...withoutNulls(e) } : x)) }));
     const projectId = existing?.projectId;
     if (projectId && (e.fundId !== undefined || e.amount !== undefined)) {
       try { await (get() as any).loadFundsForProject?.(projectId); }
