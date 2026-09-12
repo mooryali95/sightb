@@ -1,24 +1,23 @@
+/**
+ * The milestones section: the weighted percent complete, the list (or the
+ * Gantt view), and every write that moves a milestone. Each write leaves
+ * the project row's percent in step with the milestones, since EVM and the
+ * dashboard read it there. The form, the card, the invoice prompt and the
+ * maths live under milestones/.
+ */
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency } from '@/lib/finance';
-import {
-  MILESTONE_STATUS_LABELS, MILESTONE_STATUS_COLORS, REVENUE_STATUS_LABELS,
-  type MilestoneStatus, type Milestone, type MilestoneUpdate, type Project, type Revenue,
-} from '@/types/project';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
-import { FormFooter } from '@/components/FormFooter';
-import { Plus, Pencil } from 'lucide-react';
+import { useDialogSession } from '@/hooks/useDialogSession';
+import { type Milestone, type MilestoneUpdate, type Project, type Revenue } from '@/types/project';
 import { toast } from 'sonner';
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GanttChart } from './GanttChart';
 import { List, GanttChartSquare } from 'lucide-react';
+import { MilestoneFormDialog, type MilestoneFormValues } from './milestones/MilestoneFormDialog';
+import { MilestoneCard } from './milestones/MilestoneCard';
+import { InvoicePrompt } from './milestones/InvoicePrompt';
+import { weightedPercent, sortMilestones, statusForPercent } from './milestones/milestoneFigures';
 
 interface MilestonesSectionProps {
   projectId: string;
@@ -29,20 +28,10 @@ interface MilestonesSectionProps {
 }
 
 export function MilestonesSection({ projectId, milestones, project, readOnly = false, revenues = [] }: MilestonesSectionProps) {
-  const { addMilestone, updateMilestone, deleteMilestone, updateProject, updateRevenue } = useStore();
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [weight, setWeight] = useState('');
-  const [status, setStatus] = useState<MilestoneStatus>('planned');
-  const [percentComplete, setPercentComplete] = useState('0');
-  const [plannedStart, setPlannedStart] = useState('');
-  const [plannedEnd, setPlannedEnd] = useState('');
-  const [linkedRevenueId, setLinkedRevenueId] = useState('');
-
-  // Revenue prompt
-  const [revenuePrompt, setRevenuePrompt] = useState<{ milestoneId: string; revenue: Revenue } | null>(null);
+  const { addMilestone, updateMilestone, deleteMilestone, updateProject } = useStore();
+  // Remounted on open so an edit starts from the row and an add starts blank; see useDialogSession.
+  const form = useDialogSession<{ milestone?: Milestone }>();
+  const [invoiceFor, setInvoiceFor] = useState<Revenue | null>(null);
 
   // Auto-detect delayed milestones (once per mount)
   const delayChecked = useRef(false);
@@ -61,52 +50,22 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     // writing again.
   }, [milestones, readOnly, updateMilestone]);
 
-  const resetForm = () => {
-    setEditingId(null); setName(''); setDescription(''); setWeight('');
-    setStatus('planned'); setPercentComplete('0'); setPlannedStart(''); setPlannedEnd('');
-    setLinkedRevenueId('');
-  };
-
-  const openEdit = (m: Milestone) => {
-    setEditingId(m.id); setName(m.name); setDescription(m.description || '');
-    setWeight(String(m.weight)); setStatus(m.status);
-    setPercentComplete(String(m.percentComplete));
-    setPlannedStart(m.plannedStart || ''); setPlannedEnd(m.plannedEnd || '');
-    setLinkedRevenueId(m.linkedRevenueId || '');
-    setOpen(true);
-  };
-
-  const recalcProjectPercent = (updatedMilestones: Milestone[]) => {
-    const totalWeight = updatedMilestones.reduce((s, m) => s + m.weight, 0);
-    if (totalWeight === 0) return 0;
-    const weighted = updatedMilestones.reduce((s, m) => s + (m.weight * m.percentComplete), 0);
-    return Math.round(weighted / totalWeight);
-  };
-
   // The link is passed in rather than read from the row: an edit may set the
   // link and the completion together, and the row still carries the old one.
-  const checkRevenuePrompt = (milestoneId: string, pct: number, statusVal: string | undefined, linkedRevenueId: string | undefined) => {
+  const checkRevenuePrompt = (pct: number, statusVal: string | undefined, linkedRevenueId: string | undefined) => {
     if (pct === 100 || statusVal === 'completed') {
-      if (linkedRevenueId) {
-        const linkedRevenue = revenues.find(r => r.id === linkedRevenueId);
-        if (linkedRevenue && linkedRevenue.status === 'planned') {
-          setRevenuePrompt({ milestoneId, revenue: linkedRevenue });
-        }
-      }
+      const linkedRevenue = linkedRevenueId ? revenues.find(r => r.id === linkedRevenueId) : undefined;
+      if (linkedRevenue && linkedRevenue.status === 'planned') setInvoiceFor(linkedRevenue);
     }
   };
 
   // Every write that moves a milestone leaves the project row's percent
-  // consistent with the milestones, since EVM and the dashboard read it there.
+  // consistent with the milestones, and completes or reactivates the project.
   const syncProject = async (updated: Milestone[]) => {
-    const projectPct = recalcProjectPercent(updated);
+    const projectPct = weightedPercent(updated);
     await updateProject(projectId, { percentComplete: projectPct });
-    await checkProjectAutoComplete(updated, projectPct);
-  };
-
-  const checkProjectAutoComplete = async (updatedMilestones: Milestone[], projectPct: number) => {
-    if (updatedMilestones.length === 0) return;
-    const allCompleted = updatedMilestones.every(m => m.status === 'completed' || m.percentComplete === 100);
+    if (updated.length === 0) return;
+    const allCompleted = updated.every(m => m.status === 'completed' || m.percentComplete === 100);
     if (allCompleted && projectPct === 100 && project.status === 'active') {
       await updateProject(projectId, { status: 'completed', percentComplete: 100 });
       toast.success('🎉 المشروع اكتمل — تم تحويل حالته إلى "مكتمل" تلقائياً');
@@ -117,44 +76,30 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     }
   };
 
-  const handleSubmit = async () => {
-    if (!name.trim()) return;
-    const pct = parseInt(percentComplete) || 0;
-    let st = status;
-
-    // Auto status based on percent
-    if (pct === 100 && st !== 'completed') st = 'completed';
-    if (pct > 0 && pct < 100 && st === 'planned') st = 'in_progress';
-
-    const link = linkedRevenueId && linkedRevenueId !== 'none' ? linkedRevenueId : '';
-    const form = {
-      name: name.trim(), weight: parseFloat(weight) || 0, status: st, percentComplete: pct,
-      description: description.trim(), plannedStart, plannedEnd, linkedRevenueId: link,
-    };
-
-    if (editingId) {
-      const current = milestones.find(m => m.id === editingId);
+  const handleSave = async (values: MilestoneFormValues) => {
+    const editing = form.value?.milestone;
+    const link = values.linkedRevenueId || undefined;
+    if (editing) {
       // A cleared field goes as null so the store writes it; undefined would mean "unchanged".
       const data: MilestoneUpdate = {
-        ...form,
-        description: form.description || null,
-        plannedStart: form.plannedStart || null,
-        plannedEnd: form.plannedEnd || null,
-        linkedRevenueId: form.linkedRevenueId || null,
-        sortOrder: current?.sortOrder ?? milestones.length,
+        ...values,
+        description: values.description || null,
+        plannedStart: values.plannedStart || null,
+        plannedEnd: values.plannedEnd || null,
+        linkedRevenueId: link ?? null,
+        sortOrder: editing.sortOrder,
       };
-      await updateMilestone(editingId, data);
-      const updated = milestones.map(m => m.id === editingId ? { ...m, ...form, linkedRevenueId: link || undefined } : m);
+      await updateMilestone(editing.id, data);
       toast.success('تم تعديل المرحلة');
-      await syncProject(updated);
-      checkRevenuePrompt(editingId, pct, st, link || undefined);
+      await syncProject(milestones.map(m => m.id === editing.id ? { ...m, ...values, linkedRevenueId: link } : m));
+      checkRevenuePrompt(values.percentComplete, values.status, link);
     } else {
       const data = {
-        ...form,
-        description: form.description || undefined,
-        plannedStart: form.plannedStart || undefined,
-        plannedEnd: form.plannedEnd || undefined,
-        linkedRevenueId: form.linkedRevenueId || undefined,
+        ...values,
+        description: values.description || undefined,
+        plannedStart: values.plannedStart || undefined,
+        plannedEnd: values.plannedEnd || undefined,
+        linkedRevenueId: link,
         sortOrder: milestones.length,
         actualStart: undefined, actualEnd: undefined,
       };
@@ -162,8 +107,6 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
       toast.success('تمت إضافة المرحلة');
       await syncProject([...milestones, { id: newId, projectId, createdAt: '', ...data }]);
     }
-    resetForm();
-    setOpen(false);
   };
 
   const handleDelete = async (m: Milestone) => {
@@ -173,38 +116,18 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
 
   const handlePercentChange = async (m: Milestone, newPct: number) => {
     const updates: Partial<Milestone> = { percentComplete: newPct };
-
-    // Auto status transitions. 100 wins: a planned milestone typed straight
-    // to 100 is completed, not "in progress".
-    if (newPct === 100) {
-      if (m.status !== 'completed') {
-        updates.status = 'completed';
-        toast.success(`✓ المرحلة "${m.name}" اكتملت تلقائياً`);
-      }
-    } else if (newPct > 0 && (m.status === 'completed' || m.status === 'planned')) {
-      updates.status = 'in_progress';
-    }
+    const next = statusForPercent(m.status, newPct);
+    if (next) updates.status = next;
+    if (next === 'completed') toast.success(`✓ المرحلة "${m.name}" اكتملت تلقائياً`);
 
     await updateMilestone(m.id, updates);
-    const updated = milestones.map(ms => ms.id === m.id ? { ...ms, ...updates } : ms);
-    await syncProject(updated);
-    checkRevenuePrompt(m.id, newPct, updates.status, m.linkedRevenueId);
+    await syncProject(milestones.map(ms => ms.id === m.id ? { ...ms, ...updates } : ms));
+    checkRevenuePrompt(newPct, updates.status, m.linkedRevenueId);
   };
 
-  // Sort milestones by planned start date, then planned end date
-  const sortedMilestones = [...milestones].sort((a, b) => {
-    const dateA = a.plannedStart || a.plannedEnd || '';
-    const dateB = b.plannedStart || b.plannedEnd || '';
-    if (dateA && dateB) return dateA.localeCompare(dateB);
-    if (dateA) return -1;
-    if (dateB) return 1;
-    return a.sortOrder - b.sortOrder;
-  });
-
+  const sortedMilestones = sortMilestones(milestones);
   const totalWeight = milestones.reduce((s, m) => s + m.weight, 0);
-  const weightedComplete = totalWeight > 0
-    ? Math.round(milestones.reduce((s, m) => s + (m.weight * m.percentComplete), 0) / totalWeight)
-    : 0;
+  const weightedComplete = weightedPercent(milestones);
 
   return (
     <div className="stat-card">
@@ -217,71 +140,15 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           </p>
         </div>
         {!readOnly && (
-        <ResponsiveFormDialog
-          open={open}
-          onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}
-          title={editingId ? 'تعديل المرحلة' : 'إضافة مرحلة'}
-          trigger={<Button size="sm" className="gap-1.5"><Plus className="w-3.5 h-3.5" />مرحلة جديدة</Button>}
-          footer={<FormFooter onCancel={() => { setOpen(false); resetForm(); }} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
-        >
-          <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>اسم المرحلة</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مرحلة التصميم" />
-              </div>
-              <div className="space-y-2">
-                <Label>الوصف (اختياري)</Label>
-                <Input value={description} onChange={(e) => setDescription(e.target.value)} />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label>الوزن (0-1)</Label>
-                  <Input type="number" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} step="0.1" min="0" max="1" placeholder="0.25" />
-                </div>
-                <div className="space-y-2">
-                  <Label>الإنجاز %</Label>
-                  <Input type="number" inputMode="numeric" value={percentComplete} onChange={(e) => setPercentComplete(e.target.value)} min="0" max="100" />
-                </div>
-                <div className="space-y-2">
-                  <Label>الحالة</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as MilestoneStatus)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(MILESTONE_STATUS_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>تاريخ البداية المخطط</Label>
-                  <Input type="date" value={plannedStart} onChange={(e) => setPlannedStart(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>تاريخ النهاية المخطط</Label>
-                  <Input type="date" value={plannedEnd} onChange={(e) => setPlannedEnd(e.target.value)} />
-                </div>
-              </div>
-              {revenues.length > 0 && (
-                <div className="space-y-2">
-                  <Label>ربط بإيراد (اختياري)</Label>
-                  <Select value={linkedRevenueId} onValueChange={setLinkedRevenueId}>
-                    <SelectTrigger><SelectValue placeholder="بدون ربط" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">بدون ربط</SelectItem>
-                      {revenues.map(r => (
-                        <SelectItem key={r.id} value={r.id}>
-                          {r.description} — {formatCurrency(r.amount)} ({REVENUE_STATUS_LABELS[r.status]})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-          </div>
-        </ResponsiveFormDialog>
+          <MilestoneFormDialog
+            key={form.session}
+            open={form.value !== null}
+            onOpenChange={(v) => { if (!v) form.close(); }}
+            onRequestOpen={() => form.open({})}
+            editing={form.value?.milestone}
+            revenues={revenues}
+            onSave={handleSave}
+          />
         )}
       </div>
 
@@ -315,97 +182,27 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
           </TabsList>
 
           <TabsContent value="gantt">
-            <GanttChart milestones={milestones} onMilestoneClick={(m) => !readOnly && openEdit(m)} />
+            <GanttChart milestones={milestones} onMilestoneClick={(m) => !readOnly && form.open({ milestone: m })} />
           </TabsContent>
 
           <TabsContent value="list">
           <div className="space-y-3">
           {sortedMilestones.map((m) => (
-            <div key={m.id} className="p-3 rounded-lg border border-border bg-muted/10">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-sm font-medium">{m.name}</h4>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${MILESTONE_STATUS_COLORS[m.status]}`}>
-                    {MILESTONE_STATUS_LABELS[m.status]}
-                  </span>
-                  {m.weight > 0 && <span className="text-xs text-muted-foreground">وزن: {m.weight}</span>}
-                  {m.linkedRevenueId && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">مربوط بإيراد</span>
-                  )}
-                </div>
-                {!readOnly && (
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
-                    <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                  </Button>
-                  <ConfirmDeleteDialog title="حذف المرحلة" description="هل أنت متأكد من حذف هذه المرحلة؟" onConfirm={() => handleDelete(m)} />
-                </div>
-                )}
-              </div>
-              {m.description && <p className="text-xs text-muted-foreground mb-2">{m.description}</p>}
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <Progress value={m.percentComplete} className="h-2" />
-                </div>
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="number"
-                    value={m.percentComplete}
-                    onChange={(e) => handlePercentChange(m, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                    className="w-16 h-7 text-xs text-center"
-                    min="0" max="100"
-                    disabled={readOnly}
-                  />
-                  <span className="text-xs text-muted-foreground">%</span>
-                </div>
-              </div>
-              {(m.plannedStart || m.plannedEnd) && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {m.plannedStart && `بداية: ${m.plannedStart}`}
-                  {m.plannedStart && m.plannedEnd && ' · '}
-                  {m.plannedEnd && `نهاية: ${m.plannedEnd}`}
-                </p>
-              )}
-            </div>
+            <MilestoneCard
+              key={m.id}
+              milestone={m}
+              readOnly={readOnly}
+              onEdit={() => form.open({ milestone: m })}
+              onDelete={() => handleDelete(m)}
+              onPercentChange={(pct) => handlePercentChange(m, pct)}
+            />
           ))}
           </div>
           </TabsContent>
         </Tabs>
       )}
 
-      {/* Revenue auto-suggest dialog */}
-      <Dialog open={!!revenuePrompt} onOpenChange={(v) => { if (!v) setRevenuePrompt(null); }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>إصدار فاتورة؟</DialogTitle>
-          </DialogHeader>
-          {revenuePrompt && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                المرحلة اكتملت — هل تريد تحويل الدفعة المرتبطة إلى "مُفوتر"؟
-              </p>
-              <div className="p-3 rounded-lg border border-border bg-muted/30">
-                <p className="text-sm font-medium">{revenuePrompt.revenue.description}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  المبلغ: {formatCurrency(revenuePrompt.revenue.amount)} · الحالة: {REVENUE_STATUS_LABELS[revenuePrompt.revenue.status]}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={async () => {
-                  await updateRevenue(revenuePrompt.revenue.id, { status: 'invoiced' });
-                  toast.success('تم تحويل الدفعة إلى مُفوتر');
-                  setRevenuePrompt(null);
-                }}>
-                  نعم — أصدر الفاتورة
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setRevenuePrompt(null)}>
-                  لاحقاً
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <InvoicePrompt revenue={invoiceFor} onClose={() => setInvoiceFor(null)} />
     </div>
   );
 }
