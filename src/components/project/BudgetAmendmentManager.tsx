@@ -303,7 +303,8 @@ function ComparisonView({ amendment }: { amendment: BudgetAmendment }) {
     let type: 'unchanged' | 'modified' | 'added' | 'removed' = 'unchanged';
     if (b && !a) type = 'removed';
     else if (!b && a) type = 'added';
-    else if (b && a && (b.plannedAmount !== a.plannedAmount || b.description !== a.description)) type = 'modified';
+    // A move to another category is a change too, even at the same amount.
+    else if (b && a && (b.plannedAmount !== a.plannedAmount || b.description !== a.description || b.category !== a.category)) type = 'modified';
     rows.push({ key: k, before: b, after: a, type });
   }
   rows.sort((x, y) => {
