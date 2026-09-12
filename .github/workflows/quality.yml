@@ -116,7 +116,12 @@ jobs:
           #   Expense and Revenue shapes (so the finance library gets them
           #   uncast), names what jspdf-autotable adds to a document, and is one
           #   module per report under lib/export/.
-          ERROR_BUDGET=14
+          #   14 → 2 (12 Sep): the database wrapper's internals are typed (the
+          #   query envelope, the replayed chain, the thenable) and its one
+          #   deliberately loose surface, the fluent builder, is disabled inline
+          #   with its reason. The two left are in a Lovable-authored edge
+          #   function; see rule 3 in CLAUDE.md.
+          ERROR_BUDGET=2
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.

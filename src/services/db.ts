@@ -43,7 +43,17 @@ function isTransient(error: unknown): boolean {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function execute(build: () => any, label: string): Promise<any> {
+/** What every query resolves to: the client's envelope, plus the offline flag this module adds. */
+export interface QueryResult {
+  data: unknown;
+  error: unknown;
+  queuedOffline?: boolean;
+}
+
+/** The recorded chain, replayed on the client: each method call returns the next builder. */
+type Replayable = Record<string, (...args: unknown[]) => unknown>;
+
+async function execute(build: () => PromiseLike<QueryResult> | QueryResult, label: string): Promise<QueryResult> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
@@ -67,10 +77,10 @@ async function execute(build: () => any, label: string): Promise<any> {
   return { data: null, error: lastError };
 }
 
-function buildFrom(table: string, calls: ChainCall[]): any {
-  let query: any = (supabase as any).from(table);
-  for (const call of calls) query = query[call.method](...call.args);
-  return query;
+function buildFrom(table: string, calls: ChainCall[]): PromiseLike<QueryResult> {
+  let query: unknown = (supabase as unknown as { from(table: string): unknown }).from(table);
+  for (const call of calls) query = (query as Replayable)[call.method](...call.args);
+  return query as PromiseLike<QueryResult>;
 }
 
 function offlineIntent(table: string, calls: ChainCall[]) {
@@ -88,6 +98,10 @@ function offlineIntent(table: string, calls: ChainCall[]) {
   };
 }
 
+// The builder mirrors the client's fluent API for any table and any chain,
+// which is why its surface is deliberately loose: every service narrows the
+// rows it gets back, and unwrap() normalizes the envelope.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function chain(table: string, calls: ChainCall[], options: DbOptions): any {
   const label = `${table}.${calls.map((c) => c.method).join('.') || 'select'}`;
 
@@ -115,10 +129,10 @@ function chain(table: string, calls: ChainCall[], options: DbOptions): any {
     {
       get(_target, prop: string | symbol) {
         if (prop === 'then') {
-          return (resolve: any, reject: any) => run().then(resolve, reject);
+          return (resolve: (v: QueryResult) => unknown, reject: (e: unknown) => unknown) => run().then(resolve, reject);
         }
-        if (prop === 'catch') return (reject: any) => run().catch(reject);
-        if (prop === 'finally') return (fn: any) => run().finally(fn);
+        if (prop === 'catch') return (reject: (e: unknown) => unknown) => run().catch(reject);
+        if (prop === 'finally') return (fn: () => void) => run().finally(fn);
         return (...args: unknown[]) => chain(table, [...calls, { method: String(prop), args }], options);
       },
     }
@@ -133,15 +147,18 @@ export const db = {
 
   /** Retry-aware RPC call. */
   async rpc<T = unknown>(fn: string, args?: Record<string, unknown>): Promise<{ data: T | null; error: unknown }> {
-    return execute(() => (supabase as any).rpc(fn, args), `rpc.${fn}`);
+    const client = supabase as unknown as { rpc(fn: string, args?: Record<string, unknown>): PromiseLike<QueryResult> };
+    const result = await execute(() => client.rpc(fn, args), `rpc.${fn}`);
+    return { data: (result.data ?? null) as T | null, error: result.error };
   },
 
   /** Retry-aware edge function invocation. */
   async invoke<T = unknown>(fn: string, body?: unknown): Promise<{ data: T | null; error: unknown }> {
-    return execute(
+    const result = await execute(
       () => supabase.functions.invoke(fn, body == null ? undefined : { body: body as Record<string, unknown> }),
       `fn.${fn}`
     );
+    return { data: (result.data ?? null) as T | null, error: result.error };
   },
 
   /** Storage handle — binary I/O, not routed through the query retry chain. */
@@ -167,7 +184,7 @@ export const db = {
 /** Throws normalized errors from a `{ data, error }` envelope. */
 export function unwrap<T>(result: { data: T | null; error: unknown }, context: string): T {
   if (result.error) {
-    const message = result.error instanceof Error ? result.error.message : (result.error as any)?.message ?? String(result.error);
+    const message = result.error instanceof Error ? result.error.message : (result.error as { message?: string } | null)?.message ?? String(result.error);
     logger.error('db', `${context}: ${message}`);
     throw result.error instanceof Error ? result.error : new Error(message);
   }
