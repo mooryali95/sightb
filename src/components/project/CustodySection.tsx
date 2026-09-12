@@ -153,6 +153,8 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
       breakdown: bd,
       transferSources,
       orphanTransfers: transferSources.filter((t) => t.orphan),
+      // Closed by hand, or exhausted: either way nothing more can be spent.
+      isClosed: c.status === 'closed' || bd.remaining <= 0,
       spent: bd.spent,
       transfersIn: bd.transfersIn,
       outstandingAdvances: bd.outstandingAdvances,
@@ -192,6 +194,9 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
 
   const totalAmount = enrichedCustodies.reduce((s, c) => s + c.effectiveAmount, 0);
   const totalSpent = enrichedCustodies.reduce((s, c) => s + c.spent, 0);
+  // Summed from the rows, not recomputed as total − spent: the rows also
+  // debit outstanding advances, and the header must say the same number.
+  const totalRemaining = enrichedCustodies.reduce((s, c) => s + c.remaining, 0);
 
 
   const openTransfer = (custodyId: string) => {
@@ -238,7 +243,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         <div>
           <h3 className="text-sm font-semibold">سجل العهد</h3>
           <p className="text-xs text-muted-foreground">
-            إجمالي العهد: {formatCurrency(totalAmount)} · المصروف: {formatCurrency(totalSpent)} · المتبقي: {formatCurrency(totalAmount - totalSpent)}
+            إجمالي العهد: {formatCurrency(totalAmount)} · المصروف: {formatCurrency(totalSpent)} · المتبقي: {formatCurrency(totalRemaining)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -467,7 +472,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     </td>
                     <td className="text-xs text-muted-foreground">{c.receivedDate || '—'}</td>
                     <td>
-                      {c.remaining <= 0 ? (
+                      {c.isClosed ? (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">مُغلقة</span>
                       ) : (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-success/10 text-success border border-success/20">نشطة</span>
@@ -543,7 +548,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
             onOpenChange={(o) => !o && setInspectorId(null)}
             title={c.resourceName}
             description="تفاصيل العهدة والمصروفات المرتبطة بها"
-            meta={c.remaining <= 0
+            meta={c.isClosed
               ? <Badge variant="outline" className="text-[10px] bg-muted">مُغلقة</Badge>
               : <Badge variant="outline" className="text-[10px] bg-success/10 text-success border-success/20">نشطة</Badge>}
             width="lg"
