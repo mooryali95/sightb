@@ -4,10 +4,11 @@ import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import type { Company } from '@/types/project';
 
 interface CompanyManagementProps {
-  activeCompanies: any[];
-  archivedCompanies: any[];
+  activeCompanies: Company[];
+  archivedCompanies: Company[];
   isAdmin: boolean;
   archiveCompany: (id: string) => Promise<void>;
   unarchiveCompany: (id: string) => Promise<void>;
@@ -46,7 +47,7 @@ export function CompanyManagement({
                     try {
                       await archiveCompany(company.id);
                       toast.success(`تم أرشفة "${company.name}"`);
-                    } catch (e: any) {
+                    } catch (e) {
                       console.error('[archive]', e);
                       toast.error('حدث خطأ أثناء أرشفة الشركة. يرجى المحاولة مرة أخرى.');
                     }
@@ -62,7 +63,7 @@ export function CompanyManagement({
                     try {
                       await deleteCompany(company.id);
                       toast.success(`تم حذف "${company.name}"`);
-                     } catch (e: any) {
+                     } catch (e) {
                        console.error('[delete-company]', e);
                        toast.error('حدث خطأ أثناء حذف الشركة. يرجى المحاولة مرة أخرى.');
                     }
@@ -91,7 +92,7 @@ export function CompanyManagement({
                       try {
                         await unarchiveCompany(company.id);
                         toast.success(`تم إعادة تفعيل "${company.name}"`);
-                      } catch (e: any) {
+                      } catch (e) {
                         console.error('[unarchive]', e);
                         toast.error('حدث خطأ أثناء إعادة تفعيل الشركة. يرجى المحاولة مرة أخرى.');
                       }

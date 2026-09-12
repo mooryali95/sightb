@@ -70,7 +70,7 @@ export function BudgetAmendmentManager({
       toast.success('🔓 تم فتح الموازنة للتعديل — أُخذت لقطة قبل التعديل');
       setReason('');
       setOpenDialog(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('[open-amendment]', err);
       toast.error('فشل فتح الموازنة، حاول مرة أخرى');
     } finally {
@@ -84,7 +84,7 @@ export function BudgetAmendmentManager({
     try {
       await approveBudgetAmendment(activeDraft.id);
       toast.success('✅ تم اعتماد التعديل وحفظ لقطة بعد التعديل للمقارنة');
-    } catch (err: any) {
+    } catch (err) {
       console.error('[approve-amendment]', err);
       toast.error('فشل اعتماد التعديل');
     } finally {
@@ -98,7 +98,7 @@ export function BudgetAmendmentManager({
     try {
       await cancelBudgetAmendment(activeDraft.id);
       toast.info('تم إلغاء التعديل — الموازنة مقفلة كما كانت');
-    } catch (err: any) {
+    } catch (err) {
       console.error('[cancel-amendment]', err);
       toast.error('فشل إلغاء التعديل');
     } finally {
