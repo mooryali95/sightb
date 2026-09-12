@@ -112,7 +112,11 @@ jobs:
           #   types). What remains: services/db.ts (12, the dynamic proxy around
           #   the client), lib/export.ts (12), and a Lovable-authored edge
           #   function (2).
-          ERROR_BUDGET=26
+          #   26 → 14 (12 Sep): the export library takes the real BudgetItem,
+          #   Expense and Revenue shapes (so the finance library gets them
+          #   uncast), names what jspdf-autotable adds to a document, and is one
+          #   module per report under lib/export/.
+          ERROR_BUDGET=14
           WARN_BUDGET=10
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.
