@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { calcVAT, addVAT, removeVAT, formatCurrency } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
 import { useCoreData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
@@ -15,7 +14,8 @@ import { Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectSchema } from '@/lib/validations';
 import { PROJECT_STATUS_LABELS, CONTRACT_TYPE_LABELS, type ProjectStatus, type ContractType } from '@/types/project';
-import { cn } from '@/lib/utils';
+import { VatSplitPreview } from './newproject/VatSplitPreview';
+import { contractFigures, resolveVatRate } from './newproject/contractFigures';
 
 export default function NewProject() {
   const [searchParams] = useSearchParams();
@@ -49,10 +49,9 @@ export default function NewProject() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const rawValue = parseFloat(contractValue) || 0;
-    // 0 is a rate, not a missing one: only an unparsable field falls back to 15.
-    const parsedRate = parseFloat(taxPercent);
-    const rate = Number.isFinite(parsedRate) ? parsedRate : 15;
-    const finalContractValue = vatInclusive ? removeVAT(rawValue, rate) : rawValue;
+    const rate = resolveVatRate(taxPercent);
+    // The row stores the contract net of VAT.
+    const finalContractValue = contractFigures(rawValue, rate, vatInclusive).excl;
 
     const result = projectSchema.safeParse({
       name,
@@ -178,57 +177,10 @@ export default function NewProject() {
 
           {/* VAT inclusive/exclusive toggle */}
           {parsedTax > 0 && (
-            <div className="space-y-3">
-              <Label>القيمة المُدخلة</Label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setVatInclusive(false)}
-                  className={cn(
-                    "flex-1 p-2 rounded-lg border text-xs text-center transition-colors",
-                    !vatInclusive ? "border-primary bg-primary/10 font-semibold" : "border-border hover:bg-muted/50"
-                  )}
-                >
-                  بدون ضريبة
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVatInclusive(true)}
-                  className={cn(
-                    "flex-1 p-2 rounded-lg border text-xs text-center transition-colors",
-                    vatInclusive ? "border-primary bg-primary/10 font-semibold" : "border-border hover:bg-muted/50"
-                  )}
-                >
-                  شاملة الضريبة
-                </button>
-              </div>
-
-              {parsedValue > 0 && (
-                <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">بدون ضريبة:</span>
-                    <span className="font-mono font-semibold">
-                      {formatCurrency(vatInclusive ? removeVAT(parsedValue, parsedTax) : parsedValue)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">الضريبة ({taxPercent}%):</span>
-                    <span className="font-mono health-warning">
-                      {formatCurrency(vatInclusive
-                        ? parsedValue - removeVAT(parsedValue, parsedTax)
-                        : calcVAT(parsedValue, parsedTax)
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-t border-border pt-1.5">
-                    <span className="text-muted-foreground font-medium">شامل الضريبة:</span>
-                    <span className="font-mono font-bold">
-                      {formatCurrency(vatInclusive ? parsedValue : addVAT(parsedValue, parsedTax))}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+            <VatSplitPreview
+              entered={parsedValue} rate={parsedTax} rateText={taxPercent}
+              inclusive={vatInclusive} onInclusiveChange={setVatInclusive}
+            />
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
