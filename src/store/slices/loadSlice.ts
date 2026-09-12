@@ -288,14 +288,24 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
   },
 
   subscribeToProject: (projectId: string) => {
-    const tables = ['expenses', 'revenues', 'milestones', 'budget_items', 'change_orders'] as const;
-    const mappers: Record<string, { key: string; map: (d: any) => any }> = {
+    // One entry per table the channel carries: which list it lands in and
+    // how a raw row becomes a domain row. The row is typed by its table.
+    type RealtimeMapper = {
+      [T in 'expenses' | 'revenues' | 'milestones' | 'budget_items' | 'change_orders']: {
+        key: 'expenses' | 'revenues' | 'milestones' | 'budgetItems' | 'changeOrders';
+        map: (d: Tables<T>) => { id: string };
+      };
+    };
+    const mappers: RealtimeMapper = {
       expenses: { key: 'expenses', map: mapExpense },
       revenues: { key: 'revenues', map: mapRevenue },
       milestones: { key: 'milestones', map: mapMilestone },
       budget_items: { key: 'budgetItems', map: mapBudgetItem },
       change_orders: { key: 'changeOrders', map: mapChangeOrder },
     };
+    const isMapped = (table: string): table is keyof RealtimeMapper => table in mappers;
+    type Listed = { id: string };
+    const listOf = (s: AppState, key: RealtimeMapper[keyof RealtimeMapper]['key']): Listed[] => s[key] as Listed[];
 
     const channel = db.raw
       .channel(`project-${projectId}`)
@@ -317,21 +327,23 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
           return;
         }
 
+        if (!isMapped(table)) return;
         const m = mappers[table];
-        if (!m) return;
+        // The channel hands a row of the named table; map it as that table's row.
+        const mapRow = (row: unknown) => (m.map as (d: unknown) => Listed)(row);
 
         if (payload.eventType === 'INSERT') {
-          set((s: any) => ({ [m.key]: [m.map(payload.new), ...s[m.key]] }));
+          set((s) => ({ [m.key]: [mapRow(payload.new), ...listOf(s, m.key)] }) as Partial<AppState>);
         } else if (payload.eventType === 'UPDATE') {
-          set((s: any) => ({
-            [m.key]: s[m.key].map((item: any) =>
-              item.id === (payload.new as any).id ? m.map(payload.new) : item
-            ),
-          }));
+          const next = mapRow(payload.new);
+          set((s) => ({
+            [m.key]: listOf(s, m.key).map((item) => (item.id === next.id ? next : item)),
+          }) as Partial<AppState>);
         } else if (payload.eventType === 'DELETE') {
-          set((s: any) => ({
-            [m.key]: s[m.key].filter((item: any) => item.id !== (payload.old as any).id),
-          }));
+          const goneId = (payload.old as { id?: string }).id;
+          set((s) => ({
+            [m.key]: listOf(s, m.key).filter((item) => item.id !== goneId),
+          }) as Partial<AppState>);
         }
       })
       .subscribe();

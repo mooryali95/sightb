@@ -13,13 +13,23 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 
-type Row = Record<string, any>;
+/** A write payload in the table's own column names. */
+type Row = Record<string, unknown>;
+type Reimbursement = Tables<'resource_reimbursements'>;
+type Request = Tables<'payment_requests'>;
+type Settlement = Tables<'resource_settlements'>;
+type SettlementEvent = Tables<'settlement_events'>;
 
+// The one loose read of the client in this module: payloads are built by
+// column name, which the generated Insert types cannot follow. Every row
+// that comes back is typed below.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
-function fail(error: any, fallback: string): never {
-  throw new Error(error?.message || fallback);
+function fail(error: unknown, fallback: string): never {
+  throw new Error((error as { message?: string } | null)?.message || fallback);
 }
 
 /* ─────────────── Reimbursements ─────────────── */
@@ -40,7 +50,7 @@ export interface CreateReimbursementInput {
   autoApprove?: boolean;
 }
 
-export async function listReimbursementsRaw(projectId: string): Promise<Row[]> {
+export async function listReimbursementsRaw(projectId: string): Promise<Reimbursement[]> {
   const { data, error } = await db
     .from('resource_reimbursements')
     .select('*')
@@ -50,7 +60,7 @@ export async function listReimbursementsRaw(projectId: string): Promise<Row[]> {
   return data ?? [];
 }
 
-export async function createReimbursementRaw(input: CreateReimbursementInput): Promise<Row> {
+export async function createReimbursementRaw(input: CreateReimbursementInput): Promise<Reimbursement> {
   const now = new Date().toISOString();
   const { data, error } = await db
     .from('resource_reimbursements')
@@ -77,7 +87,7 @@ export async function createReimbursementRaw(input: CreateReimbursementInput): P
   return data;
 }
 
-export async function updateReimbursementRaw(id: string, payload: Row): Promise<Row> {
+export async function updateReimbursementRaw(id: string, payload: Row): Promise<Reimbursement> {
   const { data, error } = await db
     .from('resource_reimbursements').update(payload).eq('id', id).select().single();
   if (error) fail(error, 'فشل تحديث الاسترداد');
@@ -98,7 +108,7 @@ export async function deleteReimbursementRaw(id: string): Promise<void> {
 
 /* ─────────────── Payment Requests ─────────────── */
 
-export async function listPaymentRequestsRaw(projectId: string): Promise<Row[]> {
+export async function listPaymentRequestsRaw(projectId: string): Promise<Request[]> {
   const { data, error } = await db
     .from('payment_requests')
     .select('*')
@@ -108,14 +118,14 @@ export async function listPaymentRequestsRaw(projectId: string): Promise<Row[]> 
   return data ?? [];
 }
 
-export async function createPaymentRequestRaw(payload: Row): Promise<Row> {
+export async function createPaymentRequestRaw(payload: Row): Promise<Request> {
   const { data, error } = await db
     .from('payment_requests').insert(payload).select().single();
   if (error) fail(error, 'فشل إنشاء طلب الصرف');
   return data;
 }
 
-export async function updatePaymentRequestRaw(id: string, payload: Row): Promise<Row> {
+export async function updatePaymentRequestRaw(id: string, payload: Row): Promise<Request> {
   const { data, error } = await db
     .from('payment_requests').update(payload).eq('id', id).select().single();
   if (error) fail(error, 'فشل تحديث طلب الصرف');
@@ -129,7 +139,7 @@ export async function deletePaymentRequestRaw(id: string): Promise<void> {
 
 /* ─────────────── Expenses (settlement side-effects) ─────────────── */
 
-export async function createSettlementExpenseRaw(payload: Row): Promise<Row> {
+export async function createSettlementExpenseRaw(payload: Row): Promise<Tables<'expenses'>> {
   const { data, error } = await db.from('expenses').insert(payload).select().single();
   if (error) fail(error, 'فشل إنشاء مصروف التسوية');
   return data;
@@ -147,14 +157,14 @@ export async function createSettlementEventRaw(payload: Row): Promise<void> {
   if (error) fail(error, 'فشل تسجيل حدث التسوية');
 }
 
-export async function getSettlementEventRaw(id: string): Promise<Row | null> {
+export async function getSettlementEventRaw(id: string): Promise<SettlementEvent | null> {
   const { data, error } = await db
     .from('settlement_events').select('*').eq('id', id).maybeSingle();
   if (error) fail(error, 'فشل تحميل حدث التسوية');
   return data ?? null;
 }
 
-export async function findReverseEventRaw(eventId: string): Promise<Row | null> {
+export async function findReverseEventRaw(eventId: string): Promise<SettlementEvent | null> {
   const { data, error } = await db
     .from('settlement_events')
     .select('id')
@@ -167,7 +177,7 @@ export async function findReverseEventRaw(eventId: string): Promise<Row | null> 
 
 /* ─────────────── Resource Settlements ─────────────── */
 
-export async function listResourceSettlementsRaw(projectId: string): Promise<Row[]> {
+export async function listResourceSettlementsRaw(projectId: string): Promise<Settlement[]> {
   const { data, error } = await db
     .from('resource_settlements')
     .select('*')
@@ -177,14 +187,14 @@ export async function listResourceSettlementsRaw(projectId: string): Promise<Row
   return data ?? [];
 }
 
-export async function createResourceSettlementRaw(payload: Row): Promise<Row> {
+export async function createResourceSettlementRaw(payload: Row): Promise<Settlement> {
   const { data, error } = await db
     .from('resource_settlements').insert(payload).select().single();
   if (error) fail(error, 'فشل إنشاء المخالصة');
   return data;
 }
 
-export async function updateResourceSettlementRaw(id: string, payload: Row): Promise<Row> {
+export async function updateResourceSettlementRaw(id: string, payload: Row): Promise<Settlement> {
   const { data, error } = await db
     .from('resource_settlements').update(payload).eq('id', id).select().single();
   if (error) fail(error, 'فشل تحديث المخالصة');
