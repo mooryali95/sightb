@@ -111,6 +111,14 @@ describe('the five cards agree on one ledger', () => {
     expect(card('بيد حاملي العُهد')).toHaveTextContent('1/1 عهدة نشطة');
   });
 
+  it('leaves a closed custody out of what holders still have', () => {
+    // Closed means handed back; whatever arithmetic says is left in it is
+    // not cash in anyone's hand. Breaking the status filter put 2,000 here.
+    renderLedger(expenses, [custody, { ...custody, id: 'custody-closed', resourceName: 'هند', amount: 2000, status: 'closed', closedDate: '2026-03-01' }]);
+    expect(card('بيد حاملي العُهد')).toHaveTextContent('4,000.00 ر.س');
+    expect(card('بيد حاملي العُهد')).toHaveTextContent('1/2 عهدة نشطة');
+  });
+
   it('splits documented spend into direct and through custodies', () => {
     renderLedger();
     expect(card('مصروف موثّق')).toHaveTextContent('10,000.00 ر.س');
