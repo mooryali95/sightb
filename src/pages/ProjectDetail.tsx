@@ -61,14 +61,19 @@ export default function ProjectDetail() {
   const [activeGroup, setActiveGroupState] = useState<TabGroup>((searchParams.get('group') as TabGroup) || 'summary');
   const [activeTab, setActiveTabState] = useState(searchParams.get('tab') || 'overview');
 
-  const setActiveTab = (tab: string) => {
-    setActiveTabState(tab);
-    setSearchParams((prev) => { const n = new URLSearchParams(prev); n.set('tab', tab); return n; }, { replace: true });
+  // One URL write per change: two functional writes in one event each build
+  // on the params the render saw, so the second would drop the first.
+  const applyTabs = (next: { group?: TabGroup; tab?: string }) => {
+    if (next.group) setActiveGroupState(next.group);
+    if (next.tab) setActiveTabState(next.tab);
+    setSearchParams((prev) => {
+      const n = new URLSearchParams(prev);
+      if (next.group) n.set('group', next.group);
+      if (next.tab) n.set('tab', next.tab);
+      return n;
+    }, { replace: true });
   };
-  const setActiveGroup = (group: TabGroup) => {
-    setActiveGroupState(group);
-    setSearchParams((prev) => { const n = new URLSearchParams(prev); n.set('group', group); return n; }, { replace: true });
-  };
+  const setActiveTab = (tab: string) => applyTabs({ tab });
 
   if (!data.project) {
     return (
@@ -95,20 +100,12 @@ export default function ProjectDetail() {
   const subTabs = buildSubTabs(isAdmin);
 
   const handleGroupChange = (group: TabGroup) => {
-    setActiveGroup(group);
-    const firstTab = subTabs[group][0]?.value;
-    if (firstTab) setActiveTab(firstTab);
+    applyTabs({ group, tab: subTabs[group][0]?.value });
   };
 
   const navigateToTab = (tab: string) => {
-    for (const [grp, tabs] of Object.entries(subTabs)) {
-      if (tabs.some((t) => t.value === tab)) {
-        setActiveGroup(grp as TabGroup);
-        setActiveTab(tab);
-        return;
-      }
-    }
-    setActiveTab(tab);
+    const grp = (Object.keys(subTabs) as TabGroup[]).find((g) => subTabs[g].some((t) => t.value === tab));
+    applyTabs({ group: grp, tab });
   };
 
   const handleArchive = async () => {
@@ -411,8 +408,7 @@ export default function ProjectDetail() {
         <MobileFAB
           label={fab.label}
           onClick={() => {
-            setActiveGroup(fab.group);
-            setActiveTab(fab.tab);
+            applyTabs({ group: fab.group, tab: fab.tab });
             setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
           }}
         />
