@@ -42,7 +42,7 @@ export function InvitesLog({
       filtered = filtered.filter(i => i.status === inviteStatusFilter);
     }
     if (inviteSearchQuery.trim()) {
-      const q = inviteSearchQuery.toLowerCase();
+      const q = inviteSearchQuery.trim().toLowerCase();
       filtered = filtered.filter(i => i.email.toLowerCase().includes(q));
     }
 
