@@ -1,37 +1,19 @@
+/**
+ * The notification bell. What it says comes from notifications/
+ * buildNotifications.ts; this file keeps the read state and the popover.
+ */
 import { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { getProjectSummary } from '@/lib/finance';
 import { Bell, AlertTriangle, Clock, TrendingDown, ShieldAlert, X, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  severity: 'critical' | 'warning' | 'info';
-  link: string;
-}
+import { buildNotifications, groupNotifications, TYPE_LABELS, type Notification } from './notifications/buildNotifications';
 
 const STORAGE_KEY = 'sightb_read_notifications';
-
-const SEVERITY_RANK: Record<Notification['severity'], number> = { critical: 0, warning: 1, info: 2 };
-
-const TYPE_LABELS: Record<string, string> = {
-  budget: 'تحذيرات الميزانية',
-  approval: 'بانتظار الاعتماد',
-  milestone: 'مراحل متأخرة',
-  deadline: 'تجاوز المواعيد',
-  risk: 'مخاطر مفتوحة',
-  advance: 'سلف متقادمة',
-};
-
-const TYPE_ORDER = ['deadline', 'budget', 'advance', 'risk', 'milestone', 'approval'];
 
 const ICONS: Record<string, typeof Bell> = {
   budget: TrendingDown, milestone: Clock, deadline: AlertTriangle,
@@ -59,82 +41,15 @@ export function SmartNotifications() {
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(getRead());
 
-  const all = useMemo(() => {
-    const items: Notification[] = [];
-    for (const p of projects) {
-      if (['completed', 'archived', 'cancelled'].includes(p.status)) continue;
-      const pB = budgetItems.filter(b => b.projectId === p.id);
-      const pE = expenses.filter(e => e.projectId === p.id);
-      const pR = revenues.filter(r => r.projectId === p.id);
-      const pC = changeOrders.filter(c => c.projectId === p.id);
-      const s = getProjectSummary(p, pB, pE, pR, pC);
-      const util = s.totalPlanned > 0 ? (s.totalActual / s.totalPlanned) * 100 : 0;
-
-      if (util > 100)
-        items.push({ id: `bo-${p.id}`, type: 'budget', severity: 'critical', title: `تجاوز الميزانية: ${p.name}`, description: `${util.toFixed(0)}% من الموازنة`, link: `/project/${p.id}` });
-      else if (util > 90)
-        items.push({ id: `bw-${p.id}`, type: 'budget', severity: 'warning', title: `قارب الميزانية: ${p.name}`, description: `${util.toFixed(0)}%`, link: `/project/${p.id}` });
-
-      const pending = pE.filter(e => e.approvalStatus === 'pending').length;
-      if (pending > 0)
-        items.push({ id: `pe-${p.id}`, type: 'approval', severity: 'warning', title: `${pending} مصروف بانتظار الاعتماد`, description: p.name, link: `/project/${p.id}` });
-
-      const pendingCO = pC.filter(c => c.status === 'proposed').length;
-      if (pendingCO > 0)
-        items.push({ id: `pc-${p.id}`, type: 'approval', severity: 'info', title: `${pendingCO} أمر تغيير مقترح`, description: p.name, link: `/project/${p.id}` });
-
-      const delayed = milestones.filter(m => m.projectId === p.id && m.status === 'delayed').length;
-      if (delayed > 0)
-        items.push({ id: `dm-${p.id}`, type: 'milestone', severity: 'warning', title: `${delayed} مرحلة متأخرة`, description: p.name, link: `/project/${p.id}` });
-
-      if (p.endDate && new Date(p.endDate) < new Date() && p.percentComplete < 100)
-        items.push({ id: `od-${p.id}`, type: 'deadline', severity: 'critical', title: `تجاوز الموعد: ${p.name}`, description: 'تجاوز تاريخ الانتهاء', link: `/project/${p.id}` });
-
-      const hr = risks.filter(r => r.projectId === p.id && r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length;
-      if (hr > 0)
-        items.push({ id: `hr-${p.id}`, type: 'risk', severity: 'warning', title: `${hr} خطر عالي`, description: p.name, link: `/project/${p.id}` });
-
-      // سلف قائمة متقادمة (> 60 يوم حرج، 30-60 تحذير)
-      const now = Date.now();
-      const outstandingAdv = paymentRequests.filter((r) =>
-        r.projectId === p.id && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding
-      );
-      let oldestDays = 0;
-      for (const adv of outstandingAdv) {
-        const ref = adv.paidDate || adv.createdAt;
-        if (!ref) continue;
-        const days = Math.floor((now - new Date(ref).getTime()) / 86400000);
-        if (days > oldestDays) oldestDays = days;
-      }
-      if (oldestDays > 60)
-        items.push({ id: `ao-${p.id}`, type: 'advance', severity: 'critical',
-          title: `سلفة قائمة عمرها ${oldestDays} يوم`, description: `${p.name} · ${outstandingAdv.length} سلفة`, link: `/project/${p.id}` });
-      else if (oldestDays > 30)
-        items.push({ id: `aw-${p.id}`, type: 'advance', severity: 'warning',
-          title: `سلفة قائمة عمرها ${oldestDays} يوم`, description: `${p.name} · ${outstandingAdv.length} سلفة`, link: `/project/${p.id}` });
-    }
-    return items;
-  }, [projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, paymentRequests]);
+  const all = useMemo(
+    () => buildNotifications({ projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, paymentRequests }),
+    [projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, paymentRequests],
+  );
 
   const active = useMemo(() => all.filter(n => !readIds.has(n.id)), [all, readIds]);
   const critCount = active.filter(n => n.severity === 'critical').length;
 
-  // Group by type
-  const grouped = useMemo(() => {
-    const map = new Map<string, Notification[]>();
-    for (const n of active) {
-      if (!map.has(n.type)) map.set(n.type, []);
-      map.get(n.type)!.push(n);
-    }
-    // Sort each group by severity
-    for (const arr of map.values()) {
-      arr.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]);
-    }
-    // Return in canonical type order
-    return TYPE_ORDER
-      .filter(t => map.has(t))
-      .map(t => ({ type: t, items: map.get(t)! }));
-  }, [active]);
+  const grouped = useMemo(() => groupNotifications(active), [active]);
 
   const handleDismiss = useCallback((id: string) => {
     const s = getRead(); s.add(id); persistRead(s); setReadIds(new Set(s));
