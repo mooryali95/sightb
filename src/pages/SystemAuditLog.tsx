@@ -86,7 +86,7 @@ export default function SystemAuditLog() {
       result = result.filter(e => e.action === actionFilter);
     }
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.trim().toLowerCase();
       result = result.filter(e =>
         (e.userEmail && e.userEmail.toLowerCase().includes(q)) ||
         (e.entityName && e.entityName.toLowerCase().includes(q)) ||
