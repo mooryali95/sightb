@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts';
@@ -11,9 +10,9 @@ import { logger } from '@/lib/logger';
 import type { Expense, Resource } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InspectorPanel, InspectorSection, InspectorKpiStrip } from '@/components/ui/inspector-panel';
-import { AlertTriangle, CheckCircle2, BellRing } from 'lucide-react';
+import { ConsistencyBanner } from './consistency/ConsistencyBanner';
+import { ConsistencyRows } from './consistency/ConsistencyRows';
+import { RowComparisonPanel } from './consistency/RowComparisonPanel';
 
 interface Props {
   projectId: string;
@@ -23,6 +22,8 @@ interface Props {
 }
 
 /**
+ * The banner, the rows and the comparison panel live under consistency/.
+ *
  * مخطط فجوات الاتساق: يقارن أرقام الصرف قبل/بعد إصلاح التحويلات بلا مصدر
  * على مستوى المورد أو الفئة، وينبّه عند وجود أي اختلاف أو مصروف بلا مصدر.
  */
@@ -88,48 +89,7 @@ export function SpendConsistencyChart({ projectId, projectName = '', expenses, r
         </div>
       </div>
 
-      {report.hasIssues ? (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>تم رصد اختلافات في أرقام الصرف</AlertTitle>
-          <AlertDescription className="text-xs space-y-1">
-            {Math.abs(report.totalGap) > 0.01 && (
-              <div>فرق قبل/بعد الإصلاح: <span className="font-mono">{formatCurrency(report.totalGap)}</span></div>
-            )}
-            {report.totalUnlinked > 0.01 && (
-              <div>
-                مصروفات بلا دفعة أو عهدة: <span className="font-mono">{formatCurrency(report.totalUnlinked)}</span>
-                {' '}({report.unlinkedCount} عملية) — {report.unlinked.slice(0, 3).map((u) => u.label).join('، ')}
-              </div>
-            )}
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <Alert>
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertTitle>الأرقام متسقة</AlertTitle>
-          <AlertDescription className="text-xs">
-            لا توجد فروق بين ما قبل وبعد الإصلاح، وكل مصروف مرتبط بمصدر واحد صحيح.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-3 gap-3">
-        <div className="p-3 rounded-lg border border-border bg-muted/30">
-          <p className="text-xs text-muted-foreground">الإجمالي قبل</p>
-          <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(report.totalBefore)}</p>
-        </div>
-        <div className="p-3 rounded-lg border border-border bg-muted/30">
-          <p className="text-xs text-muted-foreground">الإجمالي بعد</p>
-          <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(report.totalAfter)}</p>
-        </div>
-        <div className="p-3 rounded-lg border border-border bg-muted/30">
-          <p className="text-xs text-muted-foreground">إجمالي الفجوة</p>
-          <p className={`text-sm font-mono font-semibold mt-1 ${Math.abs(report.totalGap) > 0.01 ? 'text-destructive' : ''}`}>
-            {formatCurrency(report.totalGap)}
-          </p>
-        </div>
-      </div>
+      <ConsistencyBanner report={report} />
 
       {data.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-6">لا توجد مصروفات لعرضها</p>
@@ -161,86 +121,9 @@ export function SpendConsistencyChart({ projectId, projectName = '', expenses, r
       )}
 
       {/* جدول المجموعات — انقر لفتح المقارنة التفصيلية */}
-      {report.rows.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">
-            انقر على أي {dimension === 'resource' ? 'مورد' : 'فئة'} لعرض عناصر الصرف التي تغيّرت قبل/بعد الإصلاح.
-          </p>
-          {report.rows.map((r) => {
-            const changed = Math.abs(r.gap) > 0.01;
-            return (
-              <button
-                key={r.key}
-                type="button"
-                onClick={() => setActiveKey(r.key)}
-                className="w-full flex items-center justify-between gap-3 p-2 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors text-start"
-              >
-                <span className="text-xs font-medium truncate">{r.label}</span>
-                <span className="flex items-center gap-3 shrink-0 font-mono text-[11px]">
-                  <span className="text-muted-foreground">قبل: {formatCurrency(r.before)}</span>
-                  <span>بعد: {formatCurrency(r.after)}</span>
-                  <span className={changed ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
-                    فرق: {formatCurrency(r.gap)}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <ConsistencyRows report={report} dimension={dimension} onOpen={setActiveKey} />
 
-      {comparison && (
-        <InspectorPanel
-          open={!!comparison}
-          onOpenChange={(v) => !v && setActiveKey(null)}
-          title={`مقارنة تفصيلية — ${comparison.label}`}
-          description={`${comparison.changedCount} عنصر تغيّر من أصل ${comparison.lines.length}`}
-          width="lg"
-        >
-          <InspectorKpiStrip
-            items={[
-              { label: 'قبل الإصلاح', value: formatCurrency(comparison.before), tone: 'default' },
-              { label: 'بعد الإصلاح', value: formatCurrency(comparison.after), tone: 'success' },
-              { label: 'الفرق', value: formatCurrency(comparison.gap), tone: Math.abs(comparison.gap) > 0.01 ? 'destructive' : 'default' },
-            ]}
-          />
-          <InspectorSection title="عناصر الصرف — قبل / بعد / الفرق">
-            <div className="space-y-2">
-              {comparison.lines.map((l) => {
-                const changed = Math.abs(l.diff) > 0.01;
-                return (
-                  <div
-                    key={`${l.kind}-${l.id}`}
-                    className={`p-2 rounded border ${changed ? 'border-destructive/40 bg-destructive/5' : 'border-border bg-muted/20'}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium truncate">{l.description}</span>
-                      {changed && <Badge variant="destructive" className="text-[10px] shrink-0">تغيّر</Badge>}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] font-mono">
-                      {l.date && <span className="text-muted-foreground">{l.date}</span>}
-                      <span className="text-muted-foreground">{l.categoryLabel}</span>
-                      <span className="text-muted-foreground">قبل: {formatCurrency(l.before)}</span>
-                      <span>بعد: {formatCurrency(l.after)}</span>
-                      <span className={changed ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
-                        فرق: {formatCurrency(l.diff)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-              {comparison.lines.length === 0 && (
-                <p className="text-xs text-muted-foreground">لا توجد عناصر صرف في هذه المجموعة.</p>
-              )}
-            </div>
-          </InspectorSection>
-          <InspectorSection title="مركز التنبيهات">
-            <Link to="/alerts" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
-              <BellRing className="w-3.5 h-3.5" />عرض سجل تنبيهات الاتساق لكل المشاريع
-            </Link>
-          </InspectorSection>
-        </InspectorPanel>
-      )}
+      {comparison && <RowComparisonPanel comparison={comparison} onClose={() => setActiveKey(null)} />}
     </div>
   );
 }
