@@ -1,31 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, LogIn, ShieldCheck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import basserhLogo from '@/assets/basserh-logo.jpg';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { loginSchema } from '@/lib/validations';
+import { getDeviceFingerprint } from './login/deviceFingerprint';
+import { readOtpCheck, type OtpDecision } from './login/otpCheck';
+import { LoginForm } from './login/LoginForm';
+import { OtpForm } from './login/OtpForm';
+import { ForgotPasswordForm } from './login/ForgotPasswordForm';
 
-function getDeviceFingerprint(): string {
-  const key = 'rouya_device_fp';
-  let fp = localStorage.getItem(key);
-  if (!fp) {
-    fp = crypto.randomUUID();
-    localStorage.setItem(key, fp);
-  }
-  return fp;
-}
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
 
@@ -44,47 +35,35 @@ export default function Login() {
 
   const finalizeSuccessfulAccess = async () => {
     try {
-      await supabase.functions.invoke('accept-invite', {
-        body: {},
-      });
+      await supabase.functions.invoke('accept-invite', { body: {} });
     } catch (error) {
       console.error('[accept-invite]', error);
     }
-
     navigate('/', { replace: true });
   };
 
-  const checkAndSendOtp = async (): Promise<string> => {
+  /** Asks the server whether this device needs a code; signs out on a refusal. */
+  const checkAndSendOtp = async (): Promise<OtpDecision> => {
     const fingerprint = getDeviceFingerprint();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return 'error';
+    if (!session) return { kind: 'error' };
 
-    const res = await supabase.functions.invoke('admin-otp', {
-      body: { action: 'check', fingerprint },
-    });
-
-    if (res.error) {
+    const res = await supabase.functions.invoke('admin-otp', { body: { action: 'check', fingerprint } });
+    const decision = readOtpCheck(res);
+    if (decision.kind === 'error') {
       console.error('[otp-check]', res.error);
       await supabase.auth.signOut();
       toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى.');
-      return 'error';
-    }
-
-    if (res.data?.rateLimited) {
+    } else if (decision.kind === 'rate-limited') {
       await supabase.auth.signOut();
-      toast.error(res.data?.error || 'تم تجاوز الحد الأقصى للمحاولات');
-      return 'error';
+      toast.error(decision.message);
     }
+    return decision;
+  };
 
-    if (res.data?.noRoles) {
-      return 'no-roles';
-    }
-
-    if (res.data?.requiresOtp === true) {
-      return res.data?.sent === true ? 'otp-sent' : 'otp-failed';
-    }
-
-    return 'ok';
+  const holdForOtp = () => {
+    setOtpRequired(true);
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,34 +75,28 @@ export default function Login() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) throw error;
 
-      // Check if OTP is required (admin on untrusted device)
-      const otpResult = await checkAndSendOtp();
-      if (otpResult === 'error') {
-        // Already signed out and error shown
-        return;
-      }
-      if (otpResult === 'no-roles') {
-        // User has no roles — sign out and show message
-        await supabase.auth.signOut();
-        toast.error('ليس لديك صلاحية للوصول. تواصل مع مدير النظام.');
-        return;
-      }
-      if (otpResult === 'otp-sent') {
-        setOtpRequired(true);
-        setResendCooldown(60);
-        toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
-      } else if (otpResult === 'otp-failed') {
-        setOtpRequired(true);
-        setResendCooldown(60);
-        toast.warning('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
-      } else {
-        await finalizeSuccessfulAccess();
+      const decision = await checkAndSendOtp();
+      switch (decision.kind) {
+        case 'error':
+        case 'rate-limited':
+          return; // already signed out and told
+        case 'no-roles':
+          await supabase.auth.signOut();
+          toast.error('ليس لديك صلاحية للوصول. تواصل مع مدير النظام.');
+          return;
+        case 'otp-sent':
+          holdForOtp();
+          toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
+          return;
+        case 'otp-failed':
+          holdForOtp();
+          toast.warning('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
+          return;
+        case 'ok':
+          await finalizeSuccessfulAccess();
       }
     } catch (error) {
       console.error('[login]', error);
@@ -139,9 +112,7 @@ export default function Login() {
     setOtpLoading(true);
     try {
       const fingerprint = getDeviceFingerprint();
-      const res = await supabase.functions.invoke('admin-otp', {
-        body: { action: 'verify', code: otpCode, fingerprint },
-      });
+      const res = await supabase.functions.invoke('admin-otp', { body: { action: 'verify', code: otpCode, fingerprint } });
 
       if (res.data?.rateLimited) {
         await supabase.auth.signOut();
@@ -149,13 +120,11 @@ export default function Login() {
         toast.error(res.data?.error || 'تم تجاوز الحد الأقصى للمحاولات');
         return;
       }
-
       if (res.error || !res.data?.verified) {
         toast.error(res.data?.error || 'الرمز غير صحيح');
         setOtpCode('');
         return;
       }
-
       toast.success('تم التحقق بنجاح');
       await finalizeSuccessfulAccess();
     } catch (error) {
@@ -171,20 +140,13 @@ export default function Login() {
     setOtpLoading(true);
     try {
       const fingerprint = getDeviceFingerprint();
-      const res = await supabase.functions.invoke('admin-otp', {
-        body: { action: 'check', fingerprint },
-      });
-
-      if (res.error) {
-        throw res.error;
-      }
-
+      const res = await supabase.functions.invoke('admin-otp', { body: { action: 'check', fingerprint } });
+      if (res.error) throw res.error;
       if (res.data?.sent !== true) {
         toast.warning('تعذر إرسال الرمز حالياً');
         return;
       }
-
-      setResendCooldown(60);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
       setOtpCode('');
       toast.success('تم إرسال رمز جديد');
     } catch (error) {
@@ -225,12 +187,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-sm"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-sm">
         <div className="text-center mb-8">
           <img src={basserhLogo} alt="بصيرة" className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4 shadow-lg" />
           <h1 className="text-2xl font-bold">رؤية</h1>
@@ -240,128 +197,36 @@ export default function Login() {
         <div className="stat-card">
           <AnimatePresence mode="wait">
             {otpRequired ? (
-              <motion.form
+              <OtpForm
                 key="otp"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                code={otpCode}
+                onCodeChange={setOtpCode}
+                loading={otpLoading}
+                resendCooldown={resendCooldown}
                 onSubmit={handleVerifyOtp}
-                className="space-y-5"
-              >
-                <div className="text-center space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                    <ShieldCheck className="w-6 h-6 text-primary" />
-                  </div>
-                  <h2 className="text-lg font-semibold">التحقق بخطوتين</h2>
-                  <p className="text-sm text-muted-foreground">أدخل الرمز المرسل إلى بريدك الإلكتروني</p>
-                </div>
-
-                <div className="flex justify-center" dir="ltr">
-                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode} autoFocus>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-
-                <Button type="submit" className="w-full gap-2" disabled={otpLoading || otpCode.length !== 6}>
-                  {otpLoading ? 'جاري التحقق...' : (
-                    <><ShieldCheck className="w-4 h-4" /> تأكيد الرمز</>
-                  )}
-                </Button>
-
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    disabled={resendCooldown > 0 || otpLoading}
-                    className="text-xs text-primary hover:underline disabled:opacity-50 disabled:no-underline flex items-center gap-1"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    {resendCooldown > 0 ? `إعادة الإرسال (${resendCooldown}ث)` : 'إعادة إرسال الرمز'}
-                  </button>
-                  <button type="button" onClick={handleCancelOtp} className="text-xs text-muted-foreground hover:underline">
-                    إلغاء
-                  </button>
-                </div>
-              </motion.form>
+                onResend={handleResendOtp}
+                onCancel={handleCancelOtp}
+              />
             ) : isForgotPassword ? (
-              <motion.form
+              <ForgotPasswordForm
                 key="forgot"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                email={email}
+                onEmailChange={setEmail}
+                loading={loading}
                 onSubmit={handleForgotPassword}
-                className="space-y-4"
-              >
-                <h2 className="text-lg font-semibold text-center">استعادة كلمة المرور</h2>
-                <div className="space-y-2">
-                  <Label htmlFor="forgot-email">البريد الإلكتروني</Label>
-                  <Input id="forgot-email" name="email" type="email" inputMode="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required className="h-11" />
-                </div>
-                <Button type="submit" className="w-full h-11" disabled={loading}>
-                  {loading ? 'جاري الإرسال...' : 'إرسال رابط الاستعادة'}
-                </Button>
-                <Button type="button" variant="ghost" className="w-full text-sm" onClick={() => setIsForgotPassword(false)}>
-                  العودة لتسجيل الدخول
-                </Button>
-              </motion.form>
+                onBack={() => setIsForgotPassword(false)}
+              />
             ) : (
-              <motion.form
+              <LoginForm
                 key="login"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                email={email}
+                onEmailChange={setEmail}
+                password={password}
+                onPasswordChange={setPassword}
+                loading={loading}
                 onSubmit={handleSubmit}
-                className="space-y-4"
-              >
-                <h2 className="text-lg font-semibold text-center">تسجيل الدخول</h2>
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">البريد الإلكتروني</Label>
-                  <Input id="login-email" name="email" type="email" inputMode="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" dir="ltr" required className="h-11" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">كلمة المرور</Label>
-                  <div className="relative">
-                    <Input
-                      id="login-password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      dir="ltr"
-                      required
-                      minLength={6}
-                      className="h-11"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <button type="button" onClick={() => setIsForgotPassword(true)} className="text-xs text-primary hover:underline">
-                  نسيت كلمة المرور؟
-                </button>
-
-                <Button type="submit" className="w-full h-11 gap-2" disabled={loading}>
-                  {loading ? 'جاري التحميل...' : (
-                    <><LogIn className="w-4 h-4" /> تسجيل الدخول</>
-                  )}
-                </Button>
-              </motion.form>
+                onForgot={() => setIsForgotPassword(true)}
+              />
             )}
           </AnimatePresence>
         </div>
