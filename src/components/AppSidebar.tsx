@@ -304,7 +304,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                                   <ProjectButton key={project.id} project={project} />
                                 ))}
 
-                                {isShowingInactive && portfolioInactiveProjects.filter(p => isProjectMatched(p.name)).map((project) => (
+                                {(isShowingInactive || normalizedSearch) && portfolioInactiveProjects.filter(p => isProjectMatched(p.name)).map((project) => (
                                   <ProjectButton key={project.id} project={project} />
                                 ))}
 
@@ -323,7 +323,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                       })}
 
                       {/* Inactive direct projects (no portfolio) */}
-                      {isShowingInactive && inactiveProjects.filter(p => !p.portfolioId && isProjectMatched(p.name)).map((project) => (
+                      {(isShowingInactive || normalizedSearch) && inactiveProjects.filter(p => !p.portfolioId && isProjectMatched(p.name)).map((project) => (
                         <ProjectButton key={project.id} project={project} />
                       ))}
 
