@@ -166,8 +166,12 @@ describe('ProjectDetail', () => {
     renderPage('/project/p1?group=management&tab=changeorders');
     await screen.findByTestId('ChangeOrdersSection');
     expect(screen.getByTestId('fab')).toHaveTextContent('إضافة خطر');
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
     fireEvent.click(screen.getByTestId('fab'));
     await waitFor(() => expect(screen.getByTestId('path')).toHaveTextContent('group=management&tab=risks'));
+    // The action scrolls to the top a beat later; wait for it so no timer outlives the test.
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' }));
   });
 
   it('archives and goes home, reports a refused delete, and exports with the VAT figures', async () => {
