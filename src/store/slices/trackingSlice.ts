@@ -166,6 +166,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   },
 
   updateChangeOrder: async (id, co) => {
+    const wasApproved = get().changeOrders.find((c) => c.id === id)?.status === 'approved';
     const updates: Record<string, unknown> = {};
     if (co.description !== undefined) updates.description = co.description;
     if (co.changeType !== undefined) updates.change_type = co.changeType;
@@ -180,7 +181,9 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     const { error } = await db.from('change_orders').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ changeOrders: s.changeOrders.map((x) => (x.id === id ? { ...x, ...co } : x)) }));
-    if (co.status === 'approved') {
+    // The items go into the budget once, on the approval itself; an edit
+    // that keeps the status approved must not add them again.
+    if (co.status === 'approved' && !wasApproved) {
       const changeOrder = get().changeOrders.find(c => c.id === id);
       if (changeOrder && (changeOrder.budgetItems || []).length > 0) {
         await get().applyApprovedChangeOrder(changeOrder.projectId, changeOrder);
