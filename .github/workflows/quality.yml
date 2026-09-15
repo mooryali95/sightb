@@ -121,8 +121,16 @@ jobs:
           #   deliberately loose surface, the fluent builder, is disabled inline
           #   with its reason. The two left are in a Lovable-authored edge
           #   function; see rule 3 in CLAUDE.md.
-          ERROR_BUDGET=2
-          WARN_BUDGET=10
+          #   2 / 10 → 0 / 3 (15 Sep): the Deno edge functions leave this
+          #   config (they are not the browser bundle it describes, and the
+          #   two `any` sat in a Lovable-authored shared helper, which now has
+          #   unit tests under src/test/edge instead), and the vendored shadcn
+          #   primitives keep every rule but the hot-reload one, which their
+          #   variant helpers trip by design. The three warnings left are the
+          #   same hot-reload rule on two Lovable-authored app files
+          #   (auth/Can.tsx, hooks/useAuth.tsx); they stay counted.
+          ERROR_BUDGET=0
+          WARN_BUDGET=3
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.
           bunx eslint . -f json > eslint-report.json || true
