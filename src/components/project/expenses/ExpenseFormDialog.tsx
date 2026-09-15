@@ -1,10 +1,10 @@
 /**
  * The expense form, for adding and for editing.
  *
- * The single-source rule lives here: a new expense draws from exactly one of
- * the active fund or a custody, never neither and never both, and never more
- * than that source still holds. The database enforces the same rule in its
- * triggers; the form refuses first so the user sees why.
+ * The single-source rule lives in expenseSource.ts: a new expense draws from
+ * exactly one of the active fund or a custody, never neither and never both,
+ * and never more than that source still holds. The database enforces the
+ * same rule in its triggers; the form refuses first so the user sees why.
  *
  * The section remounts this component (via `key`) on every open. An edit
  * starts from the row's values through the `useState` initialisers below,
@@ -14,7 +14,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency, calcVAT, addVAT, removeVAT } from '@/lib/finance';
+import { formatCurrency } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS,
   type ExpenseCategory, type ApprovalStatus, type Resource, type Custody, type BudgetItem, type Expense,
@@ -26,10 +26,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
-import { Plus, Wallet } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/utils';
 import { translateDbError } from './translateDbError';
+import { bookedAmount, budgetItemRemaining, chosen, fundBlocksSubmit, resolveExpenseSource } from './expenseSource';
+import { SourcePicker, type SourceMode } from './SourcePicker';
+import { VatControls } from './VatControls';
 
 interface Props {
   open: boolean;
@@ -54,10 +57,7 @@ export function ExpenseFormDialog({
   budgetItems, taxPercent, projectStatus, isAdmin,
 }: Props) {
   const { addExpense, updateExpense, projectFunds, acknowledgeFund, updateProject } = useStore();
-  const activeFund = useMemo(
-    () => getActiveFund(projectId, projectFunds),
-    [projectId, projectFunds],
-  );
+  const activeFund = useMemo(() => getActiveFund(projectId, projectFunds), [projectId, projectFunds]);
 
   const editingId = editing?.id ?? null;
   const [category, setCategory] = useState<ExpenseCategory>(editing?.category ?? 'salary');
@@ -75,36 +75,23 @@ export function ExpenseFormDialog({
   const [invoiceRef, setInvoiceRef] = useState(editing?.invoiceRef || '');
   const [isVatExempt, setIsVatExempt] = useState(editing?.isVatExempt || false);
   const [inputInclusive, setInputInclusive] = useState(false);
-
-  const fundIsRequired = !!activeFund;
-  const [sourceMode, setSourceMode] = useState<'fund' | 'custody'>(
+  const [sourceMode, setSourceMode] = useState<SourceMode>(
     editing ? (editing.custodyId ? 'custody' : 'fund') : (activeFund ? 'fund' : 'custody'),
   );
+
   const paymentRequests = useStore((s) => s.paymentRequests);
   const cashTransfers = useStore((s) => s.cashTransfers);
   const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
-  const projTransfers = useMemo(
-    () => (cashTransfers || []).filter((t) => t.projectId === projectId),
-    [cashTransfers, projectId],
-  );
+  const projTransfers = useMemo(() => (cashTransfers || []).filter((t) => t.projectId === projectId), [cashTransfers, projectId]);
   // SSOT: رصيد العهدة = المبلغ + التحويلات الواردة − المصروف − السلف القائمة
-  const activeCustodies = useMemo(
-    () => custodies.filter((c) => c.status !== 'closed'),
-    [custodies],
-  );
+  const activeCustodies = useMemo(() => custodies.filter((c) => c.status !== 'closed'), [custodies]);
   const custodyBreakdowns = useMemo(
     () => new Map(custodies.map((c) => [c.id, getCustodyBreakdown(c, expenses, projTransfers, projPRs)])),
     [custodies, expenses, projTransfers, projPRs],
   );
-  const custodyRemainingOf = (id: string) => custodyBreakdowns.get(id)?.remaining ?? 0;
-
-  const activeFundRemaining = activeFund
-    ? getFundRemaining(activeFund, expenses, custodies, projPRs, projTransfers)
-    : 0;
-
-  const matchingBudgetItems = budgetItems.filter(b => b.category === category);
-
-  const hasCustody = !!(custodyId && custodyId !== 'none');
+  const activeFundRemaining = activeFund ? getFundRemaining(activeFund, expenses, custodies, projPRs, projTransfers) : 0;
+  const matchingBudgetItems = budgetItems.filter((b) => b.category === category);
+  const parsedAmount = parseFloat(amount) || 0;
 
   // Auto-fill fundId for NEW expense ONLY when the source mode is "fund".
   // Single-source rule: custody-backed expense MUST NOT also link to a fund.
@@ -115,6 +102,11 @@ export function ExpenseFormDialog({
     if (sourceMode === 'custody') setFundId('');
   }, [open, editingId, activeFund, sourceMode]);
 
+  const changeSourceMode = (mode: SourceMode) => {
+    setSourceMode(mode);
+    if (mode === 'fund') { setCustodyId(''); setFundId(activeFund?.id || ''); }
+    else setFundId('');
+  };
 
   const handleInlineAcknowledge = async () => {
     if (!activeFund || activeFund.status !== 'transferred') return;
@@ -126,98 +118,50 @@ export function ExpenseFormDialog({
     }
   };
 
-  // Block submit only if fund is required (no custody) AND fund still 'transferred'
-  const fundBlocksSubmit = !editingId && !!activeFund && activeFund.status === 'transferred' && !hasCustody;
+  const submitHeld = fundBlocksSubmit(!!editingId, activeFund, custodyId);
 
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
-    if (fundBlocksSubmit) {
-      toast.error(`الدفعة #${activeFund!.fundNumber} لم يُقَرّ باستلامها بعد. اضغط "إقرار الاستلام" أعلى النموذج.`);
-      return;
-    }
-    const rawAmount = parseFloat(amount);
-    const finalAmount = (inputInclusive && !isVatExempt) ? removeVAT(rawAmount, taxPercent) : rawAmount;
-
-    // Single-source: custody wins. Otherwise pick chosen fund or active fund.
-    const effectiveFundId = hasCustody
-      ? undefined
-      : (fundId && fundId !== 'none'
-          ? fundId
-          : (fundIsRequired && !editingId ? activeFund?.id : undefined));
-    if (fundIsRequired && !editingId && !hasCustody && !effectiveFundId) {
-      toast.error('يجب ربط المصروف بالدفعة النشطة أو اختيار عهدة');
-      return;
-    }
-    // قاعدة المصدر الواحد: مصدر واحد إلزامي — لا بدون مصدر ولا الاثنين معاً
-    if (!editingId && !hasCustody && !effectiveFundId) {
-      toast.error('يجب اختيار مصدر الصرف: دفعة أو عهدة.');
-      return;
-    }
-    if (hasCustody && fundId && fundId !== 'none') {
-      toast.error('لا يمكن ربط المصروف بعهدة ودفعة في آن واحد. اختر مصدراً واحداً فقط.');
+    const finalAmount = bookedAmount(parseFloat(amount), inputInclusive, isVatExempt, taxPercent);
+    const source = resolveExpenseSource({
+      editing: !!editingId, activeFund, fundId, custodyId, amount: finalAmount, activeFundRemaining,
+      custodyRemaining: (id) => custodyBreakdowns.get(id)?.remaining ?? 0,
+    });
+    if (source.error) {
+      if (source.long) toast.error(source.error, { duration: 8000 });
+      else toast.error(source.error);
       return;
     }
 
-    // Hard UI guard: overflow on custody — guide user to split instead of silent DB fail
-    if (!editingId && hasCustody) {
-      const remaining = custodyRemainingOf(custodyId);
-      if (finalAmount > remaining) {
-        toast.error(
-          `المبلغ (${formatCurrency(finalAmount)}) يتجاوز المتبقي في العهدة (${formatCurrency(remaining)}). قسّم المصروف لجزأين: الأول من هذه العهدة بالمبلغ المتاح، والباقي من عهدة/دفعة أخرى.`,
-          { duration: 8000 },
-        );
-        return;
-      }
-    }
-
-    // Hard UI guard: overflow on fund (when not via custody)
-    if (!editingId && !hasCustody && effectiveFundId) {
-      if (effectiveFundId === activeFund?.id && finalAmount > activeFundRemaining) {
-        toast.error(
-          `المبلغ (${formatCurrency(finalAmount)}) يتجاوز المتبقي في الدفعة #${activeFund!.fundNumber} (${formatCurrency(activeFundRemaining)}). قسّم المصروف، أو سجّل دفعة جديدة، أو حرّر سلفة قائمة.`,
-          { duration: 8000 },
-        );
-        return;
-      }
-    }
-
-
+    const fields = {
+      category,
+      description: description.trim(),
+      amount: finalAmount,
+      date,
+      month: parseInt(month),
+      responsible: responsible.trim() || undefined,
+      approvalStatus,
+      vendor: vendor.trim() || undefined,
+      invoiceRef: invoiceRef.trim() || undefined,
+      isVatExempt,
+      fundId: source.effectiveFundId,
+    };
     try {
       if (editingId) {
         await updateExpense(editingId, {
-          category,
-          description: description.trim(),
-          amount: finalAmount,
-          date,
-          month: parseInt(month),
-          responsible: responsible.trim() || undefined,
-          resourceId: resourceId && resourceId !== 'none' ? resourceId : null,
-          custodyId: custodyId && custodyId !== 'none' ? custodyId : null,
-          budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : null,
-          approvalStatus,
-          vendor: vendor.trim() || undefined,
-          invoiceRef: invoiceRef.trim() || undefined,
-          isVatExempt,
-          fundId: effectiveFundId,
+          ...fields,
+          resourceId: chosen(resourceId) ?? null,
+          custodyId: source.custodyId ?? null,
+          budgetItemId: chosen(budgetItemId) ?? null,
         });
         toast.success('تم تعديل المصروف');
       } else {
         await addExpense({
           projectId,
-          category,
-          description: description.trim(),
-          amount: finalAmount,
-          date,
-          month: parseInt(month),
-          responsible: responsible.trim() || undefined,
-          resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
-          custodyId: custodyId && custodyId !== 'none' ? custodyId : undefined,
-          budgetItemId: budgetItemId && budgetItemId !== 'none' ? budgetItemId : undefined,
-          approvalStatus,
-          vendor: vendor.trim() || undefined,
-          invoiceRef: invoiceRef.trim() || undefined,
-          isVatExempt,
-          fundId: effectiveFundId,
+          ...fields,
+          resourceId: chosen(resourceId),
+          custodyId: source.custodyId,
+          budgetItemId: chosen(budgetItemId),
         });
         toast.success('تمت إضافة المصروف');
 
@@ -230,7 +174,6 @@ export function ExpenseFormDialog({
       onOpenChange(false);
     } catch (err) {
       toast.error(translateDbError(errorMessage(err, '')) || 'تعذّر حفظ المصروف');
-      return;
     }
   };
 
@@ -240,231 +183,121 @@ export function ExpenseFormDialog({
       onOpenChange={onOpenChange}
       title={editingId ? 'تعديل المصروف' : 'إضافة مصروف جديد'}
       trigger={<Button size="sm" className="gap-1.5" onClick={onRequestOpen}><Plus className="w-3.5 h-3.5" />إضافة مصروف</Button>}
-      footer={<FormFooter onCancel={() => onOpenChange(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} submitDisabled={fundBlocksSubmit} />}
+      footer={<FormFooter onCancel={() => onOpenChange(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} submitDisabled={submitHeld} />}
     >
       <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>الفئة</Label>
+          <Select value={category} onValueChange={(v) => { setCategory(v as ExpenseCategory); setBudgetItemId(''); }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        {!editingId && matchingBudgetItems.length > 0 && (
           <div className="space-y-2">
-            <Label>الفئة</Label>
-            <Select value={category} onValueChange={(v) => { setCategory(v as ExpenseCategory); setBudgetItemId(''); }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Label>ربط ببند الموازنة <span className="text-muted-foreground text-xs">(مهم للتتبع)</span></Label>
+            <Select value={budgetItemId} onValueChange={setBudgetItemId}>
+              <SelectTrigger><SelectValue placeholder="اختر بند الموازنة" /></SelectTrigger>
               <SelectContent>
-                {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                <SelectItem value="none">بدون ربط</SelectItem>
+                {matchingBudgetItems.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.description} — متبقي: {formatCurrency(budgetItemRemaining(b, expenses))}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          {!editingId && matchingBudgetItems.length > 0 && (
-            <div className="space-y-2">
-              <Label>ربط ببند الموازنة <span className="text-muted-foreground text-xs">(مهم للتتبع)</span></Label>
-              <Select value={budgetItemId} onValueChange={setBudgetItemId}>
-                <SelectTrigger><SelectValue placeholder="اختر بند الموازنة" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">بدون ربط</SelectItem>
-                  {matchingBudgetItems.map((b) => {
-                    const spent = expenses.filter((e) => e.budgetItemId === b.id).reduce((s, e) => s + e.amount, 0);
-                    return (
-                      <SelectItem key={b.id} value={b.id}>{b.description} — متبقي: {formatCurrency(b.plannedAmount - spent)}</SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {/* مصدر الصرف — قاعدة المصدر الواحد: دفعة أو عهدة، واحدة فقط */}
-          {!editingId && (activeFund || activeCustodies.length > 0) && (
-            <div className="space-y-3 p-3 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700/30">
-              <Label className="flex items-center gap-1.5">
-                <Wallet className="w-3.5 h-3.5" />
-                مصدر الصرف
-                <span className="text-destructive text-xs">*</span>
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button" size="sm"
-                  variant={sourceMode === 'fund' ? 'default' : 'outline'}
-                  disabled={!activeFund}
-                  onClick={() => { setSourceMode('fund'); setCustodyId(''); setFundId(activeFund?.id || ''); }}
-                >
-                  من الدفعة
-                </Button>
-                <Button
-                  type="button" size="sm"
-                  variant={sourceMode === 'custody' ? 'default' : 'outline'}
-                  disabled={activeCustodies.length === 0}
-                  onClick={() => { setSourceMode('custody'); setFundId(''); }}
-                >
-                  من العهدة
-                </Button>
-              </div>
+        )}
+        {/* مصدر الصرف — قاعدة المصدر الواحد: دفعة أو عهدة، واحدة فقط */}
+        {!editingId && (activeFund || activeCustodies.length > 0) && (
+          <SourcePicker
+            mode={sourceMode}
+            onModeChange={changeSourceMode}
+            activeFund={activeFund}
+            activeFundRemaining={activeFundRemaining}
+            fundId={fundId}
+            onFundChange={setFundId}
+            custodies={activeCustodies}
+            custodyId={custodyId}
+            onCustodyChange={setCustodyId}
+            breakdownOf={(id) => custodyBreakdowns.get(id)}
+            amount={parsedAmount}
+            isAdmin={isAdmin}
+            onAcknowledge={handleInlineAcknowledge}
+          />
+        )}
 
-              {sourceMode === 'fund' && activeFund && (
-                <div className="space-y-2">
-                  {activeFund.status === 'transferred' && (
-                    <div className="flex items-start justify-between gap-2 p-2 rounded bg-background border border-border">
-                      <div className="text-xs">
-                        <p className="font-semibold">الدفعة #{activeFund.fundNumber} — قيد التحويل</p>
-                        <p className="text-muted-foreground mt-0.5">
-                          يجب إقرار الاستلام قبل الصرف منها.
-                        </p>
-                      </div>
-                      {isAdmin && (
-                        <Button type="button" size="sm" variant="outline" onClick={handleInlineAcknowledge}>
-                          إقرار الاستلام
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                  <Select value={fundId || activeFund.id} onValueChange={setFundId}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={activeFund.id}>
-                        الدفعة #{activeFund.fundNumber} — متبقي: {formatCurrency(activeFundRemaining)}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {parseFloat(amount) > 0 && parseFloat(amount) > activeFundRemaining && (
-                    <p className="text-xs text-destructive">
-                      ⚠️ المبلغ يتجاوز رصيد الدفعة المتبقي — سيُرفض من النظام
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {sourceMode === 'custody' && (
-                <div className="space-y-2">
-                  <Select value={custodyId} onValueChange={setCustodyId}>
-                    <SelectTrigger><SelectValue placeholder="اختر العهدة" /></SelectTrigger>
-                    <SelectContent>
-                      {activeCustodies.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.resourceName} — متبقي: {formatCurrency(custodyRemainingOf(c.id))}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {hasCustody && (() => {
-                    const b = custodyBreakdowns.get(custodyId);
-                    if (!b) return null;
-                    const parsedAmount = parseFloat(amount) || 0;
-                    return (
-                      <div className="space-y-1 text-xs">
-                        <p className="text-muted-foreground">
-                          العهدة: {formatCurrency(b.baseAmount)}
-                          {b.transfersIn > 0 && ` + تحويلات واردة: ${formatCurrency(b.transfersIn)}`}
-                          {' '}− مصروف: {formatCurrency(b.spent)}
-                          {b.outstandingAdvances > 0 && ` − سلف قائمة: ${formatCurrency(b.outstandingAdvances)}`}
-                        </p>
-                        <p className={b.remaining > 0 ? 'font-semibold' : 'text-destructive font-semibold'}>
-                          المتبقي: {formatCurrency(b.remaining)}
-                          {b.remaining <= 0 && ' ⚠️ العهدة مستنفدة'}
-                        </p>
-                        {parsedAmount > 0 && parsedAmount > b.remaining && (
-                          <p className="text-destructive">
-                            ⚠️ المبلغ ({formatCurrency(parsedAmount)}) يتجاوز المتبقي ({formatCurrency(b.remaining)}).
-                            قسّم المصروف: {formatCurrency(b.remaining)} من هذه العهدة، والباقي من عهدة/دفعة أخرى.
-                          </p>
-                        )}
-                        <p className="text-muted-foreground">
-                          سيُخصم من العهدة فقط ولن يُخصم من الدفعة مرة أخرى (مبلغ العهدة محجوز مسبقاً).
-                        </p>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
-
+        <div className="space-y-2">
+          <Label>الوصف</Label>
+          <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب شهر يناير — أحمد" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label>الوصف</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: راتب شهر يناير — أحمد" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>المبلغ</Label>
-              <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>الشهر</Label>
-              <Select value={month} onValueChange={setMonth}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: durationMonths }, (_, i) => (
-                    <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* VAT controls */}
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-xs cursor-pointer">
-              <input type="checkbox" checked={isVatExempt} onChange={(e) => { setIsVatExempt(e.target.checked); if (e.target.checked) setInputInclusive(false); }} className="rounded" />
-              معفى من الضريبة
-            </label>
-            {!isVatExempt && (
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
-                <input type="checkbox" checked={inputInclusive} onChange={(e) => setInputInclusive(e.target.checked)} className="rounded" />
-                المبلغ شامل الضريبة
-              </label>
-            )}
-          </div>
-          {parseFloat(amount) > 0 && !isVatExempt && taxPercent > 0 && (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
-              {inputInclusive
-                ? `بدون ضريبة: ${formatCurrency(removeVAT(parseFloat(amount), taxPercent))} · الضريبة: ${formatCurrency(parseFloat(amount) - removeVAT(parseFloat(amount), taxPercent))}`
-                : `شامل الضريبة: ${formatCurrency(addVAT(parseFloat(amount), taxPercent))} · الضريبة: ${formatCurrency(calcVAT(parseFloat(amount), taxPercent))}`
-              }
-            </p>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>التاريخ</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>المسؤول</Label>
-              <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} placeholder="اختياري" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>المورّد</Label>
-              <Input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="اختياري" />
-            </div>
-            <div className="space-y-2">
-              <Label>مرجع الفاتورة</Label>
-              <Input value={invoiceRef} onChange={(e) => setInvoiceRef(e.target.value)} placeholder="اختياري" />
-            </div>
+            <Label>المبلغ</Label>
+            <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
           </div>
           <div className="space-y-2">
-            <Label>حالة الاعتماد</Label>
-            <Select value={approvalStatus} onValueChange={(v) => setApprovalStatus(v as ApprovalStatus)}>
+            <Label>الشهر</Label>
+            <Select value={month} onValueChange={setMonth}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(APPROVAL_STATUS_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
-                ))}
+                {Array.from({ length: durationMonths }, (_, i) => <SelectItem key={i + 1} value={String(i + 1)}>شهر {i + 1}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          {!editingId && resources.length > 0 && (
-            <div className="space-y-2">
-              <Label>المورد (اختياري)</Label>
-              <Select value={resourceId} onValueChange={setResourceId}>
-                <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">بدون مورد</SelectItem>
-                  {resources.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>{r.name} {r.role ? `(${r.role})` : ''}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+        </div>
+
+        <VatControls
+          amount={parsedAmount}
+          taxPercent={taxPercent}
+          isVatExempt={isVatExempt}
+          onExemptChange={(exempt) => { setIsVatExempt(exempt); if (exempt) setInputInclusive(false); }}
+          inputInclusive={inputInclusive}
+          onInclusiveChange={setInputInclusive}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>التاريخ</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>المسؤول</Label>
+            <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} placeholder="اختياري" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>المورّد</Label>
+            <Input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="اختياري" />
+          </div>
+          <div className="space-y-2">
+            <Label>مرجع الفاتورة</Label>
+            <Input value={invoiceRef} onChange={(e) => setInvoiceRef(e.target.value)} placeholder="اختياري" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>حالة الاعتماد</Label>
+          <Select value={approvalStatus} onValueChange={(v) => setApprovalStatus(v as ApprovalStatus)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(APPROVAL_STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        {!editingId && resources.length > 0 && (
+          <div className="space-y-2">
+            <Label>المورد (اختياري)</Label>
+            <Select value={resourceId} onValueChange={setResourceId}>
+              <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">بدون مورد</SelectItem>
+                {resources.map((r) => <SelectItem key={r.id} value={r.id}>{r.name} {r.role ? `(${r.role})` : ''}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
     </ResponsiveFormDialog>
   );
