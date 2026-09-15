@@ -70,6 +70,7 @@ export const createCompanySlice: StateCreator<AppState, [], [], CompanySlice> = 
       portfolios: s.portfolios.filter((x) => x.companyId !== id),
       projects: s.projects.filter((x) => x.companyId !== id),
       indirectCosts: s.indirectCosts.filter((x) => x.companyId !== id),
+      custodies: s.custodies.filter((x) => x.companyId !== id),
     }));
   },
 
