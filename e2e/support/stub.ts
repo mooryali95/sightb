@@ -36,9 +36,14 @@ function applyFilters(rows: Record<string, unknown>[], url: string) {
  * `sb-<first host label>-auth-token`, so it must track the VITE_SUPABASE_URL
  * the preview server was built with (https://e2e.supabase.co → sb-e2e-...).
  */
-export async function stubSupabase(page: Page): Promise<Wire> {
+export async function stubSupabase(
+  page: Page,
+  /** Rows a spec needs on top of the shared seed, by table; appended, never replacing. */
+  extra: Record<string, Record<string, unknown>[]> = {},
+): Promise<Wire> {
   const wire: Wire = { writes: [] };
   const rows: Record<string, Record<string, unknown>[]> = JSON.parse(JSON.stringify(seed));
+  for (const [table, list] of Object.entries(extra)) rows[table] = [...(rows[table] ?? []), ...list];
 
   await page.addInitScript(
     ([key, session]) => {
