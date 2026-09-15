@@ -262,7 +262,7 @@ export function ExpenseFormDialog({
                 <SelectContent>
                   <SelectItem value="none">بدون ربط</SelectItem>
                   {matchingBudgetItems.map((b) => {
-                    const spent = expenses.filter((e) => e.budgetItemId === b.id).reduce((s, e) => s + e.amount, 0);
+                    const spent = expenses.filter((e) => e.budgetItemId === b.id && e.approvalStatus !== 'rejected').reduce((s, e) => s + e.amount, 0);
                     return (
                       <SelectItem key={b.id} value={b.id}>{b.description} — متبقي: {formatCurrency(b.plannedAmount - spent)}</SelectItem>
                     );
