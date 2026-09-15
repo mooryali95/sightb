@@ -160,6 +160,8 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       risks: s.risks.filter((x) => x.projectId !== id),
       resources: s.resources.filter((x) => x.projectId !== id),
       custodies: s.custodies.filter((x) => x.projectId !== id),
+      commitments: s.commitments.filter((x) => x.projectId !== id),
+      baselines: s.baselines.filter((x) => x.projectId !== id),
       projectFunds: s.projectFunds.filter((x) => x.projectId !== id),
       fundSettlements: s.fundSettlements.filter((x) => x.projectId !== id),
     }));
