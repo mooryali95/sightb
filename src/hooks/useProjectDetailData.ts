@@ -24,7 +24,7 @@ export function useProjectDetailData(id: string | undefined) {
     loadAll, updateProject, archiveProject, deleteProject,
   } = useStore();
 
-  const { detailsLoaded, subscribeToProject, ensureProjectCashData } = useStore();
+  const { detailsLoaded, subscribeToProject, ensureProjectCashData, loadBaselines } = useStore();
 
   useCoreData();
   useProjectData(detailsLoaded ? undefined : id);
@@ -36,6 +36,14 @@ export function useProjectDetailData(id: string | undefined) {
     ensureProjectCashData(id).catch((e: unknown) => console.warn('[ProjectDetail] cash data', e));
   }, [id, ensureProjectCashData]);
 
+
+  // The baseline lock is read from the store's baselines, which nothing else
+  // loads until the baseline section mounts; a budget opened first would
+  // show as unlocked and let its items change without an amendment.
+  useEffect(() => {
+    if (!id) return;
+    loadBaselines(id).catch((e: unknown) => console.warn('[ProjectDetail] baselines', e));
+  }, [id, loadBaselines]);
 
   // Realtime subscription for collaborative editing — cleanup on id change
   useEffect(() => {
