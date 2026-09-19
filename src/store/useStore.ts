@@ -9,6 +9,7 @@ import { createBudgetAmendmentSlice, BudgetAmendmentSlice } from './slices/budge
 import { createFundSlice, FundSlice } from './slices/fundSlice';
 import { createResourcePayableSlice, ResourcePayableSlice } from './slices/resourcePayableSlice';
 import { createCashTransferSlice, CashTransferSlice } from './slices/cashTransferSlice';
+import { flagOutstandingAdvances } from './outstandingAdvances';
 
 /**
  * The row the audit trigger captured, as a loose bag: the fields the audit
@@ -40,3 +41,13 @@ export const useStore = create<AppState>()((...a) => ({
   ...createResourcePayableSlice(...a),
   ...createCashTransferSlice(...a),
 }));
+
+// The outstanding-advance flag on an expense is not a column: it follows the
+// paid advance that created the expense. Whenever either side changes, the
+// flags are re-derived; when nothing differs the rows keep their identity and
+// no further update is made, so this cannot loop.
+useStore.subscribe((state, prev) => {
+  if (state.expenses === prev.expenses && state.paymentRequests === prev.paymentRequests) return;
+  const flagged = flagOutstandingAdvances(state.expenses, state.paymentRequests);
+  if (flagged.some((e, i) => e !== (state.expenses ?? [])[i])) useStore.setState({ expenses: flagged });
+});
