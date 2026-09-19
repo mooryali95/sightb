@@ -38,7 +38,7 @@ interface ProjectSectionProps {
 /** The section a tab value stands for, fed from the page's data. */
 export function ProjectSection({ value, data: d, navigateToTab }: ProjectSectionProps) {
   const {
-    project, isAdmin, isReadOnly,
+    project, company, isAdmin, isReadOnly,
     pBudget, pExpenses, pRevenues, pResources, pCustodies, pMilestones, pChangeOrders, pRisks, pCommitments,
     projectFunds, fundSettlements, paymentRequests, cashTransfers,
     summary, pieData, barData, evm, currentMonth, totalCommitted, daysRemaining,
@@ -127,7 +127,7 @@ export function ProjectSection({ value, data: d, navigateToTab }: ProjectSection
     case 'payables':
       return (
         <div className="space-y-4">
-          <ResourcePayablesSection projectId={project.id} projectName={project.name} readOnly={isReadOnly} />
+          <ResourcePayablesSection projectId={project.id} companyName={company?.name} projectName={project.name} readOnly={isReadOnly} />
           <VendorPayablesPanel projectId={project.id} readOnly={isReadOnly} />
         </div>
       );
