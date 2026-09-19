@@ -10,6 +10,7 @@ import { readOtpCheck, type OtpDecision } from './login/otpCheck';
 import { LoginForm } from './login/LoginForm';
 import { OtpForm } from './login/OtpForm';
 import { ForgotPasswordForm } from './login/ForgotPasswordForm';
+import { passkeysSupported, passkeyErrorMessage, verifyWithPasskey } from '@/services/passkeyService';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -25,6 +26,8 @@ export default function Login() {
   const [otpCode, setOtpCode] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const passkeyOffered = passkeysSupported();
 
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -135,6 +138,25 @@ export default function Login() {
     }
   };
 
+  /** The passkey is the second factor instead of the code: same trust, no inbox. */
+  const handleVerifyWithPasskey = async () => {
+    setPasskeyLoading(true);
+    try {
+      const result = await verifyWithPasskey(getDeviceFingerprint());
+      if (result === 'no-passkeys') {
+        toast.error('لا يوجد مفتاح مرور مسجّل لهذا الحساب. أدخل الرمز المرسل، ثم سجّل مفتاحاً من صفحة الأمان.');
+        return;
+      }
+      toast.success('تم التحقق بمفتاح المرور');
+      await finalizeSuccessfulAccess();
+    } catch (error) {
+      console.error('[passkey-verify]', error);
+      toast.error(passkeyErrorMessage(error));
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
     setOtpLoading(true);
@@ -206,6 +228,8 @@ export default function Login() {
                 onSubmit={handleVerifyOtp}
                 onResend={handleResendOtp}
                 onCancel={handleCancelOtp}
+                onPasskey={passkeyOffered ? handleVerifyWithPasskey : undefined}
+                passkeyLoading={passkeyLoading}
               />
             ) : isForgotPassword ? (
               <ForgotPasswordForm

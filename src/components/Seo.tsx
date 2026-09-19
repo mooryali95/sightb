@@ -83,6 +83,14 @@ const ROUTE_META: Array<{ path: string; meta: Meta }> = [
     },
   },
   {
+    path: '/security',
+    meta: {
+      title: 'الأمان ومفاتيح المرور — رؤية بصيرة',
+      description: 'إدارة مفاتيح المرور لحسابك في رؤية بصيرة: تحقق بخطوتين بلا رموز بريد.',
+      noindex: true,
+    },
+  },
+  {
     path: '/users',
     meta: {
       title: 'إدارة المستخدمين — رؤية بصيرة',

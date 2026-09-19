@@ -40,6 +40,8 @@ export async function stubSupabase(
   page: Page,
   /** Rows a spec needs on top of the shared seed, by table; appended, never replacing. */
   extra: Record<string, Record<string, unknown>[]> = {},
+  /** Answers for edge functions, by function name; a function not listed answers an empty object. */
+  functions: Record<string, (body: unknown) => unknown> = {},
 ): Promise<Wire> {
   const wire: Wire = { writes: [] };
   const rows: Record<string, Record<string, unknown>[]> = JSON.parse(JSON.stringify(seed));
@@ -118,7 +120,8 @@ export async function stubSupabase(
     let body: unknown = null;
     try { body = req.postDataJSON(); } catch { /* non-JSON call; recorded as null */ }
     wire.writes.push({ method: 'INVOKE', table: fn, body });
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+    const answer = functions[fn] ? functions[fn](body) : {};
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer) });
   });
 
   return wire;

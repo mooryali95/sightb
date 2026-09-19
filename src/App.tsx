@@ -26,6 +26,7 @@ const PortfolioDetail = lazy(() => import("./pages/PortfolioDetail"));
 const CompanyDetail = lazy(() => import("./pages/CompanyDetail"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
+const Security = lazy(() => import("./pages/Security"));
 const SystemAuditLog = lazy(() => import("./pages/SystemAuditLog"));
 const AlertsCenter = lazy(() => import("./pages/AlertsCenter"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -83,6 +84,7 @@ const App = () => (
                     <Route path="/project/new" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
                     <Route path="/project/:id" element={<ProtectedRoute><ErrorBoundary><ProjectDetail /></ErrorBoundary></ProtectedRoute>} />
                     <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                    <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
                     <Route path="/alerts" element={<ProtectedRoute><ErrorBoundary><AlertsCenter /></ErrorBoundary></ProtectedRoute>} />
                     <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
                     <Route path="/m/expense/new" element={<ProtectedRoute><ErrorBoundary><MobileExpenseCapture /></ErrorBoundary></ProtectedRoute>} />
