@@ -7,7 +7,7 @@
  * the device's fingerprint and can be cancelled; and the reset link goes
  * to the reset page.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -66,6 +66,12 @@ describe('Login', () => {
     m.signInWithPassword.mockResolvedValue({ error: null });
     m.getSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } });
     m.invoke.mockResolvedValue({ data: {}, error: null });
+  });
+  // The code input (input-otp) schedules 0, 10 and 50 ms timers on every
+  // change and never clears them. Let them fire while the DOM still exists,
+  // or the last test of a loaded run tears the environment down under them.
+  afterEach(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 60));
   });
 
   it('refuses a bad email or a short password before reaching the server', () => {
