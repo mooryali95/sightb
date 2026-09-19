@@ -3,6 +3,8 @@ project_id = "krhvqowmhthokqvmnvxj"
 [functions]
   [functions.admin-otp]
     verify_jwt = false
+  [functions.passkeys]
+    verify_jwt = false
   [functions.auth-email-hook]
     verify_jwt = false
   [functions.process-email-queue]

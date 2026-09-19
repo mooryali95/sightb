@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ShieldCheck, RefreshCw } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Fingerprint } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
@@ -11,10 +11,13 @@ interface OtpFormProps {
   onSubmit: (e: React.FormEvent) => void;
   onResend: () => void;
   onCancel: () => void;
+  /** Offered when the browser can run a passkey ceremony; absent otherwise. */
+  onPasskey?: () => void;
+  passkeyLoading?: boolean;
 }
 
-/** The one-time code step: six digits, a resend with its cooldown, and a way back. */
-export function OtpForm({ code, onCodeChange, loading, resendCooldown, onSubmit, onResend, onCancel }: OtpFormProps) {
+/** The one-time code step: six digits, a resend with its cooldown, a passkey instead when one is offered, and a way back. */
+export function OtpForm({ code, onCodeChange, loading, resendCooldown, onSubmit, onResend, onCancel, onPasskey, passkeyLoading = false }: OtpFormProps) {
   return (
     <motion.form
       key="otp"
@@ -43,6 +46,18 @@ export function OtpForm({ code, onCodeChange, loading, resendCooldown, onSubmit,
       <Button type="submit" className="w-full gap-2" disabled={loading || code.length !== 6}>
         {loading ? 'جاري التحقق...' : <><ShieldCheck className="w-4 h-4" /> تأكيد الرمز</>}
       </Button>
+
+      {onPasskey && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />أو<span className="h-px flex-1 bg-border" />
+          </div>
+          <Button type="button" variant="outline" className="w-full gap-2" onClick={onPasskey} disabled={loading || passkeyLoading}>
+            <Fingerprint className="w-4 h-4" />
+            {passkeyLoading ? 'بانتظار مفتاح المرور...' : 'التحقق بمفتاح المرور'}
+          </Button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <button

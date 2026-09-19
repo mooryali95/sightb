@@ -121,3 +121,12 @@ describe('useProjectDetailData', () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('baseline lock', () => {
+  it("loads the project's baselines on mount, so the lock is known before the baseline section opens", () => {
+    const loadBaselines = vi.fn().mockResolvedValue([]);
+    seed({ loadBaselines });
+    renderHook(() => useProjectDetailData(PROJECT_ID));
+    expect(loadBaselines).toHaveBeenCalledWith(PROJECT_ID);
+  });
+});

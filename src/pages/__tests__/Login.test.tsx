@@ -30,6 +30,10 @@ vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }),
 }));
 vi.mock('@/assets/basserh-logo.jpg', () => ({ default: 'logo.jpg' }));
+const wa = vi.hoisted(() => ({ supports: vi.fn(() => true), startAuthentication: vi.fn(), startRegistration: vi.fn() }));
+vi.mock('@simplewebauthn/browser', () => ({
+  browserSupportsWebAuthn: wa.supports, startAuthentication: wa.startAuthentication, startRegistration: wa.startRegistration,
+}));
 vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
 document.elementFromPoint = () => null;
 
@@ -167,5 +171,68 @@ describe('Login', () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني'));
     expect(m.resetPasswordForEmail).toHaveBeenCalledWith('pm@example.com', { redirectTo: `${window.location.origin}/reset-password` });
     await waitFor(() => expect(screen.getByText('تسجيل الدخول', { selector: 'h2' })).toBeInTheDocument());
+  });
+
+  describe('passkey instead of the code', () => {
+    const holdAtCode = async () => {
+      otpCheck({ requiresOtp: true, sent: true });
+      renderLogin();
+      submitLogin('pm@example.com', 'secret1');
+      expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
+      return screen.getByRole('button', { name: /التحقق بمفتاح المرور/ });
+    };
+    /** Answers the passkeys function per action, admin-otp as before. */
+    const passkeys = (byAction: Record<string, unknown>) => m.invoke.mockImplementation(async (name: string, opts?: { body?: { action?: string } }) => {
+      if (name === 'passkeys') return { data: byAction[opts?.body?.action ?? ''] ?? {}, error: null };
+      if (name === 'admin-otp') return { data: { requiresOtp: true, sent: true }, error: null };
+      return { data: {}, error: null };
+    });
+
+    it('verifies with the passkey and the device fingerprint, then goes home', async () => {
+      const button = await holdAtCode();
+      passkeys({ 'auth-options': { options: { challenge: 'c1' } }, 'auth-verify': { verified: true } });
+      wa.startAuthentication.mockResolvedValue({ id: 'cred-1', response: { signature: 's' } });
+      fireEvent.click(button);
+      await screen.findByTestId('path');
+      expect(screen.getByTestId('path')).toHaveTextContent('/');
+      const fingerprint = localStorage.getItem('rouya_device_fp');
+      expect(wa.startAuthentication).toHaveBeenCalledWith({ optionsJSON: { challenge: 'c1' } });
+      expect(m.invoke).toHaveBeenCalledWith('passkeys', { body: { action: 'auth-verify', response: { id: 'cred-1', response: { signature: 's' } }, fingerprint } });
+      expect(m.invoke).toHaveBeenLastCalledWith('accept-invite', { body: {} });
+      expect(toast.success).toHaveBeenCalledWith('تم التحقق بمفتاح المرور');
+    });
+
+    it('tells an account without passkeys to use the code, and stays', async () => {
+      const button = await holdAtCode();
+      passkeys({ 'auth-options': { noPasskeys: true } });
+      fireEvent.click(button);
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('لا يوجد مفتاح مرور مسجّل')));
+      expect(wa.startAuthentication).not.toHaveBeenCalled();
+      expect(screen.getByText('التحقق بخطوتين')).toBeInTheDocument();
+      expect(screen.queryByTestId('path')).not.toBeInTheDocument();
+    });
+
+    it('keeps the code step when the person cancels the passkey prompt', async () => {
+      const button = await holdAtCode();
+      passkeys({ 'auth-options': { options: { challenge: 'c1' } } });
+      wa.startAuthentication.mockRejectedValue(Object.assign(new Error('x'), { name: 'NotAllowedError' }));
+      fireEvent.click(button);
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('أُلغي التحقق أو انتهت مهلته. حاول مرة أخرى.'));
+      expect(m.invoke).not.toHaveBeenCalledWith('passkeys', expect.objectContaining({ body: expect.objectContaining({ action: 'auth-verify' }) }));
+      expect(screen.getByText('التحقق بخطوتين')).toBeInTheDocument();
+    });
+
+    it('offers no passkey button where the browser cannot run one', async () => {
+      wa.supports.mockReturnValue(false);
+      try {
+        otpCheck({ requiresOtp: true, sent: true });
+        renderLogin();
+        submitLogin('pm@example.com', 'secret1');
+        expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /التحقق بمفتاح المرور/ })).not.toBeInTheDocument();
+      } finally {
+        wa.supports.mockReturnValue(true);
+      }
+    });
   });
 });

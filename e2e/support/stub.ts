@@ -40,6 +40,8 @@ export async function stubSupabase(
   page: Page,
   /** Rows a spec needs on top of the shared seed, by table; appended, never replacing. */
   extra: Record<string, Record<string, unknown>[]> = {},
+  /** Answers for edge functions, by function name; a function not listed answers an empty object. */
+  functions: Record<string, (body: unknown) => unknown> = {},
 ): Promise<Wire> {
   const wire: Wire = { writes: [] };
   const rows: Record<string, Record<string, unknown>[]> = JSON.parse(JSON.stringify(seed));
@@ -110,8 +112,17 @@ export async function stubSupabase(
   // so an unrelated 404 never fails a spec about arithmetic.
   await page.route('**/storage/v1/**', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ Key: 'e2e/receipt.png', path: 'e2e/receipt.png' }) }));
-  await page.route('**/functions/v1/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) }));
+  // Edge function calls are recorded like writes, under the function's name,
+  // so a spec can assert on what was sent; the answer is an empty object.
+  await page.route('**/functions/v1/**', (route) => {
+    const req = route.request();
+    const fn = req.url().match(/\/functions\/v1\/([^/?]+)/)?.[1] ?? '';
+    let body: unknown = null;
+    try { body = req.postDataJSON(); } catch { /* non-JSON call; recorded as null */ }
+    wire.writes.push({ method: 'INVOKE', table: fn, body });
+    const answer = functions[fn] ? functions[fn](body) : {};
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer) });
+  });
 
   return wire;
 }
