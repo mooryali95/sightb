@@ -216,6 +216,18 @@ describe('editing, exporting, archiving and deleting the company', () => {
     })));
   });
 
+  it('trims the name and the description before writing, and clears a blank description', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /تعديل/ }));
+    const dialog = screen.getByRole('dialog');
+    const [name, description] = within(dialog).getAllByRole('textbox');
+    fireEvent.change(name, { target: { value: '  شركة الأفق  ' } });
+    fireEvent.change(description, { target: { value: '   ' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'حفظ' }));
+
+    await waitFor(() => expect(actions.updateCompany).toHaveBeenCalledWith(COMPANY_ID, { name: 'شركة الأفق', description: null }));
+  });
+
   it('clears the description when it is emptied', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: /تعديل/ }));
