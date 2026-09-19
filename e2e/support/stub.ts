@@ -42,6 +42,8 @@ export async function stubSupabase(
   extra: Record<string, Record<string, unknown>[]> = {},
   /** Answers for edge functions, by function name; a function not listed answers an empty object. */
   functions: Record<string, (body: unknown) => unknown> = {},
+  /** Answers for Postgres functions called through PostgREST, by name; one not listed answers an empty object. */
+  rpcs: Record<string, (args: unknown) => unknown> = {},
 ): Promise<Wire> {
   const wire: Wire = { writes: [] };
   const rows: Record<string, Record<string, unknown>[]> = JSON.parse(JSON.stringify(seed));
@@ -83,6 +85,15 @@ export async function stubSupabase(
 
     let body: unknown = null;
     try { body = req.postDataJSON(); } catch { /* non-JSON write; recorded as null */ }
+
+    // A Postgres function call is recorded under its own name, and answered
+    // by the spec's function or with an empty object, never as a table write.
+    if (table === 'rpc') {
+      const fn = url.match(/\/rest\/v1\/rpc\/([^/?]+)/)?.[1] ?? '';
+      wire.writes.push({ method: 'RPC', table: fn, body });
+      const answer = rpcs[fn] ? rpcs[fn](body) : {};
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer) });
+    }
     wire.writes.push({ method, table, body });
 
     if (method === 'POST') {
