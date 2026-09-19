@@ -213,7 +213,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
     if (get().detailsLoaded || get().projectDataLoaded.has(projectId)) return;
 
     try {
-      const [budgetItemsData, expensesData, revenuesData, resourcesData, custodiesData, milestonesData, changeOrdersData, risksData] = await Promise.all([
+      const [budgetItemsData, expensesData, revenuesData, resourcesData, custodiesData, milestonesData, changeOrdersData, risksData, commitmentsData] = await Promise.all([
         fetchAll('budget_items', 'created_at', false, { project_id: projectId }),
         fetchAll('expenses', 'created_at', false, { project_id: projectId }),
         fetchAll('revenues', 'created_at', false, { project_id: projectId }),
@@ -222,6 +222,9 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         fetchAll('milestones', 'sort_order', true, { project_id: projectId }),
         fetchAll('change_orders', 'created_at', false, { project_id: projectId }),
         fetchAll('risks', 'created_at', false, { project_id: projectId }),
+        // Commitments hold plan money on the project page; without them a
+        // project opened directly showed none until a full preload ran.
+        fetchAll('commitments', 'created_at', false, { project_id: projectId }),
       ]);
 
 
@@ -238,6 +241,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         milestones: [...s.milestones.filter(m => m.projectId !== projectId), ...milestonesData.map(mapMilestone)],
         changeOrders: [...s.changeOrders.filter(co => co.projectId !== projectId), ...changeOrdersData.map(mapChangeOrder)],
         risks: [...s.risks.filter(r => r.projectId !== projectId), ...risksData.map(mapRisk)],
+        commitments: [...s.commitments.filter(c => c.projectId !== projectId), ...commitmentsData.map(mapCommitment)],
         projectDataLoaded: loaded,
       }));
     } catch (error) {
