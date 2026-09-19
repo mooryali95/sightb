@@ -165,6 +165,27 @@ describe('opening a custody', () => {
     }));
   });
 
+  it('keeps an admin\'s choice of no fund, and then insists on a written reason', async () => {
+    renderSection();
+    const dialog = openForm(/عهدة جديدة/);
+    fireEvent.change(within(dialog).getByPlaceholderText(/عمر أحمد/), { target: { value: 'سعاد' } });
+    fireEvent.change(within(dialog).getByRole('spinbutton'), { target: { value: '3000' } });
+    const fundPicker = within(dialog).getByText(/دفعة #1/).closest('button') as HTMLElement;
+    fireEvent.keyDown(fundPicker, { key: 'ArrowDown' });
+    fireEvent.keyDown(screen.getByRole('option', { name: /بدون ربط/ }), { key: 'Enter' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'إضافة' }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('سبب عدم الربط بدفعة مطلوب (10 أحرف على الأقل)'));
+    expect(actions.addCustody).not.toHaveBeenCalled();
+
+    fireEvent.change(within(dialog).getByPlaceholderText(/عهدة طارئة/), { target: { value: 'عهدة طارئة بانتظار اعتماد دفعة' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'إضافة' }));
+    await waitFor(() => expect(actions.addCustody).toHaveBeenCalledTimes(1));
+    expect(actions.addCustody).toHaveBeenCalledWith(expect.objectContaining({
+      sourceFundId: undefined, notes: '[عهدة غير مربوطة بدفعة] عهدة طارئة بانتظار اعتماد دفعة',
+    }));
+  });
+
   it('will not reduce a custody below what was spent from it', async () => {
     renderSection();
     fireEvent.click(within(rowFor('عمر')).getByTitle('تعديل العهدة'));

@@ -11,7 +11,7 @@
  * blank. The trigger renders here (the responsive dialog wants it as a prop)
  * but opening is the section's call through `onRequestOpen`.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
 import type { Custody, Expense } from '@/types/project';
@@ -52,13 +52,17 @@ export function CustodyFormDialog({
   const [sourceFundId, setSourceFundId] = useState<string>(editing?.sourceFundId || 'none');
   const [unlinkReason, setUnlinkReason] = useState('');
 
-  // افتراضياً اختر أحدث دفعة متاحة عند فتح النموذج
+  // افتراضياً اختر أحدث دفعة متاحة عند فتح النموذج — مرة واحدة فقط.
+  // Once only: the guard used to be `sourceFundId === 'none'`, so an admin who
+  // deliberately chose "no fund" was handed the newest fund straight back and
+  // the unlink reason was never asked for. The dialog is remounted on every
+  // open, so a ref is enough to remember that the default has been applied.
+  const defaulted = useRef(false);
   useEffect(() => {
-    if (open && sourceFundId === 'none' && availableFunds.length > 0) {
+    if (open && !defaulted.current && sourceFundId === 'none' && availableFunds.length > 0) {
+      defaulted.current = true;
       setSourceFundId(availableFunds[0].id);
     }
-    // Settles after one pass: the guard requires sourceFundId === 'none', which
-    // the setter clears. `availableFunds` is memoized, so its identity is stable.
   }, [open, availableFunds, sourceFundId]);
 
   const fundsExist = availableFunds.length > 0;
