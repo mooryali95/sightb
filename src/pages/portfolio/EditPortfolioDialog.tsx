@@ -33,7 +33,7 @@ export function EditPortfolioDialog({ portfolio, open, onOpenChange }: Props) {
     if (!editName.trim()) { toast.error('اسم المحفظة مطلوب'); return; }
     try {
       await updatePortfolio(portfolio.id, {
-        name: editName,
+        name: editName.trim(),
         description: editDescription || null,
         targetRevenue: parseFloat(editTargetRevenue) || 0,
         targetMargin: parseFloat(editTargetMargin) || 0,
