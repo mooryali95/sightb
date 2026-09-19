@@ -125,19 +125,19 @@ describe('the cash', () => {
 });
 
 describe('loadProjectData', () => {
-  it('brings the cash, loads the project\'s eight lists in place of its old rows, and never repeats itself', async () => {
+  it('brings the cash, loads the project\'s nine lists in place of its old rows, and never repeats itself', async () => {
     useStore.setState({ expenses: [{ id: 'e-old', projectId: P } as Expense, { id: 'e-keep', projectId: 'p2' } as Expense] });
     answers.push({ data: [], error: null });
     answers.push({ data: [{ id: 'e-new', project_id: P, amount: '5', category: 'salary', description: 'x', date: 'd', month: 1 }], error: null });
     await useStore.getState().loadProjectData(P);
     expect(loaders.loadFundsForProject).toHaveBeenCalledWith(P);
-    expect(calls.map((c) => c.table)).toEqual(['budget_items', 'expenses', 'revenues', 'resources', 'custodies', 'milestones', 'change_orders', 'risks']);
+    expect(calls.map((c) => c.table)).toEqual(['budget_items', 'expenses', 'revenues', 'resources', 'custodies', 'milestones', 'change_orders', 'risks', 'commitments']);
     expect(ops(0)).toContainEqual(['eq', 'project_id', P]);
     expect(useStore.getState().expenses.map((e) => e.id)).toEqual(['e-keep', 'e-new']);
     expect(useStore.getState().projectDataLoaded.has(P)).toBe(true);
 
     await useStore.getState().loadProjectData(P);
-    expect(calls).toHaveLength(8);
+    expect(calls).toHaveLength(9);
     expect(loaders.loadFundsForProject).toHaveBeenCalledTimes(2);
   });
 
