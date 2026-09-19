@@ -28,7 +28,7 @@ export function EditCompanyDialog({ company, open, onOpenChange }: Props) {
   const handleSaveEdit = async () => {
     if (!editName.trim()) { toast.error('اسم الشركة مطلوب'); return; }
     try {
-      await updateCompany(company.id, { name: editName, description: editDescription || null });
+      await updateCompany(company.id, { name: editName.trim(), description: editDescription.trim() || null });
       toast.success('تم تحديث بيانات الشركة');
       onOpenChange(false);
     } catch { toast.error('فشل التحديث'); }
