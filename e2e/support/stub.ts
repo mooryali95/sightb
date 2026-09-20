@@ -42,8 +42,12 @@ export async function stubSupabase(
   extra: Record<string, Record<string, unknown>[]> = {},
   /** Answers for edge functions, by function name; a function not listed answers an empty object. */
   functions: Record<string, (body: unknown) => unknown> = {},
-  /** Answers for Postgres functions called through PostgREST, by name; one not listed answers an empty object. */
-  rpcs: Record<string, (args: unknown) => unknown> = {},
+  /**
+   * Answers for Postgres functions called through PostgREST, by name; one not
+   * listed answers an empty object. The function sees the tables and may
+   * change them, as the database would.
+   */
+  rpcs: Record<string, (args: unknown, tables: Record<string, Record<string, unknown>[]>) => unknown> = {},
 ): Promise<Wire> {
   const wire: Wire = { writes: [] };
   const rows: Record<string, Record<string, unknown>[]> = JSON.parse(JSON.stringify(seed));
@@ -91,7 +95,7 @@ export async function stubSupabase(
     if (table === 'rpc') {
       const fn = url.match(/\/rest\/v1\/rpc\/([^/?]+)/)?.[1] ?? '';
       wire.writes.push({ method: 'RPC', table: fn, body });
-      const answer = rpcs[fn] ? rpcs[fn](body) : {};
+      const answer = rpcs[fn] ? rpcs[fn](body, rows) : {};
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer) });
     }
     wire.writes.push({ method, table, body });
