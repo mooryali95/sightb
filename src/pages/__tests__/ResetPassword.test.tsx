@@ -232,7 +232,8 @@ describe('saving the new password', () => {
   });
 
   it('stays on the page and translates the server\'s refusal', async () => {
-    m.updateUser.mockResolvedValue({ error: new Error('New password should be different from the old password (same password)') });
+    // As the auth service answers it: the code names the refusal, the prose does not say "same password".
+    m.updateUser.mockResolvedValue({ error: Object.assign(new Error('New password should be different from the old password.'), { code: 'same_password', status: 422 }) });
     await ready();
     submit('secret-1');
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('اختر كلمة مرور جديدة مختلفة عن الحالية.'));
