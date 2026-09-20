@@ -72,7 +72,21 @@ export function decodeSpendView(search: string): SpendViewState | null {
 }
 
 /** رابط كامل قابل للمشاركة يحافظ على مسار الصفحة الحالي. */
-export function buildShareUrl(origin: string, pathname: string, state: SpendViewState, hash = ''): string {
-  const qs = encodeSpendView(state);
-  return `${origin}${pathname}?${qs}${hash}`;
+/**
+ * The view's parameters on top of the page's own tab parameters (`group`
+ * and `tab`), so a shared address opens on the tab the explorer lives in
+ * rather than on the project summary with the explorer out of sight.
+ */
+export function withSpendView(search: string, state: SpendViewState): string {
+  const page = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const p = new URLSearchParams(encodeSpendView(state));
+  for (const key of ['group', 'tab']) {
+    const value = page.get(key);
+    if (value) p.set(key, value);
+  }
+  return p.toString();
+}
+
+export function buildShareUrl(origin: string, pathname: string, state: SpendViewState, hash = '', search = ''): string {
+  return `${origin}${pathname}?${withSpendView(search, state)}${hash}`;
 }

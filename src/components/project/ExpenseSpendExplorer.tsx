@@ -13,7 +13,7 @@ import { buildSpendTree, buildSpendTreeCSV, type SpendNode } from '@/lib/expense
 import type { Resource, Custody, BudgetItem, Expense } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { decodeSpendView, encodeSpendView, buildShareUrl } from '@/lib/spend-url';
+import { decodeSpendView, encodeSpendView, buildShareUrl, withSpendView } from '@/lib/spend-url';
 import { Download, Link2 } from 'lucide-react';
 import { useSpendView } from './spend/useSpendView';
 import { SpendControls } from './spend/SpendControls';
@@ -54,15 +54,15 @@ export function ExpenseSpendExplorer({
   );
 
   const handleShare = useCallback(async () => {
-    const url = buildShareUrl(window.location.origin, location.pathname, shareState, location.hash);
-    navigate({ pathname: location.pathname, search: `?${encodeSpendView(shareState)}`, hash: location.hash }, { replace: true });
+    const url = buildShareUrl(window.location.origin, location.pathname, shareState, location.hash, location.search);
+    navigate({ pathname: location.pathname, search: `?${withSpendView(location.search, shareState)}`, hash: location.hash }, { replace: true });
     try {
       await navigator.clipboard.writeText(url);
       toast({ title: 'تم نسخ رابط التقرير', description: 'يفتح نفس العرض بنفس الفلاتر والفرز والنطاق الزمني.' });
     } catch {
       toast({ title: 'رابط التقرير', description: url });
     }
-  }, [shareState, location.pathname, location.hash, navigate, toast]);
+  }, [shareState, location.pathname, location.search, location.hash, navigate, toast]);
 
   const handleExport = () => {
     const csv = buildSpendTreeCSV(tree, projectName, { filters, sort, dimensionPath: levels });
