@@ -30,6 +30,7 @@ async function openFunds(page: Page) {
   return region;
 }
 const holders = (page: Page) => page.getByText('بيد حاملي العُهد', { exact: true }).locator('..').locator('..');
+// Toast titles are matched exactly: the toaster also announces them in a live region that repeats the title with the body.
 const rpcCalls = (wire: { writes: { method: string; table: string; body: unknown }[] }) =>
   wire.writes.filter((w) => w.method === 'RPC' && w.table === 'repair_orphan_cash_transfer');
 
@@ -64,12 +65,12 @@ test('an orphan transfer is named, needs a reason, and is repaired through the d
   await expect(page.getByText('إصلاح تحويل بلا دفعة أصل')).toBeVisible();
   await page.getByPlaceholder(/سجل يتيم ناتج عن حذف دفعة سابقة/).fill('قصير');
   await page.getByRole('button', { name: 'تنفيذ الإصلاح' }).click();
-  await expect(page.getByText('سبب الإصلاح مطلوب')).toBeVisible();
+  await expect(page.getByText('سبب الإصلاح مطلوب', { exact: true })).toBeVisible();
   expect(rpcCalls(wire)).toHaveLength(0);
 
   await page.getByPlaceholder(/سجل يتيم ناتج عن حذف دفعة سابقة/).fill('  سجل يتيم بعد حذف الدفعة الثانية  ');
   await page.getByRole('button', { name: 'تنفيذ الإصلاح' }).click();
-  await expect(page.getByText('تم الإصلاح')).toBeVisible();
+  await expect(page.getByText('تم الإصلاح', { exact: true })).toBeVisible();
   expect(rpcCalls(wire)).toHaveLength(1);
   expect(rpcCalls(wire)[0].body).toStrictEqual({ _transfer_id: 'ct-orphan', _reason: 'سجل يتيم بعد حذف الدفعة الثانية' });
   await expect(region.getByText('لا توجد تحويلات بلا مصدر')).toBeVisible();
