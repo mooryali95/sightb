@@ -10,12 +10,16 @@ import { resetPasswordSchema } from '@/lib/validations';
 
 function getResetPasswordErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : '';
+  // The auth service names its refusals by code; the message is prose that
+  // has changed before ("New password should be different from the old
+  // password."), so the code is matched first and the prose as a fallback.
+  const code = error instanceof Error && 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
 
   if (!message) return 'حدث خطأ، يرجى المحاولة مرة أخرى';
   if (message.includes('Auth session missing') || message.includes('session_not_found')) {
     return 'انتهت جلسة الدعوة أو الاستعادة. افتح الرابط من البريد مرة أخرى.';
   }
-  if (message.includes('same password')) {
+  if (code === 'same_password' || message.includes('same password') || message.includes('different from the old password')) {
     return 'اختر كلمة مرور جديدة مختلفة عن الحالية.';
   }
 
