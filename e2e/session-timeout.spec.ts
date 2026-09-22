@@ -39,6 +39,12 @@ test('twenty-eight idle minutes warn, continuing clears the warning, thirty sign
 
   await page.clock.fastForward(MINUTE);
   await expect(warning.getByRole('heading', { name: 'تحذير: انتهاء الجلسة' })).toBeVisible();
+  // The warning re-arms the timers in an effect after the dialog paints; a
+  // countdown that moves proves they are armed before the clock jumps on.
+  await expect(async () => {
+    await page.clock.fastForward(1000);
+    await expect(warning).toContainText(/1 دقيقة و 5\d ثانية/);
+  }).toPass();
   await page.clock.fastForward(2 * MINUTE);
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByLabel('البريد الإلكتروني')).toBeVisible();
