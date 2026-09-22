@@ -29,6 +29,8 @@ async function openFunds(page: import('@playwright/test').Page) {
   await page.getByRole('tab', { name: 'المالية' }).click();
   await page.getByRole('button', { name: 'الدفعات', exact: true }).click();
   await expect(page.getByText('سجل الدفعات')).toBeVisible();
+  // The section keeps fetching (ledger, repairs) after it shows; act once the wire is quiet so a click lands on a settled row.
+  await page.waitForLoadState('networkidle');
 }
 const patches = (wire: { writes: { method: string; table: string; body: unknown }[] }, table: string) =>
   wire.writes.filter((w) => w.table === table && w.method === 'PATCH').map((w) => w.body as Record<string, unknown>);
