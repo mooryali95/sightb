@@ -17,7 +17,6 @@ export function getProjectSummary(
     .reduce((sum, e) => sum + e.amount, 0);
 
   const effectiveContractValue = getEffectiveContractValue(project.contractValue, changeOrders);
-  const contractRemaining = effectiveContractValue - totalActual;
   const budgetRemaining = totalPlanned - totalActual;
   const budgetVariance = totalPlanned > 0 ? ((totalPlanned - totalActual) / totalPlanned) * 100 : 0;
 
@@ -30,6 +29,8 @@ export function getProjectSummary(
   const realizedProfit = collectedRevenue - totalActual;
   const realizedProfitMargin = collectedRevenue > 0 ? (realizedProfit / collectedRevenue) * 100 : 0;
   const accountsReceivable = invoicedRevenue; // invoiced but not yet collected
+  // What the client has not been invoiced for yet: the contract less what was collected and what is invoiced.
+  const contractRemaining = effectiveContractValue - collectedRevenue - accountsReceivable;
 
   const spendRate = totalPlanned > 0 ? (totalActual / totalPlanned) * 100 : 0;
   const contractSpendRate = effectiveContractValue > 0 ? (totalActual / effectiveContractValue) * 100 : 0;
