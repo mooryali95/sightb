@@ -1,4 +1,5 @@
 import { formatCurrency, getPlannedMonthlyCashFlow, getMonthlyBreakdown } from '@/lib/finance';
+import { getSpendTrend } from '@/lib/finance/trend';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory, type Expense, type BudgetItem } from '@/types/project';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -21,29 +22,8 @@ interface ChartsSectionProps {
 }
 
 export function ChartsSection({ pieData, barData, expenses = [], totalPlanned = 0, durationMonths = 0, budgetItems = [] }: ChartsSectionProps) {
-  // Cost Trend data
-  const hasTrendData = expenses.length > 0 && durationMonths > 0;
-  const trendData = hasTrendData ? (() => {
-    const monthlyAvgPlanned = durationMonths > 0 ? totalPlanned / durationMonths : 0;
-    const monthlyActual: number[] = Array(durationMonths).fill(0);
-    expenses.forEach(e => {
-      if (e.month >= 1 && e.month <= durationMonths) {
-        monthlyActual[e.month - 1] += e.amount;
-      }
-    });
-
-    let cumActual = 0;
-    return Array.from({ length: durationMonths }, (_, i) => {
-      cumActual += monthlyActual[i];
-      const avgBurnRate = cumActual / (i + 1);
-      return {
-        month: `شهر ${i + 1}`,
-        الفعلي: monthlyActual[i],
-        'معدل الحرق': Math.round(avgBurnRate),
-        'المتوسط المخطط': Math.round(monthlyAvgPlanned),
-      };
-    });
-  })() : [];
+  // Cost Trend data: the same counted spend the bars and the variance table read.
+  const trendData = getSpendTrend(expenses, totalPlanned, durationMonths);
 
   // Monthly Variance data
   const varianceData = (budgetItems.length > 0 && durationMonths > 0) ? (() => {
