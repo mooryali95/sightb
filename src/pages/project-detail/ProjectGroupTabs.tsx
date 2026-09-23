@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -60,33 +60,61 @@ export function ProjectGroupTabs({ groups, subTabs, activeGroup, activeTab, onGr
             </TabsContent>
           );
         }
-        const defaultOpen = activeTab && sections.some((s) => s.value === activeTab) ? [activeTab] : [sections[0].value];
         return (
           <TabsContent key={group.key} value={group.key} className="mt-2">
-            <Accordion
-              type="multiple"
-              defaultValue={defaultOpen}
-              onValueChange={(vals) => { if (vals.length > 0) onTabChange(vals[vals.length - 1]); }}
-              className="space-y-2"
-            >
-              {sections.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <AccordionItem key={s.value} value={s.value} className="border border-border rounded-lg bg-card px-3 md:px-4">
-                    <AccordionTrigger className="text-sm font-semibold py-3 hover:no-underline">
-                      <div className="flex items-center gap-2 text-foreground">
-                        <Icon className="w-4 h-4 text-primary" />
-                        <span>{s.label}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-2 pb-4">{renderSection(s.value)}</AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-            </Accordion>
+            <SectionAccordion sections={sections} activeTab={activeTab} onTabChange={onTabChange} renderSection={renderSection} />
           </TabsContent>
         );
       })}
     </Tabs>
+  );
+}
+
+/**
+ * A group's sections as an accordion that may hold several open. It opens
+ * on the active section, or the first, and whenever the active section
+ * changes while the group stays open (the floating button, an alert's
+ * action, a shared link) that section opens too instead of only the URL
+ * moving; the sections a person opened by hand stay as they are.
+ */
+function SectionAccordion({ sections, activeTab, onTabChange, renderSection }: {
+  sections: SubTabDef[];
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  renderSection: (value: string) => ReactNode;
+}) {
+  const hostsActive = Boolean(activeTab) && sections.some((s) => s.value === activeTab);
+  const [open, setOpen] = useState<string[]>(() => (hostsActive ? [activeTab] : [sections[0].value]));
+
+  useEffect(() => {
+    if (!hostsActive) return;
+    setOpen((prev) => (prev.includes(activeTab) ? prev : [...prev, activeTab]));
+  }, [activeTab, hostsActive]);
+
+  return (
+    <Accordion
+      type="multiple"
+      value={open}
+      onValueChange={(vals) => {
+        setOpen(vals);
+        if (vals.length > 0) onTabChange(vals[vals.length - 1]);
+      }}
+      className="space-y-2"
+    >
+      {sections.map((s) => {
+        const Icon = s.icon;
+        return (
+          <AccordionItem key={s.value} value={s.value} className="border border-border rounded-lg bg-card px-3 md:px-4">
+            <AccordionTrigger className="text-sm font-semibold py-3 hover:no-underline">
+              <div className="flex items-center gap-2 text-foreground">
+                <Icon className="w-4 h-4 text-primary" />
+                <span>{s.label}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-2 pb-4">{renderSection(s.value)}</AccordionContent>
+          </AccordionItem>
+        );
+      })}
+    </Accordion>
   );
 }

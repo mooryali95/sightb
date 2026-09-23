@@ -20,6 +20,8 @@ test('one press writes a snapshot per project and company for the current period
   const wire = await stubSupabase(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'إدارة الشركات' })).toBeVisible();
+  // The snapshot carries whatever the dashboard holds at the press, so wait for the seed's spend to show.
+  await expect(page.getByText('12,000.00 ر.س').first()).toBeVisible();
   await page.getByRole('button', { name: 'حفظ لقطة الشهر الحالي' }).click();
   await expect(page.getByText(`تم حفظ 2 لقطة للفترة ${period()}`).first()).toBeVisible();
 
@@ -39,6 +41,7 @@ test('a portfolio is snapshotted too, between the projects and the companies', a
   });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'إدارة الشركات' })).toBeVisible();
+  await expect(page.getByText('12,000.00 ر.س').first()).toBeVisible();
   await page.getByRole('button', { name: 'حفظ لقطة الشهر الحالي' }).click();
   await expect(page.getByText(`تم حفظ 3 لقطة للفترة ${period()}`).first()).toBeVisible();
   await expect.poll(() => snapshots(wire).length).toBe(3);
