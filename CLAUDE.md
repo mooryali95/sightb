@@ -86,6 +86,25 @@ history" step in `quality.yml` fails on any deleted or renamed migration. If it
 fires on a Lovable push, restore the file from the commit before; do not
 delete the ledger row.
 
+**On Lovable Cloud none of those secrets can exist.** The project is hosted
+there, and the owner has no Supabase dashboard, cannot create an access token
+and has no database URL. So `migrate.yml`, `deploy-functions.yml` and the
+database checks in the security scan cannot be enabled while it stays there;
+they are kept for a move off Lovable Cloud. What works instead:
+
+- `scripts/live-drift.sh`, run by Security Re-scan on every push to main,
+  every publish and nightly, needs no secret. It asks the live API with the
+  publishable key in `.env` whether every table a migration creates and every
+  function folder is live, and fails naming what is not. It would have caught
+  the missing passkeys tables and function the day #92 merged.
+- A migration merged through git is applied by the owner in Lovable Cloud's
+  SQL editor, as a one-off under rule 1's exception. Hand them one idempotent
+  block that records its version in `supabase_migrations.schema_migrations`
+  and ends in a single verification row, since the editor shows only the last
+  result. Test it on a local Postgres first, twice, and break the check once.
+- A function arriving through git is deployed when Lovable next builds the
+  project; `passkeys` went live that way.
+
 `scripts/security-scan.sh` check 5/5 detects the drift. Version matching is on
 real timestamps with a ±10s tolerance, never string or integer comparison:
 `20260307175459` and `20260307175500` are one second apart but 41 apart
