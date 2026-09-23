@@ -70,6 +70,29 @@ export function getFundOutstandingAdvances(
 }
 
 /**
+ * A project's advances still outstanding: each paid, unsettled advance at
+ * what is still out on it, net of what came back. Since the 22 May
+ * migration a paid advance writes no expense row, so this is read from the
+ * requests, never from expenses; the payables card and the fund breakdown
+ * count the same way.
+ */
+export function getProjectOutstandingAdvances(
+  projectId: string | undefined,
+  paymentRequests: PaymentRequest[] = [],
+): { total: number; count: number } {
+  const open = paymentRequests.filter((p) =>
+    p.projectId === projectId
+    && p.requestType === 'advance'
+    && p.status === 'paid'
+    && p.isAdvanceOutstanding === true,
+  );
+  return {
+    total: open.reduce((s, p) => s + Math.max(p.amount - (p.refundedAmount ?? 0), 0), 0),
+    count: open.length,
+  };
+}
+
+/**
  * مجموع السلف القائمة المخصومة من عهدة معيّنة (يطرح ما رُدّ منها جزئياً).
  */
 export function getCustodyOutstandingAdvances(
