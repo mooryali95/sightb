@@ -47,9 +47,10 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
   // from the row and an add starts blank. See useDialogSession.
   const form = useDialogSession<{ item?: BudgetItem }>();
 
-  // A rejected expense is not spend, here as on every other screen. Every
-  // actual figure below reads this list.
-  const countedExpenses = expenses.filter((e) => e.approvalStatus !== 'rejected');
+  // What counts as spend, here as on every other screen: not a rejected
+  // expense, and not the expense of an advance still outstanding, which the
+  // summary shows apart as recoverable. Every actual figure below reads this list.
+  const countedExpenses = expenses.filter((e) => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
 
   const totalPlanned = getTotalPlanned(budgetItems);
   const totalActual = countedExpenses.reduce((s, e) => s + e.amount, 0);

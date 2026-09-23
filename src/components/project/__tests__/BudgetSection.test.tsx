@@ -136,6 +136,16 @@ describe('what counts as actual spend', () => {
     expect(cells[6]).toBe('10,000.00 ر.س');
   });
 
+  it('leaves the expense of an advance still outstanding out of every actual figure, as the summary says', () => {
+    // The paid advance's own expense, 3,000 on the fixed item; recoverable until the advance is settled.
+    renderSection({ rows: [...expenses, expense({ id: 'e-adv', amount: 3000, budgetItemId: 'b-fixed', isOutstandingAdvance: true })] });
+    const totals = screen.getByText(/الإجمالي المخطط:/);
+    expect(totals).toHaveTextContent('الفعلي: 10,000.00 ر.س');
+    const cells = within(rowFor('استشارة تصميم')).getAllByRole('cell').map((c) => c.textContent);
+    expect(cells[6]).toBe('10,000.00 ر.س');
+    expect(screen.getByText('سلف قائمة (لم تُسوَّ بعد)')).toBeInTheDocument();
+  });
+
   it('spreads a recurring item over its months in the per-category table', () => {
     renderSection();
     const categoryTable = screen.getByText('النسبة من العقد').closest('table') as HTMLElement;
