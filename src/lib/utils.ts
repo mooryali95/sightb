@@ -23,5 +23,11 @@ export function normalizeDigits(input: string): string {
 export function errorMessage(e: unknown, fallback = 'فشلت العملية'): string {
   if (e instanceof Error && e.message) return e.message;
   if (typeof e === 'string' && e) return e;
+  // Database errors arrive as plain objects ({ message, code, details }),
+  // not Error instances — their message carries the trigger's Arabic reason.
+  if (e && typeof e === 'object') {
+    const m = (e as { message?: unknown }).message;
+    if (typeof m === 'string' && m) return m;
+  }
   return fallback;
 }
