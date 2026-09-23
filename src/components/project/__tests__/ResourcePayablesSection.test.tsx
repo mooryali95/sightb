@@ -18,6 +18,7 @@ import { ResourcePayablesSection } from '../ResourcePayablesSection';
 import {
   PROJECT_ID,
   foreignReimbursement,
+  partlyRefundedAdvance,
   paymentRequests,
   resource,
   resourceReimbursements,
@@ -174,6 +175,20 @@ describe('summary arithmetic', () => {
 
     // submitted + approved count; paid and draft do not.
     expect(cardValue('طلبات معلقة')).toBe('2');
+  });
+
+  it("keeps the team's advances on the team's ledger and off the vendors'", () => {
+    seedStore({ paymentRequests: [...paymentRequests, partlyRefundedAdvance] });
+    renderSection();
+
+    // 5,000 paid out, 2,000 back.
+    expect(cardValue('سلف قائمة (غير مسوّاة)')).toBe('3,000.00 ر.س');
+    expect(screen.getByText('1 سلفة')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /مستحقات الموردين/ }));
+    expect(cardValue('سلف قائمة (غير مسوّاة)')).toBe('0.00 ر.س');
+    expect(screen.getByText('0 سلفة')).toBeInTheDocument();
+    expect(screen.queryByText(/أقدمها:/)).not.toBeInTheDocument();
   });
 });
 
