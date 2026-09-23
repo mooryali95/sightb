@@ -144,6 +144,16 @@ describe('the figures at the top', () => {
     expect(screen.queryByText('سلفة قائمة قديمة')).not.toBeInTheDocument();
     expect(screen.getByText('استشارة تصميم')).toBeInTheDocument();
   });
+
+  it('leaves the hidden advance out of the totals and the cards too', () => {
+    // The advance is hidden as a receivable; counting it would put 2,000 of it on the
+    // same screen's total and on its resource's and responsible's cards.
+    renderSection({ expenses: [...expenses, { ...outstandingAdvanceExpense, resourceId: RESOURCE_ID }] });
+    expect(screen.getByText(/نسبة ما صُرف من قيمة العقد \(12\.5%\)/)).toBeInTheDocument();
+    expect(screen.getByText('12,500.00 ر.س / 100,000.00 ر.س')).toBeInTheDocument();
+    expect(cardFigure('ملخص الصرف حسب المورد', resource.name)).toBe('7,000.00 ر.س');
+    expect(cardFigure('ملخص الصرف حسب المسؤول', 'أحمد')).toBe('12,000.00 ر.س');
+  });
 });
 
 describe('adding an expense', () => {

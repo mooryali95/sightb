@@ -98,10 +98,11 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     toast.success('تم رفض المصروف');
   };
 
-  // A rejected expense is not spend. Every figure on this screen reads the
-  // same list, so the per-resource and per-responsible cards cannot disagree
-  // with the total above them.
-  const countedExpenses = expenses.filter((e) => e.approvalStatus !== 'rejected');
+  // What counts as spend: not a rejected expense, and not an advance still
+  // outstanding, which the table hides as a receivable. Every figure on this
+  // screen reads the same list, so the per-resource and per-responsible cards
+  // cannot disagree with the total above them.
+  const countedExpenses = visibleExpenses.filter((e) => e.approvalStatus !== 'rejected');
 
   const responsibleMap = new Map<string, number>();
   countedExpenses.forEach((e) => {

@@ -34,23 +34,30 @@ export function rankProjects(
   }).sort((a, b) => HEALTH_ORDER[a.health] - HEALTH_ORDER[b.health]);
 }
 
-/** Cumulative planned and actual cash flow, summed across the projects month by month. */
+/**
+ * Cumulative planned and actual cash flow, summed across the projects month
+ * by month. A project that has ended keeps its final cumulative position in
+ * every later month: its money does not vanish from the portfolio when its
+ * last month passes.
+ */
 export function aggregateCashFlow(
   projects: Project[], budgetItems: BudgetItem[], expenses: Expense[], revenues: Revenue[],
 ): CashFlowPoint[] {
   if (projects.length === 0) return [];
   const maxMonths = Math.max(...projects.map(p => p.durationMonths), 1);
+  const forecasts = projects.map(project => getCashFlowForecast(
+    budgetItems.filter(b => b.projectId === project.id),
+    expenses.filter(e => e.projectId === project.id),
+    revenues.filter(r => r.projectId === project.id),
+    project.durationMonths,
+  ));
   const aggregated: CashFlowPoint[] = [];
   for (let m = 1; m <= maxMonths; m++) {
     let planned = 0, actual = 0;
-    projects.forEach(project => {
-      const pBudget = budgetItems.filter(b => b.projectId === project.id);
-      const pExpenses = expenses.filter(e => e.projectId === project.id);
-      const pRevenues = revenues.filter(r => r.projectId === project.id);
-      const cf = getCashFlowForecast(pBudget, pExpenses, pRevenues, project.durationMonths);
-      const entry = cf.find(c => c.month === m);
+    for (const cf of forecasts) {
+      const entry = cf.find(c => c.month === m) ?? (cf.length > 0 && m > cf[cf.length - 1].month ? cf[cf.length - 1] : undefined);
       if (entry) { planned += entry.cumulativePlanned; actual += entry.cumulativeActual; }
-    });
+    }
     aggregated.push({ month: m, مخطط: planned, فعلي: actual });
   }
   return aggregated;
