@@ -189,6 +189,23 @@ jobs:
           fi
           echo "All lockfile tarballs resolve from the public npm registry."
 
+      - name: Guard the migration history
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # An applied migration must never leave the repository: the live
+          # ledger keeps its version, so `supabase db push` refuses to run, and
+          # a database rebuilt from the repository lacks what it created.
+          # Lovable deleted 20260314014847_email_infra.sql on 23 September while
+          # three functions still used its table. See the script.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "Manual run: no base to compare against."
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE"
+          scripts/deleted-migrations.sh "$BASE" HEAD
+
       - name: Guard the data-access layer
         run: |
           # Production code must reach the database through src/services only.

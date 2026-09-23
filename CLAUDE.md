@@ -77,6 +77,15 @@ function when its folder, or a shared file it imports, changes on main, and
 can be run by hand for named functions. It needs the `SUPABASE_ACCESS_TOKEN`
 secret; without it the run warns that nothing was deployed.
 
+An applied migration must never leave the repository. Lovable deleted
+`20260314014847_email_infra.sql` on 23 September while three functions still
+used the table it creates; it was restored byte for byte. The live ledger
+keeps a deleted version, so `supabase db push` refuses to run, and a database
+rebuilt from the repository lacks the objects. The "Guard the migration
+history" step in `quality.yml` fails on any deleted or renamed migration. If it
+fires on a Lovable push, restore the file from the commit before; do not
+delete the ledger row.
+
 `scripts/security-scan.sh` check 5/5 detects the drift. Version matching is on
 real timestamps with a ±10s tolerance, never string or integer comparison:
 `20260307175459` and `20260307175500` are one second apart but 41 apart
