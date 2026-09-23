@@ -287,9 +287,11 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
         totalPaidAmount={summary.totalPaidAmount}
         totalOutstandingAmount={summary.totalOutstandingAmount}
         pendingRequestsCount={summary.pendingRequestsCount}
-        outstandingAdvancesTotal={outstandingAdvancesTotal}
-        outstandingAdvancesCount={outstandingAdvances.length}
-        oldestAdvanceDays={oldestAdvanceDays}
+        // Only a team member raises a payment request, so an advance is the
+        // team's; the vendors' ledger holds none, as it holds no requests.
+        outstandingAdvancesTotal={scope === 'resource' ? outstandingAdvancesTotal : 0}
+        outstandingAdvancesCount={scope === 'resource' ? outstandingAdvances.length : 0}
+        oldestAdvanceDays={scope === 'resource' ? oldestAdvanceDays : 0}
       />
 
       {/* Export bar for advances and settlement events */}
