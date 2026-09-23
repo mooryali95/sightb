@@ -37,7 +37,7 @@ const build = (over: Partial<Parameters<typeof buildCashFlowGraph>[0]> = {}) => 
   expenses: [
     expense({ id: 'ex-cu', amount: 3000, custodyId: 'cu-1' }),
     expense({ id: 'ex-pr', amount: 10000, fundId: 'f1', isOutstandingAdvance: true }),
-    expense({ id: 'ex-direct', category: 'materials', amount: 12000, fundId: 'f1' }),
+    expense({ id: 'ex-direct', category: 'equipment', amount: 12000, fundId: 'f1' }),
     expense({ id: 'ex-rej', category: 'food', amount: 9000, fundId: 'f1', approvalStatus: 'rejected' }),
   ],
   ...over,
@@ -51,7 +51,7 @@ describe('buildCashFlowGraph', () => {
       'دفعة 1 → عهدة: عهدة سامي : 1000',
       'دفعة 1 → سلفة: سارة : 10000',
       'سلفة: سارة → مرتجع إلى دفعة 1 : 2000',
-      'دفعة 1 → مصروف: materials : 12000',
+      'دفعة 1 → مصروف: equipment : 12000',
       'عهدة: عهدة سامي → مصروف: transport : 3000',
     ]);
     expect(hasCycle(g!)).toBe(false);
