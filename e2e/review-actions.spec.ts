@@ -30,8 +30,14 @@ test('acknowledging a transferred fund stamps the receipt and opens its draft se
     }],
   });
   await openSection(page, 'الدفعات');
-  await page.getByRole('button', { name: /إقرار استلام/ }).first().click();
+  // Under load a click can land while the row re-renders and do nothing. Click
+  // again only when no acknowledgement was written, so it is never sent twice.
+  await expect(async () => {
+    if (writes(wire, 'project_funds', 'PATCH').length === 0) await page.getByRole('button', { name: /إقرار استلام/ }).first().click();
+    await expect.poll(() => writes(wire, 'project_funds', 'PATCH').length, { timeout: 2000 }).toBeGreaterThan(0);
+  }).toPass();
   await expect(page.getByText('تم الإقرار بالاستلام')).toBeVisible();
+  expect(writes(wire, 'project_funds', 'PATCH')).toHaveLength(1);
 
   await expect.poll(() => writes(wire, 'fund_settlements', 'POST').length).toBe(1);
   expect(writes(wire, 'project_funds', 'PATCH').at(-1)).toMatchObject({ status: 'acknowledged', acknowledged_by: USER_ID });
