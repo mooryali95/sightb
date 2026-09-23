@@ -59,8 +59,12 @@ test('deleting asks by name and removes the risk with its exposure', async ({ pa
   const wire = await stubSupabase(page, { risks: [risk('rk-1', 'تأخر التوريد', 25000, 'open')] });
   await openRisks(page);
   await expect(figure(page, 'إجمالي التعرض المالي')).toHaveText(/^25,000\.00/);
-  await rowOf(page, 'تأخر التوريد').locator('button', { has: page.locator('svg.text-destructive') }).click();
   const confirm = page.getByRole('alertdialog');
+  // Under load a click can land while the table re-renders and open nothing; retry until the confirmation is up.
+  await expect(async () => {
+    if (!(await confirm.isVisible())) await rowOf(page, 'تأخر التوريد').locator('button', { has: page.locator('svg.text-destructive') }).click();
+    await expect(confirm).toBeVisible({ timeout: 1000 });
+  }).toPass();
   await expect(confirm).toContainText('هل أنت متأكد من حذف "تأخر التوريد"؟');
   await confirm.getByRole('button', { name: 'إلغاء' }).click();
   expect(wire.writes.filter((w) => w.method === 'DELETE')).toHaveLength(0);

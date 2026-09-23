@@ -123,6 +123,14 @@ describe('the planning summary', () => {
     expect(note).toHaveTextContent('3,000.00 ر.س');
     expect(note).toHaveTextContent('1 سلفة');
   });
+
+  it('reads an advance partly refunded at what is still out on it', () => {
+    seedStore({ paymentRequests: [{ ...outstandingAdvance, refundedAmount: 1000 }] });
+    renderSection();
+    const note = screen.getByText(/سلف قائمة \(لم تُسوَّ بعد\)/).closest('div.rounded-lg') as HTMLElement;
+    // 3,000 handed over, 1,000 back: the payables card and the fund breakdown both read 2,000.
+    expect(note).toHaveTextContent('2,000.00 ر.س');
+  });
 });
 
 describe('what counts as actual spend', () => {

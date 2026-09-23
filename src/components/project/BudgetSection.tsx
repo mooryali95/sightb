@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useDialogSession } from '@/hooks/useDialogSession';
 import { formatCurrency, getTotalPlanned } from '@/lib/finance';
+import { getProjectOutstandingAdvances } from '@/lib/funds';
 import {
   EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type Resource,
   type BudgetAmendment, type BudgetItem, type Expense, type Revenue,
@@ -34,11 +35,7 @@ interface BudgetSectionProps {
 
 export function BudgetSection({ projectId, budgetItems, expenses, revenues = [], durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false, taxPercent = 15, startDate }: BudgetSectionProps) {
   const { deleteBudgetItem, updateExpense, paymentRequests } = useStore();
-  const outstandingAdvancesTotal = paymentRequests
-    .filter((r) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding)
-    .reduce((s, r) => s + r.amount, 0);
-  const outstandingAdvancesCount = paymentRequests
-    .filter((r) => r.projectId === projectId && r.requestType === 'advance' && r.status === 'paid' && r.isAdvanceOutstanding).length;
+  const { total: outstandingAdvancesTotal, count: outstandingAdvancesCount } = getProjectOutstandingAdvances(projectId, paymentRequests);
   const [activeDraft, setActiveDraft] = useState<BudgetAmendment | null>(null);
   // الموازنة مفتوحة للتعديل عند: عدم القفل، أو وجود مسودة تعديل نشطة
   const isLocked = readOnly || (baselineLocked && !activeDraft);

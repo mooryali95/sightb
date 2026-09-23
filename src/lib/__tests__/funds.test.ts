@@ -11,6 +11,7 @@ import {
   getSettlementForFund,
   getFundOpenItems,
   auditFundFinancialLinks,
+  getProjectOutstandingAdvances,
 } from '../funds';
 import { generateFundAlerts, canCreateNewFund } from '../fund-alerts';
 import type { ProjectFund, FundSettlement, Expense, PaymentRequest, Custody, CashTransfer } from '@/types/project';
@@ -383,3 +384,20 @@ describe('getFundRemainingBreakdown — SSOT unification', () => {
 
 
 
+
+describe('getProjectOutstandingAdvances', () => {
+  it("counts each paid, unsettled advance of the project at what is still out on it", () => {
+    const prs = [
+      makeRequest({ id: 'a1', requestType: 'advance', status: 'paid', isAdvanceOutstanding: true, amount: 6000, refundedAmount: 1000 }),
+      makeRequest({ id: 'a2', requestType: 'advance', status: 'paid', isAdvanceOutstanding: true, amount: 3000 }),
+      // Settled, not yet paid, not an advance, and another project's: none is out.
+      makeRequest({ id: 'a3', requestType: 'advance', status: 'paid', isAdvanceOutstanding: false, amount: 9000 }),
+      makeRequest({ id: 'a4', requestType: 'advance', status: 'approved', isAdvanceOutstanding: true, amount: 700 }),
+      makeRequest({ id: 's1', requestType: 'salary', status: 'paid', isAdvanceOutstanding: true, amount: 800 }),
+      makeRequest({ id: 'a5', projectId: 'other', requestType: 'advance', status: 'paid', isAdvanceOutstanding: true, amount: 500 }),
+      // More came back than went out: nothing is out, never a negative.
+      makeRequest({ id: 'a6', requestType: 'advance', status: 'paid', isAdvanceOutstanding: true, amount: 100, refundedAmount: 150 }),
+    ];
+    expect(getProjectOutstandingAdvances(PID, prs)).toEqual({ total: 8000, count: 3 });
+  });
+});

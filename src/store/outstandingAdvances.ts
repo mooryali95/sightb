@@ -1,14 +1,16 @@
 import type { Expense } from '@/types/project';
 
 /**
- * Which expenses are advances still outstanding. The database creates an
- * expense when an advance is paid and marks the request outstanding until it
- * is settled; the calculations layer excludes those expenses from spend, but
- * the expense row itself carries no such flag. It is derived here from the
- * requests: an expense is outstanding while the paid advance that created it
- * is, and not once that advance is settled. An expense no request mentions
- * keeps whatever flag it has. Untouched rows keep their identity, so a
- * caller can tell whether anything changed.
+ * Which expenses are advances still outstanding. Before the 22 May migration
+ * the database created an expense when an advance was paid; since then a
+ * paid advance writes none, that migration deleted the ones outstanding, and
+ * the expense flag column was dropped on 29 May. So on live data this flags
+ * nothing, and every figure of what is still out on advances reads the
+ * requests (getProjectOutstandingAdvances). It stays as a guard for a row in
+ * the old shape: an expense is outstanding while the paid advance that
+ * created it is, and not once that advance is settled. An expense no request
+ * mentions keeps whatever flag it has. Untouched rows keep their identity, so
+ * a caller can tell whether anything changed.
  */
 export function flagOutstandingAdvances(
   expenses: Expense[] | undefined,

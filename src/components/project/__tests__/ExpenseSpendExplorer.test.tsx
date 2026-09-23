@@ -17,7 +17,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { BudgetItem, Expense, Resource } from '@/types/project';
+import type { BudgetItem, Expense, PaymentRequest, Resource } from '@/types/project';
+import { useStore } from '@/store/useStore';
 import { encodeSpendView } from '@/lib/spend-url';
 import { ExpenseSpendExplorer } from '../ExpenseSpendExplorer';
 
@@ -45,6 +46,19 @@ const expenses: Expense[] = [
   expense({ id: 'e5', amount: 4000, description: 'سلفة قائمة', date: '2026-03-05', month: 3, isOutstandingAdvance: true }),
 ];
 
+/**
+ * The paid advance behind e5. The tile reads what is still out on the
+ * request; e5 is the expense rows written before 22 May carried for it, so
+ * the tile must not count it a second time.
+ */
+function advance(over: Partial<PaymentRequest> = {}): PaymentRequest {
+  return {
+    id: 'pr-advance', projectId: PROJECT_ID, resourceId: 'r1', requestType: 'advance', amount: 4000, currency: 'SAR',
+    description: 'سلفة', linkedReimbursementIds: [], status: 'paid', isAdvanceOutstanding: true, refundedAmount: 0,
+    autoCreatedExpenseId: 'e5', ...over,
+  } as PaymentRequest;
+}
+
 function renderExplorer(rows = expenses, search = '') {
   return render(
     <MemoryRouter initialEntries={[`/project/${PROJECT_ID}${search}`]}>
@@ -69,7 +83,10 @@ function pick(shown: string, option: RegExp) {
   fireEvent.keyDown(screen.getByRole('option', { name: option }), { key: 'Enter' });
 }
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  useStore.setState({ paymentRequests: [advance()] });
+});
 afterEach(() => vi.restoreAllMocks());
 
 describe('the totals', () => {
@@ -82,6 +99,14 @@ describe('the totals', () => {
     expect(card('عدد المجموعات')).toHaveTextContent('2');
     expect(card('مرفوض (خارج الإجمالي)')).toHaveTextContent('3,000.00 ر.س');
     expect(card('سلف قائمة (خارج الإجمالي)')).toHaveTextContent('4,000.00 ر.س');
+  });
+
+  it('reads an advance that has no expense row, net of what came back', () => {
+    // The shape written since 22 May: the request alone. 6,000 out, 1,000 back.
+    useStore.setState({ paymentRequests: [advance({ amount: 6000, refundedAmount: 1000, autoCreatedExpenseId: undefined })] });
+    renderExplorer(expenses.filter((e) => e.id !== 'e5'));
+    expect(card('إجمالي المطابق')).toHaveTextContent('35,000.00 ر.س');
+    expect(card('سلف قائمة (خارج الإجمالي)')).toHaveTextContent('5,000.00 ر.س');
   });
 
   it('groups by resource, largest first, with each share, and drills into the category level', () => {

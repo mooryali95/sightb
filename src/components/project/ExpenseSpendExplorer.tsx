@@ -10,6 +10,8 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/finance';
 import { buildSpendTree, buildSpendTreeCSV, type SpendNode } from '@/lib/expense-analytics';
+import { getProjectOutstandingAdvances } from '@/lib/funds';
+import { useStore } from '@/store/useStore';
 import type { Resource, Custody, BudgetItem, Expense } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -48,9 +50,15 @@ export function ExpenseSpendExplorer({
   }, []);
 
   const look = useMemo(() => ({ resources, custodies, budgetItems }), [resources, custodies, budgetItems]);
+  // An outstanding advance writes no expense row, so the tile beside the
+  // rejected total reads the project's requests, net of what came back.
+  const paymentRequests = useStore((s) => s.paymentRequests);
   const tree = useMemo(
-    () => buildSpendTree(expenses, levels, filters, look, sort),
-    [expenses, levels, filters, look, sort],
+    () => ({
+      ...buildSpendTree(expenses, levels, filters, look, sort),
+      outstandingAdvanceTotal: getProjectOutstandingAdvances(projectId, paymentRequests).total,
+    }),
+    [expenses, levels, filters, look, sort, projectId, paymentRequests],
   );
 
   const handleShare = useCallback(async () => {
