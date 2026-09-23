@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { htmlToPlainText } from "../_shared/email-text.ts";
-import { getOrCreateUnsubscribeToken } from "../_shared/email-unsubscribe.ts";
+import { sendLovableEmail, EmailAPIError } from "npm:@lovable.dev/email-js@0.1.0";
 
 const ALLOWED_ORIGINS = [
   "https://sightb.lovable.app",
@@ -188,59 +188,52 @@ Deno.serve(async (req) => {
       const roleLabel = safeRole === "admin" ? "مدير النظام" : safeRole === "editor" ? "محرر" : "مشاهد";
       const emailHtml = buildInviteEmailHtml(resetLink, roleLabel);
       const emailText = htmlToPlainText(emailHtml);
-      const messageId = crypto.randomUUID();
-      const unsubscribeToken = await getOrCreateUnsubscribeToken(supabaseAdmin, normalizedEmail);
+      let status: "sent" | "suppressed" | "failed" = "failed";
+      let queueError: { message: string } | null = null;
+      try {
+        await sendLovableEmail(
+          {
+            to: normalizedEmail,
+            from: FROM_ADDRESS,
+            sender_domain: SENDER_DOMAIN,
+            subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
+            html: emailHtml,
+            text: emailText,
+            purpose: "transactional",
+            label: "invite",
+            idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
+          },
+          { apiKey: Deno.env.get("LOVABLE_API_KEY")!, sendUrl: Deno.env.get("LOVABLE_SEND_URL") },
+        );
+        status = "sent";
+      } catch (err) {
+        if (err instanceof EmailAPIError && err.code === "recipient_suppressed") status = "suppressed";
+        queueError = { message: err instanceof Error ? err.message.slice(0, 1000) : String(err) };
+      }
+      const emailQueued = status === "sent";
+      console.log("[send-invite] Email send:", status);
 
-      const emailPayload = {
-        to: normalizedEmail,
-        from: FROM_ADDRESS,
-        sender_domain: SENDER_DOMAIN,
-        subject: "دعوة للانضمام إلى SightB - نظام إدارة المشاريع",
-        html: emailHtml,
-        text: emailText,
-        purpose: "transactional",
-        label: "invite",
-        idempotency_key: `invite-${normalizedEmail}-${Date.now()}`,
-        message_id: messageId,
-        unsubscribe_token: unsubscribeToken,
-        queued_at: new Date().toISOString(),
-        invite_id: inviteRecord?.id ?? null,
-        metadata: {
-          type: "invite",
-          invite_id: inviteRecord?.id ?? null,
-          role: safeRole,
-          scope_type: safeScopeType,
-          scope_id: safeScopeType === "system" ? null : scope_id || null,
-        },
-      };
-
-      const { data: queueResult, error: queueError } = await supabaseAdmin.rpc("enqueue_email", {
-        queue_name: "auth_emails",
-        payload: emailPayload,
-      });
-
-      const emailQueued = !queueError;
-      console.log("[send-invite] Email enqueued:", emailQueued, "error:", queueError?.message, "msgId:", queueResult);
-
-      await supabaseAdmin.from("email_send_log").insert({
-        message_id: messageId,
+      const { error: logError } = await supabaseAdmin.from("email_send_log").insert({
         recipient_email: normalizedEmail,
         template_name: "invite",
-        status: emailQueued ? "pending" : "failed",
+        status,
         error_message: queueError?.message || null,
         metadata: {
-          invite_id: inviteRecord?.id ?? null,
-          role: safeRole,
-          scope_type: safeScopeType,
-          scope_id: safeScopeType === "system" ? null : scope_id || null,
-        },
+        invite_id: inviteRecord?.id ?? null,
+        role: safeRole,
+        scope_type: safeScopeType,
+        scope_id: safeScopeType === "system" ? null : scope_id || null,
+      },
       });
+      if (logError) console.error("[send-invite] log insert failed", logError.message);
 
       if (inviteRecord?.id) {
-        await supabaseAdmin
+        const { error: invErr } = await supabaseAdmin
           .from("user_invites")
-          .update({ status: emailQueued ? "pending" : "failed" })
-          .eq("id", inviteRecord.id);
+          .update({ status: emailQueued ? "sent" : "failed" })
+          .eq("id", inviteRecord.id)
+          .neq("status", "accepted");
+        if (invErr) console.error("[send-invite] invite status sync failed", invErr.message);
       }
 
       return {

@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { htmlToPlainText } from "../_shared/email-text.ts";
-import { getOrCreateUnsubscribeToken } from "../_shared/email-unsubscribe.ts";
+import { sendLovableEmail, EmailAPIError } from "npm:@lovable.dev/email-js@0.1.0";
 
 const ALLOWED_ORIGINS = [
   "https://sightb.lovable.app",
@@ -168,43 +168,40 @@ Deno.serve(async (req) => {
           </div>
         `;
 
-        const messageId = crypto.randomUUID();
         const emailText = htmlToPlainText(emailHtml);
-        const unsubscribeToken = await getOrCreateUnsubscribeToken(supabase, profile.email);
+        let status: "sent" | "suppressed" | "failed" = "failed";
+        let errorMessage: string | null = null;
+        try {
+          await sendLovableEmail(
+            {
+              to: profile.email,
+              from: FROM_ADDRESS,
+              sender_domain: SENDER_DOMAIN,
+              subject: "رمز التحقق لتسجيل الدخول - SightB",
+              html: emailHtml,
+              text: emailText,
+              purpose: "transactional",
+              label: "otp",
+              idempotency_key: `otp-${user.id}-${Date.now()}`,
+            },
+            { apiKey: Deno.env.get("LOVABLE_API_KEY")!, sendUrl: Deno.env.get("LOVABLE_SEND_URL") },
+          );
+          status = "sent";
+        } catch (err) {
+          if (err instanceof EmailAPIError && err.code === "recipient_suppressed") status = "suppressed";
+          errorMessage = err instanceof Error ? err.message.slice(0, 1000) : String(err);
+        }
+        emailSent = status === "sent";
+        console.log("[admin-otp] Email send:", status);
 
-        const emailPayload = {
-          to: profile.email,
-          from: FROM_ADDRESS,
-          sender_domain: SENDER_DOMAIN,
-          subject: "رمز التحقق لتسجيل الدخول - SightB",
-          html: emailHtml,
-          text: emailText,
-          purpose: "transactional",
-          label: "otp",
-          idempotency_key: `otp-${user.id}-${Date.now()}`,
-          message_id: messageId,
-          unsubscribe_token: unsubscribeToken,
-          queued_at: new Date().toISOString(),
-          metadata: { type: "otp", user_id: user.id },
-        };
-
-        const { error: queueError } = await supabase.rpc("enqueue_email", {
-          queue_name: "auth_emails",
-          payload: emailPayload,
-        });
-
-        emailSent = !queueError;
-        console.log("[admin-otp] Email enqueued:", emailSent, "to:", profile.email, "error:", queueError?.message);
-
-        // Log to email_send_log
-        await supabase.from("email_send_log").insert({
-          message_id: messageId,
+        const { error: logError } = await supabase.from("email_send_log").insert({
           recipient_email: profile.email,
           template_name: "otp",
-          status: emailSent ? "pending" : "failed",
-          error_message: queueError?.message || null,
+          status,
+          error_message: errorMessage,
           metadata: { type: "otp" },
         });
+        if (logError) console.error("[admin-otp] log insert failed", logError.message);
       }
 
       return new Response(
