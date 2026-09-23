@@ -1,0 +1,133 @@
+name: Deploy edge functions
+
+# Edge functions merged through GitHub were never deployed, the same way
+# migrations merged through GitHub were never applied (see migrate.yml).
+# Lovable deploys the functions it authors; anything arriving through git it
+# ignores. Proved on 23 September: of the ten folders in supabase/functions,
+# nine answered on the live project and `passkeys`, the one added through git
+# in #92, answered 404 "Requested function was not found".
+#
+# This closes that: a function whose folder changes on main, or that imports
+# a shared file that changes, is deployed here with the Supabase CLI, which
+# reads verify_jwt for each function from supabase/config.toml. The job then
+# checks the function answers. A 404 after a deploy fails the job.
+#
+# Like migrate.yml it is NOT part of Quality (a gate must not write to
+# production) and does not run on ordinary code merges.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+  workflow_dispatch:
+    inputs:
+      functions:
+        description: 'Functions to deploy, space-separated, or "all"'
+        type: string
+        default: 'passkeys'
+
+# Never let two deploys of the same function race.
+concurrency:
+  group: supabase-functions-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # Requires the secret SUPABASE_ACCESS_TOKEN: a personal access token from
+    # supabase.com/dashboard/account/tokens for an account that can deploy to
+    # this project. Configure reviewers under Settings → Environments →
+    # production to put a human before each deploy.
+    #
+    # The guard is on each step via `env`, never a job-level
+    # `if: secrets.X != ''` (see migrate.yml for the 66 runs that cost).
+    environment: production
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The push's base commit must be readable to diff against it.
+          fetch-depth: 0
+
+      - name: Choose what to deploy
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          REQUESTED: ${{ inputs.functions }}
+          BASE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            if [ "$REQUESTED" = "all" ]; then
+              names=$(find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name _shared -printf '%f\n' | sort)
+            else
+              names=$(printf '%s\n' $REQUESTED | sort -u)
+            fi
+          else
+            names=$(scripts/changed-functions.sh "$BASE" "$HEAD_SHA")
+          fi
+          for n in $names; do
+            if [ ! -f "supabase/functions/$n/index.ts" ]; then
+              echo "::error::no function named '$n' in supabase/functions"
+              exit 1
+            fi
+          done
+          names=$(echo $names)
+          echo "names=$names" >> "$GITHUB_OUTPUT"
+          echo "project_ref=$(sed -n 's/^project_id = "\(.*\)"$/\1/p' supabase/config.toml)" >> "$GITHUB_OUTPUT"
+          echo "To deploy: ${names:-nothing}"
+
+      # Not deploying is reported, never silent: a green run without this
+      # token has deployed nothing, and the summary says so.
+      - name: Report that nothing was deployed when the token is not configured
+        if: ${{ env.SUPABASE_ACCESS_TOKEN == '' && steps.pick.outputs.names != '' }}
+        env:
+          NAMES: ${{ steps.pick.outputs.names }}
+        run: |
+          msg="SUPABASE_ACCESS_TOKEN is not set: NOT deployed: $NAMES"
+          echo "::warning::$msg"
+          echo "### $msg" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: supabase/setup-cli@v1
+        if: ${{ env.SUPABASE_ACCESS_TOKEN != '' && steps.pick.outputs.names != '' }}
+        with:
+          version: latest
+
+      - name: Deploy
+        if: ${{ env.SUPABASE_ACCESS_TOKEN != '' && steps.pick.outputs.names != '' }}
+        env:
+          NAMES: ${{ steps.pick.outputs.names }}
+          REF: ${{ steps.pick.outputs.project_ref }}
+        run: |
+          for n in $NAMES; do
+            echo "::group::deploy $n"
+            supabase functions deploy "$n" --project-ref "$REF"
+            echo "::endgroup::"
+          done
+
+      - name: Verify each function answers
+        if: ${{ env.SUPABASE_ACCESS_TOKEN != '' && steps.pick.outputs.names != '' }}
+        env:
+          NAMES: ${{ steps.pick.outputs.names }}
+          REF: ${{ steps.pick.outputs.project_ref }}
+        run: |
+          # A CORS preflight needs no key and changes nothing. 404 is what the
+          # platform answers for a function it does not have.
+          failed=0
+          for n in $NAMES; do
+            code=$(curl -sS -m 30 -o /dev/null -w '%{http_code}' -X OPTIONS \
+              "https://$REF.supabase.co/functions/v1/$n" \
+              -H 'Origin: https://sight.basserh.com' -H 'Access-Control-Request-Method: POST')
+            echo "$n: HTTP $code"
+            echo "- \`$n\`: HTTP $code" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$code" = "404" ] || [ "$code" = "000" ]; then
+              echo "::error::$n does not answer after its deploy (HTTP $code)"
+              failed=1
+            fi
+          done
+          exit $failed

@@ -70,6 +70,13 @@ through git.
 `SUPABASE_PROD_DB_URL` secret. **Without that secret it skips silently** — it
 does not fail, so a green run does not mean a migration was applied.
 
+Edge functions have the same gap. Of the ten in `supabase/functions`, nine
+answered on the live project on 23 September; `passkeys`, the one added
+through git, answered 404. `.github/workflows/deploy-functions.yml` deploys a
+function when its folder, or a shared file it imports, changes on main, and
+can be run by hand for named functions. It needs the `SUPABASE_ACCESS_TOKEN`
+secret; without it the run warns that nothing was deployed.
+
 `scripts/security-scan.sh` check 5/5 detects the drift. Version matching is on
 real timestamps with a ±10s tolerance, never string or integer comparison:
 `20260307175459` and `20260307175500` are one second apart but 41 apart
