@@ -28,11 +28,22 @@ test('twenty-eight idle minutes warn, continuing clears the warning, thirty sign
   await page.clock.fastForward(MINUTE);
   await expect(warning.getByRole('heading', { name: 'تحذير: انتهاء الجلسة' })).toBeVisible();
   await expect(warning).toContainText('سيتم تسجيل خروجك تلقائياً بسبب عدم النشاط خلال');
-  await expect(warning).toContainText(/1 دقيقة و (29|30) ثانية/);
+  // The installed clock also runs in real time, so a loaded machine can let a
+  // few seconds pass before this reads it: ninety seconds, give or take ten.
+  await expect(warning).toContainText(/1 دقيقة و (2\d|30) ثانية/);
   expect(signOuts).toHaveLength(0);
 
   await warning.getByRole('button', { name: 'متابعة العمل' }).click();
   await expect(warning).toHaveCount(0);
+  // Closing the warning re-arms the idle timers in an effect. Under load the
+  // clock could jump before that effect ran, and the warning would come late.
+  // React schedules effects through a MessageChannel, which the faked clock
+  // leaves real and delivers in order: a round trip through one lets them run.
+  await page.evaluate(() => new Promise((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => resolve(null);
+    channel.port2.postMessage(null);
+  }));
   await page.clock.fastForward(27 * MINUTE);
   await expect(warning).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'إدارة الشركات' })).toBeVisible();

@@ -129,8 +129,11 @@ jobs:
           #   variant helpers trip by design. The three warnings left are the
           #   same hot-reload rule on two Lovable-authored app files
           #   (auth/Can.tsx, hooks/useAuth.tsx); they stay counted.
+          #   0 / 3 → 0 / 2 (23 Sep): the in-range dependency update brought a
+          #   newer eslint-plugin-react-refresh, which no longer reports one of
+          #   the two in Can.tsx. One is left in each file.
           ERROR_BUDGET=0
-          WARN_BUDGET=3
+          WARN_BUDGET=2
           # Call eslint directly rather than through `bun run lint` — passing
           # `-f json` through a package script differs between bun and npm.
           bunx eslint . -f json > eslint-report.json || true

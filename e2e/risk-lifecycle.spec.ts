@@ -31,7 +31,8 @@ async function setStatus(page: Page, title: string, from: string, to: string) {
   await dialog.getByRole('combobox').filter({ hasText: from }).click();
   await page.getByRole('option', { name: to, exact: true }).click();
   await dialog.getByRole('button', { name: 'تحديث' }).click();
-  await expect(page.getByText('تم تحديث الخطر')).toBeVisible();
+  // The previous update's toast may still be showing: the newest one is last.
+  await expect(page.getByText('تم تحديث الخطر').last()).toBeVisible();
 }
 
 test('mitigating keeps the exposure, closing drops it, and the row stays on the register', async ({ page }) => {
