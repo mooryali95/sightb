@@ -21,6 +21,12 @@ describe('errorMessage', () => {
     expect(errorMessage({ code: 42 })).toBe('فشلت العملية');
   });
 
+  it('reads the message off a plain database error object', () => {
+    const dbErr = { message: 'المصروف يتجاوز الرصيد المتبقي للدفعة', code: 'P0001', details: null };
+    expect(errorMessage(dbErr, 'تعذّر حفظ المصروف')).toBe('المصروف يتجاوز الرصيد المتبقي للدفعة');
+    expect(errorMessage({ message: '' }, 'x')).toBe('x');
+  });
+
   it('uses the caller\'s fallback when given one', () => {
     expect(errorMessage(null, 'تعذّر التراجع')).toBe('تعذّر التراجع');
   });
