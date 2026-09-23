@@ -69,6 +69,20 @@ const tile = (plan: ReturnType<Page['locator']>, label: string) => plan.locator(
 // Exact to the month: "شهر 1" is a prefix of months 10 to 12; the current month's name ends in a dot.
 const monthCard = (plan: ReturnType<Page['locator']>, month: number) => plan.getByText(new RegExp(`^شهر ${month}●?$`)).locator('xpath=ancestor::div[2]');
 
+/**
+ * Hovers a month card until its tooltip opens. The card can still be moving
+ * while the section animates open, so a single hover may land beside it.
+ */
+async function hoverMonth(page: Page, plan: ReturnType<Page['locator']>, month: number) {
+  const tip = page.getByRole('tooltip').filter({ hasText: `شهر ${month} —` });
+  await expect(async () => {
+    await page.mouse.move(0, 0);
+    await monthCard(plan, month).hover();
+    await expect(tip).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  return tip;
+}
+
 test('buckets the plan and the spend by month, grades each month, and sums the strip', async ({ page }) => {
   const plan = await openPlan(page);
   await expect(tile(plan, 'إجمالي مخطط')).toContainText('69,000.00 ر.س');
@@ -95,8 +109,7 @@ test('buckets the plan and the spend by month, grades each month, and sums the s
   await expect(monthCard(plan, 7)).toContainText('4,000.00 ر.س');
   await expect(monthCard(plan, 12)).toContainText('4,000.00 ر.س');
 
-  await monthCard(plan, 2).hover();
-  const tip = page.getByRole('tooltip');
+  const tip = await hoverMonth(page, plan, 2);
   await expect(tip).toContainText('شهر 2 — تجاوز');
   await expect(tip).toContainText('البنود المخصصة (1):');
   await expect(tip).toContainText('أخرى: دفعة واحدة');
@@ -107,9 +120,9 @@ test('buckets the plan and the spend by month, grades each month, and sums the s
 test('the table reads the same rows with their status, the collected revenue and the totals', async ({ page }) => {
   const plan = await openPlan(page);
   // A month with nothing planned and nothing spent says so on hover.
-  await monthCard(plan, 3).hover();
-  await expect(page.getByRole('tooltip')).toContainText('شهر 3 — بدون نشاط');
-  await expect(page.getByRole('tooltip')).toContainText('لا توجد بنود مخصصة لهذا الشهر');
+  const tip3 = await hoverMonth(page, plan, 3);
+  await expect(tip3).toContainText('شهر 3 — بدون نشاط');
+  await expect(tip3).toContainText('لا توجد بنود مخصصة لهذا الشهر');
   await page.mouse.move(0, 0);
 
   await plan.getByRole('button', { name: 'جدول' }).click();
