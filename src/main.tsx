@@ -1,3 +1,5 @@
+// First, so the frame guard decides before any other module runs: see lib/frame-guard-boot.
+import { renderAllowed } from "@/lib/frame-guard-boot";
 import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
 import { toast } from "sonner";
@@ -64,7 +66,8 @@ subscribeToQueueFailures(({ item, message }) => {
 
 installOfflineQueue();
 
-if (assertSupabaseEnv()) {
+// Framed by another site, the app shows a notice instead: see lib/frame-guard.
+if (renderAllowed && assertSupabaseEnv()) {
   createRoot(document.getElementById("root")!).render(
     <HelmetProvider>
       <App />
