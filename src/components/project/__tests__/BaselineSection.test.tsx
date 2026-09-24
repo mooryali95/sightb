@@ -91,22 +91,26 @@ beforeEach(() => {
 });
 
 describe('the management reserve', () => {
-  it('charges the reserve only with contingency spend the summary counts', async () => {
+  it('stays whole: contingency spend is charged to the contingency lines, not to it', async () => {
     await renderSection();
-    // 1,000 approved; the rejected 3,000 and the outstanding 500 are not spend.
-    expect(reserveFigure('المصروف (طوارئ)')).toBe('1,000.00 ر.س');
-    expect(reserveFigure('المتبقي')).toBe('4,000.00 ر.س');
+    // 1,000 of approved contingency spend in the fixture; the 5,000 reserve is untouched
+    // (decided 24 September; the budget's reserves card carries the contingency).
+    expect(reserveFigure('الاحتياطي المخصص')).toBe('5,000.00 ر.س');
+    expect(screen.getByText('محجوز خارج خط الأساس')).toBeInTheDocument();
+    expect(screen.queryByText('المصروف (طوارئ)')).not.toBeInTheDocument();
+    expect(screen.queryByText('4,000.00 ر.س')).not.toBeInTheDocument();
   });
 });
 
 describe('earned value against the active baseline', () => {
-  it('shows the actual cost the finance library counts, and the baseline without its reserve', async () => {
+  it('shows the actual cost the finance library counts, and the whole baseline as BAC', async () => {
     await renderSection();
-    // AC: 9,000 + 1,000 approved contingency; BAC: 65,000 less the 5,000 reserve.
+    // AC: 9,000 + 1,000 approved contingency; BAC: the 65,000 baseline, the 5,000
+    // reserve sitting outside it (decided 24 September).
     const ac = screen.getByText('التكلفة الفعلية (AC)').closest('div.stat-card') as HTMLElement;
     expect(within(ac).getByText('10,000.00 ر.س')).toBeInTheDocument();
     const bac = screen.getByText('الميزانية الكلية (BAC)').closest('div.stat-card') as HTMLElement;
-    expect(within(bac).getByText('60,000.00 ر.س')).toBeInTheDocument();
+    expect(within(bac).getByText('65,000.00 ر.س')).toBeInTheDocument();
   });
 
   it('shows no figures without an active baseline', async () => {

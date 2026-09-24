@@ -46,7 +46,7 @@ function summary(over: Partial<ProjectSummary> = {}): ProjectSummary {
     plannedProfit: 60000, plannedProfitMargin: 50, collectedRevenue: 40000, invoicedRevenue: 20000,
     totalPlannedRevenue: 60000, realizedProfit: 10000, realizedProfitMargin: 25, accountsReceivable: 20000,
     spendRate: 50, contractSpendRate: 25, burnRate: 10000, percentComplete: 40, managementReserve: 5000,
-    bacWithoutReserve: 55000, vatRate: 15, contractValueInclVAT: 138000, totalActualInclVAT: 34500,
+    bac: 55000, vatRate: 15, contractValueInclVAT: 138000, totalActualInclVAT: 34500,
     totalVATOnExpenses: 4500, totalVATOnRevenues: 6000, netVATPayable: 1500, ...over,
   };
 }
