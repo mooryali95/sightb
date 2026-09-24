@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,7 @@ interface ForgotPasswordFormProps {
 /** The reset-link step: the email alone. */
 export function ForgotPasswordForm({ email, onEmailChange, loading, onSubmit, onBack }: ForgotPasswordFormProps) {
   return (
-    <motion.form
+    <m.form
       key="forgot"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -33,6 +33,6 @@ export function ForgotPasswordForm({ email, onEmailChange, loading, onSubmit, on
       <Button type="button" variant="ghost" className="w-full text-sm" onClick={onBack}>
         العودة لتسجيل الدخول
       </Button>
-    </motion.form>
+    </m.form>
   );
 }

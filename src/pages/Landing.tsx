@@ -1,5 +1,5 @@
 import { useNavigate, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { BarChart3, Shield, TrendingUp, FolderKanban, ArrowLeft, ExternalLink } from 'lucide-react';
 import basserhLogo from '@/assets/basserh-logo.webp';
@@ -51,7 +51,7 @@ export default function Landing() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--navy))] to-[hsl(var(--navy-light))]" />
         <div className="relative max-w-5xl mx-auto px-6 py-20 text-center">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -93,23 +93,23 @@ export default function Landing() {
                 زيارة موقع بصيرة
               </a>
             </div>
-          </motion.div>
+          </m.div>
         </div>
       </header>
 
       {/* Features */}
       <section className="max-w-5xl mx-auto px-6 py-16">
-        <motion.h2
+        <m.h2
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           className="text-2xl font-bold text-center mb-10"
         >
           المزايا الرئيسية
-        </motion.h2>
+        </m.h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {features.map((feature, i) => (
-            <motion.div
+            <m.div
               key={i}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -124,7 +124,7 @@ export default function Landing() {
                 <h3 className="text-sm font-semibold mb-1">{feature.title}</h3>
                 <p className="text-xs text-muted-foreground">{feature.description}</p>
               </div>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </section>

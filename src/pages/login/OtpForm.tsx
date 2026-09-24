@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { ShieldCheck, RefreshCw, Fingerprint } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
@@ -19,7 +19,7 @@ interface OtpFormProps {
 /** The one-time code step: six digits, a resend with its cooldown, a passkey instead when one is offered, and a way back. */
 export function OtpForm({ code, onCodeChange, loading, resendCooldown, onSubmit, onResend, onCancel, onPasskey, passkeyLoading = false }: OtpFormProps) {
   return (
-    <motion.form
+    <m.form
       key="otp"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -73,6 +73,6 @@ export function OtpForm({ code, onCodeChange, loading, resendCooldown, onSubmit,
           إلغاء
         </button>
       </div>
-    </motion.form>
+    </m.form>
   );
 }

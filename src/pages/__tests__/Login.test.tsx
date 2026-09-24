@@ -74,12 +74,13 @@ describe('Login', () => {
     await new Promise((resolve) => setTimeout(resolve, 60));
   });
 
-  it('refuses a bad email or a short password before reaching the server', () => {
+  it('refuses a bad email or a short password before reaching the server', async () => {
     renderLogin();
+    // The schema loads on submit, so the refusal lands a tick later.
     submitLogin('not-an-email', 'secret1');
-    expect(toast.error).toHaveBeenCalledWith('البريد الإلكتروني غير صالح');
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('البريد الإلكتروني غير صالح'));
     submitLogin('pm@example.com', '123');
-    expect(toast.error).toHaveBeenCalledWith('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('كلمة المرور يجب أن تكون 6 أحرف على الأقل'));
     expect(m.signInWithPassword).not.toHaveBeenCalled();
   });
 
