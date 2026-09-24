@@ -60,10 +60,11 @@ describe('a portfolio summary', () => {
     expect(summarize().weightedPercentComplete).toBeCloseTo(68.75);
   });
 
-  it('approximates CPI from earned value over spend, with the reserve out of BAC and unspent projects left out', () => {
+  it('approximates CPI from earned value over spend, BAC being the plan, and leaves unspent projects out', () => {
     // A: EV = 0.5 × 80,000 = 40,000 over 40,000 spent → 1.0, weight 100,000
-    // B: EV = 1.0 × (50,000 − 5,000) = 45,000 over 60,000 → 0.75, weight 60,000
-    expect(summarize().averageCPI).toBeCloseTo((1.0 * 100000 + 0.75 * 60000) / 160000);
+    // B: EV = 1.0 × 50,000 over 60,000 → 0.833, weight 60,000. Its 5,000 reserve
+    // sits outside the plan and is not taken away again (decided 24 September).
+    expect(summarize().averageCPI).toBeCloseTo((1.0 * 100000 + (50000 / 60000) * 60000) / 160000);
     const unspent = summarize([], [A, project({ id: 'N', contractValue: 50000, percentComplete: 100 })]);
     expect(unspent.averageCPI).toBe(1); // only A counts; N has a plan but no spend
   });

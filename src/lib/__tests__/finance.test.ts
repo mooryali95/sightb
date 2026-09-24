@@ -44,21 +44,23 @@ describe('calculateEVM', () => {
   ];
 
   it('should compute EV independently from AC', () => {
-    const result = calculateEVM(baselineItems, spend(30000), 4, 1, 50, 0);
+    const result = calculateEVM(baselineItems, spend(30000), 4, 1, 50);
     expect(result.ev).toBe(12500);
     expect(result.ac).toBe(30000);
     expect(result.cpi).toBeCloseTo(0.417, 2);
   });
 
-  it('should subtract managementReserve from BAC', () => {
-    const withReserve = calculateEVM(baselineItems, spend(10000), 4, 1, 40, 5000);
-    const withoutReserve = calculateEVM(baselineItems, spend(10000), 4, 1, 40, 0);
-    expect(withReserve.bac).toBe(20000);
-    expect(withoutReserve.bac).toBe(25000);
+  it('takes BAC as the baseline total, the management reserve sitting outside it', () => {
+    // Decided 24 September: the reserve is its own project field, not a
+    // baseline line, so nothing is taken away from the baseline for it.
+    const result = calculateEVM(baselineItems, spend(10000), 4, 1, 40);
+    expect(result.bac).toBe(25000);
+    expect(result.ev).toBe(10000);
+    expect(result.cpi).toBe(1);
   });
 
   it('should return CPI=1 when AC=0 and EV=0', () => {
-    const result = calculateEVM(baselineItems, [], 4, 1, 0, 0);
+    const result = calculateEVM(baselineItems, [], 4, 1, 0);
     expect(result.cpi).toBe(1); // no spend, no work → no deviation
     // SPI: EV=0, PV>0 → SPI=0 (behind schedule)
     expect(result.spi).toBe(0);

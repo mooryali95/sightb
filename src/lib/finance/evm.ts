@@ -4,6 +4,12 @@ import { getBaselineMonthlyPV, getMonthlyBreakdown } from './budget';
 /**
  * Calculate EVM metrics given baseline, expenses, and current month.
  * Uses independent percentComplete (from milestones) instead of AC/BAC ratio.
+ *
+ * BAC is the baseline total. The management reserve sits outside the
+ * baseline (PMI): it is its own project field, not a budget line, so taking
+ * it away from the baseline as well understated BAC by the whole reserve and
+ * with it EV, CPI, EAC and TCPI. It enters BAC only when an approved change
+ * order moves part of it into the plan. Decided by the owner on 24 September.
  */
 export function calculateEVM(
   baselineItems: BaselineItem[],
@@ -11,14 +17,11 @@ export function calculateEVM(
   durationMonths: number,
   currentMonth: number,
   percentComplete: number = 0,
-  managementReserve: number = 0,
 ): EVMMetrics {
   const monthlyPV = getBaselineMonthlyPV(baselineItems, durationMonths);
   const monthlyAC = getMonthlyBreakdown(expenses, durationMonths);
 
-  // BAC = baseline total MINUS management reserve (per PMI standard)
-  const rawBac = monthlyPV.reduce((s, v) => s + v, 0);
-  const bac = Math.max(0, rawBac - managementReserve);
+  const bac = monthlyPV.reduce((s, v) => s + v, 0);
 
   const pv = monthlyPV.slice(0, currentMonth).reduce((s, v) => s + v, 0);
   const ac = monthlyAC.slice(0, currentMonth).reduce((s, v) => s + v, 0);

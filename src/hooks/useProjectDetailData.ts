@@ -93,7 +93,7 @@ export function useProjectDetailData(id: string | undefined) {
     ? calculateEVM(
         activeBaseline.items, pExpenses, project.durationMonths,
         Math.min(project.durationMonths, currentMonth),
-        project.percentComplete, project.managementReserve || 0,
+        project.percentComplete,
       )
     : null;
 

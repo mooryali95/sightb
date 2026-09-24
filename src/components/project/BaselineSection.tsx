@@ -69,17 +69,10 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
   const currentMonth = getCurrentMonth(project.startDate, durationMonths);
 
   const evm = activeBaseline
-    ? calculateEVM(activeBaseline.items, expenses, durationMonths, Math.min(durationMonths, currentMonth), project.percentComplete, project.managementReserve || 0)
+    ? calculateEVM(activeBaseline.items, expenses, durationMonths, Math.min(durationMonths, currentMonth), project.percentComplete)
     : null;
 
   const sCurveData = activeBaseline ? buildSCurveData(activeBaseline, expenses, durationMonths) : [];
-
-  // Management reserve tracking: charged with the contingency spend the
-  // summary counts, so not a rejected expense and not an outstanding advance.
-  const contingencySpent = expenses
-    .filter(e => e.category === 'contingency' && e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance)
-    .reduce((s, e) => s + e.amount, 0);
-  const managementReserveRemaining = (project.managementReserve || 0) - contingencySpent;
 
   const getMonthDisplay = (item: BaselineItem) => {
     if (item.startMonth && item.endMonth && item.startMonth !== item.endMonth) {
@@ -167,20 +160,18 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
             <Shield className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-semibold">الاحتياطي الإداري (Management Reserve)</h3>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          {/* Outside the baseline and untouched by spend: contingency spend is
+              charged to the contingency lines on the budget's reserves card;
+              this reserve enters the plan only through an approved change order. */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground">الاحتياطي المخصص</p>
               <p className="text-sm font-mono font-bold mt-1">{formatCurrency(project.managementReserve)}</p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">المصروف (طوارئ)</p>
-              <p className="text-sm font-mono font-bold mt-1">{formatCurrency(contingencySpent)}</p>
-            </div>
-            <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
-              <p className="text-xs text-muted-foreground">المتبقي</p>
-              <p className={`text-sm font-mono font-bold mt-1 ${managementReserveRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                {formatCurrency(managementReserveRemaining)}
-              </p>
+              <p className="text-xs text-muted-foreground">الحالة</p>
+              <p className="text-sm font-semibold mt-1">محجوز خارج خط الأساس</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">يُستخدم بأمر تغيير معتمد</p>
             </div>
           </div>
         </div>

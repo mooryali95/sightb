@@ -20,7 +20,7 @@ export function EvmBlock({ evm, currency }: { evm: EVMMetrics | null; currency: 
             <Row
               label="BAC — الميزانية الإجمالية"
               value={evm.bac}
-              formula="Σ baseline_items.planned − managementReserve"
+              formula="Σ baseline_items.planned"
               sources={[{ kind: 'fn', label: 'calculateEVM()' }]}
               currency={currency}
             />

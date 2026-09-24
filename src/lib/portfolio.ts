@@ -57,11 +57,10 @@ export function getPortfolioSummary(
     weightedCompleteNum += project.percentComplete * w;
     totalWeight += w;
 
-    // F3 fix: use proper PMI Earned Value formula. EV = %complete × BAC,
-    // where BAC excludes the Management Reserve (PMBOK 7).
-    // Previously divided %complete×totalPlanned by AC without removing the reserve.
-    if (summary.totalActual > 0 && summary.bacWithoutReserve > 0) {
-      const ev = (project.percentComplete / 100) * summary.bacWithoutReserve;
+    // EV = %complete × BAC, BAC being the plan: the management reserve sits
+    // outside it and is not taken away again (see calculateEVM).
+    if (summary.totalActual > 0 && summary.bac > 0) {
+      const ev = (project.percentComplete / 100) * summary.bac;
       const approxCPI = ev / summary.totalActual;
       weightedCPINum += approxCPI * w;
       cpiWeight += w;

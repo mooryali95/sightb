@@ -422,7 +422,8 @@ export interface ProjectSummary {
   burnRate: number;
   percentComplete: number;
   managementReserve: number;
-  bacWithoutReserve: number;
+  /** Budget at completion: the plan, without the management reserve, which sits outside it. */
+  bac: number;
   vatRate: number;
   contractValueInclVAT: number;
   totalActualInclVAT: number;

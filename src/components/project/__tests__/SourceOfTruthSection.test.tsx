@@ -46,7 +46,7 @@ const summary: ProjectSummary = {
   plannedProfit: 60000, plannedProfitMargin: 50, collectedRevenue: 40000, invoicedRevenue: 20000,
   totalPlannedRevenue: 10000, realizedProfit: 28000, realizedProfitMargin: 70, accountsReceivable: 20000,
   spendRate: 20, contractSpendRate: 10, burnRate: 4000, percentComplete: 40, managementReserve: 5000,
-  bacWithoutReserve: 55000, vatRate: 15, contractValueInclVAT: 138000, totalActualInclVAT: 13800,
+  bac: 55000, vatRate: 15, contractValueInclVAT: 138000, totalActualInclVAT: 13800,
   totalVATOnExpenses: 1800, totalVATOnRevenues: 6000, netVATPayable: 4200,
 };
 

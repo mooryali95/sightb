@@ -40,9 +40,10 @@ export function getProjectSummary(
   const projectStarted = project.startDate ? new Date(project.startDate) <= new Date() : true;
   const burnRate = projectStarted && currentMonth > 0 ? totalActual / currentMonth : 0;
 
-  // Management reserve
+  // The management reserve sits outside the plan, so BAC is the plan itself;
+  // see calculateEVM.
   const managementReserve = project.managementReserve || 0;
-  const bacWithoutReserve = totalPlanned - managementReserve;
+  const bac = totalPlanned;
 
   // === VAT ===
   const vatRate = project.taxPercent || 0;
@@ -83,7 +84,7 @@ export function getProjectSummary(
     burnRate,
     percentComplete: project.percentComplete,
     managementReserve,
-    bacWithoutReserve,
+    bac,
     vatRate,
     contractValueInclVAT,
     totalActualInclVAT,
