@@ -6,7 +6,7 @@
  * branches and hides the rest; the collapsed rail; and signing out.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Company, Portfolio, Project } from '@/types/project';
@@ -20,6 +20,8 @@ vi.mock('@/hooks/useRole', () => ({
 const signOut = vi.fn(async () => {});
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'me', email: 'pm@example.com' }, signOut }) }));
 vi.mock('@/assets/basserh-logo.jpg', () => ({ default: 'logo.jpg' }));
+const reloadAt = vi.fn();
+vi.mock('@/lib/reload-at', () => ({ reloadAt: (path: string) => reloadAt(path) }));
 
 const fixture = <T,>(rows: Partial<T>[]): T[] => rows as T[];
 const companies = fixture<Company>([
@@ -164,6 +166,7 @@ describe('AppSidebar', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: 'تسجيل الخروج' }));
     expect(signOut).toHaveBeenCalledTimes(1);
-    await screen.findByText('/login');
+    // Signing out loads the login page afresh rather than routing to it in-app.
+    await waitFor(() => expect(reloadAt).toHaveBeenCalledWith('/login'));
   });
 });
