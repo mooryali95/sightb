@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { m } from 'framer-motion';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff, Fingerprint, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,10 +13,13 @@ interface LoginFormProps {
   loading: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onForgot: () => void;
+  /** Signing in with a passkey alone; absent where the browser cannot. */
+  onPasskey?: () => void;
+  passkeyLoading?: boolean;
 }
 
-/** The password step, with the password shown on request. */
-export function LoginForm({ email, onEmailChange, password, onPasswordChange, loading, onSubmit, onForgot }: LoginFormProps) {
+/** The password step, with the password shown on request, and the passkey door beside it. */
+export function LoginForm({ email, onEmailChange, password, onPasswordChange, loading, onSubmit, onForgot, onPasskey, passkeyLoading = false }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   return (
     <m.form
@@ -63,9 +66,21 @@ export function LoginForm({ email, onEmailChange, password, onPasswordChange, lo
         نسيت كلمة المرور؟
       </button>
 
-      <Button type="submit" className="w-full h-11 gap-2" disabled={loading}>
+      <Button type="submit" className="w-full h-11 gap-2" disabled={loading || passkeyLoading}>
         {loading ? 'جاري التحميل...' : <><LogIn className="w-4 h-4" /> تسجيل الدخول</>}
       </Button>
+
+      {onPasskey && (
+        <>
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />أو<span className="h-px flex-1 bg-border" />
+          </div>
+          <Button type="button" variant="outline" className="w-full h-11 gap-2" onClick={onPasskey} disabled={loading || passkeyLoading}>
+            <Fingerprint className="w-4 h-4" />
+            {passkeyLoading ? 'بانتظار مفتاح المرور...' : 'الدخول بمفتاح المرور'}
+          </Button>
+        </>
+      )}
     </m.form>
   );
 }

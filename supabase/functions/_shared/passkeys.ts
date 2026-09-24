@@ -82,6 +82,13 @@ export interface PasskeyRow {
   name: string;
   created_at: string;
   last_used_at: string | null;
+  /**
+   * Whether the key may sign in on its own. Absent until the migration adding
+   * it is applied, and false for every key registered before the gate that
+   * requires a completed second factor to add one.
+   */
+  can_sign_in?: boolean | null;
+  discoverable?: boolean | null;
 }
 
 /** What the browser is told about a passkey: never the key material. */
@@ -93,6 +100,13 @@ export interface PasskeySummary {
   deviceType: string | null;
   backedUp: boolean;
   transports: string[];
+  /**
+   * Whether it signs in on its own, or only stands in for the emailed code;
+   * null while the column that says so is not there yet.
+   */
+  canSignIn: boolean | null;
+  /** Whether the authenticator kept a discoverable credential; null when it did not say. */
+  discoverable: boolean | null;
 }
 
 export function summarizePasskey(row: PasskeyRow): PasskeySummary {
@@ -104,6 +118,8 @@ export function summarizePasskey(row: PasskeyRow): PasskeySummary {
     deviceType: row.device_type,
     backedUp: row.backed_up,
     transports: row.transports ?? [],
+    canSignIn: row.can_sign_in === undefined ? null : row.can_sign_in === true,
+    discoverable: typeof row.discoverable === "boolean" ? row.discoverable : null,
   };
 }
 

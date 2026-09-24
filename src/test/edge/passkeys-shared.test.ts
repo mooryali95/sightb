@@ -54,9 +54,21 @@ describe('summaries and names', () => {
       id: 'pk-1', user_id: 'u1', credential_id: 'cred', public_key: 'SECRET', counter: 3, transports: null,
       device_type: 'multiDevice', backed_up: true, name: 'هاتفي', created_at: '2026-09-01T00:00:00Z', last_used_at: null,
     });
-    expect(summary).toEqual({ id: 'pk-1', name: 'هاتفي', createdAt: '2026-09-01T00:00:00Z', lastUsedAt: null, deviceType: 'multiDevice', backedUp: true, transports: [] });
+    expect(summary).toEqual({ id: 'pk-1', name: 'هاتفي', createdAt: '2026-09-01T00:00:00Z', lastUsedAt: null, deviceType: 'multiDevice', backedUp: true, transports: [], canSignIn: null, discoverable: null });
     expect(JSON.stringify(summary)).not.toContain('SECRET');
     expect(JSON.stringify(summary)).not.toContain('cred');
+  });
+
+  it('says a key signs in alone only when the row says so, and cannot say while the column is missing', () => {
+    const row = {
+      id: 'pk-1', user_id: 'u1', credential_id: 'cred', public_key: 'k', counter: 0, transports: [],
+      device_type: null, backed_up: false, name: 'n', created_at: '2026-09-01T00:00:00Z', last_used_at: null,
+    };
+    expect(summarizePasskey({ ...row, can_sign_in: true }).canSignIn).toBe(true);
+    expect(summarizePasskey({ ...row, can_sign_in: false }).canSignIn).toBe(false);
+    expect(summarizePasskey({ ...row, can_sign_in: null }).canSignIn).toBe(false);
+    expect(summarizePasskey(row).canSignIn).toBeNull();
+    expect(summarizePasskey({ ...row, discoverable: false }).discoverable).toBe(false);
   });
   it('trims the typed name, falls back when blank, and caps its length', () => {
     expect(passkeyName('  هاتفي  ')).toBe('هاتفي');

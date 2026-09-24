@@ -12,6 +12,9 @@
 #   * every table a migration creates must be known to the API. A table it
 #     does not know answers PGRST205; row-level security never hides a table's
 #     existence, it only empties the answer.
+#   * every column a migration adds to a table (and no later one drops) must
+#     be known too. A column it does not know answers 42703; a table that is
+#     missing altogether is already reported above, so it is not repeated.
 #   * every function folder must be deployed. The platform answers 404 to a
 #     CORS preflight for a function it does not have, 200 for one it has.
 #
@@ -36,6 +39,17 @@ fi
 tables=$(cat supabase/migrations/*.sql \
   | grep -ioE 'create table (if not exists )?public\.[a-z_]+' \
   | awk -F. '{print $NF}' | sort -u)
+# ALTER TABLE public.t ... ADD COLUMN c, as table.column, less any column a
+# later ALTER TABLE drops. One statement may add several.
+columns=$(cat supabase/migrations/*.sql | perl -0777 -ne '
+  my (%drop, @add);
+  while (/alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?public\.(\w+)([^;]*);/gis) {
+    my ($t, $b) = (lc $1, $2);
+    $drop{"$t." . lc $1} = 1 while $b =~ /drop\s+column\s+(?:if\s+exists\s+)?(\w+)/gi;
+    push @add, "$t." . lc $1 while $b =~ /add\s+column\s+(?:if\s+not\s+exists\s+)?(\w+)/gi;
+  }
+  print "$_\n" for grep { !$drop{$_} } @add;
+' | sort -u)
 functions=$(find supabase/functions -mindepth 2 -maxdepth 2 -name index.ts \
   | awk -F/ '$3 != "_shared" {print $3}' | sort -u)
 
@@ -52,6 +66,21 @@ for t in $tables; do
     missing=$((missing + 1))
   elif [ "$code" = "000" ] || [ -z "$code" ]; then
     echo "  NO ANSWER      $t"
+    unknown=$((unknown + 1))
+  fi
+done
+
+echo "Columns added by migrations: $(echo "$columns" | wc -l)"
+for c in $columns; do
+  t=${c%%.*}; col=${c#*.}
+  body=$(curl -sS -m 20 "$URL/rest/v1/$t?select=$col&limit=0" \
+    -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -w $'\n%{http_code}' 2>/dev/null)
+  code=$(printf '%s' "$body" | tail -1)
+  if printf '%s' "$body" | grep -q '"42703"'; then
+    echo "  MISSING column $c"
+    missing=$((missing + 1))
+  elif [ "$code" = "000" ] || [ -z "$code" ]; then
+    echo "  NO ANSWER      $c"
     unknown=$((unknown + 1))
   fi
 done
