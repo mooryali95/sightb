@@ -138,6 +138,13 @@ describe('passkeyService', () => {
     expect(m.openSession).not.toHaveBeenCalled();
   });
 
+  it('says sign-in by passkey is not available yet while the deployed function predates it', async () => {
+    const old = Object.assign(new Error('Edge Function returned a non-2xx status code'), { context: { json: async () => ({ error: 'Unauthorized' }) } });
+    m.invoke.mockResolvedValueOnce({ data: null, error: old });
+    await expect(signInWithPasskey('fp')).rejects.toThrow('الدخول بمفتاح المرور غير متاح بعد. ادخل بكلمة المرور.');
+    expect(m.startAuthentication).not.toHaveBeenCalled();
+  });
+
   it('turns a token the platform refuses into a readable message', async () => {
     answer({ options: { challenge: 'c8' }, challengeId: 'ch-8' });
     m.startAuthentication.mockResolvedValue({ id: 'cred-1' });

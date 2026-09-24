@@ -9,3 +9,5 @@ project_id = "krhvqowmhthokqvmnvxj"
     verify_jwt = false
   [functions.send-invite]
     verify_jwt = false
+  [functions.second-factor]
+    verify_jwt = false

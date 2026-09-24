@@ -16,8 +16,6 @@
  * register-verify · auth-options · auth-verify · delete.
  */
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendLovableEmail, EmailAPIError } from "npm:@lovable.dev/email-js@0.1.0";
-import { htmlToPlainText } from "../_shared/email-text.ts";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
@@ -26,13 +24,11 @@ import {
   type AuthenticatorTransportFuture,
 } from "npm:@simplewebauthn/server@13";
 import {
-  ALLOWED_ORIGINS,
   MAX_CHALLENGES_PER_WINDOW,
   RATE_WINDOW_MS,
   base64urlToBytes,
   bytesToBase64url,
   challengeExpiresAt,
-  isAllowedOrigin,
   isChallengeLive,
   passkeyName,
   relyingPartyFor,
@@ -49,118 +45,24 @@ import {
 } from "../_shared/passkeyLogin.ts";
 import {
   GATE_MESSAGES,
-  STEP_UP_DAY_MS,
   grantCutoff,
   sendStepUp,
   sessionIdOf,
   signInCapability,
   verifyStepUp,
-  type StepUpStore,
 } from "../_shared/passkeyGate.ts";
+import {
+  accountMail,
+  corsHeaders,
+  escapeHtml,
+  sendAccountEmail,
+  sha256Hex,
+  recordSecondFactor,
+  stepUpStore,
+  trustDevice,
+} from "../_shared/account.ts";
 
 const RP_NAME = "رؤية بصيرة";
-const TRUSTED_DEVICE_DAYS = 30;
-const SENDER_DOMAIN = "notify.sight.basserh.com";
-const FROM_ADDRESS = "SightB <noreply@sight.basserh.com>";
-
-/**
- * Sends an account email the way admin-otp sends the login code, and logs
- * it the same way. Never throws: a mail that could not go is reported as
- * false, and the caller decides whether that stops anything.
- */
-async function sendAccountEmail(
-  supabase: SupabaseClient,
-  mail: { to: string; subject: string; html: string; label: string },
-): Promise<boolean> {
-  let status: "sent" | "suppressed" | "failed" = "failed";
-  let errorMessage: string | null = null;
-  try {
-    await sendLovableEmail(
-      {
-        to: mail.to,
-        from: FROM_ADDRESS,
-        sender_domain: SENDER_DOMAIN,
-        subject: mail.subject,
-        html: mail.html,
-        text: htmlToPlainText(mail.html),
-        purpose: "transactional",
-        label: mail.label,
-        idempotency_key: `${mail.label}-${crypto.randomUUID()}`,
-      },
-      { apiKey: Deno.env.get("LOVABLE_API_KEY")!, sendUrl: Deno.env.get("LOVABLE_SEND_URL") },
-    );
-    status = "sent";
-  } catch (err) {
-    if (err instanceof EmailAPIError && err.code === "recipient_suppressed") status = "suppressed";
-    errorMessage = err instanceof Error ? err.message.slice(0, 1000) : String(err);
-  }
-  const { error } = await supabase.from("email_send_log").insert({
-    recipient_email: mail.to,
-    template_name: mail.label,
-    status,
-    error_message: errorMessage,
-    metadata: { type: mail.label },
-  });
-  if (error) console.error("[passkeys] email log insert failed", error.message);
-  return status === "sent";
-}
-
-const escapeHtml = (text: string) =>
-  text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-
-function accountMail(title: string, body: string): string {
-  return `<div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 20px; background: #ffffff;">
-  <h2 style="color: #1a1a1a; text-align: center;">${title}</h2>
-  ${body}
-  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-  <p style="color: #aaa; font-size: 11px; text-align: center;">SightB - نظام إدارة المشاريع المالية</p>
-</div>`;
-}
-
-async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function stepUpStore(supabase: SupabaseClient): StepUpStore {
-  const table = () => supabase.from("passkey_step_up_codes");
-  return {
-    async countSince(userId, since) {
-      const { count, error } = await table()
-        .select("id", { count: "exact", head: true }).eq("user_id", userId).gte("created_at", since.toISOString());
-      if (error) throw error;
-      return count ?? 0;
-    },
-    async insert(row) {
-      // Rows older than two days count toward nothing any more.
-      await table().delete().eq("user_id", row.user_id).lt("created_at", new Date(Date.now() - 2 * STEP_UP_DAY_MS).toISOString());
-      const { error } = await table().insert(row);
-      if (error) throw error;
-    },
-    async check(userId, codeHash, sessionId) {
-      const { data, error } = await supabase.rpc("passkey_step_up_verify", {
-        p_user_id: userId, p_code_hash: codeHash, p_session_id: sessionId,
-      });
-      if (error) throw error;
-      return data as "ok" | "wrong" | "spent" | "none";
-    },
-    async hasGrant(userId, sessionId, since) {
-      const { data, error } = await table().select("id")
-        .eq("user_id", userId).eq("session_id", sessionId).gte("confirmed_at", since.toISOString()).is("consumed_at", null)
-        .limit(1);
-      if (error) throw error;
-      return (data ?? []).length > 0;
-    },
-    // One statement, so two registrations racing for one grant cannot both use it.
-    async consumeGrant(userId, sessionId, since) {
-      const { data, error } = await table().update({ consumed_at: new Date().toISOString() })
-        .eq("user_id", userId).eq("session_id", sessionId).gte("confirmed_at", since.toISOString()).is("consumed_at", null)
-        .select("id");
-      if (error) throw error;
-      return (data ?? []).length > 0;
-    },
-  };
-}
 
 /** A stored credential as the library takes it. */
 function credentialOf(p: PasskeyRow) {
@@ -174,17 +76,6 @@ function credentialOf(p: PasskeyRow) {
 
 function transportsOf(p: PasskeyRow) {
   return (p.transports ?? undefined) as AuthenticatorTransportFuture[] | undefined;
-}
-
-async function trustDevice(supabase: SupabaseClient, userId: string, fingerprint: string, now: Date) {
-  await supabase.from("trusted_devices").upsert(
-    {
-      user_id: userId,
-      fingerprint,
-      expires_at: new Date(now.getTime() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    { onConflict: "user_id,fingerprint" },
-  );
 }
 
 /** Challenges minted before sign-in, held apart from the per-user ones. */
@@ -218,15 +109,6 @@ function loginChallengeStore(supabase: SupabaseClient): LoginChallengeStore {
     async forget(id) {
       await table().delete().eq("id", id);
     },
-  };
-}
-
-function corsHeaders(req: Request) {
-  const origin = req.headers.get("origin") || "";
-  return {
-    "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0],
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   };
 }
 
@@ -509,6 +391,13 @@ Deno.serve(async (req) => {
 
       const fingerprint = typeof body.fingerprint === "string" ? body.fingerprint : "";
       if (fingerprint) await trustDevice(supabase, user.id, fingerprint, now);
+      // This session has passed the second factor; row-level security reads this.
+      try {
+        if (sessionId) await recordSecondFactor(supabase, sessionId, user.id, "passkey");
+      } catch (err) {
+        if (!isMissingSchema(err)) throw err;
+        console.error("[passkeys] schema not applied yet", err);
+      }
       return json(200, { verified: true });
     }
 

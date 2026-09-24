@@ -135,7 +135,7 @@ test('at the second factor, the passkey signs the challenge and the person lands
   const pkcs8 = privateKey.export({ format: 'der', type: 'pkcs8' }) as Buffer;
 
   const wire = await stubSupabase(page, {}, {
-    'admin-otp': () => ({ requiresOtp: true, sent: true }),
+    'second-factor': () => ({ requiresOtp: true, sent: true }),
     passkeys: (body) => {
       const { action } = body as { action: string };
       if (action === 'auth-options') {
@@ -171,8 +171,9 @@ test('at the second factor, the passkey signs the challenge and the person lands
   expect(response.response.signature.length).toBeGreaterThan(0);
   expect(response.response.authenticatorData.length).toBeGreaterThan(0);
   expect(wire.writes.some((w) => w.method === 'INVOKE' && w.table === 'accept-invite')).toBe(true);
-  // The code was never used.
-  expect(wire.writes.filter((w) => w.table === 'admin-otp').map((w) => (w.body as { action: string }).action)).toEqual(['check']);
+  // The code was never used: one check, no verify. The home page then asks where the session stands.
+  expect(wire.writes.filter((w) => w.table === 'second-factor').map((w) => (w.body as { action: string }).action)).toEqual(['check', 'status']);
+  expect(wire.writes.some((w) => w.table === 'admin-otp')).toBe(false);
 });
 
 test('on the login page, a passkey alone signs the person in: no email, no password, no code', async ({ page }) => {
@@ -182,7 +183,8 @@ test('on the login page, a passkey alone signs the person in: no email, no passw
   const userHandle = Buffer.from(USER_ID);
 
   const wire = await stubSupabase(page, {}, {
-    'admin-otp': () => ({ requiresOtp: true, sent: true }),
+    // login-verify trusted this device, so the check that follows needs no code.
+    'second-factor': () => ({ requiresOtp: false }),
     passkeys: (body) => {
       const { action } = body as { action: string };
       if (action === 'login-options') {
@@ -236,4 +238,7 @@ test('on the login page, a passkey alone signs the person in: no email, no passw
   expect(auth.some((a) => a.url.includes('grant_type=password'))).toBe(false);
   expect(wire.writes.some((w) => w.method === 'INVOKE' && w.table === 'accept-invite')).toBe(true);
   expect(wire.writes.some((w) => w.table === 'admin-otp')).toBe(false);
+  // The new session is checked with the same fingerprint, which records it as passed.
+  const checks = wire.writes.filter((w) => w.table === 'second-factor' && (w.body as { action: string }).action === 'check');
+  expect(checks.map((w) => w.body)).toEqual([{ action: 'check', fingerprint: verify[0].fingerprint }]);
 });

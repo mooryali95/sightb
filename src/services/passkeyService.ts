@@ -32,6 +32,7 @@ export function passkeysSupported(): boolean {
 }
 
 const UNREACHABLE = 'تعذّر الوصول إلى خدمة مفاتيح المرور';
+const NOT_YET = 'الدخول بمفتاح المرور غير متاح بعد. ادخل بكلمة المرور.';
 const OFFLINE = 'تعذّر الاتصال. تحقّق من الشبكة وحاول مرة أخرى.';
 
 /**
@@ -123,7 +124,16 @@ export async function verifyWithPasskey(fingerprint: string): Promise<'verified'
  * device is then trusted as a correct code would trust it.
  */
 export async function signInWithPasskey(fingerprint: string): Promise<void> {
-  const { options, challengeId } = await call<{ options?: PublicKeyCredentialRequestOptionsJSON; challengeId?: string }>({ action: 'login-options' });
+  let begun: { options?: PublicKeyCredentialRequestOptionsJSON; challengeId?: string };
+  try {
+    begun = await call<{ options?: PublicKeyCredentialRequestOptionsJSON; challengeId?: string }>({ action: 'login-options' });
+  } catch (e) {
+    // A function deployed before sign-in by passkey existed asks every caller
+    // for a session; the page can be published before the function catches up.
+    if (e instanceof Error && e.message === 'Unauthorized') throw new Error(NOT_YET);
+    throw e;
+  }
+  const { options, challengeId } = begun;
   if (!options || !challengeId) throw new Error('تعذّر بدء الدخول بمفتاح المرور');
   const response = await startAuthentication({ optionsJSON: options });
   const { tokenHash } = await call<{ tokenHash?: string }>({ action: 'login-verify', challengeId, response, fingerprint });

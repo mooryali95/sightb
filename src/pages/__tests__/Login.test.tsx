@@ -42,9 +42,9 @@ document.elementFromPoint = () => null;
 function Probe() {
   return <p data-testid="path">{useLocation().pathname}</p>;
 }
-function renderLogin() {
+function renderLogin(at = '/login') {
   return render(
-    <MemoryRouter initialEntries={['/login']}>
+    <MemoryRouter initialEntries={[at]}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Probe />} />
@@ -59,7 +59,7 @@ const submitLogin = (email: string, password: string) => {
 };
 /** The one-time-code check the edge function answers with. */
 const otpCheck = (data: Record<string, unknown>) => m.invoke.mockImplementation(async (name: string) =>
-  name === 'admin-otp' ? { data, error: null } : { data: {}, error: null });
+  name === 'second-factor' ? { data, error: null } : { data: {}, error: null });
 
 describe('Login', () => {
   beforeEach(() => {
@@ -104,7 +104,7 @@ describe('Login', () => {
     expect(screen.getByTestId('path')).toHaveTextContent('/');
     const fingerprint = localStorage.getItem('rouya_device_fp');
     expect(fingerprint).toMatch(/[0-9a-f-]{36}/);
-    expect(m.invoke).toHaveBeenNthCalledWith(1, 'admin-otp', { body: { action: 'check', fingerprint } });
+    expect(m.invoke).toHaveBeenNthCalledWith(1, 'second-factor', { body: { action: 'check', fingerprint } });
     expect(m.invoke).toHaveBeenNthCalledWith(2, 'accept-invite', { body: {} });
     expect(m.signOut).not.toHaveBeenCalled();
   });
@@ -144,7 +144,7 @@ describe('Login', () => {
     expect(confirm).toBeEnabled();
     fireEvent.submit(confirm.closest('form') as HTMLFormElement);
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('الرمز غير صحيح'));
-    expect(m.invoke).toHaveBeenLastCalledWith('admin-otp', { body: { action: 'verify', code: '111111', fingerprint } });
+    expect(m.invoke).toHaveBeenLastCalledWith('second-factor', { body: { action: 'verify', code: '111111', fingerprint } });
     expect(code).toHaveValue('');
     expect(screen.queryByTestId('path')).not.toBeInTheDocument();
 
@@ -192,6 +192,43 @@ describe('Login', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('طُلب رابط قبل قليل. انتظر دقيقة ثم أعد الطلب.'));
   });
 
+  it('falls back to admin-otp while second-factor is not deployed yet, and asks for the code the same way', async () => {
+    const missing = Object.assign(new Error('Edge Function returned a non-2xx status code'), { name: 'FunctionsHttpError', context: { status: 404 } });
+    m.invoke.mockImplementation(async (name: string) => {
+      if (name === 'second-factor') return { data: null, error: missing };
+      if (name === 'admin-otp') return { data: { requiresOtp: true, sent: true }, error: null };
+      return { data: {}, error: null };
+    });
+    renderLogin();
+    submitLogin('pm@example.com', 'secret1');
+    expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
+    const fingerprint = localStorage.getItem('rouya_device_fp');
+    expect(m.invoke).toHaveBeenCalledWith('admin-otp', { body: { action: 'check', fingerprint } });
+  });
+
+  it('does not fall back on a refusal: a second-factor error signs out', async () => {
+    m.invoke.mockImplementation(async (name: string) =>
+      name === 'second-factor' ? { data: null, error: Object.assign(new Error('x'), { name: 'FunctionsHttpError', context: { status: 500 } }) } : { data: {}, error: null });
+    renderLogin();
+    submitLogin('pm@example.com', 'secret1');
+    await waitFor(() => expect(m.signOut).toHaveBeenCalled());
+    expect(m.invoke).not.toHaveBeenCalledWith('admin-otp', expect.anything());
+  });
+
+  it('resumes at the code step for a session sent back to finish it, without asking the password again', async () => {
+    otpCheck({ requiresOtp: true, sent: true });
+    renderLogin('/login?step=code');
+    expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
+    expect(m.signInWithPassword).not.toHaveBeenCalled();
+    expect(m.invoke).toHaveBeenCalledWith('second-factor', { body: { action: 'check', fingerprint: localStorage.getItem('rouya_device_fp') } });
+  });
+
+  it('goes straight home when the resumed session turns out to have passed already', async () => {
+    otpCheck({ requiresOtp: false });
+    renderLogin('/login?step=code');
+    expect(await screen.findByTestId('path')).toHaveTextContent('/');
+  });
+
   describe('passkey instead of the code', () => {
     const holdAtCode = async () => {
       otpCheck({ requiresOtp: true, sent: true });
@@ -200,10 +237,10 @@ describe('Login', () => {
       expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
       return screen.getByRole('button', { name: /التحقق بمفتاح المرور/ });
     };
-    /** Answers the passkeys function per action, admin-otp as before. */
+    /** Answers the passkeys function per action, the second factor as before. */
     const passkeys = (byAction: Record<string, unknown>) => m.invoke.mockImplementation(async (name: string, opts?: { body?: { action?: string } }) => {
       if (name === 'passkeys') return { data: byAction[opts?.body?.action ?? ''] ?? {}, error: null };
-      if (name === 'admin-otp') return { data: { requiresOtp: true, sent: true }, error: null };
+      if (name === 'second-factor') return { data: { requiresOtp: true, sent: true }, error: null };
       return { data: {}, error: null };
     });
 
@@ -276,6 +313,8 @@ describe('Login', () => {
       expect(m.verifyOtp).toHaveBeenCalledWith({ token_hash: 'th-9', type: 'magiclink' });
       expect(m.invoke).toHaveBeenLastCalledWith('accept-invite', { body: {} });
       expect(m.signInWithPassword).not.toHaveBeenCalled();
+      // The new session is checked like any other; the trusted device records it.
+      expect(m.invoke).toHaveBeenCalledWith('second-factor', { body: { action: 'check', fingerprint } });
       expect(m.invoke).not.toHaveBeenCalledWith('admin-otp', expect.anything());
       expect(toast.success).toHaveBeenCalledWith('تم الدخول بمفتاح المرور');
     });

@@ -238,6 +238,13 @@ jobs:
             exit 1
           fi
 
+      - name: Guard the second factor on new tables
+        # A public table created after the second factor became a database
+        # rule must carry the rule's policy, or a password-only session could
+        # read it. Lovable writes migrations too, so this is checked on every
+        # push rather than remembered.
+        run: bash scripts/second-factor-coverage.sh
+
 
   e2e:
     # Separate from `checks` so a browser download never delays the fast gates,
