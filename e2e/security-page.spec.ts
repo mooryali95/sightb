@@ -51,7 +51,7 @@ test('lists the passkeys with their kind and dates, and deletes one by id after 
 test('refuses a blank name before asking the function, and shows the empty state', async ({ page }) => {
   const wire = await stubSupabase(page, {}, { passkeys: (body) => ((body as { action: string }).action === 'list' ? { passkeys: [] } : {}) });
   await openSecurity(page);
-  await expect(page.getByText('لا توجد مفاتيح مرور مسجّلة. أضف واحداً لتتحقق بخطوتين بلا رموز بريد.')).toBeVisible();
+  await expect(page.getByText('لا توجد مفاتيح مرور مسجّلة. أضف واحداً لتدخل ببصمتك دون كلمة مرور.')).toBeVisible();
   await page.getByRole('button', { name: 'إضافة مفتاح مرور' }).click();
   await page.getByLabel('اسم المفتاح').fill('   ');
   await page.getByRole('button', { name: 'تسجيل المفتاح' }).click();

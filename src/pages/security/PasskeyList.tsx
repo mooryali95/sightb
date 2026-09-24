@@ -1,6 +1,7 @@
 /**
- * The user's registered passkeys: what each one is, when it was made and
- * last used, and a confirmed way to remove it. Adding is the page's job.
+ * The user's registered passkeys: what each one is, whether it signs in on
+ * its own, when it was made and last used, and a confirmed way to remove it.
+ * Adding is the page's job.
  */
 import { KeyRound, Cloud, Smartphone } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -18,12 +19,31 @@ function passkeyKindLabel(p: PasskeySummary): string {
   return p.deviceType === 'singleDevice' ? 'مفتاح على هذا الجهاز فقط' : 'مفتاح مرور';
 }
 
+/**
+ * Whether the key signs in on its own, and what to do when it does not: an
+ * older key is replaced by adding a new one from the same device; a key whose
+ * authenticator cannot keep the account never will, so nothing is advised.
+ * Nothing is said while the server cannot tell.
+ */
+function SignInNote({ passkey: p }: { passkey: PasskeySummary }) {
+  if (p.canSignIn === null) return null;
+  if (p.canSignIn) return <p className="text-xs text-emerald-700 dark:text-emerald-400">يصلح للدخول دون كلمة مرور</p>;
+  if (p.discoverable === false) {
+    return <p className="text-xs text-muted-foreground">للتحقق فقط: هذا المفتاح لا يحفظ الحساب ليدخل به وحده.</p>;
+  }
+  return (
+    <p className="text-xs text-amber-700 dark:text-amber-400">
+      للتحقق فقط. أضف مفتاحاً جديداً من الجهاز نفسه لتدخل به دون كلمة مرور، ثم احذف هذا.
+    </p>
+  );
+}
+
 export function PasskeyList({ passkeys, onDelete }: Props) {
   if (passkeys.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm space-y-2">
         <KeyRound className="w-8 h-8 mx-auto opacity-40" />
-        <p>لا توجد مفاتيح مرور مسجّلة. أضف واحداً لتتحقق بخطوتين بلا رموز بريد.</p>
+        <p>لا توجد مفاتيح مرور مسجّلة. أضف واحداً لتدخل ببصمتك دون كلمة مرور.</p>
       </div>
     );
   }
@@ -39,6 +59,7 @@ export function PasskeyList({ passkeys, onDelete }: Props) {
             <p className="text-xs text-muted-foreground">
               {passkeyKindLabel(p)} · أُضيف {formatDate(p.createdAt)} · آخر استخدام: {formatDate(p.lastUsedAt)}
             </p>
+            <SignInNote passkey={p} />
           </div>
           <ConfirmDeleteDialog
             title="حذف مفتاح المرور"

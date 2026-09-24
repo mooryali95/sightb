@@ -2,12 +2,14 @@
  * Signing in with a passkey alone. No password stands behind it, so every
  * condition is the whole door: a stale or foreign challenge, an unknown
  * credential, a handle naming someone else, a bad signature, a bare tap
- * without verifying the person, or an account without a role must each
- * end with no session minted and no device trusted.
+ * without verifying the person, a key registered before the gate, or an
+ * account without a role must each end with no session minted and no device
+ * trusted. Localhost is no door, and a migration not yet applied reads as
+ * "not available yet", never as a server error.
  */
 import { describe, it, expect, vi } from 'vitest';
 import {
-  beginPasskeyLogin, completePasskeyLogin, clientAddress, userHandleIs, LOGIN_MESSAGES,
+  beginPasskeyLogin, completePasskeyLogin, clientAddress, userHandleIs, loginRelyingPartyFor, isMissingSchema, LOGIN_MESSAGES,
   MAX_LOGIN_CHALLENGES_PER_CLIENT, type CompleteDeps, type LoginChallengeStore,
 } from '../../../supabase/functions/_shared/passkeyLogin.ts';
 import { bytesToBase64url, type PasskeyRow } from '../../../supabase/functions/_shared/passkeys.ts';
@@ -20,15 +22,17 @@ const headers = (h: Record<string, string>) => ({ get: (k: string) => h[k.toLowe
 const passkey: PasskeyRow = {
   id: 'pk-1', user_id: USER, credential_id: 'cred-1', public_key: 'key', counter: 3,
   transports: ['internal'], device_type: 'multiDevice', backed_up: true, name: 'هاتفي',
-  created_at: '2026-09-20T00:00:00Z', last_used_at: null,
+  created_at: '2026-09-20T00:00:00Z', last_used_at: null, can_sign_in: true,
 };
+const missingTable = Object.assign(new Error('relation does not exist'), { code: 'PGRST205' });
 
 function store(held: { challenge: string; expires_at: string } | null = { challenge: 'ch', expires_at: '2026-09-24T10:04:00Z' }): LoginChallengeStore {
   return {
-    purgeExpired: vi.fn(async () => {}),
+    purgeBefore: vi.fn(async () => {}),
     countSince: vi.fn(async () => 0),
     insert: vi.fn(async () => 'challenge-1'),
     take: vi.fn(async () => held),
+    forget: vi.fn(async () => {}),
   };
 }
 
@@ -69,12 +73,33 @@ describe('userHandleIs', () => {
   });
 });
 
+describe('loginRelyingPartyFor', () => {
+  it('signs in from our sites and previews, never from localhost', () => {
+    expect(loginRelyingPartyFor('https://sight.basserh.com')).toEqual({ rpID: 'sight.basserh.com', origin: 'https://sight.basserh.com' });
+    expect(loginRelyingPartyFor('https://preview-abc.lovable.app')?.rpID).toBe('preview-abc.lovable.app');
+    expect(loginRelyingPartyFor('http://localhost:4173')).toBeNull();
+    expect(loginRelyingPartyFor('http://localhost:5173')).toBeNull();
+    expect(loginRelyingPartyFor('https://evil.example.com')).toBeNull();
+    expect(loginRelyingPartyFor(null)).toBeNull();
+  });
+});
+
+describe('isMissingSchema', () => {
+  it('knows the codes for a table or column that is not there yet, and nothing else', () => {
+    for (const code of ['PGRST205', '42P01', '42703', 'PGRST204']) expect(isMissingSchema({ code })).toBe(true);
+    expect(isMissingSchema({ code: '23505' })).toBe(false);
+    expect(isMissingSchema(new Error('boom'))).toBe(false);
+    expect(isMissingSchema(null)).toBe(false);
+  });
+});
+
 describe('beginPasskeyLogin', () => {
   it('stores the challenge for this address, live five minutes, and hands back its id with the options', async () => {
     const s = store();
     const result = await beginPasskeyLogin({ store: s, generateOptions: async () => ({ challenge: 'c-1' }) }, '203.0.113.7', NOW);
     expect(result).toEqual({ options: { challenge: 'c-1' }, challengeId: 'challenge-1' });
-    expect(s.purgeExpired).toHaveBeenCalledWith(NOW);
+    // Only rows older than the rate window go, so used ones keep counting.
+    expect(s.purgeBefore).toHaveBeenCalledWith(new Date('2026-09-24T09:50:00Z'));
     expect(s.insert).toHaveBeenCalledWith({ challenge: 'c-1', client: '203.0.113.7', expires_at: '2026-09-24T10:05:00.000Z' });
   });
 
@@ -87,6 +112,19 @@ describe('beginPasskeyLogin', () => {
     expect(s.countSince).toHaveBeenCalledWith('a', new Date('2026-09-24T09:50:00Z'));
     expect(generateOptions).not.toHaveBeenCalled();
     expect(s.insert).not.toHaveBeenCalled();
+  });
+
+  it('says "not available yet" while the table is missing, and still fails loudly on anything else', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const s = store();
+    vi.mocked(s.countSince).mockRejectedValueOnce(missingTable);
+    expect(await beginPasskeyLogin({ store: s, generateOptions: async () => ({ challenge: 'c' }) }, 'a', NOW))
+      .toEqual({ error: LOGIN_MESSAGES.unavailable });
+    vi.mocked(s.countSince).mockRejectedValueOnce(new Error('connection reset'));
+    await expect(beginPasskeyLogin({ store: s, generateOptions: async () => ({ challenge: 'c' }) }, 'a', NOW)).rejects.toThrow('connection reset');
+    // Plain to the person, loud in the function log.
+    expect(log).toHaveBeenCalledWith('[passkeys] schema not applied yet', missingTable);
+    log.mockRestore();
   });
 });
 
@@ -106,6 +144,7 @@ describe('completePasskeyLogin', () => {
     ['a challenge that is not ours or already used', () => ({ d: deps({ store: store(null) }), i: input() }), LOGIN_MESSAGES.expired],
     ['an expired challenge', () => ({ d: deps({ store: store({ challenge: 'ch', expires_at: '2026-09-24T09:59:59Z' }) }), i: input() }), LOGIN_MESSAGES.expired],
     ['an unregistered credential', () => ({ d: deps(), i: input({ response: answer(handleOf(USER), 'cred-9') }) }), LOGIN_MESSAGES.unknownCredential],
+    ['a key registered before the sign-in gate', () => ({ d: deps({ findPasskey: vi.fn(async () => ({ ...passkey, can_sign_in: false })) }), i: input() }), LOGIN_MESSAGES.secondFactorOnly],
     ['a handle naming another account', () => ({ d: deps(), i: input({ response: answer(handleOf('someone-else')) }) }), LOGIN_MESSAGES.refused],
     ['no handle at all', () => ({ d: deps(), i: input({ response: { id: 'cred-1', response: { signature: 'sig' } } }) }), LOGIN_MESSAGES.refused],
     ['a signature that does not verify', () => ({ d: deps({ verify: vi.fn(async () => ({ verified: false, userVerified: true, newCounter: 0 })) }), i: input() }), LOGIN_MESSAGES.refused],
@@ -122,6 +161,31 @@ describe('completePasskeyLogin', () => {
     expect(result).not.toHaveProperty('tokenHash');
     expect(d.trustDevice).not.toHaveBeenCalled();
     if (message !== LOGIN_MESSAGES.noSession) expect(d.mintTokenHash).not.toHaveBeenCalled();
+  });
+
+  it('says "not available yet" while the table is missing', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const d = deps();
+    vi.mocked(d.store.take).mockRejectedValueOnce(Object.assign(new Error('x'), { code: '42P01' }));
+    expect(await completePasskeyLogin(d, input(), NOW)).toEqual({ error: LOGIN_MESSAGES.unavailable });
+    expect(d.mintTokenHash).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledTimes(1);
+    log.mockRestore();
+  });
+
+  it('while the column is not there yet, says "not available yet" rather than blaming the key', async () => {
+    const d = deps({ findPasskey: vi.fn(async () => ({ ...passkey, can_sign_in: undefined })) });
+    expect(await completePasskeyLogin(d, input(), NOW)).toEqual({ error: LOGIN_MESSAGES.unavailable });
+    expect(d.mintTokenHash).not.toHaveBeenCalled();
+  });
+
+  it('forgets a challenge that ended in a session, and keeps a refused one counted', async () => {
+    const ok = deps();
+    await completePasskeyLogin(ok, input(), NOW);
+    expect(ok.store.forget).toHaveBeenCalledWith('challenge-1');
+    const refused = deps({ hasRoles: vi.fn(async () => false) });
+    await completePasskeyLogin(refused, input(), NOW);
+    expect(refused.store.forget).not.toHaveBeenCalled();
   });
 
   it('consumes the challenge even when refusing, so an answer is never replayed', async () => {

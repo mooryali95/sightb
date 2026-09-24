@@ -8,8 +8,12 @@
  * account it was made for.
  *
  * What must hold before a session is minted:
+ *   * the request comes from one of our sites, never localhost, where any
+ *     local program could serve a page that uses a developer's passkey;
  *   * the challenge is ours, unused and live (it is consumed either way);
- *   * the credential is registered, and to the account its handle names;
+ *   * the credential is registered, to the account its handle names, and
+ *     was registered to sign in (keys from before that gate stay a second
+ *     factor only);
  *   * the signature verifies and the person was verified on the device (a
  *     fingerprint, a face or a PIN, never a bare tap), which with the device
  *     itself makes two factors, the reason no emailed code follows;
@@ -22,7 +26,9 @@ import {
   base64urlToBytes,
   challengeExpiresAt,
   isChallengeLive,
+  relyingPartyFor,
   type PasskeyRow,
+  type RelyingParty,
 } from "./passkeys.ts";
 
 /** Ceremonies one address may start in the window; the table cannot be flooded past it. */
@@ -37,7 +43,30 @@ export const LOGIN_MESSAGES = {
   notVerified: "يلزم التحقق بالبصمة أو الوجه أو رمز الجهاز",
   noRoles: "لا صلاحيات لهذا الحساب",
   noSession: "تعذّر فتح الجلسة، حاول مرة أخرى",
+  secondFactorOnly: "هذا المفتاح مسجّل للتحقق فقط. ادخل بكلمة المرور، ثم أضف مفتاحاً جديداً من صفحة الأمان لتدخل به.",
+  unavailable: "الدخول بمفتاح المرور غير متاح بعد. ادخل بكلمة المرور.",
 } as const;
+
+/**
+ * The relying party for a sign-in, or null. Registration and the second
+ * factor still accept localhost for development; signing in alone does not.
+ */
+export function loginRelyingPartyFor(origin: string | null): RelyingParty | null {
+  const rp = relyingPartyFor(origin);
+  if (!rp) return null;
+  return rp.rpID === "localhost" || rp.rpID === "127.0.0.1" || rp.rpID === "[::1]" ? null : rp;
+}
+
+/**
+ * Whether a database error means a table or column is not there yet: the
+ * migration arrives through git and is applied by hand, so the function can
+ * be live before it. PostgREST says PGRST205 for an unknown table, Postgres
+ * 42P01; 42703 and PGRST204 are an unknown column.
+ */
+export function isMissingSchema(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === "PGRST205" || code === "42P01" || code === "42703" || code === "PGRST204";
+}
 
 /** The address a request came from, as the platform's proxy reports it. */
 export function clientAddress(headers: { get(name: string): string | null }): string {
@@ -56,11 +85,21 @@ export function userHandleIs(userHandle: unknown, userId: string): boolean {
 }
 
 export interface LoginChallengeStore {
-  purgeExpired(now: Date): Promise<void>;
+  /** Drops rows minted before the cutoff; newer ones, used or not, still count against the address. */
+  purgeBefore(cutoff: Date): Promise<void>;
   countSince(client: string, since: Date): Promise<number>;
   insert(row: { challenge: string; client: string; expires_at: string }): Promise<string>;
-  /** Removes the challenge and returns what it held, or null when there is none. */
+  /**
+   * Marks the challenge used and returns what it held, or null when there is
+   * none or it was already used. Marking rather than deleting keeps a failed
+   * attempt counted against the address.
+   */
   take(id: string): Promise<{ challenge: string; expires_at: string } | null>;
+  /**
+   * Forgets a challenge that ended in a session, so people signing in from
+   * one office address do not use up each other's limit.
+   */
+  forget(id: string): Promise<void>;
 }
 
 /**
@@ -73,8 +112,22 @@ export type LoginAnswer =
   | { verified: true; tokenHash: string }
   | { verified?: false; error: string; rateLimited?: true; unknownCredential?: true };
 
+/** Answers "not available yet" instead of failing while the migration is not applied. */
+async function unlessSchemaMissing(run: () => Promise<LoginAnswer>): Promise<LoginAnswer> {
+  try {
+    return await run();
+  } catch (error) {
+    if (isMissingSchema(error)) {
+      // Loud in the function log, so a migration left unapplied is seen.
+      console.error("[passkeys] schema not applied yet", error);
+      return { error: LOGIN_MESSAGES.unavailable };
+    }
+    throw error;
+  }
+}
+
 /** Mints discoverable-credential options: no email is asked, the device offers its passkeys. */
-export async function beginPasskeyLogin(
+export function beginPasskeyLogin(
   deps: {
     store: LoginChallengeStore;
     generateOptions(): Promise<{ challenge: string }>;
@@ -82,8 +135,17 @@ export async function beginPasskeyLogin(
   client: string,
   now: Date = new Date(),
 ): Promise<LoginAnswer> {
-  await deps.store.purgeExpired(now);
-  const recent = await deps.store.countSince(client, new Date(now.getTime() - LOGIN_RATE_WINDOW_MS));
+  return unlessSchemaMissing(() => begin(deps, client, now));
+}
+
+async function begin(
+  deps: { store: LoginChallengeStore; generateOptions(): Promise<{ challenge: string }> },
+  client: string,
+  now: Date,
+): Promise<LoginAnswer> {
+  const windowStart = new Date(now.getTime() - LOGIN_RATE_WINDOW_MS);
+  await deps.store.purgeBefore(windowStart);
+  const recent = await deps.store.countSince(client, windowStart);
   if (recent >= MAX_LOGIN_CHALLENGES_PER_CLIENT) {
     return { error: LOGIN_MESSAGES.rateLimited, rateLimited: true };
   }
@@ -95,7 +157,11 @@ export async function beginPasskeyLogin(
 export interface CompleteDeps {
   store: LoginChallengeStore;
   findPasskey(credentialId: string): Promise<PasskeyRow | null>;
-  /** The library's verification against the stored challenge and key. */
+  /**
+   * The library's verification against the stored challenge and key, with
+   * user verification reported rather than enforced: the refusal for a bare
+   * tap is made here, where it is tested, not inside the library.
+   */
   verify(args: { response: unknown; expectedChallenge: string; passkey: PasskeyRow }):
     Promise<{ verified: boolean; userVerified: boolean; newCounter: number }>;
   touchPasskey(id: string, newCounter: number, now: Date): Promise<void>;
@@ -107,10 +173,18 @@ export interface CompleteDeps {
 }
 
 /** Checks the answer and, when every condition holds, returns the token a session is opened with. */
-export async function completePasskeyLogin(
+export function completePasskeyLogin(
   deps: CompleteDeps,
   input: { challengeId: unknown; response: unknown; fingerprint: unknown },
   now: Date = new Date(),
+): Promise<LoginAnswer> {
+  return unlessSchemaMissing(() => complete(deps, input, now));
+}
+
+async function complete(
+  deps: CompleteDeps,
+  input: { challengeId: unknown; response: unknown; fingerprint: unknown },
+  now: Date,
 ): Promise<LoginAnswer> {
   const refuse = (error: string, extra: { unknownCredential?: true } = {}): LoginAnswer =>
     ({ verified: false, error, ...extra });
@@ -124,6 +198,9 @@ export async function completePasskeyLogin(
   const passkey = credentialId ? await deps.findPasskey(credentialId) : null;
   if (!passkey) return refuse(LOGIN_MESSAGES.unknownCredential, { unknownCredential: true });
   if (!userHandleIs(response.response?.userHandle, passkey.user_id)) return refuse(LOGIN_MESSAGES.refused);
+  // Absent means the column is not there yet: not the key's fault.
+  if (passkey.can_sign_in === undefined) return { error: LOGIN_MESSAGES.unavailable };
+  if (passkey.can_sign_in !== true) return refuse(LOGIN_MESSAGES.secondFactorOnly);
 
   const result = await deps.verify({ response: input.response, expectedChallenge: held.challenge, passkey });
   if (!result.verified) return refuse(LOGIN_MESSAGES.refused);
@@ -139,5 +216,6 @@ export async function completePasskeyLogin(
   const fingerprint = typeof input.fingerprint === "string" ? input.fingerprint.slice(0, 128) : "";
   if (fingerprint) await deps.trustDevice(passkey.user_id, fingerprint, now);
 
+  await deps.store.forget(challengeId);
   return { verified: true, tokenHash };
 }

@@ -221,7 +221,10 @@ export default function Login() {
       setIsForgotPassword(false);
     } catch (error) {
       console.error('[forgot-password]', error);
-      toast.error('حدث خطأ، يرجى المحاولة مرة أخرى');
+      // A reset link was sent in the last minute, or a passkey sign-in just
+      // used the same one-time slot; the platform refuses a new one until then.
+      const status = (error as { status?: number } | null)?.status;
+      toast.error(status === 429 ? 'طُلب رابط قبل قليل. انتظر دقيقة ثم أعد الطلب.' : 'حدث خطأ، يرجى المحاولة مرة أخرى');
     } finally {
       setLoading(false);
     }

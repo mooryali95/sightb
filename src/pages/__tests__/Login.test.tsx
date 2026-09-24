@@ -182,6 +182,16 @@ describe('Login', () => {
     await waitFor(() => expect(screen.getByText('تسجيل الدخول', { selector: 'h2' })).toBeInTheDocument());
   });
 
+  it('tells a person asking for a second reset link within the minute to wait, not that something broke', async () => {
+    m.resetPasswordForEmail.mockResolvedValue({ error: Object.assign(new Error('For security purposes, you can only request this after 60 seconds.'), { status: 429 }) });
+    renderLogin();
+    fireEvent.click(screen.getByText('نسيت كلمة المرور؟'));
+    const email = await screen.findByLabelText('البريد الإلكتروني');
+    fireEvent.change(email, { target: { value: 'pm@example.com' } });
+    fireEvent.submit(email.closest('form') as HTMLFormElement);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('طُلب رابط قبل قليل. انتظر دقيقة ثم أعد الطلب.'));
+  });
+
   describe('passkey instead of the code', () => {
     const holdAtCode = async () => {
       otpCheck({ requiresOtp: true, sent: true });
@@ -288,6 +298,31 @@ describe('Login', () => {
       fireEvent.click(passkeyButton());
       await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('ادخل بكلمة المرور ثم أضفه من صفحة الأمان')));
       expect(m.invoke).not.toHaveBeenCalledWith('passkeys', expect.objectContaining({ body: expect.objectContaining({ action: 'login-verify' }) }));
+    });
+
+    it('stays on the page when the platform refuses the token, and says why', async () => {
+      passkeys({ 'login-options': { options: { challenge: 'c9' }, challengeId: 'ch-9' }, 'login-verify': { verified: true, tokenHash: 'th-9' } });
+      wa.startAuthentication.mockResolvedValue({ id: 'cred-1', response: {} });
+      m.verifyOtp.mockResolvedValue({ data: { user: null, session: null }, error: Object.assign(new Error('Token has expired or is invalid'), { status: 403 }) });
+      renderLogin();
+      fireEvent.click(passkeyButton());
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('تعذّر فتح الجلسة، حاول مرة أخرى'));
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(m.invoke).not.toHaveBeenCalledWith('accept-invite', expect.anything());
+      expect(screen.queryByTestId('path')).not.toBeInTheDocument();
+    });
+
+    it('while the device is asked, waits visibly and takes no second click or password', async () => {
+      passkeys({ 'login-options': { options: { challenge: 'c9' }, challengeId: 'ch-9' } });
+      wa.startAuthentication.mockReturnValue(new Promise(() => {}));
+      renderLogin();
+      fireEvent.click(passkeyButton());
+      const waiting = await screen.findByRole('button', { name: 'بانتظار مفتاح المرور...' });
+      expect(waiting).toBeDisabled();
+      expect(screen.getByRole('button', { name: /تسجيل الدخول/ })).toBeDisabled();
+      fireEvent.click(waiting);
+      const starts = m.invoke.mock.calls.filter(([name, opts]) => name === 'passkeys' && (opts as { body: { action: string } }).body.action === 'login-options');
+      expect(starts).toHaveLength(1);
     });
 
     it('is not offered where the browser cannot run a passkey', () => {

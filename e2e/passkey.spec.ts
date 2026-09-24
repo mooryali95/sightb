@@ -81,6 +81,54 @@ test('registering a passkey from the security page sends a real attestation unde
   await expect(page.getByText(/مفتاح على هذا الجهاز فقط/)).toBeVisible();
 });
 
+test('a session with no confirmed code is asked for the emailed code before any ceremony, then registers', async ({ page }) => {
+  let confirmed = false;
+  const wire = await stubSupabase(page, {}, {
+    passkeys: (body) => {
+      const { action, code } = body as { action: string; code?: string };
+      if (action === 'list') return { passkeys: [] };
+      if (action === 'register-options') return confirmed ? { options: registrationOptions } : { needsStepUp: true };
+      if (action === 'step-up-send') return { sent: true };
+      if (action === 'step-up-verify') {
+        confirmed = code === '482913';
+        return confirmed ? { verified: true } : { verified: false, error: 'الرمز غير صحيح أو انتهت صلاحيته' };
+      }
+      if (action === 'register-verify') {
+        return { registered: true, passkey: { id: 'pk-7', name: (body as { name: string }).name, createdAt: '2026-09-24T00:00:00Z', lastUsedAt: null, deviceType: 'multiDevice', backedUp: true, transports: ['internal'], canSignIn: true } };
+      }
+      return {};
+    },
+  });
+  await virtualAuthenticator(page);
+
+  await page.goto('/security');
+  await page.getByRole('button', { name: 'إضافة مفتاح مرور' }).click();
+  await page.getByLabel('اسم المفتاح').fill('هاتفي');
+  await page.getByRole('button', { name: 'تسجيل المفتاح' }).click();
+
+  // No ceremony yet: the code is sent, and asked for.
+  await expect(page.getByLabel('رمز التأكيد')).toBeVisible();
+  expect(invokes(wire, 'step-up-send')).toHaveLength(1);
+  expect(invokes(wire, 'register-verify')).toHaveLength(0);
+
+  await page.getByLabel('رمز التأكيد').fill('111111');
+  await page.getByRole('button', { name: 'تأكيد الرمز' }).click();
+  await expect(page.getByText('الرمز غير صحيح أو انتهت صلاحيته').first()).toBeVisible();
+
+  await page.getByLabel('رمز التأكيد').fill('482913');
+  await page.getByRole('button', { name: 'تأكيد الرمز' }).click();
+  await expect(page.getByText('تم التأكيد. اضغط «تسجيل المفتاح» لإكمال الإضافة.').first()).toBeVisible();
+  expect(invokes(wire, 'step-up-verify').map((b) => b.code)).toEqual(['111111', '482913']);
+
+  await page.getByRole('button', { name: 'تسجيل المفتاح' }).click();
+  await expect(page.getByText('تم تسجيل "هاتفي"')).toBeVisible();
+  const verify = invokes(wire, 'register-verify');
+  expect(verify).toHaveLength(1);
+  const clientData = JSON.parse(Buffer.from((verify[0].response as { response: { clientDataJSON: string } }).response.clientDataJSON, 'base64url').toString('utf8'));
+  expect(clientData).toMatchObject({ type: 'webauthn.create', challenge: CHALLENGE });
+  await expect(page.getByText('يصلح للدخول دون كلمة مرور')).toBeVisible();
+});
+
 test('at the second factor, the passkey signs the challenge and the person lands home with no code', async ({ page }) => {
   const credentialId = randomBytes(16);
   const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });

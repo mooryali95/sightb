@@ -21,7 +21,7 @@ vi.mock('@simplewebauthn/browser', () => ({
   startAuthentication: m.startAuthentication,
 }));
 
-import { listPasskeys, registerPasskey, verifyWithPasskey, signInWithPasskey, deletePasskey, passkeysSupported, passkeyErrorMessage } from '../passkeyService';
+import { listPasskeys, registerPasskey, verifyWithPasskey, signInWithPasskey, deletePasskey, passkeysSupported, passkeyErrorMessage, sendStepUpCode, confirmStepUp, StepUpRequired } from '../passkeyService';
 
 const answer = (data: unknown) => m.invoke.mockResolvedValueOnce({ data, error: null });
 
@@ -47,8 +47,37 @@ describe('passkeyService', () => {
     m.startRegistration.mockResolvedValue({ id: 'cred-1', response: {} });
     answer({ passkey: { id: 'pk-1', name: 'هاتفي' } });
     expect(await registerPasskey('هاتفي')).toEqual({ id: 'pk-1', name: 'هاتفي' });
+    expect(m.invoke).toHaveBeenNthCalledWith(1, 'passkeys', { action: 'register-options' });
     expect(m.startRegistration).toHaveBeenCalledWith({ optionsJSON: { challenge: 'c1' } });
     expect(m.invoke).toHaveBeenLastCalledWith('passkeys', { action: 'register-verify', response: { id: 'cred-1', response: {} }, name: 'هاتفي' });
+  });
+
+  it('asks for the emailed code instead of opening a ceremony when the session has not confirmed one', async () => {
+    // As the server sends it: with an error for pages published before the gate.
+    answer({ needsStepUp: true, error: 'حدّث الصفحة لتأكيد هويتك برمز البريد، ثم أعد المحاولة.' });
+    await expect(registerPasskey('هاتفي')).rejects.toBeInstanceOf(StepUpRequired);
+    expect(m.startRegistration).not.toHaveBeenCalled();
+    // register-verify answers the same way when the grant ran out mid-ceremony.
+    answer({ options: { challenge: 'c1' } });
+    m.startRegistration.mockResolvedValue({ id: 'cred-1', response: {} });
+    answer({ error: 'أكّد أنه أنت برمز يصلك بالبريد قبل إضافة مفتاح مرور.', needsStepUp: true });
+    await expect(registerPasskey('هاتفي')).rejects.toBeInstanceOf(StepUpRequired);
+  });
+
+  it('sends and confirms the step-up code, and says so when either fails', async () => {
+    answer({ sent: true });
+    await sendStepUpCode();
+    expect(m.invoke).toHaveBeenLastCalledWith('passkeys', { action: 'step-up-send' });
+    answer({ sent: false });
+    await expect(sendStepUpCode()).rejects.toThrow('تعذّر إرسال الرمز');
+    answer({ error: 'طُلبت رموز كثيرة. انتظر عشر دقائق ثم حاول.', rateLimited: true });
+    await expect(sendStepUpCode()).rejects.toThrow('طُلبت رموز كثيرة');
+
+    answer({ verified: true });
+    await confirmStepUp('123456');
+    expect(m.invoke).toHaveBeenLastCalledWith('passkeys', { action: 'step-up-verify', code: '123456' });
+    answer({ verified: false, error: 'الرمز غير صحيح أو انتهت صلاحيته' });
+    await expect(confirmStepUp('000000')).rejects.toThrow('الرمز غير صحيح');
   });
 
   it('verifies with the fingerprint, and never opens the ceremony for an account with no passkeys', async () => {
@@ -127,6 +156,14 @@ describe('passkeyService', () => {
     await expect(listPasskeys()).rejects.toThrow('تعذّر الوصول إلى خدمة مفاتيح المرور');
     m.invoke.mockResolvedValueOnce({ data: null, error: Object.assign(new Error('x'), { context: { json: async () => { throw new SyntaxError('no body'); } } }) });
     await expect(listPasskeys()).rejects.toThrow('تعذّر الوصول إلى خدمة مفاتيح المرور');
+  });
+
+  it('says it is the network when the request never arrived, instead of the English library line', async () => {
+    const offline = (name: string) => Object.assign(new Error('Failed to send a request to the Edge Function'), { name, context: new TypeError('Failed to fetch') });
+    m.invoke.mockResolvedValueOnce({ data: null, error: offline('FunctionsFetchError') });
+    await expect(listPasskeys()).rejects.toThrow('تعذّر الاتصال. تحقّق من الشبكة وحاول مرة أخرى.');
+    m.invoke.mockResolvedValueOnce({ data: null, error: offline('FunctionsRelayError') });
+    await expect(listPasskeys()).rejects.toThrow('تعذّر الاتصال. تحقّق من الشبكة وحاول مرة أخرى.');
   });
 
   it('names the browser refusals and falls back for the rest', () => {

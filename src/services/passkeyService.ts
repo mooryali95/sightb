@@ -17,6 +17,13 @@ export interface PasskeySummary {
   deviceType: string | null;
   backedUp: boolean;
   transports: string[];
+  /**
+   * Whether it signs in on its own, or only stands in for the emailed code;
+   * null while the server cannot say yet.
+   */
+  canSignIn: boolean | null;
+  /** Whether the authenticator kept a discoverable credential; null when it did not say. */
+  discoverable: boolean | null;
 }
 
 /** Whether this browser can run a passkey ceremony at all. */
@@ -25,14 +32,18 @@ export function passkeysSupported(): boolean {
 }
 
 const UNREACHABLE = 'تعذّر الوصول إلى خدمة مفاتيح المرور';
+const OFFLINE = 'تعذّر الاتصال. تحقّق من الشبكة وحاول مرة أخرى.';
 
 /**
  * The reason a failed call gives. A refusal the function answered with a
  * non-2xx status reaches here as the client library's English "non-2xx
  * status code"; the function's own Arabic reason is in the response it
- * carries, so it is read from there.
+ * carries, so it is read from there. A request that never arrived has no
+ * reason to read, and is said to be the network.
  */
 async function reasonOf(error: unknown): Promise<string> {
+  const name = (error as { name?: unknown } | null)?.name;
+  if (name === 'FunctionsFetchError' || name === 'FunctionsRelayError') return OFFLINE;
   const context = (error as { context?: { json?: () => Promise<unknown> } } | null)?.context;
   if (typeof context?.json === 'function') {
     try {
@@ -45,7 +56,8 @@ async function reasonOf(error: unknown): Promise<string> {
 }
 
 async function call<T extends object>(body: Record<string, unknown>): Promise<T> {
-  const { data, error } = await db.invoke<T & { error?: string }>('passkeys', body);
+  const { data, error } = await db.invoke<T & { error?: string; needsStepUp?: boolean }>('passkeys', body);
+  if (data?.needsStepUp) throw new StepUpRequired();
   if (data?.error) throw new Error(data.error);
   if (error) throw new Error(await reasonOf(error));
   return (data ?? {}) as T;
@@ -56,12 +68,37 @@ export async function listPasskeys(): Promise<PasskeySummary[]> {
   return passkeys ?? [];
 }
 
+/**
+ * Adding a passkey needs a code emailed to the account and confirmed by this
+ * session, since a passkey signs in on its own. Without one the server
+ * answers with this instead of a ceremony; the page then has a code sent.
+ */
+export class StepUpRequired extends Error {
+  constructor() {
+    super('أكّد أنه أنت برمز يصلك بالبريد قبل إضافة مفتاح مرور.');
+    this.name = 'StepUpRequired';
+  }
+}
+
 /** Registers a new passkey for the signed-in user under the given name. */
 export async function registerPasskey(name: string): Promise<PasskeySummary> {
-  const { options } = await call<{ options: PublicKeyCredentialCreationOptionsJSON }>({ action: 'register-options' });
-  const response = await startRegistration({ optionsJSON: options });
+  const opts = await call<{ options?: PublicKeyCredentialCreationOptionsJSON; needsStepUp?: boolean }>({ action: 'register-options' });
+  if (opts.needsStepUp || !opts.options) throw new StepUpRequired();
+  const response = await startRegistration({ optionsJSON: opts.options });
   const { passkey } = await call<{ passkey: PasskeySummary }>({ action: 'register-verify', response, name });
   return passkey;
+}
+
+/** Emails a confirmation code to the account's own address. */
+export async function sendStepUpCode(): Promise<void> {
+  const { sent } = await call<{ sent?: boolean }>({ action: 'step-up-send' });
+  if (!sent) throw new Error('تعذّر إرسال الرمز. حاول بعد قليل.');
+}
+
+/** Confirms the emailed code, which lets this session register one passkey in the next ten minutes. */
+export async function confirmStepUp(code: string): Promise<void> {
+  const { verified } = await call<{ verified?: boolean }>({ action: 'step-up-verify', code });
+  if (!verified) throw new Error('الرمز غير صحيح أو انتهت صلاحيته');
 }
 
 /**
