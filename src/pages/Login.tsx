@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import basserhLogo from '@/assets/basserh-logo.jpg';
-import { loginSchema } from '@/lib/validations';
 import { getDeviceFingerprint } from './login/deviceFingerprint';
 import { readOtpCheck, type OtpDecision } from './login/otpCheck';
 import { LoginForm } from './login/LoginForm';
@@ -71,6 +70,9 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Loaded on submit: zod is 52 KB the login page would otherwise download
+    // before anyone has typed anything.
+    const { loginSchema } = await import('@/lib/validations');
     const validation = loginSchema.safeParse({ email: email.trim(), password });
     if (!validation.success) {
       toast.error(validation.error.errors[0]?.message || 'بيانات غير صالحة');
@@ -209,7 +211,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-sm">
+      <m.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-sm">
         <div className="text-center mb-8">
           <img src={basserhLogo} alt="بصيرة" className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4 shadow-lg" />
           <h1 className="text-2xl font-bold">رؤية</h1>
@@ -254,7 +256,7 @@ export default function Login() {
             )}
           </AnimatePresence>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

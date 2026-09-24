@@ -117,6 +117,12 @@ you clear violations, lower the budget in the same PR. When a push breaks it,
 **fix the violation** — raising the budget to absorb new breakage defeats the
 mechanism.
 
+The first load is held the same way. `scripts/initial-load-guard.sh`, a
+Quality step after the build, fails when the charts, PDF or spreadsheet chunk
+loads before sign-in, and when the gzipped total passes its `GZIP_BUDGET_KB`.
+Lower the budget when the first load shrinks; when it grows, load the new
+weight where it is used instead of raising it.
+
 Warnings are capped too, deliberately: `react-hooks/exhaustive-deps` reports at
 warning severity, and a stale dependency array shows a stale balance in a
 financial app.

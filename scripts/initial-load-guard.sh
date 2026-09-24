@@ -9,8 +9,15 @@
 # 1045 KB (299 KB) once those shared modules got a chunk of their own. See
 # manualChunks in vite.config.ts.
 #
+# It also holds a budget on the gzipped total, a ratchet like the ESLint one:
+# lower it when the first load shrinks, never raise it to absorb growth. 299 KB
+# after the chunks were fixed; 260 KB once zod loaded on submit and the landing
+# and login pages took framer-motion's light `m` components.
+#
 #   scripts/initial-load-guard.sh [dist-dir]     run after `bun run build`
 set -euo pipefail
+
+GZIP_BUDGET_KB=280
 
 dist="${1:-dist}"
 index="$dist/index.html"
@@ -37,3 +44,10 @@ if [ -n "$heavy" ]; then
   exit 1
 fi
 echo "No heavy chunk loads before sign-in."
+
+if [ $((gz / 1024)) -gt "$GZIP_BUDGET_KB" ]; then
+  echo "initial-load-guard: $((gz / 1024)) KB gzipped before sign-in, over the $GZIP_BUDGET_KB KB budget."
+  echo "Find what grew and load it where it is used; do not raise the budget to absorb it."
+  exit 1
+fi
+echo "Within the $GZIP_BUDGET_KB KB budget."

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ interface LoginFormProps {
 export function LoginForm({ email, onEmailChange, password, onPasswordChange, loading, onSubmit, onForgot }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   return (
-    <motion.form
+    <m.form
       key="login"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -66,6 +66,6 @@ export function LoginForm({ email, onEmailChange, password, onPasswordChange, lo
       <Button type="submit" className="w-full h-11 gap-2" disabled={loading}>
         {loading ? 'جاري التحميل...' : <><LogIn className="w-4 h-4" /> تسجيل الدخول</>}
       </Button>
-    </motion.form>
+    </m.form>
   );
 }
