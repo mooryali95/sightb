@@ -20,8 +20,15 @@ export function useSessionTimeout() {
     if (showWarning) setShowWarning(false);
   }, [showWarning]);
 
+  // Keyed on who is signed in, not on the user object: every auth event (a
+  // token refresh, a session re-check when the tab regains focus) hands over a
+  // new object for the same person, and re-arming on each one restarted the
+  // 30-second check before it could fire, so an idle session could outlive
+  // its timeout for as long as those events kept coming.
+  const userId = user?.id;
+
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const handleActivity = () => {
       lastActivityRef.current = Date.now();
@@ -64,7 +71,7 @@ export function useSessionTimeout() {
       clearInterval(checkIdle);
       if (warningTimerRef.current) clearInterval(warningTimerRef.current);
     };
-  }, [user, showWarning]);
+  }, [userId, showWarning]);
 
   return { showWarning, remainingSeconds, resetActivity };
 }

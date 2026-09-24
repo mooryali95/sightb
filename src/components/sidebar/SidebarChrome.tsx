@@ -1,9 +1,9 @@
-import { useNavigate } from 'react-router-dom';
 import { LogOut, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
+import { reloadAt } from '@/lib/reload-at';
 
 /** A link in the rail: its label beside the icon, or in a tooltip when collapsed. */
 export function NavItem({ collapsed, label, icon, active, onClick }: {
@@ -77,11 +77,16 @@ export function UserInfo() {
 
 export function SignOutButton({ collapsed }: { collapsed?: boolean }) {
   const { signOut } = useAuth();
-  const navigate = useNavigate();
 
+  // A full load of the login page, not an in-app navigation. Signing out
+  // empties `user`, and ProtectedRoute answers that with its own redirect to
+  // /welcome; React Router 7 runs both as transitions, so whichever landed
+  // last won and "sign out" could end on the landing page. A full load cannot
+  // be overtaken, and it drops the last user's data held in the store, which
+  // an in-app navigation left in memory. The idle timeout leaves the same way.
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login', { replace: true });
+    reloadAt('/login');
   };
 
   const btn = (
