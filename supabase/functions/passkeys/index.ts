@@ -1,20 +1,27 @@
 /**
- * Passkeys (WebAuthn) as the second factor beside the emailed code.
+ * Passkeys (WebAuthn): the second factor beside the emailed code, and a door
+ * of their own.
  *
- * Every action needs a signed-in user with a role, exactly like admin-otp:
- * the password is the first factor, the passkey the second. A successful
- * `auth-verify` trusts the device for thirty days the way a correct code
- * does, so the login page can treat the two interchangeably.
+ * As a second factor every action needs a signed-in user with a role,
+ * exactly like admin-otp: the password is the first factor, the passkey the
+ * second. A successful `auth-verify` trusts the device for thirty days the
+ * way a correct code does, so the login page can treat the two
+ * interchangeably.
  *
- * Actions: list · register-options · register-verify · auth-options ·
- * auth-verify · delete.
+ * Alone, `login-options` and `login-verify` sign a person in with no email
+ * and no password, so they run before any session exists; the checks that
+ * stand in for the password are in ../_shared/passkeyLogin.ts.
+ *
+ * Actions: login-options · login-verify · list · register-options ·
+ * register-verify · auth-options · auth-verify · delete.
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
+  type AuthenticatorTransportFuture,
 } from "npm:@simplewebauthn/server@13";
 import {
   ALLOWED_ORIGINS,
@@ -30,9 +37,67 @@ import {
   summarizePasskey,
   type PasskeyRow,
 } from "../_shared/passkeys.ts";
+import {
+  beginPasskeyLogin,
+  clientAddress,
+  completePasskeyLogin,
+  type LoginChallengeStore,
+} from "../_shared/passkeyLogin.ts";
 
 const RP_NAME = "رؤية بصيرة";
 const TRUSTED_DEVICE_DAYS = 30;
+
+/** A stored credential as the library takes it. */
+function credentialOf(p: PasskeyRow) {
+  return {
+    id: p.credential_id,
+    publicKey: base64urlToBytes(p.public_key) as Uint8Array<ArrayBuffer>,
+    counter: Number(p.counter),
+    transports: transportsOf(p),
+  };
+}
+
+function transportsOf(p: PasskeyRow) {
+  return (p.transports ?? undefined) as AuthenticatorTransportFuture[] | undefined;
+}
+
+async function trustDevice(supabase: SupabaseClient, userId: string, fingerprint: string, now: Date) {
+  await supabase.from("trusted_devices").upsert(
+    {
+      user_id: userId,
+      fingerprint,
+      expires_at: new Date(now.getTime() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    { onConflict: "user_id,fingerprint" },
+  );
+}
+
+/** Challenges minted before sign-in, held apart from the per-user ones. */
+function loginChallengeStore(supabase: SupabaseClient): LoginChallengeStore {
+  const table = () => supabase.from("passkey_login_challenges");
+  return {
+    async purgeExpired(now) {
+      await table().delete().lt("expires_at", now.toISOString());
+    },
+    async countSince(client, since) {
+      const { count, error } = await table()
+        .select("id", { count: "exact", head: true }).eq("client", client).gte("created_at", since.toISOString());
+      if (error) throw error;
+      return count ?? 0;
+    },
+    async insert(row) {
+      const { data, error } = await table().insert(row).select("id").single();
+      if (error) throw error;
+      return data.id as string;
+    },
+    // Deleted and read in one statement: two answers racing for one
+    // challenge cannot both get it.
+    async take(id) {
+      const { data } = await table().delete().eq("id", id).select("challenge, expires_at").maybeSingle();
+      return data ?? null;
+    },
+  };
+}
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get("origin") || "";
@@ -52,6 +117,68 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const rp = relyingPartyFor(req.headers.get("origin"));
+    const body = await req.json().catch(() => ({}));
+    const action = String(body.action || "");
+    const now = new Date();
+
+    // Signing in with a passkey alone happens before there is a session, so
+    // these two come before the check every other action needs.
+    if (action === "login-options" || action === "login-verify") {
+      if (!rp) return json(403, { error: "مصدر الطلب غير مسموح" });
+      const store = loginChallengeStore(supabase);
+      if (action === "login-options") {
+        return json(200, await beginPasskeyLogin({
+          store,
+          // No allowCredentials: the device offers whichever passkey it holds
+          // for this site. Verification is required: with no password behind
+          // it, a bare tap is not enough.
+          generateOptions: () => generateAuthenticationOptions({ rpID: rp.rpID, userVerification: "required", allowCredentials: [] }),
+        }, clientAddress(req.headers), now));
+      }
+      return json(200, await completePasskeyLogin({
+        store,
+        async findPasskey(credentialId) {
+          const { data } = await supabase.from("passkeys").select("*").eq("credential_id", credentialId).maybeSingle();
+          return (data as PasskeyRow | null) ?? null;
+        },
+        async verify({ response, expectedChallenge, passkey }) {
+          try {
+            const v = await verifyAuthenticationResponse({
+              response: response as never,
+              expectedChallenge,
+              expectedOrigin: rp.origin,
+              expectedRPID: rp.rpID,
+              requireUserVerification: true,
+              credential: credentialOf(passkey),
+            });
+            return { verified: v.verified, userVerified: v.authenticationInfo.userVerified, newCounter: v.authenticationInfo.newCounter };
+          } catch (err) {
+            console.error("[passkeys] login assertion refused", err);
+            return { verified: false, userVerified: false, newCounter: 0 };
+          }
+        },
+        async touchPasskey(id, newCounter, at) {
+          await supabase.from("passkeys").update({ counter: newCounter, last_used_at: at.toISOString() }).eq("id", id);
+        },
+        async hasRoles(userId) {
+          const { count } = await supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("user_id", userId);
+          return (count ?? 0) > 0;
+        },
+        async emailOf(userId) {
+          const { data } = await supabase.auth.admin.getUserById(userId);
+          return data.user?.email ?? null;
+        },
+        // A magic link's token, never sent anywhere: the browser exchanges it
+        // for a session at once with verifyOtp.
+        async mintTokenHash(email) {
+          const { data, error } = await supabase.auth.admin.generateLink({ type: "magiclink", email });
+          if (error) console.error("[passkeys] generateLink", error);
+          return data?.properties?.hashed_token ?? null;
+        },
+        trustDevice: (userId, fingerprint, at) => trustDevice(supabase, userId, fingerprint, at),
+      }, { challengeId: body.challengeId, response: body.response, fingerprint: body.fingerprint }, now));
+    }
 
     const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
     if (!token) return json(401, { error: "Unauthorized" });
@@ -62,12 +189,7 @@ Deno.serve(async (req) => {
       .from("user_roles").select("id", { count: "exact", head: true }).eq("user_id", user.id);
     if ((roleCount ?? 0) === 0) return json(403, { error: "لا صلاحيات لهذا الحساب" });
 
-    const rp = relyingPartyFor(req.headers.get("origin"));
     if (!rp) return json(403, { error: "مصدر الطلب غير مسموح" });
-
-    const body = await req.json().catch(() => ({}));
-    const action = String(body.action || "");
-    const now = new Date();
 
     const ownPasskeys = async (): Promise<PasskeyRow[]> => {
       const { data, error } = await supabase
@@ -114,8 +236,9 @@ Deno.serve(async (req) => {
         userDisplayName: (user.user_metadata?.full_name as string | undefined) || user.email || "",
         userID: new TextEncoder().encode(user.id),
         attestationType: "none",
-        excludeCredentials: existing.map((p) => ({ id: p.credential_id, transports: p.transports ?? undefined })),
-        authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
+        excludeCredentials: existing.map((p) => ({ id: p.credential_id, transports: transportsOf(p) })),
+        // Discoverable, so the key can later sign in on its own with no email typed.
+        authenticatorSelection: { residentKey: "required", userVerification: "preferred" },
       });
       if (!(await mintChallenge("registration", options.challenge))) {
         return json(429, { error: "تم تجاوز عدد المحاولات. حاول بعد قليل.", rateLimited: true });
@@ -156,7 +279,7 @@ Deno.serve(async (req) => {
       const options = await generateAuthenticationOptions({
         rpID: rp.rpID,
         userVerification: "preferred",
-        allowCredentials: existing.map((p) => ({ id: p.credential_id, transports: p.transports ?? undefined })),
+        allowCredentials: existing.map((p) => ({ id: p.credential_id, transports: transportsOf(p) })),
       });
       if (!(await mintChallenge("authentication", options.challenge))) {
         return json(429, { error: "تم تجاوز عدد المحاولات. حاول بعد قليل.", rateLimited: true });
@@ -175,12 +298,7 @@ Deno.serve(async (req) => {
         expectedChallenge,
         expectedOrigin: rp.origin,
         expectedRPID: rp.rpID,
-        credential: {
-          id: passkey.credential_id,
-          publicKey: base64urlToBytes(passkey.public_key),
-          counter: Number(passkey.counter),
-          transports: (passkey.transports ?? undefined) as never,
-        },
+        credential: credentialOf(passkey),
       });
       if (!verification.verified) return json(400, { verified: false, error: "تعذّر التحقق من مفتاح المرور" });
 
@@ -189,16 +307,7 @@ Deno.serve(async (req) => {
         .eq("id", passkey.id);
 
       const fingerprint = typeof body.fingerprint === "string" ? body.fingerprint : "";
-      if (fingerprint) {
-        await supabase.from("trusted_devices").upsert(
-          {
-            user_id: user.id,
-            fingerprint,
-            expires_at: new Date(now.getTime() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          { onConflict: "user_id,fingerprint" },
-        );
-      }
+      if (fingerprint) await trustDevice(supabase, user.id, fingerprint, now);
       return json(200, { verified: true });
     }
 

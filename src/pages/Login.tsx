@@ -9,7 +9,7 @@ import { readOtpCheck, type OtpDecision } from './login/otpCheck';
 import { LoginForm } from './login/LoginForm';
 import { OtpForm } from './login/OtpForm';
 import { ForgotPasswordForm } from './login/ForgotPasswordForm';
-import { passkeysSupported, passkeyErrorMessage, verifyWithPasskey } from '@/services/passkeyService';
+import { passkeysSupported, passkeyErrorMessage, signInWithPasskey, verifyWithPasskey } from '@/services/passkeyService';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -159,6 +159,24 @@ export default function Login() {
     }
   };
 
+  /**
+   * The passkey alone: no email, no password. The device verifies the person,
+   * which with the device itself is two factors, so no code follows.
+   */
+  const handleSignInWithPasskey = async () => {
+    setPasskeyLoading(true);
+    try {
+      await signInWithPasskey(getDeviceFingerprint());
+      toast.success('تم الدخول بمفتاح المرور');
+      await finalizeSuccessfulAccess();
+    } catch (error) {
+      console.error('[passkey-login]', error);
+      toast.error(passkeyErrorMessage(error, 'sign-in'));
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
     setOtpLoading(true);
@@ -252,6 +270,8 @@ export default function Login() {
                 loading={loading}
                 onSubmit={handleSubmit}
                 onForgot={() => setIsForgotPassword(true)}
+                onPasskey={passkeyOffered ? handleSignInWithPasskey : undefined}
+                passkeyLoading={passkeyLoading}
               />
             )}
           </AnimatePresence>

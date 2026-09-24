@@ -24,10 +24,30 @@ export function passkeysSupported(): boolean {
   try { return browserSupportsWebAuthn(); } catch { return false; }
 }
 
+const UNREACHABLE = 'تعذّر الوصول إلى خدمة مفاتيح المرور';
+
+/**
+ * The reason a failed call gives. A refusal the function answered with a
+ * non-2xx status reaches here as the client library's English "non-2xx
+ * status code"; the function's own Arabic reason is in the response it
+ * carries, so it is read from there.
+ */
+async function reasonOf(error: unknown): Promise<string> {
+  const context = (error as { context?: { json?: () => Promise<unknown> } } | null)?.context;
+  if (typeof context?.json === 'function') {
+    try {
+      const reason = ((await context.json()) as { error?: unknown } | null)?.error;
+      if (typeof reason === 'string' && reason) return reason;
+    } catch { /* no JSON body */ }
+    return UNREACHABLE;
+  }
+  return error instanceof Error && error.message ? error.message : UNREACHABLE;
+}
+
 async function call<T extends object>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await db.invoke<T & { error?: string }>('passkeys', body);
   if (data?.error) throw new Error(data.error);
-  if (error) throw error instanceof Error ? error : new Error('تعذّر الوصول إلى خدمة مفاتيح المرور');
+  if (error) throw new Error(await reasonOf(error));
   return (data ?? {}) as T;
 }
 
@@ -58,13 +78,42 @@ export async function verifyWithPasskey(fingerprint: string): Promise<'verified'
   return 'verified';
 }
 
+/**
+ * Signs in with a passkey alone: no email, no password, no code. The
+ * browser offers the passkeys it holds for this site; the one chosen signs
+ * the server's challenge once the person is verified on the device, and the
+ * server answers with a one-time token the session is opened with. The
+ * device is then trusted as a correct code would trust it.
+ */
+export async function signInWithPasskey(fingerprint: string): Promise<void> {
+  const { options, challengeId } = await call<{ options?: PublicKeyCredentialRequestOptionsJSON; challengeId?: string }>({ action: 'login-options' });
+  if (!options || !challengeId) throw new Error('تعذّر بدء الدخول بمفتاح المرور');
+  const response = await startAuthentication({ optionsJSON: options });
+  const { tokenHash } = await call<{ tokenHash?: string }>({ action: 'login-verify', challengeId, response, fingerprint });
+  if (!tokenHash) throw new Error('تعذّر الدخول بمفتاح المرور');
+  try {
+    await db.openSession(tokenHash);
+  } catch (e) {
+    console.error('[passkey-session]', e);
+    throw new Error('تعذّر فتح الجلسة، حاول مرة أخرى');
+  }
+}
+
 export async function deletePasskey(id: string): Promise<void> {
   await call<{ deleted?: boolean }>({ action: 'delete', id });
 }
 
-/** The message for a failed ceremony: the browser's refusals have names, everything else has a fallback. */
-export function passkeyErrorMessage(e: unknown): string {
+/**
+ * The message for a failed ceremony: the browser's refusals have names,
+ * everything else has a fallback. Signing in, a refusal is as often a device
+ * holding no passkey for this site as a cancelled prompt, so it says what to
+ * do in either case.
+ */
+export function passkeyErrorMessage(e: unknown, during: 'sign-in' | 'other' = 'other'): string {
   const name = (e as { name?: string } | null)?.name;
+  if (name === 'NotAllowedError' && during === 'sign-in') {
+    return 'لم يُستخدم مفتاح مرور. إن لم تسجّل مفتاحاً على هذا الجهاز بعد، ادخل بكلمة المرور ثم أضفه من صفحة الأمان.';
+  }
   if (name === 'NotAllowedError') return 'أُلغي التحقق أو انتهت مهلته. حاول مرة أخرى.';
   if (name === 'InvalidStateError') return 'هذا الجهاز مسجّل بالفعل لهذا الحساب.';
   if (name === 'NotSupportedError' || name === 'SecurityError') return 'هذا المتصفح أو الموقع لا يدعم مفاتيح المرور.';

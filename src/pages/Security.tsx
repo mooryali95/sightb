@@ -1,6 +1,7 @@
 /**
- * The account's security page. Today that is passkeys: the second factor
- * that replaces the emailed code for whoever registers one. The list is
+ * The account's security page. Today that is passkeys: a door of their own
+ * on the login page, and the second factor that replaces the emailed code
+ * for whoever registers one. The list is
  * loaded from the edge function, never from the table directly, so the
  * browser sees labels and dates and never key material.
  */
@@ -81,7 +82,7 @@ export default function Security() {
             <div>
               <h2 className="text-sm font-semibold flex items-center gap-2"><KeyRound className="w-4 h-4 text-primary" /> مفاتيح المرور</h2>
               <p className="text-xs text-muted-foreground mt-1">
-                بصمة الإصبع أو الوجه أو مفتاح أمان مادي. عند تسجيل الدخول من جهاز جديد يمكنك التحقق به بدل انتظار الرمز.
+                بصمة الإصبع أو الوجه أو مفتاح أمان مادي. تدخل به مباشرة من صفحة الدخول دون كلمة مرور، أو تتحقق به بدل انتظار الرمز.
               </p>
             </div>
             <Button size="sm" className="gap-1.5" onClick={() => setAdding(true)} disabled={!supported}>

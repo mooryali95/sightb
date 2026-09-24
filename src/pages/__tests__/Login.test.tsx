@@ -4,8 +4,9 @@
  * password stays on the page; a plain sign-in accepts any pending invite
  * and goes home; a user without roles is signed straight out; an admin on
  * an unknown device is held at the one-time code, which is verified with
- * the device's fingerprint and can be cancelled; and the reset link goes
- * to the reset page.
+ * the device's fingerprint and can be cancelled; a passkey alone opens a
+ * session with no email or password typed; and the reset link goes to the
+ * reset page.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -18,11 +19,12 @@ const m = vi.hoisted(() => ({
   getSession: vi.fn(),
   signOut: vi.fn(async () => ({ error: null })),
   resetPasswordForEmail: vi.fn(),
+  verifyOtp: vi.fn(),
   invoke: vi.fn(),
 }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    auth: { signInWithPassword: m.signInWithPassword, getSession: m.getSession, signOut: m.signOut, resetPasswordForEmail: m.resetPasswordForEmail },
+    auth: { signInWithPassword: m.signInWithPassword, getSession: m.getSession, signOut: m.signOut, resetPasswordForEmail: m.resetPasswordForEmail, verifyOtp: m.verifyOtp },
     functions: { invoke: m.invoke },
   },
 }));
@@ -237,6 +239,62 @@ describe('Login', () => {
         submitLogin('pm@example.com', 'secret1');
         expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /التحقق بمفتاح المرور/ })).not.toBeInTheDocument();
+      } finally {
+        wa.supports.mockReturnValue(true);
+      }
+    });
+  });
+
+  describe('passkey alone, from the login page', () => {
+    /** Answers the passkeys function per action; anything else answers empty. */
+    const passkeys = (byAction: Record<string, unknown>) => m.invoke.mockImplementation(async (name: string, opts?: { body?: { action?: string } }) =>
+      ({ data: name === 'passkeys' ? byAction[opts?.body?.action ?? ''] ?? {} : {}, error: null }));
+    const passkeyButton = () => screen.getByRole('button', { name: 'الدخول بمفتاح المرور' });
+
+    it('opens the session from the server token, trusts the device, and goes home with no password or code', async () => {
+      passkeys({ 'login-options': { options: { challenge: 'c9' }, challengeId: 'ch-9' }, 'login-verify': { verified: true, tokenHash: 'th-9' } });
+      wa.startAuthentication.mockResolvedValue({ id: 'cred-1', response: { signature: 's', userHandle: 'u' } });
+      m.verifyOtp.mockResolvedValue({ data: {}, error: null });
+      renderLogin();
+      fireEvent.click(passkeyButton());
+      await screen.findByTestId('path');
+      expect(screen.getByTestId('path')).toHaveTextContent('/');
+      const fingerprint = localStorage.getItem('rouya_device_fp');
+      expect(fingerprint).toBeTruthy();
+      expect(wa.startAuthentication).toHaveBeenCalledWith({ optionsJSON: { challenge: 'c9' } });
+      expect(m.invoke).toHaveBeenCalledWith('passkeys', { body: { action: 'login-verify', challengeId: 'ch-9', response: { id: 'cred-1', response: { signature: 's', userHandle: 'u' } }, fingerprint } });
+      expect(m.verifyOtp).toHaveBeenCalledWith({ token_hash: 'th-9', type: 'magiclink' });
+      expect(m.invoke).toHaveBeenLastCalledWith('accept-invite', { body: {} });
+      expect(m.signInWithPassword).not.toHaveBeenCalled();
+      expect(m.invoke).not.toHaveBeenCalledWith('admin-otp', expect.anything());
+      expect(toast.success).toHaveBeenCalledWith('تم الدخول بمفتاح المرور');
+    });
+
+    it('shows the server refusal and stays, with no session opened', async () => {
+      passkeys({ 'login-options': { options: { challenge: 'c9' }, challengeId: 'ch-9' }, 'login-verify': { verified: false, error: 'لا صلاحيات لهذا الحساب' } });
+      wa.startAuthentication.mockResolvedValue({ id: 'cred-1', response: {} });
+      renderLogin();
+      fireEvent.click(passkeyButton());
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('لا صلاحيات لهذا الحساب'));
+      expect(m.verifyOtp).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('path')).not.toBeInTheDocument();
+      expect(passkeyButton()).toBeEnabled();
+    });
+
+    it('when the device offers no passkey, says how to get one', async () => {
+      passkeys({ 'login-options': { options: { challenge: 'c9' }, challengeId: 'ch-9' } });
+      wa.startAuthentication.mockRejectedValue(Object.assign(new Error('x'), { name: 'NotAllowedError' }));
+      renderLogin();
+      fireEvent.click(passkeyButton());
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('ادخل بكلمة المرور ثم أضفه من صفحة الأمان')));
+      expect(m.invoke).not.toHaveBeenCalledWith('passkeys', expect.objectContaining({ body: expect.objectContaining({ action: 'login-verify' }) }));
+    });
+
+    it('is not offered where the browser cannot run a passkey', () => {
+      wa.supports.mockReturnValue(false);
+      try {
+        renderLogin();
+        expect(screen.queryByRole('button', { name: 'الدخول بمفتاح المرور' })).not.toBeInTheDocument();
       } finally {
         wa.supports.mockReturnValue(true);
       }

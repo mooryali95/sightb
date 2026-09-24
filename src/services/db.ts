@@ -164,6 +164,15 @@ export const db = {
   /** Storage handle — binary I/O, not routed through the query retry chain. */
   storage: supabase.storage,
 
+  /**
+   * Opens a session from a one-time token the server minted, as a passkey
+   * sign-in does; the token is a magic link's that was never sent.
+   */
+  async openSession(tokenHash: string): Promise<void> {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' });
+    if (error) throw error;
+  },
+
   /** Ends the current session. */
   async signOut(): Promise<void> {
     await supabase.auth.signOut();
