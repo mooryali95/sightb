@@ -1,10 +1,12 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
+import { useSecondFactorGate } from '@/hooks/useSecondFactorGate';
 import { Navigate } from 'react-router-dom';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading, signOut } = useAuth();
   const { roles, loading: roleLoading } = useRole();
+  const secondFactor = useSecondFactorGate(user?.id);
 
   const loading = authLoading || roleLoading;
 
@@ -44,6 +46,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  // Signed in with the password but the code never given: finish it first.
+  if (secondFactor === 'needs-code') {
+    return <Navigate to="/login?step=code" replace />;
   }
 
   return <>{children}</>;

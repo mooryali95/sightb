@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { m, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -10,11 +11,14 @@ import { LoginForm } from './login/LoginForm';
 import { OtpForm } from './login/OtpForm';
 import { ForgotPasswordForm } from './login/ForgotPasswordForm';
 import { passkeysSupported, passkeyErrorMessage, signInWithPasskey, verifyWithPasskey } from '@/services/passkeyService';
+import { checkSecondFactor, verifySecondFactor } from '@/services/secondFactorService';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function Login() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,6 +45,9 @@ export default function Login() {
     } catch (error) {
       console.error('[accept-invite]', error);
     }
+    // Anything read before the second factor passed may be empty (the
+    // database refuses such a session), and would be served from cache.
+    await queryClient.invalidateQueries();
     navigate('/', { replace: true });
   };
 
@@ -50,14 +57,14 @@ export default function Login() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { kind: 'error' };
 
-    const res = await supabase.functions.invoke('admin-otp', { body: { action: 'check', fingerprint } });
+    const res = await checkSecondFactor(fingerprint);
     const decision = readOtpCheck(res);
     if (decision.kind === 'error') {
       console.error('[otp-check]', res.error);
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى.');
     } else if (decision.kind === 'rate-limited') {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       toast.error(decision.message);
     }
     return decision;
@@ -67,6 +74,43 @@ export default function Login() {
     setOtpRequired(true);
     setResendCooldown(RESEND_COOLDOWN_SECONDS);
   };
+
+  /** After any sign-in, the server says whether this session still owes a code. */
+  const proceedAfterSignIn = async () => {
+    const decision = await checkAndSendOtp();
+    switch (decision.kind) {
+      case 'error':
+      case 'rate-limited':
+        return; // already signed out and told
+      case 'no-roles':
+        await supabase.auth.signOut({ scope: 'local' });
+        toast.error('ليس لديك صلاحية للوصول. تواصل مع مدير النظام.');
+        return;
+      case 'otp-sent':
+        holdForOtp();
+        toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
+        return;
+      case 'otp-failed':
+        holdForOtp();
+        toast.warning('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
+        return;
+      case 'ok':
+        await finalizeSuccessfulAccess();
+    }
+  };
+
+  // Sent here by a page that found this session still owing its code:
+  // continue from the code step instead of asking for the password again.
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (resumed.current || searchParams.get('step') !== 'code') return;
+    resumed.current = true;
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) await proceedAfterSignIn();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,27 +126,7 @@ export default function Login() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) throw error;
-
-      const decision = await checkAndSendOtp();
-      switch (decision.kind) {
-        case 'error':
-        case 'rate-limited':
-          return; // already signed out and told
-        case 'no-roles':
-          await supabase.auth.signOut();
-          toast.error('ليس لديك صلاحية للوصول. تواصل مع مدير النظام.');
-          return;
-        case 'otp-sent':
-          holdForOtp();
-          toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
-          return;
-        case 'otp-failed':
-          holdForOtp();
-          toast.warning('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
-          return;
-        case 'ok':
-          await finalizeSuccessfulAccess();
-      }
+      await proceedAfterSignIn();
     } catch (error) {
       console.error('[login]', error);
       toast.error('بيانات الدخول غير صحيحة');
@@ -116,17 +140,16 @@ export default function Login() {
     if (otpCode.length !== 6) return;
     setOtpLoading(true);
     try {
-      const fingerprint = getDeviceFingerprint();
-      const res = await supabase.functions.invoke('admin-otp', { body: { action: 'verify', code: otpCode, fingerprint } });
+      const res = await verifySecondFactor(otpCode, getDeviceFingerprint());
 
-      if (res.data?.rateLimited) {
-        await supabase.auth.signOut();
+      if (res.rateLimited) {
+        await supabase.auth.signOut({ scope: 'local' });
         setOtpRequired(false);
-        toast.error(res.data?.error || 'تم تجاوز الحد الأقصى للمحاولات');
+        toast.error(res.error || 'تم تجاوز الحد الأقصى للمحاولات');
         return;
       }
-      if (res.error || !res.data?.verified) {
-        toast.error(res.data?.error || 'الرمز غير صحيح');
+      if (!res.verified) {
+        toast.error(res.error || 'الرمز غير صحيح');
         setOtpCode('');
         return;
       }
@@ -168,7 +191,8 @@ export default function Login() {
     try {
       await signInWithPasskey(getDeviceFingerprint());
       toast.success('تم الدخول بمفتاح المرور');
-      await finalizeSuccessfulAccess();
+      // The sign-in trusted this device; the check records the new session.
+      await proceedAfterSignIn();
     } catch (error) {
       console.error('[passkey-login]', error);
       toast.error(passkeyErrorMessage(error, 'sign-in'));
@@ -181,8 +205,7 @@ export default function Login() {
     if (resendCooldown > 0) return;
     setOtpLoading(true);
     try {
-      const fingerprint = getDeviceFingerprint();
-      const res = await supabase.functions.invoke('admin-otp', { body: { action: 'check', fingerprint } });
+      const res = await checkSecondFactor(getDeviceFingerprint(), true);
       if (res.error) throw res.error;
       if (res.data?.sent !== true) {
         toast.warning('تعذر إرسال الرمز حالياً');
@@ -200,7 +223,7 @@ export default function Login() {
   };
 
   const handleCancelOtp = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     setOtpRequired(false);
     setOtpCode('');
   };
