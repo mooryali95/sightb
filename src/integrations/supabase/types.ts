@@ -1022,13 +1022,81 @@ export type Database = {
         }
         Relationships: []
       }
+      passkey_login_challenges: {
+        Row: {
+          challenge: string
+          client: string
+          created_at: string
+          expires_at: string
+          id: string
+          used_at: string | null
+        }
+        Insert: {
+          challenge: string
+          client?: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          used_at?: string | null
+        }
+        Update: {
+          challenge?: string
+          client?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
+      passkey_step_up_codes: {
+        Row: {
+          code_hash: string
+          confirmed_at: string | null
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          session_id: string | null
+          used_at: string | null
+          user_id: string
+          wrong_attempts: number
+        }
+        Insert: {
+          code_hash: string
+          confirmed_at?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          session_id?: string | null
+          used_at?: string | null
+          user_id: string
+          wrong_attempts?: number
+        }
+        Update: {
+          code_hash?: string
+          confirmed_at?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          session_id?: string | null
+          used_at?: string | null
+          user_id?: string
+          wrong_attempts?: number
+        }
+        Relationships: []
+      }
       passkeys: {
         Row: {
           backed_up: boolean
+          can_sign_in: boolean
           counter: number
           created_at: string
           credential_id: string
           device_type: string | null
+          discoverable: boolean | null
           id: string
           last_used_at: string | null
           name: string
@@ -1038,10 +1106,12 @@ export type Database = {
         }
         Insert: {
           backed_up?: boolean
+          can_sign_in?: boolean
           counter?: number
           created_at?: string
           credential_id: string
           device_type?: string | null
+          discoverable?: boolean | null
           id?: string
           last_used_at?: string | null
           name: string
@@ -1051,10 +1121,12 @@ export type Database = {
         }
         Update: {
           backed_up?: boolean
+          can_sign_in?: boolean
           counter?: number
           created_at?: string
           credential_id?: string
           device_type?: string | null
+          discoverable?: boolean | null
           id?: string
           last_used_at?: string | null
           name?: string
@@ -1769,6 +1841,66 @@ export type Database = {
           },
         ]
       }
+      second_factor_devices: {
+        Row: {
+          created_at: string
+          expires_at: string
+          fingerprint_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          fingerprint_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          fingerprint_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      second_factor_settings: {
+        Row: {
+          enforce: boolean
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          enforce?: boolean
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          enforce?: boolean
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      session_second_factor: {
+        Row: {
+          method: string
+          session_id: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          method: string
+          session_id: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          method?: string
+          session_id?: string
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
       settlement_events: {
         Row: {
           amount: number
@@ -2061,6 +2193,10 @@ export type Database = {
         }
         Returns: number
       }
+      passkey_step_up_verify: {
+        Args: { p_code_hash: string; p_session_id: string; p_user_id: string }
+        Returns: string
+      }
       project_financial_summary: {
         Args: { _project_id: string }
         Returns: Json
@@ -2077,6 +2213,8 @@ export type Database = {
         Args: { _reason: string; _transfer_id: string }
         Returns: Json
       }
+      second_factor_ok: { Args: never; Returns: boolean }
+      second_factor_required: { Args: { p_user_id: string }; Returns: boolean }
       split_settle_advance: {
         Args: {
           _budget_item_id: string
