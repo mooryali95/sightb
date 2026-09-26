@@ -34,11 +34,51 @@ if [ "$start" -lt 0 ]; then
   exit 2
 fi
 
+# Edge functions Lovable owns that act for the user through the service
+# role, past row-level security: each must keep asking the database's rule.
+fn_missing=0
+for fn in send-invite delete-user admin-email-status; do
+  if ! grep -q "requireSecondFactor(" "supabase/functions/$fn/index.ts" 2>/dev/null; then
+    echo "  UNGUARDED function $fn: it no longer calls requireSecondFactor (see _shared/sessionGate.ts)"
+    fn_missing=$((fn_missing + 1))
+  fi
+done
+
+# Database functions: after 20260926120000 every SECURITY DEFINER function a
+# user may call carries require_second_factor. A later migration defining one
+# must carry it too, revoke it from authenticated, or re-run that migration's
+# loop (which calls plpgsql_block_begin).
+FN_GUARD="20260926120000_second_factor_on_database_functions.sql"
+fn_problems=$(ls supabase/migrations/*.sql | sort | awk -v g="$FN_GUARD" 'found { print } $0 ~ g { found = 1 }' | xargs -r perl -0777 -e '
+  my @out;
+  my %helper = map { $_ => 1 } qw(has_role has_access can_edit can_access_expense_receipt can_access_resource_receipt
+                                  second_factor_ok second_factor_required require_second_factor plpgsql_block_begin);
+  for my $f (@ARGV) {
+    open my $fh, "<", $f or die; local $/; my $sql = <$fh>; close $fh;
+    (my $name = $f) =~ s{.*/}{};
+    next if $sql =~ /plpgsql_block_begin\(/;
+    while ($sql =~ /create\s+(?:or\s+replace\s+)?function\s+(?:"?public"?\.)?"?(\w+)"?\s*\((.*?)\$(\w*)\$(.*?)\$\3\$/gis) {
+      my ($fn, $head, $body) = (lc $1, $2, $4);
+      next unless $head =~ /security\s+definer/i;
+      next if $head =~ /returns\s+trigger/i || $helper{$fn};
+      next if $body =~ /require_second_factor/i;
+      next if $sql =~ /revoke\s+(?:all|execute)\s+on\s+function\s+(?:public\.)?\Q$fn\E\b[^;]*\bauthenticated\b/i;
+      push @out, "  UNGUARDED database function $fn (in $name): add PERFORM public.require_second_factor(); or revoke it from authenticated";
+    }
+  }
+  print "$_\n" for @out;
+')
+[ -n "$fn_problems" ] && echo "$fn_problems"
+fn_missing=$((fn_missing + $(printf '%s' "$fn_problems" | grep -c . || true)))
+
 later=("${files[@]:$((start + 1))}")
-[ "${#later[@]}" -eq 0 ] && { echo "No migration after $ENFORCING; nothing to cover."; exit 0; }
+if [ "${#later[@]}" -eq 0 ]; then
+  [ "$fn_missing" -gt 0 ] && { echo "second-factor-coverage: $fn_missing function(s) without the guard."; exit 1; }
+  echo "No migration after $ENFORCING; nothing to cover."; exit 0
+fi
 
 # One perl pass over the later migrations in order, statement by statement.
-perl -0777 -e '
+FN_MISSING=$fn_missing perl -0777 -e '
   my (%pending, @problems);
   for my $f (@ARGV) {
     open my $fh, "<", $f or die "$f: $!"; local $/; my $sql = <$fh>; close $fh;
@@ -65,6 +105,7 @@ perl -0777 -e '
     }
   }
   push @problems, map { "  NOT COVERED public.$_ (created in $pending{$_})" } sort keys %pending;
+  push @problems, ("  (function guards above)") x $ENV{FN_MISSING} if $ENV{FN_MISSING};
   if (@problems) {
     print "$_\n" for @problems;
     print "second-factor-coverage: ", scalar(@problems), " problem(s) with the second_factor policy.\n";
