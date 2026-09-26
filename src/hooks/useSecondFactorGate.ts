@@ -19,7 +19,9 @@ export function useSecondFactorGate(userId: string | undefined): 'ok' | 'needs-c
     secondFactorStatus().then((status) => {
       if (!live) return;
       if (status && status.required && !status.verified) setState('needs-code');
-      else passed.add(userId);
+      // Only a clear yes is remembered; an answer that could not be had is
+      // asked again on the next page.
+      else if (status) passed.add(userId);
     });
     return () => { live = false; };
   }, [userId]);

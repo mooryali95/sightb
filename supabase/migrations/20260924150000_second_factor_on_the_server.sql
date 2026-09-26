@@ -18,10 +18,23 @@ CREATE TABLE public.session_second_factor (
 CREATE INDEX session_second_factor_user_idx ON public.session_second_factor (user_id);
 ALTER TABLE public.session_second_factor ENABLE ROW LEVEL SECURITY;
 
--- 2. A trusted device proves something only if its fingerprint is a secret
---    the device alone keeps. Users could read their own; nothing in the app
---    does (only the admin-otp, passkeys, second-factor and delete-user
---    functions, as the service role). Deleting one's own stays allowed.
+-- 2. Devices trusted for the second factor, kept apart from trusted_devices.
+--    That table is also written by admin-otp (Lovable's, whose code check can
+--    be raced) and its fingerprints were readable by their owner until now, so
+--    none of its rows counts here. This one starts empty: each device proves
+--    itself once more with a code or a passkey. Only the fingerprint's hash is
+--    kept, and only the second-factor and passkeys functions write it.
+CREATE TABLE public.second_factor_devices (
+  user_id uuid NOT NULL,
+  fingerprint_hash text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, fingerprint_hash)
+);
+ALTER TABLE public.second_factor_devices ENABLE ROW LEVEL SECURITY;
+
+--    Users could read their own trusted_devices fingerprints; nothing in the
+--    app does (only functions, as the service role). Deleting one's own stays.
 DROP POLICY IF EXISTS "Users can view own trusted devices" ON public.trusted_devices;
 
 -- 3. profiles.email is where admin-otp sends the login code, and a user could
@@ -96,10 +109,10 @@ REVOKE ALL ON FUNCTION public.second_factor_ok() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.second_factor_ok() TO authenticated, service_role;
 
 -- 6. A restrictive policy on every public table with row-level security, so
---    it narrows whatever the permissive policies allow; and on storage. Not on
---    user_roles: the app reads a user's own roles to know where to send them,
---    including to the code step. The (SELECT ...) is evaluated once per
---    statement, not per row.
+--    it narrows whatever the permissive policies allow; and on storage. On
+--    user_roles only for writes: the app reads a user's own roles to know
+--    where to send them, including to the code step. The (SELECT ...) is
+--    evaluated once per statement, not per row.
 DO $$
 DECLARE
   t record;
@@ -117,6 +130,19 @@ BEGIN
       t.relname);
   END LOOP;
 END $$;
+
+-- user_roles stays readable, since the page routes on it, but no write to it
+-- goes through without the second factor: a password alone could otherwise
+-- delete its own admin row to stop needing one, or anyone else's.
+DROP POLICY IF EXISTS second_factor_insert ON public.user_roles;
+CREATE POLICY second_factor_insert ON public.user_roles AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK ((SELECT public.second_factor_ok()));
+DROP POLICY IF EXISTS second_factor_update ON public.user_roles;
+CREATE POLICY second_factor_update ON public.user_roles AS RESTRICTIVE FOR UPDATE TO authenticated
+  USING ((SELECT public.second_factor_ok())) WITH CHECK ((SELECT public.second_factor_ok()));
+DROP POLICY IF EXISTS second_factor_delete ON public.user_roles;
+CREATE POLICY second_factor_delete ON public.user_roles AS RESTRICTIVE FOR DELETE TO authenticated
+  USING ((SELECT public.second_factor_ok()));
 
 DROP POLICY IF EXISTS second_factor ON storage.objects;
 CREATE POLICY second_factor ON storage.objects AS RESTRICTIVE FOR ALL TO authenticated

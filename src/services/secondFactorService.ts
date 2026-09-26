@@ -14,10 +14,17 @@ import type { OtpCheckResponse } from '@/pages/login/otpCheck';
 
 type Invoke = { data?: Record<string, unknown> | null; error?: unknown };
 
-/** Whether an answer means the function is not there (yet), not that it refused. */
+/**
+ * Whether an answer means the function is not there (yet), not that it
+ * refused. In a browser a function that is not deployed never answers 404:
+ * its CORS preflight fails first, and the library reports a fetch error. So
+ * a request that never arrived counts as missing too; falling back then
+ * costs nothing but a second request.
+ */
 export function functionMissing(res: Invoke): boolean {
   if (res.data && (res.data as { unavailable?: unknown }).unavailable === true) return true;
   const err = res.error as { name?: string; context?: { status?: number } } | null | undefined;
+  if (err?.name === 'FunctionsFetchError' || err?.name === 'FunctionsRelayError') return true;
   return err?.name === 'FunctionsHttpError' && err.context?.status === 404;
 }
 
@@ -27,9 +34,12 @@ async function secondFactorOr(body: Record<string, unknown>): Promise<Invoke> {
   return (await supabase.functions.invoke('admin-otp', { body })) as Invoke;
 }
 
-/** Whether this device must be asked for a code; sends it when so. */
-export function checkSecondFactor(fingerprint: string): Promise<OtpCheckResponse> {
-  return secondFactorOr({ action: 'check', fingerprint }) as Promise<OtpCheckResponse>;
+/**
+ * Whether this device must be asked for a code; sends one when so, unless a
+ * code sent earlier is still live. `resend` sends a fresh one regardless.
+ */
+export function checkSecondFactor(fingerprint: string, resend = false): Promise<OtpCheckResponse> {
+  return secondFactorOr(resend ? { action: 'check', fingerprint, resend: true } : { action: 'check', fingerprint }) as Promise<OtpCheckResponse>;
 }
 
 /** Checks the code; a correct one records this session and trusts the device. */

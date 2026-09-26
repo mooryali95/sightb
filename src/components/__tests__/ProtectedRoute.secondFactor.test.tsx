@@ -62,4 +62,15 @@ describe('ProtectedRoute and the second factor', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(status).toHaveBeenCalledTimes(1);
   });
+
+  it('asks again on the next page when the answer could not be had', async () => {
+    status.mockResolvedValueOnce(null).mockResolvedValueOnce({ required: true, verified: false });
+    const first = renderAt();
+    await waitFor(() => expect(status).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+    first.unmount();
+    renderAt();
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/login?step=code'));
+    expect(status).toHaveBeenCalledTimes(2);
+  });
 });

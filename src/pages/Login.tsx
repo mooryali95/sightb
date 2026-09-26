@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { m, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -16,6 +17,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function Login() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,6 +45,9 @@ export default function Login() {
     } catch (error) {
       console.error('[accept-invite]', error);
     }
+    // Anything read before the second factor passed may be empty (the
+    // database refuses such a session), and would be served from cache.
+    await queryClient.invalidateQueries();
     navigate('/', { replace: true });
   };
 
@@ -56,10 +61,10 @@ export default function Login() {
     const decision = readOtpCheck(res);
     if (decision.kind === 'error') {
       console.error('[otp-check]', res.error);
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى.');
     } else if (decision.kind === 'rate-limited') {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       toast.error(decision.message);
     }
     return decision;
@@ -78,7 +83,7 @@ export default function Login() {
       case 'rate-limited':
         return; // already signed out and told
       case 'no-roles':
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: 'local' });
         toast.error('ليس لديك صلاحية للوصول. تواصل مع مدير النظام.');
         return;
       case 'otp-sent':
@@ -138,7 +143,7 @@ export default function Login() {
       const res = await verifySecondFactor(otpCode, getDeviceFingerprint());
 
       if (res.rateLimited) {
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: 'local' });
         setOtpRequired(false);
         toast.error(res.error || 'تم تجاوز الحد الأقصى للمحاولات');
         return;
@@ -200,7 +205,7 @@ export default function Login() {
     if (resendCooldown > 0) return;
     setOtpLoading(true);
     try {
-      const res = await checkSecondFactor(getDeviceFingerprint());
+      const res = await checkSecondFactor(getDeviceFingerprint(), true);
       if (res.error) throw res.error;
       if (res.data?.sent !== true) {
         toast.warning('تعذر إرسال الرمز حالياً');
@@ -218,7 +223,7 @@ export default function Login() {
   };
 
   const handleCancelOtp = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     setOtpRequired(false);
     setOtpCode('');
   };

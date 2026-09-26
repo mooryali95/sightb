@@ -15,13 +15,14 @@ const NOW = new Date('2026-09-24T15:00:00Z');
 const SESSION = '0b1c2d3e-4f50-4617-8829-3a4b5c6d7e8f';
 const FP = '6f1c2d3e-4a5b-4c6d-8e7f-001122334455';
 
-function deps(o: { roles?: string[]; recorded?: boolean; trusted?: boolean; send?: unknown } = {}) {
+function deps(o: { roles?: string[]; recorded?: boolean; trusted?: boolean; send?: unknown; live?: boolean } = {}) {
   return {
     roles: vi.fn(async () => o.roles ?? ['editor']),
     isRecorded: vi.fn(async () => o.recorded ?? false),
     isTrustedDevice: vi.fn(async () => o.trusted ?? false),
     record: vi.fn(async () => {}),
     sendCode: vi.fn(async () => (o.send ?? { sent: true }) as never),
+    liveCodeExists: vi.fn(async () => o.live ?? false),
   };
 }
 const input = (over: Record<string, unknown> = {}) => ({ userId: 'u1', sessionId: SESSION, fingerprint: FP, ...over });
@@ -72,6 +73,19 @@ describe('checkSecondFactor', () => {
     expect(await checkSecondFactor(noDevice, input({ fingerprint: undefined }), NOW)).toEqual({ requiresOtp: true, sent: true });
     expect(noDevice.isTrustedDevice).not.toHaveBeenCalled();
     expect(noDevice.record).not.toHaveBeenCalled();
+  });
+
+  it('does not cancel a live code by sending another when the person comes back to the step', async () => {
+    const d = deps({ live: true });
+    expect(await checkSecondFactor(d, input(), NOW)).toEqual({ requiresOtp: true, sent: true });
+    expect(d.liveCodeExists).toHaveBeenCalledWith('u1', NOW);
+    expect(d.sendCode).not.toHaveBeenCalled();
+  });
+
+  it('sends a fresh code on an explicit resend, live code or not', async () => {
+    const d = deps({ live: true });
+    expect(await checkSecondFactor(d, input({ resend: true }), NOW)).toEqual({ requiresOtp: true, sent: true });
+    expect(d.sendCode).toHaveBeenCalledTimes(1);
   });
 
   it('passes a rate limit through in the shape the page reads', async () => {

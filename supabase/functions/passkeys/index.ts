@@ -58,6 +58,7 @@ import {
   sendAccountEmail,
   sha256Hex,
   recordSecondFactor,
+  sessionPassedSecondFactor,
   stepUpStore,
   trustDevice,
 } from "../_shared/account.ts";
@@ -235,14 +236,24 @@ Deno.serve(async (req) => {
       return isChallengeLive(data, now) ? data.challenge : null;
     };
 
-    if (action === "list") {
-      return json(200, { passkeys: (await ownPasskeys()).map(summarizePasskey) });
-    }
-
     // Adding a passkey needs a code confirmed by this session, not just the
     // session: see ../_shared/passkeyGate.ts.
     const sessionId = sessionIdOf(token);
     const steps = stepUpStore(supabase);
+
+    // Managing keys is managing the way in: with enforcement on, a session
+    // that owes its second factor may not list, delete or add one. The
+    // second-factor steps themselves (step-up, auth-options, auth-verify)
+    // stay open, since they are how the session passes.
+    if (["list", "delete", "register-options", "register-verify"].includes(action)
+      && !(await sessionPassedSecondFactor(supabase, user.id, sessionId))) {
+      return json(200, { error: "أكمل التحقق بخطوتين لهذه الجلسة أولاً.", needsSecondFactor: true });
+    }
+
+    if (action === "list") {
+      return json(200, { passkeys: (await ownPasskeys()).map(summarizePasskey) });
+    }
+
 
     if (action === "step-up-send") {
       if (!user.email) return json(200, { error: GATE_MESSAGES.notSent });

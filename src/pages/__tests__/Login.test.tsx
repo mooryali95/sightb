@@ -12,6 +12,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Login from '../Login';
 
 const m = vi.hoisted(() => ({
@@ -42,14 +43,17 @@ document.elementFromPoint = () => null;
 function Probe() {
   return <p data-testid="path">{useLocation().pathname}</p>;
 }
+const queryClient = new QueryClient();
 function renderLogin(at = '/login') {
   return render(
+    <QueryClientProvider client={queryClient}>
     <MemoryRouter initialEntries={[at]}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Probe />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 const submitLogin = (email: string, password: string) => {
@@ -192,6 +196,20 @@ describe('Login', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('طُلب رابط قبل قليل. انتظر دقيقة ثم أعد الطلب.'));
   });
 
+  it('falls back to admin-otp when a browser cannot reach an undeployed second-factor at all', async () => {
+    // What a browser really gets: the CORS preflight of a missing function fails.
+    const unreachable = Object.assign(new Error('Failed to send a request to the Edge Function'), { name: 'FunctionsFetchError', context: new TypeError('Failed to fetch') });
+    m.invoke.mockImplementation(async (name: string) => {
+      if (name === 'second-factor') return { data: null, error: unreachable };
+      if (name === 'admin-otp') return { data: { requiresOtp: true, sent: true }, error: null };
+      return { data: {}, error: null };
+    });
+    renderLogin();
+    submitLogin('pm@example.com', 'secret1');
+    expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
+    expect(m.signOut).not.toHaveBeenCalled();
+  });
+
   it('falls back to admin-otp while second-factor is not deployed yet, and asks for the code the same way', async () => {
     const missing = Object.assign(new Error('Edge Function returned a non-2xx status code'), { name: 'FunctionsHttpError', context: { status: 404 } });
     m.invoke.mockImplementation(async (name: string) => {
@@ -213,6 +231,23 @@ describe('Login', () => {
     submitLogin('pm@example.com', 'secret1');
     await waitFor(() => expect(m.signOut).toHaveBeenCalled());
     expect(m.invoke).not.toHaveBeenCalledWith('admin-otp', expect.anything());
+  });
+
+  it('checks without forcing a new code, and refreshes what was read before the code passed', async () => {
+    otpCheck({ requiresOtp: true, sent: true });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    renderLogin();
+    submitLogin('pm@example.com', 'secret1');
+    expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
+    const fingerprint = localStorage.getItem('rouya_device_fp');
+    expect(m.invoke).toHaveBeenCalledWith('second-factor', { body: { action: 'check', fingerprint } });
+    m.invoke.mockImplementation(async (name: string, opts?: { body?: { action?: string } }) =>
+      name === 'second-factor' && opts?.body?.action === 'verify' ? { data: { verified: true }, error: null } : { data: {}, error: null });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
+    fireEvent.submit(screen.getByRole('textbox').closest('form') as HTMLFormElement);
+    await screen.findByTestId('path');
+    expect(invalidate).toHaveBeenCalled();
+    invalidate.mockRestore();
   });
 
   it('resumes at the code step for a session sent back to finish it, without asking the password again', async () => {

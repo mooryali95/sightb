@@ -48,8 +48,12 @@ export type CheckAnswer =
  * same way.
  */
 export async function checkSecondFactor(
-  deps: SecondFactorDeps & { sendCode(): Promise<StepUpAnswer> },
-  input: { userId: string; sessionId: string; fingerprint: unknown },
+  deps: SecondFactorDeps & {
+    sendCode(): Promise<StepUpAnswer>;
+    /** Whether a code sent earlier is still live and unused. */
+    liveCodeExists(userId: string, now: Date): Promise<boolean>;
+  },
+  input: { userId: string; sessionId: string; fingerprint: unknown; resend?: unknown },
   now: Date = new Date(),
 ): Promise<CheckAnswer> {
   const roles = await deps.roles(input.userId);
@@ -64,6 +68,11 @@ export async function checkSecondFactor(
     return { requiresOtp: false };
   }
 
+  // Coming back to the code step must not cancel the code already in the
+  // inbox, nor spend the send limits: only an explicit resend sends again.
+  if (input.resend !== true && (await deps.liveCodeExists(input.userId, now))) {
+    return { requiresOtp: true, sent: true };
+  }
   const sent = await deps.sendCode();
   if ("error" in sent) return { error: sent.error, ...(sent.rateLimited ? { rateLimited: true as const } : {}) };
   return { requiresOtp: true, sent: "sent" in sent ? sent.sent : false };

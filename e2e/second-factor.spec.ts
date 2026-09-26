@@ -48,3 +48,20 @@ test('a session that has passed goes straight to its page', async ({ page }) => 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText('التحقق بخطوتين')).toHaveCount(0);
 });
+
+test('while second-factor is not deployed, sign-in falls back to admin-otp instead of failing', async ({ page }) => {
+  const wire = await stubSupabase(page, {}, {
+    'admin-otp': (body) => ((body as { action: string }).action === 'check' ? { requiresOtp: true, sent: true } : {}),
+  });
+  // What a browser gets from a function that does not exist: the CORS
+  // preflight fails, and the request never arrives.
+  await page.route('**/functions/v1/second-factor', (route) => route.abort('failed'));
+
+  await page.goto('/login');
+  await page.getByLabel('البريد الإلكتروني').fill('pm@example.com');
+  await page.getByLabel('كلمة المرور', { exact: true }).fill('secret1');
+  await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
+
+  await expect(page.getByText('التحقق بخطوتين')).toBeVisible();
+  expect(wire.writes.filter((w) => w.table === 'admin-otp').map((w) => (w.body as { action: string }).action)).toEqual(['check']);
+});

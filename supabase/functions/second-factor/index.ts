@@ -8,7 +8,7 @@
  * This function answers in the same shape, mails the code to the Supabase
  * Auth address, checks it under a row lock, and records the session.
  *
- * Actions: status · check {fingerprint} · verify {code, fingerprint}.
+ * Actions: status · check {fingerprint, resend?} · verify {code, fingerprint}.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isMissingSchema } from "../_shared/passkeyLogin.ts";
@@ -18,6 +18,7 @@ import {
   accountMail,
   corsHeaders,
   isTrustedDevice,
+  liveCodeExists,
   recordSecondFactor,
   sendAccountEmail,
   sha256Hex,
@@ -71,6 +72,7 @@ Deno.serve(async (req) => {
         const email = user.email;
         return json(200, await checkSecondFactor({
           ...deps,
+          liveCodeExists: (userId, at) => liveCodeExists(supabase, userId, at),
           sendCode: () => email
             ? sendStepUp({
               store: steps,
@@ -88,7 +90,7 @@ Deno.serve(async (req) => {
               }),
             }, user.id, now)
             : Promise.resolve({ sent: false }),
-        }, { userId: user.id, sessionId, fingerprint: body.fingerprint }, now));
+        }, { userId: user.id, sessionId, fingerprint: body.fingerprint, resend: body.resend }, now));
       }
 
       if (action === "verify") {
