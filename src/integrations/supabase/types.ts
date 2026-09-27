@@ -2197,6 +2197,7 @@ export type Database = {
         Args: { p_code_hash: string; p_session_id: string; p_user_id: string }
         Returns: string
       }
+      plpgsql_block_begin: { Args: { body: string }; Returns: number }
       project_financial_summary: {
         Args: { _project_id: string }
         Returns: Json
@@ -2213,6 +2214,7 @@ export type Database = {
         Args: { _reason: string; _transfer_id: string }
         Returns: Json
       }
+      require_second_factor: { Args: never; Returns: undefined }
       second_factor_ok: { Args: never; Returns: boolean }
       second_factor_required: { Args: { p_user_id: string }; Returns: boolean }
       split_settle_advance: {
