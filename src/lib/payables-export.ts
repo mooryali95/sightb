@@ -9,8 +9,11 @@ import {
 import { REIMBURSEMENT_STATUS_LABELS, EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@/types/project';
 
 function esc(v: unknown): string {
-  const s = v === null || v === undefined ? '' : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  let s = v === null || v === undefined ? '' : String(v);
+  // Text starting with a formula character would run as a formula in a
+  // spreadsheet; a leading apostrophe makes it plain text. Numbers stay numbers.
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 function row(cells: unknown[]): string {
