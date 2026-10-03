@@ -5,3 +5,6 @@ interface Window {
   __rouyaLoggerInstalled?: boolean;
   __rouyaOfflineQueueInstalled?: boolean;
 }
+
+/** Changes on every build; drops the saved query cache. */
+declare const __BUILD_ID__: string;
