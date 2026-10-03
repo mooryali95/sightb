@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { claimQueryCache } from '@/lib/query-cache';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -23,6 +24,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Before anything renders: another account's saved figures are wiped.
+      void claimQueryCache(session?.user?.id ?? null);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);

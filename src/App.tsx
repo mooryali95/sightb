@@ -3,7 +3,10 @@ import { Seo } from '@/components/Seo';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { queryClient, queryPersister, CACHE_MAX_AGE, CACHE_BUSTER, shouldPersistQuery } from "@/lib/query-cache";
+import { pageLoaders } from "@/lib/route-preload";
+import { HoverPreload } from "@/components/HoverPreload";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -18,31 +21,21 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 
 // Lazy load all other pages
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const NewCompany = lazy(() => import("./pages/NewCompany"));
-const NewPortfolio = lazy(() => import("./pages/NewPortfolio"));
-const NewProject = lazy(() => import("./pages/NewProject"));
-const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
-const PortfolioDetail = lazy(() => import("./pages/PortfolioDetail"));
-const CompanyDetail = lazy(() => import("./pages/CompanyDetail"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const UserManagement = lazy(() => import("./pages/UserManagement"));
-const Security = lazy(() => import("./pages/Security"));
-const SystemAuditLog = lazy(() => import("./pages/SystemAuditLog"));
-const AlertsCenter = lazy(() => import("./pages/AlertsCenter"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const MobileExpenseCapture = lazy(() => import("./pages/MobileExpenseCapture"));
+const Dashboard = lazy(pageLoaders.dashboard);
+const NewCompany = lazy(pageLoaders.newCompany);
+const NewPortfolio = lazy(pageLoaders.newPortfolio);
+const NewProject = lazy(pageLoaders.newProject);
+const ProjectDetail = lazy(pageLoaders.project);
+const PortfolioDetail = lazy(pageLoaders.portfolio);
+const CompanyDetail = lazy(pageLoaders.company);
+const ResetPassword = lazy(pageLoaders.resetPassword);
+const UserManagement = lazy(pageLoaders.users);
+const Security = lazy(pageLoaders.security);
+const SystemAuditLog = lazy(pageLoaders.audit);
+const AlertsCenter = lazy(pageLoaders.alerts);
+const NotFound = lazy(pageLoaders.notFound);
+const MobileExpenseCapture = lazy(pageLoaders.mobileExpense);
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 15 * 60 * 1000,
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
 
 function AppBootstrap({ children }: { children: ReactNode }) {
   // React Query dedupes this with every page-level useCoreData() call.
@@ -66,7 +59,7 @@ const loadMotionFeatures = () => import("@/lib/motion-features").then((mod) => m
 
 const App = () => (
   <LazyMotion features={loadMotionFeatures}>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, maxAge: CACHE_MAX_AGE, buster: CACHE_BUSTER, dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery, shouldDehydrateMutation: () => false } }}>
       <AuthProvider>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <TooltipProvider>
@@ -75,6 +68,7 @@ const App = () => (
             <SessionTimeoutWarning />
             <BrowserRouter>
               <Seo />
+              <HoverPreload />
               <AppBootstrap>
                 <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
 
@@ -104,7 +98,7 @@ const App = () => (
           </TooltipProvider>
         </ThemeProvider>
       </AuthProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </LazyMotion>
 );
 
