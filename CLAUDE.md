@@ -154,6 +154,18 @@ never computed:
 - SSOT Tests is green today only because every step is `skipped`. Green means
   "skipped", not "passed", until `SUPABASE_DB_URL` is set.
 
+- The persisted query cache (`src/lib/query-cache.ts`, added 3 October)
+  saved the four data loaders in `src/hooks/useAppData.ts`. Those return
+  `true` and fill the Zustand store as a side effect, so the cache held the
+  flag without the figures: after a reload the query came back fresh, the
+  loader never ran, and every page rendered empty — "المشروع غير موجود" on
+  the project page. Six e2e paths went red on main and stayed red. Loaders
+  carry `meta.noPersist`, and `shouldPersistQuery` refuses boolean data so a
+  new loader written the same way cannot bring it back.
+- A form that `await`s a store action without `try/catch` turns a database
+  refusal into an unhandled promise: no toast, dialog still open, nothing
+  saved. That was the "changing a payment to collected does nothing" report.
+
 So: a tool that cannot run must fail loudly, never be counted as zero. Before
 claiming a fix works, execute it — and where a claim is about behaviour,
 deliberately break it once to confirm the check discriminates.
