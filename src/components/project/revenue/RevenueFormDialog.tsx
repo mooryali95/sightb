@@ -27,6 +27,7 @@ import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { errorMessage } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -57,11 +58,20 @@ export function RevenueFormDialog({
   const [collectionDate, setCollectionDate] = useState(editing?.collectionDate || '');
   const [milestoneId, setMilestoneId] = useState(editing?.milestoneId || '');
   const [inputInclusive, setInputInclusive] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const showVAT = taxPercent > 0;
 
   const handleSubmit = async () => {
-    if (!description.trim() || !amount) return;
+    // Every exit from here tells the user why. Both of these used to return or
+    // throw without a word: an empty field ended the click silently, and a
+    // database rejection became an unhandled promise — no toast, dialog still
+    // open, nothing saved. That is the "changing to collected does nothing"
+    // report: whatever the server refused, the user never saw it.
+    if (!description.trim()) { toast.error('أدخل وصف الإيراد'); return; }
+    const parsed = parseFloat(amount);
+    if (!amount || !Number.isFinite(parsed) || parsed <= 0) { toast.error('أدخل مبلغاً أكبر من صفر'); return; }
+    if (saving) return;
     const rawAmount = parseFloat(amount);
     const finalAmount = inputInclusive && taxPercent > 0 ? removeVAT(rawAmount, taxPercent) : rawAmount;
     const base = {
@@ -75,20 +85,29 @@ export function RevenueFormDialog({
       invoiceDate: hasInvoice && invoiceDate ? invoiceDate : null,
       collectionDate: status === 'collected' && collectionDate ? collectionDate : null,
     };
-    if (editingId) {
-      await updateRevenue(editingId, { ...base, ...links });
-      toast.success('تم تعديل الإيراد');
-    } else {
-      await addRevenue({
-        projectId, ...base,
-        milestoneId: links.milestoneId ?? undefined,
-        invoiceNumber: links.invoiceNumber ?? undefined,
-        invoiceDate: links.invoiceDate ?? undefined,
-        collectionDate: links.collectionDate ?? undefined,
-      });
-      toast.success('تمت إضافة الإيراد');
+    setSaving(true);
+    try {
+      if (editingId) {
+        await updateRevenue(editingId, { ...base, ...links });
+        toast.success('تم تعديل الإيراد');
+      } else {
+        await addRevenue({
+          projectId, ...base,
+          milestoneId: links.milestoneId ?? undefined,
+          invoiceNumber: links.invoiceNumber ?? undefined,
+          invoiceDate: links.invoiceDate ?? undefined,
+          collectionDate: links.collectionDate ?? undefined,
+        });
+        toast.success('تمت إضافة الإيراد');
+      }
+      onOpenChange(false);
+    } catch (e) {
+      // Keep the dialog open with the user's input intact, and show the
+      // server's own reason — it carries the trigger or policy message.
+      toast.error(errorMessage(e, 'تعذّر حفظ الإيراد'));
+    } finally {
+      setSaving(false);
     }
-    onOpenChange(false);
   };
 
   return (
@@ -97,7 +116,7 @@ export function RevenueFormDialog({
       onOpenChange={onOpenChange}
       title={editingId ? 'تعديل الإيراد' : 'إضافة إيراد'}
       trigger={<Button size="sm" className="gap-1.5" onClick={onRequestOpen}><Plus className="w-3.5 h-3.5" />إضافة إيراد</Button>}
-      footer={<FormFooter onCancel={() => onOpenChange(false)} onSubmit={handleSubmit} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
+      footer={<FormFooter onCancel={() => onOpenChange(false)} onSubmit={handleSubmit} isSubmitting={saving} submitLabel={editingId ? 'حفظ التعديلات' : 'إضافة'} />}
     >
       <div className="space-y-4">
           <div className="space-y-2">

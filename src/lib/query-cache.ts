@@ -30,9 +30,21 @@ export const queryPersister = createAsyncStoragePersister({
   throttleTime: 1000,
 });
 
-/** Only settled, successful queries not marked `meta.noPersist` are saved. */
-export function shouldPersistQuery(q: { state: { status: string }; meta?: Record<string, unknown> }): boolean {
-  return q.state.status === 'success' && q.meta?.noPersist !== true;
+/**
+ * Only settled, successful queries carrying real data are saved.
+ *
+ * A query whose data is a bare boolean is a store loader: it fetches into
+ * Zustand and returns `true`. Saving it saves the flag without the figures,
+ * and a reload then skips the fetch and shows an empty app. Those are refused
+ * here even if a loader forgets `meta.noPersist`, so the mistake cannot come
+ * back with the next loader written the same way.
+ */
+export function shouldPersistQuery(q: {
+  state: { status: string; data?: unknown };
+  meta?: Record<string, unknown>;
+}): boolean {
+  if (q.state.status !== 'success' || q.meta?.noPersist === true) return false;
+  return typeof q.state.data !== 'boolean';
 }
 
 /** Forget everything cached, in memory and on disk. */

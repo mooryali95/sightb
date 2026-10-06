@@ -23,6 +23,17 @@ export const queryKeys = {
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 
+/**
+ * Never saved by the query persister (see `@/lib/query-cache`).
+ *
+ * These queries return `true`; the data itself lands in the Zustand store as a
+ * side effect of the loader. Persisting one saves the `true` and not the
+ * store, so after a reload it comes back "successful and fresh", the loader
+ * never runs, and every screen renders from an empty store — the project page
+ * said "المشروع غير موجود" on any reload within five minutes.
+ */
+const STORE_LOADER = { noPersist: true } as const;
+
 /** Companies + portfolios + projects — the minimum every screen needs. */
 export function useCoreData() {
   const loadAll = useStore((s) => s.loadAll);
@@ -36,6 +47,7 @@ export function useCoreData() {
     },
     enabled: !authLoading && !!user,
     staleTime: FIVE_MINUTES,
+    meta: STORE_LOADER,
   });
 }
 
@@ -52,6 +64,7 @@ export function useDetailsData(enabled = true) {
     },
     enabled: enabled && !authLoading && !!user,
     staleTime: FIVE_MINUTES,
+    meta: STORE_LOADER,
   });
 }
 
@@ -68,6 +81,7 @@ export function useProjectData(projectId: string | undefined) {
     },
     enabled: !!projectId && !authLoading && !!user,
     staleTime: FIVE_MINUTES,
+    meta: STORE_LOADER,
   });
 }
 
@@ -84,5 +98,6 @@ export function useCompanyData(companyId: string | undefined) {
     },
     enabled: !!companyId && !authLoading && !!user,
     staleTime: FIVE_MINUTES,
+    meta: STORE_LOADER,
   });
 }
