@@ -249,8 +249,11 @@ export function buildReconciliation(
 // ── تصدير CSV ──────────────────────────────────────────────────────────────
 
 function esc(v: unknown): string {
-  const s = v === null || v === undefined ? '' : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  let s = v === null || v === undefined ? '' : String(v);
+  // Text starting with a formula character would run as a formula in a
+  // spreadsheet; a leading apostrophe makes it plain text. Numbers stay numbers.
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 const line = (cells: unknown[]) => cells.map(esc).join(',');
 
