@@ -24,7 +24,7 @@ export function useProjectDetailData(id: string | undefined) {
     loadAll, updateProject, archiveProject, deleteProject,
   } = useStore();
 
-  const { detailsLoaded, subscribeToProject, ensureProjectCashData, loadBaselines } = useStore();
+  const { detailsLoaded, subscribeToProject, ensureProjectCashData, loadBaselines, loading: storeLoading } = useStore();
 
   useCoreData();
   useProjectData(detailsLoaded ? undefined : id);
@@ -54,7 +54,7 @@ export function useProjectDetailData(id: string | undefined) {
   const project = projects.find((p) => p.id === id);
 
   if (!project) {
-    return { project: undefined, isAdmin, isSystemAdmin, canEditRole, updateProject, archiveProject, deleteProject } as const;
+    return { project: undefined, loading: storeLoading, isAdmin, isSystemAdmin, canEditRole, updateProject, archiveProject, deleteProject } as const;
   }
 
   const isReadOnly = !canEditRole('project', project.id);
