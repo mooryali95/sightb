@@ -284,9 +284,15 @@ export function SettleAdvanceDialog({
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">المصدر</span>
-                  <span className="text-xs">
-                    {advance.paidFromCustodyId ? 'عهدة' :
-                     advance.paidFromFundId ? 'دفعة' : '—'}
+                  <span className="text-xs text-end">
+                    {advance.paidFromCustodyId
+                      ? `عهدة ${custodies.find((c) => c.id === advance.paidFromCustodyId)?.resourceName ?? ''}`
+                      : advance.paidFromFundId
+                        ? `دفعة #${projectFunds.find((f) => f.id === advance.paidFromFundId)?.fundNumber ?? ''}`
+                        : '—'}
+                    <span className="block text-[11px] text-muted-foreground">
+                      التسوية تُقيَّد على المصدر نفسه الذي صُرفت منه السلفة
+                    </span>
                   </span>
                 </div>
               </div>
