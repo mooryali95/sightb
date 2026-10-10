@@ -25,11 +25,27 @@ describe('summarizeSpendByResource', () => {
     expect(out[0]).toMatchObject({ key: 'r-ayman', total: 500, count: 1, matchedByName: 1 });
   });
 
-  it('never credits a resource from المسؤول or the description — that is a different person', () => {
-    const out = summarizeSpendByResource([
-      exp({ amount: 400, responsible: 'أيمن أصلان', description: 'دفعة أيمن أصلان' }),
-    ], team);
+  it('never credits a resource from المسؤول — that is a different person', () => {
+    const out = summarizeSpendByResource([exp({ amount: 400, responsible: 'أيمن أصلان', description: 'أتعاب' })], team);
     expect(out).toEqual([expect.objectContaining({ key: UNLINKED_KEY, total: 400 })]);
+  });
+
+  it('credits the resource named in the description, by full or first name', () => {
+    const out = summarizeSpendByResource([
+      exp({ amount: 400, responsible: 'أحمد صبري', description: 'دفعة أيمن أصلان عن التصميم' }),
+      exp({ amount: 250, description: 'تحويل لعمر' }),
+      exp({ amount: 50, description: 'أتعاب ايمن' }),
+    ], team);
+    expect(out.map((b) => [b.key, b.total])).toEqual([['r-ayman', 450], ['r-omar', 250]]);
+  });
+
+  it('does not guess: a shared first name, or two people in one description, credits nobody', () => {
+    const out = summarizeSpendByResource([
+      exp({ amount: 10, description: 'دفعة أحمد' }),
+      exp({ amount: 20, description: 'عمر وأيمن' }),
+      exp({ amount: 30, description: 'عمرو للنقل' }),
+    ], [...team, res('r-ahmad2', 'أحمد علي')]);
+    expect(out).toEqual([expect.objectContaining({ key: UNLINKED_KEY, total: 60 })]);
   });
 
   it('prefers the explicit link over the typed name', () => {
