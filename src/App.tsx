@@ -35,6 +35,7 @@ const SystemAuditLog = lazy(pageLoaders.audit);
 const AlertsCenter = lazy(pageLoaders.alerts);
 const NotFound = lazy(pageLoaders.notFound);
 const MobileExpenseCapture = lazy(pageLoaders.mobileExpense);
+const ControlCenter = lazy(pageLoaders.controlCenter);
 
 
 function AppBootstrap({ children }: { children: ReactNode }) {
@@ -76,6 +77,7 @@ const App = () => (
                     <Routes>
                       <Route path="/welcome" element={<Landing />} />
                       <Route path="/login" element={<Login />} />
+                      <Route path="/login/code" element={<Login />} />
                       <Route path="/reset-password" element={<ResetPassword />} />
                       <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/companies/new" element={<ProtectedRoute><NewCompany /></ProtectedRoute>} />
@@ -88,6 +90,7 @@ const App = () => (
                       <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
                       <Route path="/alerts" element={<ProtectedRoute><ErrorBoundary><AlertsCenter /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
+                      <Route path="/control-center" element={<ProtectedRoute><ControlCenter /></ProtectedRoute>} />
                       <Route path="/m/expense/new" element={<ProtectedRoute><ErrorBoundary><MobileExpenseCapture /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>

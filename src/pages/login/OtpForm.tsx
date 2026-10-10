@@ -60,18 +60,20 @@ export function OtpForm({ code, onCodeChange, loading, resendCooldown, onSubmit,
       )}
 
       <div className="flex items-center justify-between">
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={onResend}
           disabled={resendCooldown > 0 || loading}
-          className="text-xs text-primary hover:underline disabled:opacity-50 disabled:no-underline flex items-center gap-1"
+          className="h-auto p-0 text-xs gap-1"
         >
           <RefreshCw className="w-3 h-3" />
           {resendCooldown > 0 ? `إعادة الإرسال (${resendCooldown}ث)` : 'إعادة إرسال الرمز'}
-        </button>
-        <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:underline">
-          إلغاء
-        </button>
+        </Button>
+        <Button type="button" variant="link" size="sm" onClick={onCancel} className="h-auto p-0 text-xs text-muted-foreground">
+          الدخول بحساب آخر
+        </Button>
       </div>
     </m.form>
   );

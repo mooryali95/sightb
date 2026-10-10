@@ -50,7 +50,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // Signed in with the password but the code never given: finish it first.
   if (secondFactor === 'needs-code') {
-    return <Navigate to="/login?step=code" replace />;
+    return <Navigate to="/login/code" replace />;
   }
 
   return <>{children}</>;
