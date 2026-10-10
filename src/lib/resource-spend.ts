@@ -8,10 +8,15 @@
  *
  * Attribution, in order:
  *   1. the expense's `resourceId`;
- *   2. otherwise a resource whose name matches the expense's responsible or
- *      vendor field, compared after Arabic normalisation (hamza forms, ta
+ *   2. otherwise a resource whose name matches the expense's vendor field
+ *      (المورد / الجهة), compared after Arabic normalisation (hamza forms, ta
  *      marbuta, alef maqsura, diacritics, tatweel, spacing);
  *   3. otherwise the "غير مرتبط بمورد" bucket.
+ *
+ * Never by المسؤول and never by the description. The responsible person is
+ * whoever recorded or handled the expense — a different person from the
+ * resource being paid, as the owner put it — so matching on it would credit
+ * one person's spend to another.
  *
  * Every counted expense lands in exactly one bucket, so the buckets always
  * sum to the total shown above them.
@@ -61,7 +66,7 @@ export function indexResources(resources: Resource[]): ResourceIndex {
 export function attributeExpense(e: Expense, idx: ResourceIndex): { resource?: Resource; byName: boolean } {
   const linked = e.resourceId ? idx.byId.get(e.resourceId) : undefined;
   if (linked) return { resource: linked, byName: false };
-  const named = idx.byName.get(normalizeArabicName(e.responsible)) ?? idx.byName.get(normalizeArabicName(e.vendor));
+  const named = idx.byName.get(normalizeArabicName(e.vendor));
   return named ? { resource: named, byName: true } : { byName: false };
 }
 

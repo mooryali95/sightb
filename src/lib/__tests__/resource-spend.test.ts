@@ -20,17 +20,24 @@ describe('normalizeArabicName', () => {
 });
 
 describe('summarizeSpendByResource', () => {
-  it('counts an expense typed with the name but never linked — the reported gap', () => {
-    const out = summarizeSpendByResource([exp({ amount: 500, responsible: 'ايمن اصلان' })], team);
+  it('counts an expense whose vendor names the resource but was never linked — the reported gap', () => {
+    const out = summarizeSpendByResource([exp({ amount: 500, vendor: 'ايمن اصلان' })], team);
     expect(out[0]).toMatchObject({ key: 'r-ayman', total: 500, count: 1, matchedByName: 1 });
   });
 
+  it('never credits a resource from المسؤول or the description — that is a different person', () => {
+    const out = summarizeSpendByResource([
+      exp({ amount: 400, responsible: 'أيمن أصلان', description: 'دفعة أيمن أصلان' }),
+    ], team);
+    expect(out).toEqual([expect.objectContaining({ key: UNLINKED_KEY, total: 400 })]);
+  });
+
   it('prefers the explicit link over the typed name', () => {
-    const out = summarizeSpendByResource([exp({ amount: 100, resourceId: 'r-omar', responsible: 'أيمن أصلان' })], team);
+    const out = summarizeSpendByResource([exp({ amount: 100, resourceId: 'r-omar', vendor: 'أيمن أصلان' })], team);
     expect(out[0].key).toBe('r-omar');
   });
 
-  it('falls back to the vendor field', () => {
+  it('matches the vendor field', () => {
     const out = summarizeSpendByResource([exp({ amount: 70, vendor: 'أحمد صبري' })], team);
     expect(out[0].key).toBe('r-ahmad');
   });
@@ -38,8 +45,8 @@ describe('summarizeSpendByResource', () => {
   it('puts what matches nobody in one bucket, last, so the cards always sum to the total', () => {
     const rows = [
       exp({ amount: 1000, resourceId: 'r-omar' }),
-      exp({ amount: 300, responsible: 'مطبعة الرياض' }),
-      exp({ amount: 2000, responsible: 'أحمد صبري' }),
+      exp({ amount: 300, vendor: 'مطبعة الرياض' }),
+      exp({ amount: 2000, vendor: 'أحمد صبري' }),
     ];
     const out = summarizeSpendByResource(rows, team);
     expect(out.map((b) => b.key)).toEqual(['r-ahmad', 'r-omar', UNLINKED_KEY]);

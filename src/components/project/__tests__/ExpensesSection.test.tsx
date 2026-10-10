@@ -162,11 +162,17 @@ describe('spend per resource', () => {
   // the cards summed to far less than the total.
   const section = () => screen.getByText('ملخص الصرف حسب المورد').closest('div.stat-card') as HTMLElement;
 
-  it('attributes an expense typed with the resource\'s name, spelled differently, to that resource', () => {
-    const typed = { ...expenses[0], id: 'exp-typed', resourceId: undefined, amount: 900, responsible: ` ${resource.name.replace('ا', 'اَ')} `, approvalStatus: 'approved' as const };
+  it('attributes an expense whose vendor names the resource, spelled differently, to that resource', () => {
+    const typed = { ...expenses[0], id: 'exp-typed', resourceId: undefined, amount: 900, vendor: ` ${resource.name.replace('ا', 'اَ')} `, approvalStatus: 'approved' as const };
     renderSection({ expenses: [...expenses, typed] });
     expect(cardFigure('ملخص الصرف حسب المورد', resource.name)).toBe('7,900.00 ر.س');
     expect(within(section()).getByText(/1 بالاسم/)).toBeInTheDocument();
+  });
+
+  it('does not credit the resource when only المسؤول carries the name', () => {
+    const byResponsible = { ...expenses[0], id: 'exp-resp', resourceId: undefined, vendor: undefined, amount: 900, responsible: resource.name, approvalStatus: 'approved' as const };
+    renderSection({ expenses: [...expenses, byResponsible] });
+    expect(cardFigure('ملخص الصرف حسب المورد', resource.name)).toBe('7,000.00 ر.س');
   });
 
   it('shows what matches no resource in its own card, so the cards add up to the total', () => {
