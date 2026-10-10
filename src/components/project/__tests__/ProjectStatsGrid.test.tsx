@@ -89,6 +89,19 @@ describe('the budget row', () => {
     expect(card('معدل الحرق الشهري')).toHaveTextContent('لم يبدأ الصرف');
   });
 
+  it('names an overrun as one, with a positive amount, instead of a trailing minus under "remaining"', () => {
+    // The owner read "10,544.16-" under "المتبقي من الموازنة" as 10,000 left.
+    const { unmount } = renderGrid({ summary: summary({ totalPlanned: 185000, totalActual: 195544.16, budgetRemaining: -10544.16 }) });
+    expect(screen.queryByText('المتبقي من الموازنة')).not.toBeInTheDocument();
+    expect(card('تجاوز الموازنة')).toHaveTextContent('10,544.16 ر.س');
+    expect(card('تجاوز الموازنة')).not.toHaveTextContent('-');
+    expect(card('تجاوز الموازنة')).toHaveTextContent('بنسبة 5.7% فوق الموازنة');
+    unmount();
+    renderGrid({ totalCommitted: 25000, availableBudget: -4000 });
+    expect(card('تجاوز متوقّع للموازنة')).toHaveTextContent('4,000.00 ر.س');
+    expect(card('تجاوز متوقّع للموازنة')).toHaveTextContent('ملتزم بعقود: 25,000.00 ر.س');
+  });
+
   it('shows the EAC and the expected overrun with a baseline, and asks for one without', () => {
     const { unmount } = renderGrid({ evm });
     expect(card('التكلفة المتوقعة (EAC)')).toHaveTextContent('75,000.00 ر.س');
