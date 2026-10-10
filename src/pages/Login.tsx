@@ -72,10 +72,17 @@ export default function Login() {
     return decision;
   };
 
+  // Set when this page itself moves to the code step after a sign-in that
+  // already checked. Arriving at /login/code otherwise restores the session
+  // and checks again: a second request, and the "code sent" toast twice.
+  const heldHere = useRef(false);
   const holdForOtp = () => {
     setOtpRequired(true);
     setResendCooldown(RESEND_COOLDOWN_SECONDS);
-    if (!isCodeRoute) navigate('/login/code', { replace: true });
+    if (!isCodeRoute) {
+      heldHere.current = true;
+      navigate('/login/code', { replace: true });
+    }
   };
 
   /** After any sign-in, the server says whether this session still owes a code. */
@@ -107,6 +114,11 @@ export default function Login() {
   const resumeRun = useRef(0);
   useEffect(() => {
     if (!isCodeRoute) {
+      setResumingCode(false);
+      return;
+    }
+    if (heldHere.current) {
+      heldHere.current = false;
       setResumingCode(false);
       return;
     }

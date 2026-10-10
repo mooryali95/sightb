@@ -156,6 +156,64 @@ describe('the figures at the top', () => {
   });
 });
 
+describe('spend per resource', () => {
+  // The reported problem: the card counted only expenses linked by
+  // resourceId, so spend typed with the person's name never reached it, and
+  // the cards summed to far less than the total.
+  const section = () => screen.getByText('ملخص الصرف حسب المورد').closest('div.stat-card') as HTMLElement;
+
+  it('attributes an expense whose vendor names the resource, spelled differently, to that resource', () => {
+    const typed = { ...expenses[0], id: 'exp-typed', resourceId: undefined, amount: 900, vendor: ` ${resource.name.replace('ا', 'اَ')} `, approvalStatus: 'approved' as const };
+    renderSection({ expenses: [...expenses, typed] });
+    expect(cardFigure('ملخص الصرف حسب المورد', resource.name)).toBe('7,900.00 ر.س');
+    expect(within(section()).getByText(/1 بالاسم/)).toBeInTheDocument();
+  });
+
+  it('does not credit the resource when only المسؤول carries the name', () => {
+    const byResponsible = { ...expenses[0], id: 'exp-resp', resourceId: undefined, vendor: undefined, amount: 900, responsible: resource.name, approvalStatus: 'approved' as const };
+    renderSection({ expenses: [...expenses, byResponsible] });
+    expect(cardFigure('ملخص الصرف حسب المورد', resource.name)).toBe('7,000.00 ر.س');
+  });
+
+  it('shows what matches no resource in its own card, so the cards add up to the total', () => {
+    renderSection();
+    // 12,500 counted: 7,000 on the resource, the other 5,500 unattributed.
+    expect(cardFigure('ملخص الصرف حسب المورد', 'غير مرتبط بمورد')).toBe('5,500.00 ر.س');
+    expect(within(section()).getByText(/الإجمالي 12,500\.00 ر\.س/)).toBeInTheDocument();
+  });
+
+  it('narrows the cards by name from its own search box', () => {
+    renderSection();
+    fireEvent.change(within(section()).getByLabelText('بحث في الموارد'), { target: { value: 'لا أحد بهذا الاسم' } });
+    expect(within(section()).getByText(/لا يوجد مورد يطابق/)).toBeInTheDocument();
+    fireEvent.change(within(section()).getByLabelText('بحث في الموارد'), { target: { value: normalizeLoosely(resource.name) } });
+    expect(within(section()).getByText(resource.name)).toBeInTheDocument();
+    expect(within(section()).queryByText('غير مرتبط بمورد')).not.toBeInTheDocument();
+  });
+
+  it('follows the table\'s filters, so narrowing the table updates the cards', () => {
+    renderSection();
+    fireEvent.change(screen.getAllByPlaceholderText(/بحث/).find((el) => el.getAttribute('aria-label') !== 'بحث في الموارد') as HTMLElement,
+      { target: { value: 'استشارة معلّقة' } });
+    expect(within(section()).getByText(/حسب الفلاتر الحالية/)).toBeInTheDocument();
+    expect(cardFigure('ملخص الصرف حسب المورد', 'غير مرتبط بمورد')).toBe('500.00 ر.س');
+    expect(within(section()).queryByText(resource.name)).not.toBeInTheDocument();
+  });
+
+  it('filters the table to a resource\'s expenses when its card is clicked, and back', () => {
+    renderSection();
+    fireEvent.click(within(section()).getByText(resource.name).closest('button') as HTMLElement);
+    expect(screen.queryByText('استشارة معلّقة')).not.toBeInTheDocument();
+    fireEvent.click(within(section()).getByText(/إلغاء التصفية/));
+    expect(screen.getByText('استشارة معلّقة')).toBeInTheDocument();
+  });
+});
+
+/** The same name with hamza dropped and ta marbuta swapped — how people type it. */
+function normalizeLoosely(name: string): string {
+  return name.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه');
+}
+
 describe('adding an expense', () => {
   it('books it against the active fund with the net amount', async () => {
     renderSection();

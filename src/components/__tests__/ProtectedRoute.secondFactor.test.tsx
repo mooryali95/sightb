@@ -1,7 +1,7 @@
 /**
  * A session that signed in with the password but never gave the code is sent
  * to finish it, not left before pages the database will keep empty. What
- * must hold: owing the code sends the person to /login?step=code; a passed
+ * must hold: owing the code sends the person to /login/code; a passed
  * session, a viewer, and an answer that cannot be had all stay; and the
  * server is asked once per user, not on every page.
  */
@@ -25,6 +25,7 @@ const renderAt = () => render(
     <Routes>
       <Route path="/" element={<ProtectedRoute><p>البيت</p></ProtectedRoute>} />
       <Route path="/login" element={<Where />} />
+      <Route path="/login/code" element={<Where />} />
     </Routes>
   </MemoryRouter>,
 );
@@ -35,7 +36,7 @@ describe('ProtectedRoute and the second factor', () => {
   it('sends a session that owes its code to the code step', async () => {
     status.mockResolvedValue({ required: true, verified: false });
     renderAt();
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/login?step=code'));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/login\/code$/));
   });
 
   it('keeps a passed session, a viewer, and a session whose status cannot be had', async () => {
@@ -70,7 +71,7 @@ describe('ProtectedRoute and the second factor', () => {
     await new Promise((r) => setTimeout(r, 0));
     first.unmount();
     renderAt();
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/login?step=code'));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/login\/code$/));
     expect(status).toHaveBeenCalledTimes(2);
   });
 });
