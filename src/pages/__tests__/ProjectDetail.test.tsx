@@ -116,8 +116,10 @@ describe('ProjectDetail', () => {
   it('opens on the summary with the header, the banners, the stats and the overview alone, and shows each group with its badge', () => {
     renderPage();
     expect(screen.getByTestId('header')).toHaveTextContent('ro=false');
-    expect(shown()).toEqual(['CashRepairStatusBar', 'ExecutiveSummary', 'SsotHealthBanner', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog']);
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['الملخص', 'التخطيط', 'المالية3', 'المتابعة', 'الإدارة1', 'مصدر الحقيقة']);
+    // Since 98ffa67 the cash-repair bar, the SSOT banner and the source-of-truth
+    // tab live in the owner-only control center (/control-center), not here.
+    expect(shown()).toEqual(['ExecutiveSummary', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['الملخص', 'التخطيط', 'المالية3', 'المتابعة', 'الإدارة1']);
     expect(within(groupTab('المالية')).getByText('3')).toHaveClass('bg-destructive');
     expect(screen.queryByTestId('fab')).not.toBeInTheDocument();
   });
@@ -139,7 +141,7 @@ describe('ProjectDetail', () => {
     await screen.findByTestId('FundsSection');
     expect(screen.getByTestId('path')).toHaveTextContent('tab=funds');
     expect(screen.getByTestId('CashLedgerSection')).toBeInTheDocument();
-    expect(screen.getByTestId('CashRepairLogSection')).toHaveTextContent('ro=true');
+    expect(screen.queryByTestId('CashRepairLogSection')).not.toBeInTheDocument();
     expect(screen.getByTestId('CashFlowSankey')).toBeInTheDocument();
   });
 
