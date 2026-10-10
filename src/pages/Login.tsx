@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { m, AnimatePresence } from 'framer-motion';
@@ -17,8 +17,9 @@ const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
+  const isCodeRoute = location.pathname === '/login/code';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,6 +31,7 @@ export default function Login() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [resumingCode, setResumingCode] = useState(isCodeRoute);
   const passkeyOffered = passkeysSupported();
 
   useEffect(() => {
@@ -73,6 +75,7 @@ export default function Login() {
   const holdForOtp = () => {
     setOtpRequired(true);
     setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    if (!isCodeRoute) navigate('/login/code', { replace: true });
   };
 
   /** After any sign-in, the server says whether this session still owes a code. */
@@ -99,18 +102,30 @@ export default function Login() {
     }
   };
 
-  // Sent here by a page that found this session still owing its code:
-  // continue from the code step instead of asking for the password again.
-  const resumed = useRef(false);
+  // The code has its own route. Never flash the password form while the
+  // browser restores the authenticated session that still owes its code.
+  const resumeRun = useRef(0);
   useEffect(() => {
-    if (resumed.current || searchParams.get('step') !== 'code') return;
-    resumed.current = true;
+    if (!isCodeRoute) {
+      setResumingCode(false);
+      return;
+    }
+    const run = ++resumeRun.current;
+    setResumingCode(true);
     void (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) await proceedAfterSignIn();
+      if (run !== resumeRun.current) return;
+      if (!session) {
+        toast.error('انتهت جلسة الدخول. أدخل البريد وكلمة المرور من جديد.');
+        navigate('/login', { replace: true });
+        return;
+      }
+      await proceedAfterSignIn();
+      if (run === resumeRun.current) setResumingCode(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
-  }, []);
+    return () => { resumeRun.current += 1; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- route changes alone restart restoration
+  }, [isCodeRoute, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +241,7 @@ export default function Login() {
     await supabase.auth.signOut({ scope: 'local' });
     setOtpRequired(false);
     setOtpCode('');
+    navigate('/login', { replace: true });
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -264,7 +280,13 @@ export default function Login() {
 
         <div className="stat-card">
           <AnimatePresence mode="wait">
-            {otpRequired ? (
+            {resumingCode && !otpRequired ? (
+              <div key="resuming-code" role="status" className="py-10 text-center space-y-3">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-sm font-medium">جاري تجهيز التحقق الآمن…</p>
+                <p className="text-xs text-muted-foreground">لن تحتاج إلى إدخال كلمة المرور مرة أخرى</p>
+              </div>
+            ) : otpRequired || isCodeRoute ? (
               <OtpForm
                 key="otp"
                 code={otpCode}

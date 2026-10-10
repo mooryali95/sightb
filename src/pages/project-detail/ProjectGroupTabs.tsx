@@ -20,7 +20,7 @@ const BADGE_CLASS: Record<TabGroupDef['badgeLevel'], string> = {
   info: 'bg-primary text-primary-foreground',
 };
 
-/** The six group tabs with their badges, and under each either its one section or an accordion of them. */
+/** The five business groups, and under each either one section or an accordion. */
 export function ProjectGroupTabs({ groups, subTabs, activeGroup, activeTab, onGroupChange, onTabChange, renderSection }: ProjectGroupTabsProps) {
   return (
     <Tabs value={activeGroup} onValueChange={(v) => onGroupChange(v as TabGroup)} className="space-y-4">

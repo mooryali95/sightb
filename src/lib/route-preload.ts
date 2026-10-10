@@ -17,6 +17,7 @@ const loaders = {
   alerts: () => import('../pages/AlertsCenter'),
   notFound: () => import('../pages/NotFound'),
   mobileExpense: () => import('../pages/MobileExpenseCapture'),
+  controlCenter: () => import('../pages/ControlCenter'),
 };
 export type PageKey = keyof typeof loaders;
 export const pageLoaders = loaders;
@@ -41,6 +42,7 @@ export function pageForPath(path: string): PageKey | null {
   if (path === '/security') return 'security';
   if (path === '/audit') return 'audit';
   if (path === '/alerts') return 'alerts';
+  if (path === '/control-center') return 'controlCenter';
   return null;
 }
 

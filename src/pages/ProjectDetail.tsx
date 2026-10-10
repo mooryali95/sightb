@@ -16,8 +16,7 @@ import { ProjectGroupTabs } from './project-detail/ProjectGroupTabs';
 import { ProjectDetailHeader } from '@/components/project/ProjectDetailHeader';
 import { ProjectEditDialog } from '@/components/project/ProjectEditDialog';
 import { ProjectStatsGrid } from '@/components/project/ProjectStatsGrid';
-import { CashRepairStatusBar } from '@/components/project/CashRepairStatusBar';
-import { SsotHealthBanner } from '@/components/project/SsotHealthBanner';
+import { FinancialPositionStrip } from '@/components/project/FinancialPositionStrip';
 import { errorMessage } from '@/lib/utils';
 
 export default function ProjectDetail() {
@@ -85,18 +84,11 @@ export default function ProjectDetail() {
           onDelete={handleDelete}
         />
 
-        <CashRepairStatusBar projectId={project.id} />
-
-        <SsotHealthBanner
-          project={project}
-          expenses={pExpenses}
-          custodies={pCustodies}
-          paymentRequests={ownRows(paymentRequests)}
-          cashTransfers={ownRows(cashTransfers || [])}
-          funds={ownRows(projectFunds)}
-          settlements={ownRows(fundSettlements)}
-          changeOrders={pChangeOrders}
-          onInspect={() => tabs.navigateToTab('ssot')}
+        <FinancialPositionStrip
+          project={project} summary={summary} totalCommitted={totalCommitted}
+          funds={ownRows(projectFunds)} settlements={ownRows(fundSettlements)}
+          expenses={pExpenses} custodies={pCustodies}
+          paymentRequests={ownRows(paymentRequests)} cashTransfers={ownRows(cashTransfers || [])}
         />
 
         <ProjectEditDialog

@@ -18,12 +18,10 @@ import { FundsSection } from '@/components/project/FundsSection';
 import { CashLedgerSection } from '@/components/project/CashLedgerSection';
 import { ExpenseSpendExplorer } from '@/components/project/ExpenseSpendExplorer';
 import { SpendConsistencyChart } from '@/components/project/SpendConsistencyChart';
-import { CashRepairLogSection } from '@/components/project/CashRepairLogSection';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { VendorPayablesPanel } from '@/components/project/VendorPayablesPanel';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
-import { SourceOfTruthSection } from '@/components/project/SourceOfTruthSection';
 import { PerformanceComparisonSection } from '@/components/project/PerformanceComparisonSection';
 import { AIExecutiveInsights } from '@/components/project/AIExecutiveInsights';
 
@@ -105,11 +103,6 @@ export function ProjectSection({ value, data: d, navigateToTab }: ProjectSection
       return (
         <div className="space-y-4">
           <CashLedgerSection projectId={project.id} funds={projectFunds} settlements={fundSettlements} expenses={pExpenses} custodies={pCustodies} />
-          <CashRepairLogSection
-            projectId={project.id} custodies={pCustodies} cashTransfers={cashTransfers || []}
-            funds={projectFunds} expenses={pExpenses} paymentRequests={paymentRequests}
-            readOnly={isReadOnly}
-          />
           <CashFlowSankey
             projectId={project.id} funds={projectFunds} expenses={pExpenses} custodies={pCustodies}
             paymentRequests={paymentRequests} cashTransfers={cashTransfers || []}
@@ -155,18 +148,6 @@ export function ProjectSection({ value, data: d, navigateToTab }: ProjectSection
       );
     case 'auditlog':
       return isAdmin ? <AuditLogSection projectId={project.id} /> : null;
-    case 'ssot':
-      return (
-        <SourceOfTruthSection
-          project={project} summary={summary} evm={evm}
-          budgetItems={pBudget} expenses={pExpenses} revenues={pRevenues} changeOrders={pChangeOrders}
-          funds={projectFunds.filter((f) => f.projectId === project.id)}
-          settlements={fundSettlements.filter((s) => s.projectId === project.id)}
-          custodies={pCustodies}
-          paymentRequests={paymentRequests.filter((p) => p.projectId === project.id)}
-          cashTransfers={(cashTransfers || []).filter((t) => t.projectId === project.id)}
-        />
-      );
     default:
       return null;
   }
