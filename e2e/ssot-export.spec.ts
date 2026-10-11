@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { stubSupabase } from './support/stub';
-import { PROJECT_ID, USER_ID } from './support/seed';
+import { PROJECT_ID } from './support/seed';
 import { readFileSync } from 'node:fs';
-
-// Since 98ffa67 this lives in the owner-only control center (/control-center),
-// so the seeded user is also given the system owner role.
-const OWNER_ROLE = { id: 'role-owner-cc', user_id: USER_ID, role: 'owner', scope_type: 'system', scope_id: null };
 
 /**
  * The CSV export on the source-of-truth tab. It names the project and
@@ -28,8 +24,9 @@ async function exportCsv(page: import('@playwright/test').Page) {
     const click = HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) { if (this.download) names.push(this.download); return click.call(this); };
   });
-  await page.goto('/control-center');
-  await expect(page.getByRole('heading', { name: 'مركز الرقابة' })).toBeVisible();
+  await page.goto(`/project/${PROJECT_ID}`);
+  await expect(page.getByText('مشروع الاختبار').first()).toBeVisible();
+  await page.getByRole('tab', { name: 'مصدر الحقيقة' }).click();
   await expect(page.getByText('مطابقة أرقام الخادم (المرجع النهائي)')).toBeVisible();
   // The rows are compared once the server has answered; the badge says so.
   await expect(page.getByText(/مطابق تماماً|\d+ فرق/)).toBeVisible();
@@ -43,7 +40,7 @@ async function exportCsv(page: import('@playwright/test').Page) {
 }
 
 test('writes the project, the server time, the profitability, the settlement and every reconciliation row as matching', async ({ page }) => {
-  await stubSupabase(page, { user_roles: [OWNER_ROLE] }, {}, { project_financial_summary: () => server() });
+  await stubSupabase(page, {}, {}, { project_financial_summary: () => server() });
   const { name, csv } = await exportCsv(page);
   expect(name).toBe('ssot-مشروع الاختبار.csv');
   expect(csv).toContain('المشروع,مشروع الاختبار');
@@ -63,7 +60,7 @@ test('writes the project, the server time, the profitability, the settlement and
 });
 
 test('a figure the server disagrees on is written as a conflict with its delta and reason', async ({ page }) => {
-  await stubSupabase(page, { user_roles: [OWNER_ROLE] }, {}, { project_financial_summary: () => server({ total_actual_expenses: 11000 }) });
+  await stubSupabase(page, {}, {}, { project_financial_summary: () => server({ total_actual_expenses: 11000 }) });
   const { csv } = await exportCsv(page);
   expect(csv).toMatch(/إجمالي المصروفات الفعلية,11000,12000,1000,تعارض,[^\n]*,"?غالباً مصروف أُضيف/);
   expect(csv).toContain('الربح المتوقع,988000,988000,0,مطابق,');

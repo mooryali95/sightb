@@ -23,7 +23,6 @@ import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 import { ExpenseFormDialog } from './expenses/ExpenseFormDialog';
 import { ExpenseInspector } from './expenses/ExpenseInspector';
 import { translateDbError } from './expenses/translateDbError';
-import { summarizeSpendByResource, matchesResourceQuery, normalizeArabicName, indexResources, resourceKeyOf, UNLINKED_KEY } from '@/lib/resource-spend';
 
 interface ExpensesSectionProps {
   projectId: string;
@@ -56,8 +55,6 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterApproval, setFilterApproval] = useState<string>('all');
-  const [resourceQuery, setResourceQuery] = useState('');
-  const [filterResource, setFilterResource] = useState<string | null>(null);
 
   // إخفاء السلف القائمة من جدول المصروفات (تُعرض كذمم مدينة في قسم المستحقات)
   const visibleExpenses = useMemo(
@@ -65,28 +62,13 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     [expenses],
   );
 
-  // The search now covers the vendor and the linked resource's name too, and
-  // ignores Arabic spelling variants (أ/ا، ة/ه، ى/ي), so "ايمن" finds "أيمن".
-  const resourceNameById = useMemo(() => new Map(resources.map((r) => [r.id, r.name])), [resources]);
-  const q = normalizeArabicName(searchQuery);
-  const matchesFilters = (exp: Expense) => {
-    const haystack = normalizeArabicName(
-      [exp.description, exp.responsible, exp.vendor, exp.resourceId ? resourceNameById.get(exp.resourceId) : '']
-        .filter(Boolean).join(' '),
-    );
-    const matchesSearch = !q || haystack.includes(q);
+  const filteredExpenses = visibleExpenses.filter((exp) => {
+    const matchesSearch = !searchQuery || exp.description?.toLowerCase().includes(searchQuery.toLowerCase()) || exp.responsible?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = filterCategory === 'all' || exp.category === filterCategory;
     const matchesMonth = filterMonth === 'all' || String(exp.month) === filterMonth;
     const matchesApproval = filterApproval === 'all' || exp.approvalStatus === filterApproval;
     return matchesSearch && matchesCategory && matchesMonth && matchesApproval;
-  };
-  // One attribution rule for both the cards and the table filter, so clicking
-  // a card shows exactly the expenses its figure adds up.
-  const resourceIdx = useMemo(() => indexResources(resources), [resources]);
-  const filteredByFields = visibleExpenses.filter(matchesFilters);
-  const filteredExpenses = filterResource
-    ? filteredByFields.filter((e) => resourceKeyOf(e, resourceIdx) === filterResource)
-    : filteredByFields;
+  });
 
   const pendingCount = visibleExpenses.filter(e => e.approvalStatus === 'pending').length;
 
@@ -128,16 +110,14 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     responsibleMap.set(key, (responsibleMap.get(key) || 0) + e.amount);
   });
 
-  // Per-resource spend follows the table's filters (month, category, approval,
-  // search), so the cards move with whatever the user narrows to. Expenses are
-  // attributed by link first, then by the name typed in المسؤول / المورد.
-  const filtersActive = !!q || filterCategory !== 'all' || filterMonth !== 'all' || filterApproval !== 'all';
-  const resourceSpend = summarizeSpendByResource(
-    countedExpenses.filter(matchesFilters),
-    resourceIdx,
-  );
-  const resourceSpendShown = resourceSpend.filter((r) => matchesResourceQuery(r, resourceQuery));
-  const resourceSpendTotal = resourceSpend.reduce((s, r) => s + r.total, 0);
+  const resourceSpendMap = new Map<string, number>();
+  countedExpenses.forEach((e) => {
+    if (e.resourceId) {
+      const res = resources.find(r => r.id === e.resourceId);
+      const key = res?.name || e.resourceId;
+      resourceSpendMap.set(key, (resourceSpendMap.get(key) || 0) + e.amount);
+    }
+  });
 
   const totalExpenses = countedExpenses.reduce((s, e) => s + e.amount, 0);
   const totalRevenue = revenues.reduce((s, r) => s + r.amount, 0);
@@ -181,59 +161,17 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       </div>
 
       {/* Resource Spending Summary */}
-      {resourceSpend.length > 0 && (
+      {resourceSpendMap.size > 0 && (
         <div className="stat-card">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <div>
-              <h3 className="text-sm font-semibold">ملخص الصرف حسب المورد</h3>
-              <p className="text-xs text-muted-foreground">
-                {resourceSpend.filter((r) => r.key !== UNLINKED_KEY).length} مورد · الإجمالي {formatCurrency(resourceSpendTotal)}
-                {filtersActive && ' · حسب الفلاتر الحالية'}
-              </p>
-            </div>
-            <Input
-              value={resourceQuery}
-              onChange={(e) => setResourceQuery(e.target.value)}
-              placeholder="ابحث باسم المورد أو دوره…"
-              aria-label="بحث في الموارد"
-              className="h-8 w-full sm:w-56 text-xs"
-            />
+          <h3 className="text-sm font-semibold mb-3">ملخص الصرف حسب المورد</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from(resourceSpendMap.entries()).map(([name, total]) => (
+              <div key={name} className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs text-muted-foreground">{name}</p>
+                <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(total)}</p>
+              </div>
+            ))}
           </div>
-          {resourceSpendShown.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-3 text-center">لا يوجد مورد يطابق «{resourceQuery}»</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {resourceSpendShown.map((r) => {
-                const selected = filterResource === r.key;
-                const unlinked = r.key === UNLINKED_KEY;
-                const share = resourceSpendTotal > 0 ? (r.total / resourceSpendTotal) * 100 : 0;
-                return (
-                  <button
-                    key={r.key}
-                    type="button"
-                    onClick={() => setFilterResource(selected ? null : r.key)}
-                    aria-pressed={selected}
-                    title={selected ? 'إلغاء التصفية' : 'عرض مصروفاته في الجدول'}
-                    className={`text-right p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                      selected ? 'border-primary bg-primary/10' : unlinked ? 'border-dashed border-amber-400/60 bg-amber-50/50 dark:bg-amber-900/10' : 'border-border bg-muted/30 hover:bg-muted/60'
-                    }`}
-                  >
-                    <p className="text-xs text-muted-foreground truncate">{r.name}</p>
-                    <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(r.total)}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {r.role ? `${r.role} · ` : ''}{r.count} مصروف · {share.toFixed(0)}%
-                      {r.matchedByName > 0 && !unlinked && ` · ${r.matchedByName} بالاسم`}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {filterResource && (
-            <button type="button" onClick={() => setFilterResource(null)} className="mt-3 text-xs text-primary hover:underline">
-              الجدول مصفّى على مورد واحد — إلغاء التصفية
-            </button>
-          )}
         </div>
       )}
 

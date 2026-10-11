@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { BaselineItem, ChangeOrder, Expense } from '@/types/project';
-import { getTotalPlanned, calculateEVM, getEffectiveContractValue, getCurrentMonth, calcVAT, addVAT, removeVAT } from '../finance';
+import { getTotalPlanned, calculateEVM, getEffectiveContractValue, getCurrentMonth, calcVAT, addVAT, removeVAT, getCountedExpenses } from '../finance';
 
 describe('getTotalPlanned', () => {
   it('should sum fixed items normally', () => {
@@ -32,6 +32,16 @@ describe('getTotalPlanned', () => {
       { plannedAmount: 10000, costType: 'recurring', startMonth: 3 },
     ];
     expect(getTotalPlanned(items)).toBe(10000);
+  });
+});
+
+describe('getCountedExpenses', () => {
+  it('keeps approved and pending costs, but excludes rejected costs and unsettled advances everywhere', () => {
+    const expense = (id: string, approvalStatus: Expense['approvalStatus'], isOutstandingAdvance = false) => ({ id, approvalStatus, isOutstandingAdvance } as Expense);
+    expect(getCountedExpenses([
+      expense('approved', 'approved'), expense('pending', 'pending'),
+      expense('rejected', 'rejected'), expense('advance', 'approved', true),
+    ]).map((row) => row.id)).toEqual(['approved', 'pending']);
   });
 });
 

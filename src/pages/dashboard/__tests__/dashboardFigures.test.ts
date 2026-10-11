@@ -116,6 +116,7 @@ describe('dashboardFigures', () => {
     expect(f.expenseChange).toBeNull();
     expect(f.revenueChange).toBeNull();
     expect(f.statusData).toEqual([{ name: 'تشغيل', value: 1 }]);
+    expect(f.attentionProjectsCount).toBe(0);
   });
 
   it('answers zeros and no chart rows when nothing is visible', () => {

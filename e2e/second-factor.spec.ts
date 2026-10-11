@@ -25,14 +25,14 @@ test('a session that owes its code is sent from the home page to the code step, 
 
   // The session is there (seeded); the address bar skips the login page.
   await page.goto('/');
-  await expect(page).toHaveURL(/\/login\/code$/);
+  await expect(page).toHaveURL(/\/login\?step=code$/);
   await expect(page.getByText('التحقق بخطوتين')).toBeVisible();
   expect(wire.writes.some((w) => w.table === 'second-factor' && (w.body as { action: string }).action === 'check')).toBe(true);
 
   await page.getByRole('textbox').first().fill('111111');
   await page.getByRole('button', { name: 'تأكيد الرمز' }).click();
   await expect(page.getByText('الرمز غير صحيح أو انتهت صلاحيته').first()).toBeVisible();
-  await expect(page).toHaveURL(/\/login\/code$/);
+  await expect(page).toHaveURL(/\/login\?step=code$/);
 
   await page.getByRole('textbox').first().fill('482913');
   await page.getByRole('button', { name: 'تأكيد الرمز' }).click();

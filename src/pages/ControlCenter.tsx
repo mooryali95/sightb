@@ -11,6 +11,7 @@ import { getProjectSummary, calculateEVM, getCurrentMonth } from '@/lib/finance'
 import { SourceOfTruthSection } from '@/components/project/SourceOfTruthSection';
 import { CashRepairLogSection } from '@/components/project/CashRepairLogSection';
 import { CashRepairStatusBar } from '@/components/project/CashRepairStatusBar';
+import { SpendConsistencyChart } from '@/components/project/SpendConsistencyChart';
 
 export default function ControlCenter() {
   const { isOwner, loading: roleLoading } = useRole();
@@ -72,6 +73,7 @@ function ProjectControls({ projectId }: { projectId: string }) {
       settlements: state.fundSettlements.filter((x) => x.projectId === projectId),
       requests: state.paymentRequests.filter((x) => x.projectId === projectId),
       transfers: state.cashTransfers.filter((x) => x.projectId === projectId),
+      resources: state.resources.filter((x) => x.projectId === projectId),
       summary: getProjectSummary(project, budget, expenses, revenues, changes),
       evm: activeBaseline ? calculateEVM(activeBaseline.items, expenses, project.durationMonths, getCurrentMonth(project.startDate, project.durationMonths), project.percentComplete) : null,
     };
@@ -90,6 +92,7 @@ function ProjectControls({ projectId }: { projectId: string }) {
         projectId={projectId} custodies={data.custodies} cashTransfers={data.transfers}
         funds={data.funds} expenses={data.expenses} paymentRequests={data.requests}
       />
+      <SpendConsistencyChart projectId={projectId} projectName={project.name} expenses={data.expenses} resources={data.resources} />
     </div>
   );
 }

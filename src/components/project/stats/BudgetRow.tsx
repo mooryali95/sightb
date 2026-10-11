@@ -31,32 +31,16 @@ export function BudgetRow({ summary, evm, monthsRemaining, totalCommitted, avail
         {summary.spendRate.toFixed(1)}% من الموازنة ({formatCurrency(summary.totalPlanned)})
       </p>
     </div>
-    {(() => {
-      // A negative remainder rendered as "10,544.16-" with the sign trailing
-      // in RTL, under a title still saying "remaining" — read as 10,000 left.
-      // Over budget, the card now says so and shows the overrun as a positive
-      // amount, with how far past the budget it is.
-      const committed = totalCommitted > 0;
-      const left = committed ? availableBudget : summary.budgetRemaining;
-      const over = left < 0;
-      const overPct = summary.totalPlanned > 0 ? (-left / summary.totalPlanned) * 100 : 0;
-      return (
-        <StatCard
-          title={over
-            ? (committed ? 'تجاوز متوقّع للموازنة' : 'تجاوز الموازنة')
-            : (committed ? 'المتاح للصرف' : 'المتبقي من الموازنة')}
-          value={formatCurrency(Math.abs(left))}
-          icon={<Target className="w-4 h-4" />}
-          trend={over ? 'down' : 'up'}
-          subtitle={over
-            ? `بنسبة ${overPct.toFixed(1)}% فوق الموازنة${committed ? ` · ملتزم بعقود: ${formatCurrency(totalCommitted)}` : ''}`
-            : committed ? `ملتزم بعقود: ${formatCurrency(totalCommitted)}` : undefined}
-          tooltip={committed
-            ? '= الموازنة − المصروف − الالتزامات المفتوحة. عند التجاوز يُعرض مقدار التجاوز.'
-            : '= الموازنة − المصروف. عند التجاوز يُعرض مقدار التجاوز.'}
-        />
-      );
-    })()}
+    <StatCard
+      title={totalCommitted > 0 ? 'المتاح للصرف' : 'المتبقي من الموازنة'}
+      value={formatCurrency(totalCommitted > 0 ? availableBudget : summary.budgetRemaining)}
+      icon={<Target className="w-4 h-4" />}
+      trend={(totalCommitted > 0 ? availableBudget : summary.budgetRemaining) >= 0 ? 'up' : 'down'}
+      subtitle={totalCommitted > 0 ? `ملتزم بعقود: ${formatCurrency(totalCommitted)}` : undefined}
+      tooltip={totalCommitted > 0
+        ? '= الموازنة − المصروف الفعلي − الالتزامات المفتوحة. هذا متاح محاسبي، وليس بالضرورة نقداً مستلماً.'
+        : '= الموازنة − المصروف. سالب = تجاوز.'}
+    />
     <StatCard
       title="معدل الحرق الشهري"
       value={formatCurrency(summary.burnRate)}

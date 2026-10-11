@@ -72,17 +72,10 @@ export default function Login() {
     return decision;
   };
 
-  // Set when this page itself moves to the code step after a sign-in that
-  // already checked. Arriving at /login/code otherwise restores the session
-  // and checks again: a second request, and the "code sent" toast twice.
-  const heldHere = useRef(false);
   const holdForOtp = () => {
     setOtpRequired(true);
     setResendCooldown(RESEND_COOLDOWN_SECONDS);
-    if (!isCodeRoute) {
-      heldHere.current = true;
-      navigate('/login/code', { replace: true });
-    }
+    if (!isCodeRoute) navigate('/login/code', { replace: true });
   };
 
   /** After any sign-in, the server says whether this session still owes a code. */
@@ -117,8 +110,9 @@ export default function Login() {
       setResumingCode(false);
       return;
     }
-    if (heldHere.current) {
-      heldHere.current = false;
+    // A password sign-in already established the session and opened the form;
+    // changing to the dedicated URL must not send a second code.
+    if (otpRequired) {
       setResumingCode(false);
       return;
     }
@@ -137,7 +131,7 @@ export default function Login() {
     })();
     return () => { resumeRun.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- route changes alone restart restoration
-  }, [isCodeRoute, navigate]);
+  }, [isCodeRoute, navigate, otpRequired]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,9 +245,9 @@ export default function Login() {
 
   const handleCancelOtp = async () => {
     await supabase.auth.signOut({ scope: 'local' });
+    navigate('/login', { replace: true });
     setOtpRequired(false);
     setOtpCode('');
-    navigate('/login', { replace: true });
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

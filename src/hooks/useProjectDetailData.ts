@@ -99,7 +99,7 @@ export function useProjectDetailData(id: string | undefined) {
 
   const activeCommitments = pCommitments.filter((c) => c.status === 'active');
   const totalCommitted = activeCommitments.reduce((s, c) => s + c.totalAmount, 0);
-  const availableBudget = summary.totalPlanned - totalCommitted;
+  const availableBudget = summary.totalPlanned - summary.totalActual - totalCommitted;
 
   const daysRemaining = project.endDate
     ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))

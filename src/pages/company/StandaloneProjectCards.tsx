@@ -3,8 +3,8 @@
  * contract, the spend the summary counts, and the two progress figures.
  */
 import { useNavigate } from 'react-router-dom';
-import { formatCurrency } from '@/lib/finance';
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type Expense, type Project } from '@/types/project';
+import { formatCurrency, getEffectiveContractValue } from '@/lib/finance';
+import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, type ChangeOrder, type Expense, type Project } from '@/types/project';
 import { Briefcase } from 'lucide-react';
 import { projectSpend, spendBarClass } from './projectSpend';
 
@@ -12,9 +12,10 @@ interface Props {
   /** Already filtered by the page: the finished ones are hidden until asked. */
   projects: Project[];
   countedExpenses: Expense[];
+  changeOrders: ChangeOrder[];
 }
 
-export function StandaloneProjectCards({ projects, countedExpenses }: Props) {
+export function StandaloneProjectCards({ projects, countedExpenses, changeOrders }: Props) {
   const navigate = useNavigate();
   if (projects.length === 0) return null;
   return (
@@ -25,7 +26,8 @@ export function StandaloneProjectCards({ projects, countedExpenses }: Props) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {projects.map(project => {
-            const { totalSpent, spentPercent } = projectSpend(project, countedExpenses);
+            const effectiveContract = getEffectiveContractValue(project.contractValue, changeOrders.filter((order) => order.projectId === project.id));
+            const { totalSpent, spentPercent } = projectSpend({ ...project, contractValue: effectiveContract }, countedExpenses);
             return (
               <div
                 key={project.id}
@@ -45,8 +47,8 @@ export function StandaloneProjectCards({ projects, countedExpenses }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-center mb-3">
                   <div className="p-1.5 rounded bg-muted/40">
-                    <p className="text-xs text-muted-foreground">العقد</p>
-                    <p className="text-xs font-mono font-bold">{formatCurrency(project.contractValue)}</p>
+                    <p className="text-xs text-muted-foreground">العقد الفعّال</p>
+                    <p className="text-xs font-mono font-bold">{formatCurrency(effectiveContract)}</p>
                   </div>
                   <div className="p-1.5 rounded bg-muted/40">
                     <p className="text-xs text-muted-foreground">المصروف</p>

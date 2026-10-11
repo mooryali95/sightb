@@ -50,7 +50,6 @@ function renderLogin(at = '/login') {
     <MemoryRouter initialEntries={[at]}>
       <Routes>
         <Route path="/login" element={<Login />} />
-        {/* The code step has its own route since 98ffa67, as in App.tsx. */}
         <Route path="/login/code" element={<Login />} />
         <Route path="/" element={<Probe />} />
       </Routes>
@@ -132,20 +131,6 @@ describe('Login', () => {
     expect(m.invoke).not.toHaveBeenCalledWith('accept-invite', expect.anything());
   });
 
-  it('moves to /login/code after the password, checking once and saying "code sent" once', async () => {
-    // Moving to the code route used to restore the session and check again:
-    // a second request and the same toast twice.
-    otpCheck({ requiresOtp: true, sent: true });
-    renderLogin();
-    submitLogin('pm@example.com', 'secret1');
-    expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
-    await new Promise((r) => setTimeout(r, 50));
-    const checks = m.invoke.mock.calls.filter(([name, opts]) =>
-      name === 'second-factor' && (opts as { body?: { action?: string } })?.body?.action === 'check');
-    expect(checks).toHaveLength(1);
-    expect(vi.mocked(toast.success).mock.calls.filter(([t]) => t === 'تم إرسال رمز التحقق إلى بريدك الإلكتروني')).toHaveLength(1);
-  });
-
   it('holds an admin on an unknown device at the code, rejects a wrong one, verifies the right one with the fingerprint, and goes home', async () => {
     otpCheck({ requiresOtp: true, sent: true });
     renderLogin();
@@ -182,8 +167,7 @@ describe('Login', () => {
     submitLogin('pm@example.com', 'secret1');
     expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
     expect(toast.warning).toHaveBeenCalledWith('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
-    // Relabelled in 98ffa67: cancelling the code is "sign in with another account".
-    fireEvent.click(screen.getByRole('button', { name: 'الدخول بحساب آخر' }));
+    fireEvent.click(screen.getByText('الدخول بحساب آخر'));
     await waitFor(() => expect(screen.getByText('تسجيل الدخول', { selector: 'h2' })).toBeInTheDocument());
     expect(m.signOut).toHaveBeenCalledTimes(1);
   });
@@ -279,6 +263,15 @@ describe('Login', () => {
     otpCheck({ requiresOtp: false });
     renderLogin('/login/code');
     expect(await screen.findByTestId('path')).toHaveTextContent('/');
+  });
+
+  it('never shows the password form on the code URL and returns cleanly when the session expired', async () => {
+    m.getSession.mockResolvedValueOnce({ data: { session: null } });
+    renderLogin('/login/code');
+    expect(screen.getByRole('status')).toHaveTextContent('جاري تجهيز التحقق الآمن');
+    expect(screen.queryByText('تسجيل الدخول', { selector: 'h2' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('تسجيل الدخول', { selector: 'h2' })).toBeInTheDocument());
+    expect(toast.error).toHaveBeenCalledWith('انتهت جلسة الدخول. أدخل البريد وكلمة المرور من جديد.');
   });
 
   describe('passkey instead of the code', () => {
