@@ -245,9 +245,9 @@ export default function Login() {
 
   const handleCancelOtp = async () => {
     await supabase.auth.signOut({ scope: 'local' });
+    navigate('/login', { replace: true });
     setOtpRequired(false);
     setOtpCode('');
-    navigate('/login', { replace: true });
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
