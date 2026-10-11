@@ -50,6 +50,7 @@ function renderLogin(at = '/login') {
     <MemoryRouter initialEntries={[at]}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/login/code" element={<Login />} />
         <Route path="/" element={<Probe />} />
       </Routes>
     </MemoryRouter>
@@ -262,6 +263,15 @@ describe('Login', () => {
     otpCheck({ requiresOtp: false });
     renderLogin('/login/code');
     expect(await screen.findByTestId('path')).toHaveTextContent('/');
+  });
+
+  it('never shows the password form on the code URL and returns cleanly when the session expired', async () => {
+    m.getSession.mockResolvedValueOnce({ data: { session: null } });
+    renderLogin('/login/code');
+    expect(screen.getByRole('status')).toHaveTextContent('جاري تجهيز التحقق الآمن');
+    expect(screen.queryByText('تسجيل الدخول', { selector: 'h2' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('تسجيل الدخول', { selector: 'h2' })).toBeInTheDocument());
+    expect(toast.error).toHaveBeenCalledWith('انتهت جلسة الدخول. أدخل البريد وكلمة المرور من جديد.');
   });
 
   describe('passkey instead of the code', () => {

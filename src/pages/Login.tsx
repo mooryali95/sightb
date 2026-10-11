@@ -110,6 +110,12 @@ export default function Login() {
       setResumingCode(false);
       return;
     }
+    // A password sign-in already established the session and opened the form;
+    // changing to the dedicated URL must not send a second code.
+    if (otpRequired) {
+      setResumingCode(false);
+      return;
+    }
     const run = ++resumeRun.current;
     setResumingCode(true);
     void (async () => {
@@ -125,7 +131,7 @@ export default function Login() {
     })();
     return () => { resumeRun.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- route changes alone restart restoration
-  }, [isCodeRoute, navigate]);
+  }, [isCodeRoute, navigate, otpRequired]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
