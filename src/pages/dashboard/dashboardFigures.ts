@@ -8,7 +8,7 @@ import {
   startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear,
   subMonths, subQuarters, subYears, isWithinInterval, parseISO,
 } from 'date-fns';
-import { getTotalPlanned } from '@/lib/finance';
+import { getCountedExpenses, getTotalPlanned } from '@/lib/finance';
 import {
   PROJECT_STATUS_LABELS,
   type BudgetItem, type ChangeOrder, type Company, type Expense, type Milestone, type Portfolio, type Project,
@@ -74,9 +74,6 @@ export function isInRange(dateStr: string, range: DateRange | null): boolean {
   } catch { return true; }
 }
 
-// SSOT: exclude rejected expenses and outstanding (unsettled) advances — matches getProjectSummary in finance.ts
-const isCountedExpense = (e: Expense) => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance;
-
 /** The projects the filters leave visible. */
 export function filterProjects(projects: Project[], companies: Company[], f: DashboardFilters): Project[] {
   return projects.filter((p) => {
@@ -113,7 +110,7 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   const visibleProjectIds = new Set(filteredProjects.map((project) => project.id));
 
   const filteredBudgetItems = budgetItems.filter((b) => visibleProjectIds.has(b.projectId));
-  const filteredAllExpenses = expenses.filter((e) => visibleProjectIds.has(e.projectId) && isCountedExpense(e));
+  const filteredAllExpenses = getCountedExpenses(expenses).filter((e) => visibleProjectIds.has(e.projectId));
   const filteredExpenses = filteredAllExpenses.filter((e) => isInRange(e.date, currentRange));
   const filteredAllRevenues = revenues.filter((r) => visibleProjectIds.has(r.projectId));
   const filteredRevenues = filteredAllRevenues.filter((r) => isInRange(r.date, currentRange));
@@ -135,6 +132,11 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   const prevRevenue = previousRange ? filteredAllRevenues.filter((r) => r.status === 'collected' && isInRange(r.date, previousRange)).reduce((s, r) => s + r.amount, 0) : 0;
   const expenseChange = prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : null;
   const revenueChange = prevRevenue > 0 ? ((collectedRevenue - prevRevenue) / prevRevenue) * 100 : null;
+  const attentionProjectsCount = filteredProjects.filter((project) => {
+    const spend = filteredAllExpenses.filter((expense) => expense.projectId === project.id).reduce((sum, expense) => sum + expense.amount, 0);
+    const plan = getTotalPlanned(filteredBudgetItems.filter((item) => item.projectId === project.id));
+    return (plan > 0 && spend / plan > 0.9) || project.status === 'on-hold' || project.status === 'cancelled';
+  }).length;
 
   // The same rows as the total expenses card: visible projects, counted, in the period.
   const companyData = companies.map((c) => {
@@ -152,7 +154,7 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
     filteredChangeOrders, filteredMilestones, filteredRisks, filteredPortfolios,
     defaultVisibleProjectsCount: defaultVisibleCount(projects, companies, f),
     totalContractValue, totalExpenses, approvedChangeImpact, effectiveTotalContract, plannedProfit, plannedProfitMargin,
-    collectedRevenue, expenseChange, revenueChange, companyData, statusData,
+    collectedRevenue, expenseChange, revenueChange, attentionProjectsCount, companyData, statusData,
   };
 }
 

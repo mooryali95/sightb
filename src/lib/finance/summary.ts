@@ -3,6 +3,11 @@ import { getEffectiveContractValue, getCurrentMonth } from './contract';
 import { getTotalPlanned } from './budget';
 import { addVAT, calcVAT } from './vat';
 
+/** Expenses that belong in actual cost everywhere in the product. */
+export function getCountedExpenses(expenses: Expense[]): Expense[] {
+  return expenses.filter((expense) => expense.approvalStatus !== 'rejected' && !expense.isOutstandingAdvance);
+}
+
 export function getProjectSummary(
   project: Project,
   budgetItems: BudgetItem[],
@@ -12,9 +17,7 @@ export function getProjectSummary(
 ): ProjectSummary {
   const totalPlanned = getTotalPlanned(budgetItems);
   // استبعاد المرفوضات + السلف غير المسوّاة (Outstanding Advances) من AC
-  const totalActual = expenses
-    .filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance)
-    .reduce((sum, e) => sum + e.amount, 0);
+  const totalActual = getCountedExpenses(expenses).reduce((sum, e) => sum + e.amount, 0);
 
   const effectiveContractValue = getEffectiveContractValue(project.contractValue, changeOrders);
   const budgetRemaining = totalPlanned - totalActual;
@@ -52,8 +55,8 @@ export function getProjectSummary(
     ? addVAT(effectiveContractValue, vatRate)
     : effectiveContractValue;
 
-  const totalVATOnExpenses = expenses
-    .filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance && !e.isVatExempt)
+  const totalVATOnExpenses = getCountedExpenses(expenses)
+    .filter(e => !e.isVatExempt)
     .reduce((sum, e) => sum + calcVAT(e.amount, vatRate), 0);
   const totalActualInclVAT = totalActual + totalVATOnExpenses;
 

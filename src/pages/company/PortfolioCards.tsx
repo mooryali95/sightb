@@ -7,10 +7,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, getEffectiveContractValue } from '@/lib/finance';
 import {
   HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS,
-  type Expense, type PortfolioSummary, type Project,
+  type ChangeOrder, type Expense, type PortfolioSummary, type Project,
 } from '@/types/project';
 import { FolderKanban, ArrowLeft, Briefcase, ChevronDown } from 'lucide-react';
 import { projectSpend, spendBarClass } from './projectSpend';
@@ -20,9 +20,10 @@ interface Props {
   /** The projects to list under their portfolios, already filtered by the page. */
   projects: Project[];
   countedExpenses: Expense[];
+  changeOrders: ChangeOrder[];
 }
 
-export function PortfolioCards({ summaries, projects, countedExpenses }: Props) {
+export function PortfolioCards({ summaries, projects, countedExpenses, changeOrders }: Props) {
   const navigate = useNavigate();
   const [expandedPortfolios, setExpandedPortfolios] = useState<Record<string, boolean>>({});
   const togglePortfolio = (portfolioId: string) => {
@@ -99,7 +100,8 @@ export function PortfolioCards({ summaries, projects, countedExpenses }: Props) 
                   className="divide-y divide-border/40"
                 >
                   {portfolioProjects.map(project => {
-                    const { totalSpent, spentPercent } = projectSpend(project, countedExpenses);
+                    const effectiveContract = getEffectiveContractValue(project.contractValue, changeOrders.filter((order) => order.projectId === project.id));
+                    const { totalSpent, spentPercent } = projectSpend({ ...project, contractValue: effectiveContract }, countedExpenses);
                     return (
                       <div
                         key={project.id}
@@ -117,7 +119,7 @@ export function PortfolioCards({ summaries, projects, countedExpenses }: Props) 
                             </span>
                           </div>
                           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                            <span>العقد: {formatCurrency(project.contractValue)}</span>
+                            <span>العقد الفعّال: {formatCurrency(effectiveContract)}</span>
                             <span>·</span>
                             <span>المصروف: {formatCurrency(totalSpent)}</span>
                             <span>·</span>

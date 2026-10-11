@@ -17,7 +17,6 @@ import { SmartBudgetAlerts } from '@/components/project/SmartBudgetAlerts';
 import { FundsSection } from '@/components/project/FundsSection';
 import { CashLedgerSection } from '@/components/project/CashLedgerSection';
 import { ExpenseSpendExplorer } from '@/components/project/ExpenseSpendExplorer';
-import { SpendConsistencyChart } from '@/components/project/SpendConsistencyChart';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { VendorPayablesPanel } from '@/components/project/VendorPayablesPanel';
@@ -96,7 +95,6 @@ export function ProjectSection({ value, data: d, navigateToTab }: ProjectSection
         <div className="space-y-4">
           <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} projectStatus={project.status} />
           <ExpenseSpendExplorer projectId={project.id} projectName={project.name} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} />
-          <SpendConsistencyChart projectId={project.id} projectName={project.name} expenses={pExpenses} resources={pResources} />
         </div>
       );
     case 'funds':

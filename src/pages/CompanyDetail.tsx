@@ -6,7 +6,7 @@ import { useCoreData, useCompanyData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, getCountedExpenses } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
 import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export-lazy';
 import { Button } from '@/components/ui/button';
@@ -63,10 +63,7 @@ export default function CompanyDetail() {
   // leaves out rejected expenses and advances still outstanding. The chart
   // and the project cards must count the same rows or the page disagrees
   // with itself.
-  const countedExpenses = useMemo(
-    () => expenses.filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance),
-    [expenses],
-  );
+  const countedExpenses = useMemo(() => getCountedExpenses(expenses), [expenses]);
 
   const expensesByPortfolio = useMemo(() => {
     const data: { name: string; value: number }[] = [];
@@ -259,11 +256,11 @@ export default function CompanyDetail() {
           </div>
         )}
 
-        <PortfolioCards summaries={summary?.portfolioSummaries ?? []} projects={visibleCompanyProjects} countedExpenses={countedExpenses} />
+        <PortfolioCards summaries={summary?.portfolioSummaries ?? []} projects={visibleCompanyProjects} countedExpenses={countedExpenses} changeOrders={changeOrders} />
 
         <IndirectCostsCard companyId={id!} costs={compIndirectCosts} canEdit={isAdmin || canEdit('company', id!)} />
 
-        <StandaloneProjectCards projects={visibleStandaloneProjects} countedExpenses={countedExpenses} />
+        <StandaloneProjectCards projects={visibleStandaloneProjects} countedExpenses={countedExpenses} changeOrders={changeOrders} />
       </motion.div>
     </AppLayout>
   );

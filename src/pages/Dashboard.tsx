@@ -24,6 +24,7 @@ import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { PageHeader } from '@/components/ui/page-header';
 import { useCoreData, useDetailsData } from '@/hooks/useAppData';
 import { dashboardFigures } from './dashboard/dashboardFigures';
+import { FinancialBrief } from '@/components/dashboard/FinancialBrief';
 
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
@@ -62,7 +63,7 @@ export default function Dashboard() {
     filteredProjects, filteredBudgetItems, filteredAllExpenses, filteredAllRevenues, filteredChangeOrders,
     filteredMilestones, filteredRisks, filteredPortfolios, defaultVisibleProjectsCount,
     totalContractValue, totalExpenses, approvedChangeImpact, effectiveTotalContract, plannedProfit, plannedProfitMargin,
-    collectedRevenue, expenseChange, revenueChange, companyData, statusData,
+    collectedRevenue, expenseChange, revenueChange, attentionProjectsCount, companyData, statusData,
   } = figures;
 
   const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '' || timePeriod !== 'all' || showInactive;
@@ -127,6 +128,18 @@ export default function Dashboard() {
               portfoliosCount={portfolios.length}
             />
 
+            <FinancialBrief
+              collectedRevenue={collectedRevenue} totalExpenses={totalExpenses}
+              plannedProfitMargin={plannedProfitMargin} attentionCount={attentionProjectsCount}
+              timePeriod={timePeriod}
+            />
+
+            <AttentionProjects
+              filteredProjects={filteredProjects} expenses={filteredAllExpenses}
+              budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
+              risks={risks} projects={projects} portfolios={portfolios}
+            />
+
             <DashboardCharts companyData={companyData} statusData={statusData} />
 
             <PortfolioPerformance
@@ -145,12 +158,6 @@ export default function Dashboard() {
               budgetItems={budgetItems} expenses={expenses} revenues={revenues}
               changeOrders={changeOrders} milestones={milestones} risks={risks}
               indirectCosts={indirectCosts} saveSnapshot={saveSnapshot}
-            />
-
-            <AttentionProjects
-              filteredProjects={filteredProjects} expenses={filteredAllExpenses}
-              budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
-              risks={risks} projects={projects} portfolios={portfolios}
             />
 
             <ProjectCards
