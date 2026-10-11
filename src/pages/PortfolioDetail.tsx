@@ -191,10 +191,10 @@ export default function PortfolioDetail() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard title="إجمالي قيمة العقود" value={formatCurrency(summary.totalEffectiveValue)} icon={<DollarSign className="w-4 h-4" />} />
-          <StatCard title="إجمالي المصروفات" value={formatCurrency(summary.totalActual)} icon={<TrendingDown className="w-4 h-4" />} trend="down" />
-          <StatCard title="الربح المخطط الإجمالي" value={formatCurrency(summary.aggregatePlannedProfit)} icon={<TrendingUp className="w-4 h-4" />} trend={summary.aggregatePlannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.aggregatePlannedMargin.toFixed(1)}%`} />
-          <StatCard title="الإنجاز المرجّح" value={`${summary.weightedPercentComplete.toFixed(1)}%`} icon={<Target className="w-4 h-4" />} subtitle={`${summary.projectCount} مشروع`} />
+          <StatCard title="قيمة العقود الفعّالة" value={formatCurrency(summary.totalEffectiveValue)} icon={<DollarSign className="w-4 h-4" />} tooltip="العقود الأصلية + أوامر التغيير المعتمدة لكل مشاريع المحفظة." />
+          <StatCard title="المصروف الفعلي" value={formatCurrency(summary.totalActual)} icon={<TrendingDown className="w-4 h-4" />} trend="down" tooltip="المصروفات المقبولة، بعد استبعاد المرفوض والسلف القائمة." />
+          <StatCard title="الربح المخطط الإجمالي" value={formatCurrency(summary.aggregatePlannedProfit)} icon={<TrendingUp className="w-4 h-4" />} trend={summary.aggregatePlannedProfit >= 0 ? 'up' : 'down'} subtitle={`هامش: ${summary.aggregatePlannedMargin.toFixed(1)}%`} tooltip="قيمة العقود الفعّالة − الموازنات المعتمدة. لا يساوي الربح النقدي المحقق." />
+          <StatCard title="الإنجاز المرجّح" value={`${summary.weightedPercentComplete.toFixed(1)}%`} icon={<Target className="w-4 h-4" />} subtitle={`${summary.projectCount} مشروع`} tooltip="متوسط إنجاز المشاريع موزوناً بقيمة العقد الفعّالة لكل مشروع." />
         </div>
 
         {/* Revenue target bar */}

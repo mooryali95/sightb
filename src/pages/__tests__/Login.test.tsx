@@ -166,7 +166,7 @@ describe('Login', () => {
     submitLogin('pm@example.com', 'secret1');
     expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
     expect(toast.warning).toHaveBeenCalledWith('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
-    fireEvent.click(screen.getByText('إلغاء'));
+    fireEvent.click(screen.getByText('الدخول بحساب آخر'));
     await waitFor(() => expect(screen.getByText('تسجيل الدخول', { selector: 'h2' })).toBeInTheDocument());
     expect(m.signOut).toHaveBeenCalledTimes(1);
   });
@@ -252,7 +252,7 @@ describe('Login', () => {
 
   it('resumes at the code step for a session sent back to finish it, without asking the password again', async () => {
     otpCheck({ requiresOtp: true, sent: true });
-    renderLogin('/login?step=code');
+    renderLogin('/login/code');
     expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
     expect(m.signInWithPassword).not.toHaveBeenCalled();
     expect(m.invoke).toHaveBeenCalledWith('second-factor', { body: { action: 'check', fingerprint: localStorage.getItem('rouya_device_fp') } });
@@ -260,7 +260,7 @@ describe('Login', () => {
 
   it('goes straight home when the resumed session turns out to have passed already', async () => {
     otpCheck({ requiresOtp: false });
-    renderLogin('/login?step=code');
+    renderLogin('/login/code');
     expect(await screen.findByTestId('path')).toHaveTextContent('/');
   });
 

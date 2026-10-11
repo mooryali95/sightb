@@ -38,7 +38,7 @@ export function BudgetRow({ summary, evm, monthsRemaining, totalCommitted, avail
       trend={(totalCommitted > 0 ? availableBudget : summary.budgetRemaining) >= 0 ? 'up' : 'down'}
       subtitle={totalCommitted > 0 ? `ملتزم بعقود: ${formatCurrency(totalCommitted)}` : undefined}
       tooltip={totalCommitted > 0
-        ? '= الموازنة − المصروف − الالتزامات المفتوحة. سالب = تجاوز محتمل.'
+        ? '= الموازنة − المصروف الفعلي − الالتزامات المفتوحة. هذا متاح محاسبي، وليس بالضرورة نقداً مستلماً.'
         : '= الموازنة − المصروف. سالب = تجاوز.'}
     />
     <StatCard

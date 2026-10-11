@@ -207,16 +207,17 @@ export default function CompanyDetail() {
         {/* Stats */}
         {summary && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard title="إجمالي العقود" value={formatCurrency(summary.totalContractValue)} icon={<DollarSign className="w-4 h-4" />} />
-            <StatCard title="إجمالي المصروفات" value={formatCurrency(summary.totalActual)} icon={<TrendingUp className="w-4 h-4" />} trend="down" />
+            <StatCard title="قيمة العقود الفعّالة" value={formatCurrency(summary.totalContractValue)} icon={<DollarSign className="w-4 h-4" />} tooltip="العقود الأصلية + أوامر التغيير المعتمدة لكل مشاريع الشركة." />
+            <StatCard title="المصروف الفعلي" value={formatCurrency(summary.totalActual)} icon={<TrendingUp className="w-4 h-4" />} trend="down" tooltip="المصروفات المقبولة، بعد استبعاد المرفوض والسلف القائمة." />
             <StatCard
               title="صافي الربح بعد غير المباشرة"
               value={formatCurrency(summary.netProfitAfterIndirect)}
               icon={<TrendingUp className="w-4 h-4" />}
               trend={summary.netProfitAfterIndirect >= 0 ? 'up' : 'down'}
               subtitle={`هامش: ${summary.netProfitMargin.toFixed(1)}%`}
+              tooltip="الربح المخطط لكل المشاريع − التكاليف غير المباشرة للشركة. لا يساوي الربح النقدي المحقق."
             />
-            <StatCard title="مشاريع متعثرة" value={String(summary.totalAtRiskProjects)} icon={<AlertTriangle className="w-4 h-4" />} trend={summary.totalAtRiskProjects > 0 ? 'down' : 'up'} />
+            <StatCard title="مشاريع متعثرة" value={String(summary.totalAtRiskProjects)} icon={<AlertTriangle className="w-4 h-4" />} trend={summary.totalAtRiskProjects > 0 ? 'down' : 'up'} tooltip="مشاريع معلقة أو ملغاة أو تجاوز صرفها الموازنة المعتمدة." />
           </div>
         )}
 
