@@ -32,6 +32,7 @@ export default function Login() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [resumingCode, setResumingCode] = useState(isCodeRoute);
+  const switchingAccount = useRef(false);
   const passkeyOffered = passkeysSupported();
 
   useEffect(() => {
@@ -107,9 +108,11 @@ export default function Login() {
   const resumeRun = useRef(0);
   useEffect(() => {
     if (!isCodeRoute) {
+      switchingAccount.current = false;
       setResumingCode(false);
       return;
     }
+    if (switchingAccount.current) return;
     // A password sign-in already established the session and opened the form;
     // changing to the dedicated URL must not send a second code.
     if (otpRequired) {
@@ -244,10 +247,11 @@ export default function Login() {
   };
 
   const handleCancelOtp = async () => {
+    switchingAccount.current = true;
     await supabase.auth.signOut({ scope: 'local' });
-    navigate('/login', { replace: true });
     setOtpRequired(false);
     setOtpCode('');
+    navigate('/login', { replace: true });
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
