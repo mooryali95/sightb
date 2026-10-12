@@ -114,8 +114,8 @@ describe('the figures at the top', () => {
     renderPage();
     // 100,000 + 50,000 + 20,000 contracts; 10,000 + 5,000 counted spend;
     // planned profit 170,000 with no budget, less 5,000 indirect.
-    expect(statFigure('إجمالي العقود')).toBe('170,000.00 ر.س');
-    expect(statFigure('إجمالي المصروفات')).toBe('15,000.00 ر.س');
+    expect(statFigure('قيمة العقود الفعّالة')).toBe('170,000.00 ر.س');
+    expect(statFigure('المصروف الفعلي')).toBe('15,000.00 ر.س');
     expect(statFigure('صافي الربح بعد غير المباشرة')).toBe('165,000.00 ر.س');
     expect(screen.getByText('هامش: 97.1%')).toBeInTheDocument();
   });
