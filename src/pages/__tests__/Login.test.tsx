@@ -172,6 +172,15 @@ describe('Login', () => {
     expect(m.signOut).toHaveBeenCalledTimes(1);
   });
 
+  it('ends code-route restoration on an HTTP-success server refusal rather than looping home', async () => {
+    otpCheck({ error: 'تعذّر التعرّف على الجلسة. سجّل الدخول من جديد.' });
+    renderLogin('/login/code');
+    await screen.findByText('تسجيل الدخول', { selector: 'h2' });
+    expect(toast.error).toHaveBeenCalledWith('تعذّر التعرّف على الجلسة. سجّل الدخول من جديد.');
+    expect(m.signOut).toHaveBeenCalledTimes(1);
+    expect(m.invoke).not.toHaveBeenCalledWith('accept-invite', expect.anything());
+  });
+
   it('sends the reset link for the typed email to the reset page and returns to the form', async () => {
     m.resetPasswordForEmail.mockResolvedValue({ error: null });
     renderLogin();
@@ -340,7 +349,7 @@ describe('Login', () => {
   describe('passkey alone, from the login page', () => {
     /** Answers the passkeys function per action; anything else answers empty. */
     const passkeys = (byAction: Record<string, unknown>) => m.invoke.mockImplementation(async (name: string, opts?: { body?: { action?: string } }) =>
-      ({ data: name === 'passkeys' ? byAction[opts?.body?.action ?? ''] ?? {} : {}, error: null }));
+      ({ data: name === 'passkeys' ? byAction[opts?.body?.action ?? ''] ?? {} : name === 'second-factor' ? { requiresOtp: false } : {}, error: null }));
     const passkeyButton = () => screen.getByRole('button', { name: 'الدخول بمفتاح المرور' });
 
     it('opens the session from the server token, trusts the device, and goes home with no password or code', async () => {
