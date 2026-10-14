@@ -65,10 +65,12 @@ export default function Login() {
     if (decision.kind === 'error') {
       console.error('[otp-check]', res.error);
       await supabase.auth.signOut({ scope: 'local' });
-      toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى.');
+      toast.error(res.data?.error || 'حدث خطأ في التحقق. يرجى المحاولة مرة أخرى.');
+      navigate('/login', { replace: true });
     } else if (decision.kind === 'rate-limited') {
       await supabase.auth.signOut({ scope: 'local' });
       toast.error(decision.message);
+      navigate('/login', { replace: true });
     }
     return decision;
   };
@@ -89,6 +91,7 @@ export default function Login() {
       case 'no-roles':
         await supabase.auth.signOut({ scope: 'local' });
         toast.error('ليس لديك صلاحية للوصول. تواصل مع مدير النظام.');
+        navigate('/login', { replace: true });
         return;
       case 'otp-sent':
         holdForOtp();
@@ -170,6 +173,7 @@ export default function Login() {
         await supabase.auth.signOut({ scope: 'local' });
         setOtpRequired(false);
         toast.error(res.error || 'تم تجاوز الحد الأقصى للمحاولات');
+        navigate('/login', { replace: true });
         return;
       }
       if (!res.verified) {

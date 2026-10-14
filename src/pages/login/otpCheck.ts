@@ -25,7 +25,8 @@ export function readOtpCheck(res: OtpCheckResponse): OtpDecision {
   if (res.error) return { kind: 'error' };
   const d = res.data;
   if (d?.rateLimited) return { kind: 'rate-limited', message: d.error || 'تم تجاوز الحد الأقصى للمحاولات' };
+  if (d?.error) return { kind: 'error' };
   if (d?.noRoles) return { kind: 'no-roles' };
   if (d?.requiresOtp === true) return d.sent === true ? { kind: 'otp-sent' } : { kind: 'otp-failed' };
-  return { kind: 'ok' };
+  return d?.requiresOtp === false ? { kind: 'ok' } : { kind: 'error' };
 }

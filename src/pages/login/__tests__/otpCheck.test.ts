@@ -17,8 +17,11 @@ describe('readOtpCheck', () => {
     expect(readOtpCheck({ data: { requiresOtp: true, sent: true } })).toEqual({ kind: 'otp-sent' });
     expect(readOtpCheck({ data: { requiresOtp: true } })).toEqual({ kind: 'otp-failed' });
     expect(readOtpCheck({ data: { requiresOtp: false } })).toEqual({ kind: 'ok' });
-    expect(readOtpCheck({ data: null })).toEqual({ kind: 'ok' });
-    expect(readOtpCheck({})).toEqual({ kind: 'ok' });
+    expect(readOtpCheck({ data: null })).toEqual({ kind: 'error' });
+    expect(readOtpCheck({})).toEqual({ kind: 'error' });
+  });
+  it('refuses a server refusal even when HTTP succeeded', () => {
+    expect(readOtpCheck({ data: { error: 'تعذّر التعرّف على الجلسة. سجّل الدخول من جديد.' } })).toEqual({ kind: 'error' });
   });
 });
 
