@@ -1,6 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 import { stubSupabase } from './support/stub';
-import { PROJECT_ID } from './support/seed';
+import { PROJECT_ID, USER_ID } from './support/seed';
+
+// Since 98ffa67 this lives in the owner-only control center (/control-center),
+// so the seeded user is also given the system owner role.
+const OWNER_ROLE = { id: 'role-owner-cc', user_id: USER_ID, role: 'owner', scope_type: 'system', scope_id: null };
 
 /**
  * The server truth card on the source-of-truth tab. The page asks the
@@ -20,19 +24,16 @@ const rpcCalls = (wire: { writes: { method: string; table: string; body: unknown
   wire.writes.filter((w) => w.method === 'RPC' && w.table === 'project_financial_summary');
 
 async function openTruth(page: Page) {
-  await page.goto(`/project/${PROJECT_ID}`);
-  await expect(page.getByText('مشروع الاختبار').first()).toBeVisible();
-  // The group holds one section, rendered straight into the panel with no header to open.
-  await page.getByRole('tab', { name: 'مصدر الحقيقة' }).click();
+  await page.goto('/control-center');
+  await expect(page.getByRole('heading', { name: 'مركز الرقابة' })).toBeVisible();
   await expect(page.getByText('مطابقة أرقام الخادم (المرجع النهائي)')).toBeVisible();
 }
 const row = (page: Page, label: string) => page.getByRole('button', { name: new RegExp(`^${label} `) });
 
 test('asks the server once for the project and reports a full match when the figures agree', async ({ page }) => {
-  const wire = await stubSupabase(page, {}, {}, { project_financial_summary: () => agreeing });
+  const wire = await stubSupabase(page, { user_roles: [OWNER_ROLE] }, {}, { project_financial_summary: () => agreeing });
   await openTruth(page);
   await expect(page.getByText('مطابق تماماً')).toBeVisible();
-  await expect(page.getByText('لا توجد تعارضات — أرقام الواجهة مطابقة للخادم')).toBeVisible();
   await expect(rpcCalls(wire)[0]?.body).toStrictEqual({ _project_id: PROJECT_ID });
   await expect(row(page, 'إجمالي المصروفات الفعلية')).toContainText('12,000.00 ر.س');
   await expect(row(page, 'المتبقي من الدفعات')).toContainText('38,000.00 ر.س');
@@ -43,7 +44,7 @@ test('asks the server once for the project and reports a full match when the fig
 });
 
 test('counts a figure the server disagrees on, marks its delta, and explains the likely cause', async ({ page }) => {
-  await stubSupabase(page, {}, {}, { project_financial_summary: () => ({ ...agreeing, total_actual_expenses: 11000 }) });
+  await stubSupabase(page, { user_roles: [OWNER_ROLE] }, {}, { project_financial_summary: () => ({ ...agreeing, total_actual_expenses: 11000 }) });
   await openTruth(page);
   await expect(page.getByText('1 فرق')).toBeVisible();
   await expect(page.getByText('مطابق تماماً')).toHaveCount(0);

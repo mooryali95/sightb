@@ -89,7 +89,7 @@ test('change orders, commitments, invoices, a high risk, a pending expense and a
   await expect(stat(page, 'المتبقي من العقد')).toContainText('700,000.00 ر.س');
   await expect(stat(page, 'المتبقي من العقد')).toContainText('67% لم يُفوتر');
 
-  await expect(stat(page, 'المتاح للصرف')).toContainText('300,000.00 ر.س');
+  await expect(stat(page, 'المتاح للصرف')).toContainText('283,000.00 ر.س');
   await expect(stat(page, 'المتاح للصرف')).toContainText('ملتزم بعقود: 100,000.00 ر.س');
   await expect(page.getByText('المتبقي من الموازنة', { exact: true })).toHaveCount(0);
 

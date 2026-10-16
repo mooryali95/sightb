@@ -44,15 +44,16 @@ async function choosePeriod(page: Page, current: string, next: string) {
 
 test('over all time: the contract with its change orders, every counted expense, the visible projects and their statuses', async ({ page }) => {
   await openDashboard(page);
-  await expect(stat(page, 'إجمالي قيمة العقود')).toContainText('1,520,000.00 ر.س');
-  await expect(stat(page, 'إجمالي قيمة العقود')).toContainText('الأصلية: 1,500,000.00 ر.س');
+  await expect(stat(page, 'قيمة العقود الفعّالة')).toContainText('1,520,000.00 ر.س');
+  await expect(stat(page, 'قيمة العقود الفعّالة')).toContainText('الأصلية: 1,500,000.00 ر.س');
   await expect(stat(page, 'إجمالي المصروفات')).toContainText('27,000.00 ر.س');
   await expect(stat(page, 'إجمالي المصروفات')).not.toContainText('عن الفترة السابقة');
   await expect(stat(page, 'الربح المخطط')).toContainText('1,120,000.00 ر.س');
   await expect(stat(page, 'الربح المخطط')).toContainText('هامش: 73.7%');
   await expect(stat(page, 'إجمالي المشاريع')).toContainText('2');
   await expect(stat(page, 'إجمالي المشاريع')).toContainText('1 شركة · 0 محفظة');
-  await expect(page.getByText('الإيرادات المحصّلة', { exact: true })).toHaveCount(0);
+  // Shown over all time too since 11 October, as the cash actually received.
+  await expect(stat(page, 'الإيرادات المحصّلة')).toContainText('نقد مستلم فعلياً');
 
   const pie = page.locator('div.stat-card', { has: page.getByRole('heading', { name: 'حالة المشاريع' }) });
   await expect(pie.getByText('تشغيل: 1')).toBeVisible();
@@ -68,14 +69,14 @@ test('under a period the expenses and the collected revenue keep to it and compa
   await expect(stat(page, 'إجمالي المصروفات')).toContainText('↑ 100.0% عن الفترة السابقة');
   await expect(stat(page, 'الإيرادات المحصّلة')).toContainText('30,000.00 ر.س');
   await expect(stat(page, 'الإيرادات المحصّلة')).toContainText('↑ 50.0% عن الفترة السابقة');
-  await expect(stat(page, 'إجمالي قيمة العقود')).toContainText('1,520,000.00 ر.س');
+  await expect(stat(page, 'قيمة العقود الفعّالة')).toContainText('1,520,000.00 ر.س');
 
   await choosePeriod(page, 'هذا الشهر', 'هذا الربع');
   // April to June: 8,000 + 4,000 + the pending 3,000, against the first quarter's 12,000.
   await expect(stat(page, 'إجمالي المصروفات')).toContainText('15,000.00 ر.س');
   await expect(stat(page, 'إجمالي المصروفات')).toContainText('↑ 25.0% عن الفترة السابقة');
   await expect(stat(page, 'الإيرادات المحصّلة')).toContainText('50,000.00 ر.س');
-  await expect(stat(page, 'الإيرادات المحصّلة')).toContainText('خلال الفترة المحددة');
+  await expect(stat(page, 'الإيرادات المحصّلة')).toContainText('نقد مستلم فعلياً');
 
   await choosePeriod(page, 'هذا الربع', 'هذه السنة');
   await expect(stat(page, 'إجمالي المصروفات')).toContainText('27,000.00 ر.س');
