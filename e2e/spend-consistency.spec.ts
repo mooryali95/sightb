@@ -33,12 +33,14 @@ const rows = {
   }],
 };
 
+// Moved to the owner-only control center (/control-center) on 11 October,
+// so the seeded user is also given the system owner role.
+const OWNER_ROLE = { id: 'role-owner-cc', user_id: USER_ID, role: 'owner', scope_type: 'system', scope_id: null };
+const asOwner = (rows: Record<string, unknown[]> = {}) => ({ ...rows, user_roles: [...(rows.user_roles ?? []), OWNER_ROLE] });
+
 async function openChart(page: Page) {
-  await page.goto(`/project/${PROJECT_ID}`);
-  await expect(page.getByText('مشروع الاختبار').first()).toBeVisible();
-  await page.getByRole('tab', { name: 'المالية' }).click();
-  const header = page.getByRole('button', { name: 'المصروفات', exact: true });
-  if ((await header.getAttribute('aria-expanded')) !== 'true') await header.click();
+  await page.goto('/control-center');
+  await expect(page.getByRole('heading', { name: 'مركز الرقابة' })).toBeVisible();
   const card = page.locator('div.stat-card', { has: page.getByRole('heading', { name: 'اتساق الصرف — قبل/بعد الإصلاح' }) }).first();
   await expect(card).toBeVisible();
   return card;
@@ -47,7 +49,7 @@ const total = (card: ReturnType<Page['locator']>, label: string) => card.getByTe
 const row = (card: ReturnType<Page['locator']>, label: string) => card.getByRole('button').filter({ hasText: new RegExp(`^${label}قبل`) });
 
 test('puts the repaired amount back by resource and by category, calls out the unsourced spend, and leaves the rejected out', async ({ page }) => {
-  await stubSupabase(page, rows);
+  await stubSupabase(page, asOwner(rows));
   const card = await openChart(page);
   await expect(card).toContainText('تم رصد اختلافات في أرقام الصرف');
   await expect(card).toContainText('فرق قبل/بعد الإصلاح: 2,000.00 ر.س');
@@ -76,7 +78,7 @@ test('puts the repaired amount back by resource and by category, calls out the u
 });
 
 test('a row opens the comparison of its lines before and after the repair', async ({ page }) => {
-  await stubSupabase(page, rows);
+  await stubSupabase(page, asOwner(rows));
   const card = await openChart(page);
   await row(card, 'سارة').click();
   const panel = page.getByRole('dialog');
@@ -91,7 +93,7 @@ test('a row opens the comparison of its lines before and after the repair', asyn
 });
 
 test('with every expense sourced and nothing repaired the figures agree', async ({ page }) => {
-  await stubSupabase(page);
+  await stubSupabase(page, asOwner());
   const card = await openChart(page);
   await expect(card).toContainText('الأرقام متسقة');
   await expect(card).not.toContainText('تم رصد اختلافات');
@@ -99,7 +101,7 @@ test('with every expense sourced and nothing repaired the figures agree', async 
 });
 
 test('an unsourced expense alone raises the warning, with no gap line', async ({ page }) => {
-  await stubSupabase(page, { expenses: [expense('ex-loose', 'food', 500, {})] });
+  await stubSupabase(page, asOwner({ expenses: [expense('ex-loose', 'food', 500, {})] }));
   const card = await openChart(page);
   await expect(card).toContainText('تم رصد اختلافات في أرقام الصرف');
   await expect(card).toContainText('مصروفات بلا دفعة أو عهدة: 500.00 ر.س (1 عملية) — غير محدّد');

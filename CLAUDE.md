@@ -59,6 +59,13 @@ Before fixing a lint or style violation, check `git log` on that file. If
 Lovable authored it, excluding it beats repairing it — a gate a generated file
 can flip is a gate people learn to ignore.
 
+Lovable can also delete merged work outright. Between 11 and 14 October it
+removed `src/lib/resource-spend.ts`, the budget-overrun card and **their tests**,
+so the suite stayed green. `docs/LOVABLE_HANDOFF.md` (also set as Lovable's
+project knowledge, and linked from `AGENTS.md`) limits its scope, and
+`scripts/protected-files-guard.sh`, a Quality step, fails when a protected file
+or behaviour disappears. Add new protected work to both.
+
 ## 4. Migrations merged through GitHub are not applied automatically
 
 Proven against the live ledger, not assumed: two migrations sat in

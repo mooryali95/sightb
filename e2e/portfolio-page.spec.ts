@@ -62,8 +62,8 @@ const card = (page: Page, title: string) => page.locator('div.stat-card', { has:
 
 test('sums the cards, ranks the projects worst first with their health, and a row opens the project', async ({ page }) => {
   await openPortfolio(page);
-  await expect(card(page, 'إجمالي قيمة العقود')).toContainText('1,000,000.00 ر.س');
-  await expect(card(page, 'إجمالي المصروفات')).toContainText('265,000.00 ر.س');
+  await expect(card(page, 'قيمة العقود الفعّالة')).toContainText('1,000,000.00 ر.س');
+  await expect(card(page, 'المصروف الفعلي')).toContainText('265,000.00 ر.س');
   await expect(card(page, 'الربح المخطط الإجمالي')).toContainText('700,000.00 ر.س');
   await expect(card(page, 'الربح المخطط الإجمالي')).toContainText('هامش: 70.0%');
   // (500,000 × 60 + 200,000 × 20 + 300,000 × 100) / 1,000,000.

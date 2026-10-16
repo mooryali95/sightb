@@ -32,8 +32,8 @@ test('rolls the projects up, nets the indirect costs off the profit, and counts 
   await stubSupabase(page, rows);
   await openCompany(page);
   // 1,000,000 + 300,000 + 100,000 of contracts; 12,000 + 40,000 counted, the rejected 70,000 not.
-  await expect(stat(page, 'إجمالي العقود')).toContainText('1,400,000.00 ر.س');
-  await expect(stat(page, 'إجمالي المصروفات')).toContainText('52,000.00 ر.س');
+  await expect(stat(page, 'قيمة العقود الفعّالة')).toContainText('1,400,000.00 ر.س');
+  await expect(stat(page, 'المصروف الفعلي')).toContainText('52,000.00 ر.س');
   // Planned profit 600,000 + 200,000 + 100,000 (no plan) less 50,000 of rent.
   await expect(stat(page, 'صافي الربح بعد غير المباشرة')).toContainText('850,000.00 ر.س');
   await expect(stat(page, 'مشاريع متعثرة')).toContainText('1');

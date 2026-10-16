@@ -3,8 +3,8 @@ import { stubSupabase } from './support/stub';
 import { PROJECT_ID, USER_ID, seed } from './support/seed';
 
 /**
- * The alerts centre. The spend consistency chart on a project's expenses
- * tab records, in the browser, any gap between spend before and after
+ * The alerts centre. The spend consistency chart in the control center
+ * records, in the browser, any gap between spend before and after
  * repairs and any expense with no fund or custody behind it. The centre
  * lists what was recorded with the project linked, the figures and the
  * dimension; the search narrows it; marking an alert handled closes it
@@ -17,16 +17,18 @@ const unlinked = {
   approval_status: 'approved', is_vat_exempt: true, fund_id: null, custody_id: null, user_id: USER_ID, created_at: '2026-03-05T00:00:00Z',
 };
 
+// The chart that records alerts moved to the owner-only control center on
+// 11 October, so alerts are recorded when the owner opens it.
+const OWNER_ROLE = { id: 'role-owner-cc', user_id: USER_ID, role: 'owner', scope_type: 'system', scope_id: null };
 async function visitExpenses(page: Page) {
-  await page.goto(`/project/${PROJECT_ID}`);
-  await expect(page.getByText('مشروع الاختبار').first()).toBeVisible();
-  await page.getByRole('tab', { name: 'المالية' }).click();
+  await page.goto('/control-center');
+  await expect(page.getByRole('heading', { name: 'مركز الرقابة' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'حسب الفئة' })).toBeVisible();
 }
 const stored = (page: Page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? '[]') as unknown[], ALERTS_KEY);
 
 test('an expense with no source is recorded on the project page and read, handled and cleared in the centre', async ({ page }) => {
-  await stubSupabase(page, { expenses: [unlinked] });
+  await stubSupabase(page, { user_roles: [OWNER_ROLE], expenses: [unlinked] });
   await visitExpenses(page);
   await expect.poll(() => stored(page).then((l) => l.length)).toBe(1);
 
@@ -60,7 +62,7 @@ test('an expense with no source is recorded on the project page and read, handle
 });
 
 test('a project whose spend all has a source, a fund or a custody, records nothing', async ({ page }) => {
-  await stubSupabase(page, {
+  await stubSupabase(page, { user_roles: [OWNER_ROLE],
     custodies: [{ id: 'cu-x', project_id: PROJECT_ID, company_id: seed.projects[0].company_id, resource_id: null, resource_name: 'عهدة النقل', amount: 10000,
       date: '2026-03-01', received_date: '2026-03-01', status: 'active', source_fund_id: null, notes: null, closed_date: null, user_id: USER_ID, created_at: '2026-03-01T00:00:00Z' }],
     expenses: [{ ...unlinked, id: 'ex-cust', description: 'نقل من العهدة', amount: 2000, custody_id: 'cu-x' }],

@@ -197,6 +197,11 @@ jobs:
           fi
           echo "All lockfile tarballs resolve from the public npm registry."
 
+      - name: Guard the protected files
+        # docs/LOVABLE_HANDOFF.md lists work Lovable must not delete; a
+        # deletion that takes its tests with it leaves the suite green.
+        run: bash scripts/protected-files-guard.sh
+
       - name: Guard the migration history
         env:
           EVENT: ${{ github.event_name }}
