@@ -111,6 +111,12 @@ they are kept for a move off Lovable Cloud. What works instead:
   result. Test it on a local Postgres first, twice, and break the check once.
 - A function arriving through git is deployed when Lovable next builds the
   project; `passkeys` went live that way.
+- **Every SQL block or migration the owner is asked to run comes with a direct
+  link**, never only a path: the file on `main` at
+  `https://github.com/mooryali95/sightb/blob/main/<path>` and its raw form at
+  `https://raw.githubusercontent.com/mooryali95/sightb/main/<path>` for
+  copying. Hand it over only once the file is on `main`, so the link resolves.
+  The owner asked for this on 16 October.
 
 `scripts/security-scan.sh` check 5/5 detects the drift. Version matching is on
 real timestamps with a ±10s tolerance, never string or integer comparison:

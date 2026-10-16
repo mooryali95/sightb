@@ -1,36 +1,73 @@
-import { Activity, ArrowLeft, Landmark, TriangleAlert } from 'lucide-react';
+/**
+ * «المركز المالي» under the headline cards: the cash position and the
+ * profitability after the company's own costs, each figure with its formula.
+ * The net here is the same net the company page shows: the projects'
+ * planned profit minus the company's indirect costs.
+ */
+import { Landmark, Scale, TriangleAlert, TrendingUp, Receipt, Building2, Wallet } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/finance';
 
 interface Props {
-  collectedRevenue: number;
-  totalExpenses: number;
-  plannedProfitMargin: number;
+  netCash: number;
+  receivables: number;
+  plannedProfit: number;
+  indirectTotal: number;
+  netPlannedProfit: number;
+  netPlannedMargin: number;
   attentionCount: number;
   timePeriod: string;
 }
 
-export function FinancialBrief({ collectedRevenue, totalExpenses, plannedProfitMargin, attentionCount, timePeriod }: Props) {
-  const cashGap = collectedRevenue - totalExpenses;
-  const period = timePeriod === 'all' ? 'تراكميًا' : 'في الفترة المحددة';
+function Figure({ icon, label, value, formula, tone }: { icon: React.ReactNode; label: string; value: string; formula: string; tone?: 'good' | 'bad' | 'muted' }) {
   return (
-    <section className="mb-6 border-y border-border bg-card/70 px-4 py-3" aria-label="القراءة التنفيذية">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 min-w-[190px]">
-          <Activity className="w-4 h-4 text-primary" />
-          <div><p className="text-xs font-semibold">القراءة التنفيذية</p><p className="text-[11px] text-muted-foreground">السيولة والربحية أولاً</p></div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div tabIndex={0} className="min-w-0 rounded-lg px-3 py-2 hover:bg-muted/40 focus-visible:bg-muted/40 outline-none transition-colors cursor-help" aria-label={`${label}: ${value}`}>
+          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">{icon}{label}</p>
+          <p className={`font-mono text-base font-bold mt-0.5 truncate ${tone === 'good' ? 'health-good' : tone === 'bad' ? 'text-destructive' : ''}`}>{value}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <Landmark className="w-3.5 h-3.5 text-muted-foreground" />
-          <span>فجوة التحصيل والمصروف {period}:</span>
-          <strong className={cashGap >= 0 ? 'health-good' : 'text-destructive'}>{formatCurrency(cashGap)}</strong>
-        </div>
-        <ArrowLeft className="w-3.5 h-3.5 text-muted-foreground hidden sm:block" />
-        <p className="text-xs">هامش الربح المخطط: <strong>{plannedProfitMargin.toFixed(1)}%</strong></p>
-        <div className="ms-auto flex items-center gap-1.5 text-xs">
-          <TriangleAlert className={`w-3.5 h-3.5 ${attentionCount > 0 ? 'text-warning' : 'text-success'}`} />
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs text-xs">{formula}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+export function FinancialBrief({ netCash, receivables, plannedProfit, indirectTotal, netPlannedProfit, netPlannedMargin, attentionCount, timePeriod }: Props) {
+  const period = timePeriod === 'all' ? 'تراكمياً' : 'في الفترة المحددة';
+  return (
+    <TooltipProvider delayDuration={200}>
+    <section className="mb-6 rounded-xl border border-border bg-card/70" aria-label="المركز المالي">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
+        <h2 className="text-sm font-semibold flex items-center gap-2"><Scale className="w-4 h-4 text-primary" />المركز المالي</h2>
+        <p className={`flex items-center gap-1.5 text-xs ${attentionCount > 0 ? 'text-warning' : 'text-success'}`}>
+          <TriangleAlert className="w-3.5 h-3.5" />
           {attentionCount > 0 ? `${attentionCount} مشروع يحتاج تدخلاً` : 'لا توجد مشاريع حرجة ضمن العرض'}
+        </p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-border">
+        <div className="p-2">
+          <p className="px-3 pt-1 text-[11px] font-semibold text-muted-foreground">النقد {period}</p>
+          <div className="grid grid-cols-2">
+            <Figure icon={<Wallet className="w-3.5 h-3.5" />} label="صافي النقد" value={formatCurrency(netCash)} tone={netCash >= 0 ? 'good' : 'bad'}
+              formula="الإيرادات المحصّلة (بتاريخ التحصيل) − المصروفات المحتسبة، للمشاريع الظاهرة وفي الفترة المحددة." />
+            <Figure icon={<Receipt className="w-3.5 h-3.5" />} label="مستحق على العملاء" value={formatCurrency(receivables)}
+              formula="دفعات فُوترت ولم تُحصَّل بعد. رصيد قائم الآن، لا يتغيّر مع فلتر الفترة." />
+          </div>
+        </div>
+        <div className="p-2">
+          <p className="px-3 pt-1 text-[11px] font-semibold text-muted-foreground">الربحية المخططة (تراكمية)</p>
+          <div className="grid grid-cols-3">
+            <Figure icon={<TrendingUp className="w-3.5 h-3.5" />} label="ربح المشاريع" value={formatCurrency(plannedProfit)} tone={plannedProfit >= 0 ? undefined : 'bad'}
+              formula="قيمة العقود الفعّالة − الموازنات المعتمدة للمشاريع الظاهرة." />
+            <Figure icon={<Building2 className="w-3.5 h-3.5" />} label="تكاليف الشركة غير المباشرة" value={formatCurrency(indirectTotal)} tone="muted"
+              formula="التكاليف غير المباشرة المسجّلة على الشركات الظاهرة. تُطرح من ربح المشاريع كما في صفحة الشركة." />
+            <Figure icon={<Landmark className="w-3.5 h-3.5" />} label={`صافي الشركة · ${netPlannedMargin.toFixed(1)}%`} value={formatCurrency(netPlannedProfit)} tone={netPlannedProfit >= 0 ? 'good' : 'bad'}
+              formula="ربح المشاريع − تكاليف الشركة غير المباشرة. ربح مخطط، وليس الربح النقدي المحقق." />
+          </div>
         </div>
       </div>
     </section>
+    </TooltipProvider>
   );
 }

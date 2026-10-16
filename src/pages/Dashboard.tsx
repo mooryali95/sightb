@@ -25,6 +25,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { useCoreData, useDetailsData } from '@/hooks/useAppData';
 import { dashboardFigures } from './dashboard/dashboardFigures';
 import { FinancialBrief } from '@/components/dashboard/FinancialBrief';
+import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
@@ -36,11 +37,15 @@ export default function Dashboard() {
   const archivedCompanies = useMemo(() => companies.filter(c => c.status === 'archived'), [companies]);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filterCompany, setFilterCompany] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [timePeriod, setTimePeriod] = useState<string>('all');
-  const [showInactive, setShowInactive] = useState(false);
+  // Filters live in the address bar: a filtered view can be shared and survives a reload.
+  const { filters, update, clear: clearFilters, active } = useDashboardFilters();
+  const { filterCompany, filterPortfolio, filterStatus, searchQuery, timePeriod, showInactive } = filters;
+  const setFilterCompany = (v: string) => update({ filterCompany: v });
+  const setFilterPortfolio = (v: string) => update({ filterPortfolio: v });
+  const setFilterStatus = (v: string) => update({ filterStatus: v });
+  const setSearchQuery = (v: string) => update({ searchQuery: v });
+  const setTimePeriod = (v: string) => update({ timePeriod: v });
+  const setShowInactive = (v: boolean) => update({ showInactive: v });
 
   const core = useCoreData();
   useDetailsData();
@@ -51,23 +56,19 @@ export default function Dashboard() {
     }
   }, [core.isError]);
 
-  const filters = useMemo(
-    () => ({ filterCompany, filterStatus, searchQuery, timePeriod, showInactive }),
-    [filterCompany, filterStatus, searchQuery, timePeriod, showInactive],
-  );
   const figures = useMemo(
-    () => dashboardFigures({ companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks }, filters),
-    [companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, filters],
+    () => dashboardFigures({ companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts }, filters),
+    [companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, filters],
   );
   const {
     filteredProjects, filteredBudgetItems, filteredAllExpenses, filteredAllRevenues, filteredChangeOrders,
     filteredMilestones, filteredRisks, filteredPortfolios, defaultVisibleProjectsCount,
     totalContractValue, totalExpenses, approvedChangeImpact, effectiveTotalContract, plannedProfit, plannedProfitMargin,
     collectedRevenue, expenseChange, revenueChange, attentionProjectsCount, companyData, statusData,
+    netCash, receivables, indirectTotal, netPlannedProfit, netPlannedMargin,
   } = figures;
 
-  const hasActiveFilters = filterCompany !== 'all' || filterStatus !== 'all' || searchQuery !== '' || timePeriod !== 'all' || showInactive;
-  const clearFilters = () => { setFilterCompany('all'); setFilterStatus('all'); setSearchQuery(''); setTimePeriod('all'); setShowInactive(false); };
+  const hasActiveFilters = active.length > 0;
 
   const hasData = companies.length > 0;
 
@@ -107,6 +108,7 @@ export default function Dashboard() {
           <>
             <DashboardFilters
               companies={activeCompanies} filterCompany={filterCompany} setFilterCompany={setFilterCompany}
+              portfolios={portfolios} filterPortfolio={filterPortfolio} setFilterPortfolio={setFilterPortfolio}
               filterStatus={filterStatus} setFilterStatus={setFilterStatus}
               searchQuery={searchQuery} setSearchQuery={setSearchQuery}
               timePeriod={timePeriod} setTimePeriod={setTimePeriod}
@@ -129,9 +131,9 @@ export default function Dashboard() {
             />
 
             <FinancialBrief
-              collectedRevenue={collectedRevenue} totalExpenses={totalExpenses}
-              plannedProfitMargin={plannedProfitMargin} attentionCount={attentionProjectsCount}
-              timePeriod={timePeriod}
+              netCash={netCash} receivables={receivables} plannedProfit={plannedProfit}
+              indirectTotal={indirectTotal} netPlannedProfit={netPlannedProfit} netPlannedMargin={netPlannedMargin}
+              attentionCount={attentionProjectsCount} timePeriod={timePeriod}
             />
 
             <AttentionProjects

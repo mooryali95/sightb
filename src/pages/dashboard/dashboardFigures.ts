@@ -9,9 +9,10 @@ import {
   subMonths, subQuarters, subYears, isWithinInterval, parseISO,
 } from 'date-fns';
 import { getCountedExpenses, getTotalPlanned } from '@/lib/finance';
+import { normalizeArabicName } from '@/lib/resource-spend';
 import {
   PROJECT_STATUS_LABELS,
-  type BudgetItem, type ChangeOrder, type Company, type Expense, type Milestone, type Portfolio, type Project,
+  type BudgetItem, type ChangeOrder, type Company, type Expense, type IndirectCost, type Milestone, type Portfolio, type Project,
   type ProjectStatus, type Revenue, type Risk,
 } from '@/types/project';
 
@@ -24,6 +25,8 @@ export const INACTIVE_STATUSES: ProjectStatus[] = ['completed', 'archived', 'can
 
 export interface DashboardFilters {
   filterCompany: string;
+  /** A portfolio id, 'standalone' for projects outside any portfolio, or 'all'. */
+  filterPortfolio?: string;
   filterStatus: string;
   searchQuery: string;
   timePeriod: string;
@@ -40,6 +43,7 @@ export interface DashboardInput {
   changeOrders: ChangeOrder[];
   milestones: Milestone[];
   risks: Risk[];
+  indirectCosts?: IndirectCost[];
 }
 
 export interface DateRange { start: Date; end: Date }
@@ -74,9 +78,24 @@ export function isInRange(dateStr: string, range: DateRange | null): boolean {
   } catch { return true; }
 }
 
+/**
+ * One rule for "needs attention", for the count in the strip and the list
+ * below it: spend past 90% of the budget, or a project on hold or cancelled.
+ */
+export function needsAttention(project: Project, actual: number, planned: number): boolean {
+  return (planned > 0 && actual / planned > 0.9) || project.status === 'on-hold' || project.status === 'cancelled';
+}
+
 /** The projects the filters leave visible. */
-export function filterProjects(projects: Project[], companies: Company[], f: DashboardFilters): Project[] {
+export function filterProjects(projects: Project[], companies: Company[], f: DashboardFilters, portfolios: Portfolio[] = []): Project[] {
+  // Search ignores Arabic spelling variants (أ/ا، ة/ه، ى/ي) and also matches
+  // the project's company and portfolio, so "الافق" finds every project of
+  // «الأفق».
+  const q = normalizeArabicName(f.searchQuery);
+  const pf = f.filterPortfolio ?? 'all';
   return projects.filter((p) => {
+    if (pf === 'standalone' && p.portfolioId) return false;
+    if (pf !== 'all' && pf !== 'standalone' && p.portfolioId !== pf) return false;
     if (f.filterCompany === 'all') {
       const comp = companies.find(c => c.id === p.companyId);
       if (comp?.status === 'archived') return false;
@@ -84,7 +103,11 @@ export function filterProjects(projects: Project[], companies: Company[], f: Das
     if (f.filterCompany !== 'all' && p.companyId !== f.filterCompany) return false;
     if (f.filterStatus !== 'all' && p.status !== f.filterStatus) return false;
     if (f.filterStatus === 'all' && !f.showInactive && INACTIVE_STATUSES.includes(p.status)) return false;
-    if (f.searchQuery && !p.name.toLowerCase().includes(f.searchQuery.toLowerCase())) return false;
+    if (q) {
+      const company = companies.find((c) => c.id === p.companyId)?.name ?? '';
+      const portfolio = portfolios.find((x) => x.id === p.portfolioId)?.name ?? '';
+      if (!normalizeArabicName(`${p.name} ${company} ${portfolio}`).includes(q)) return false;
+    }
     return true;
   });
 }
@@ -106,7 +129,7 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks } = input;
   const { currentRange, previousRange } = periodRanges(f.timePeriod, now);
 
-  const filteredProjects = filterProjects(projects, companies, f);
+  const filteredProjects = filterProjects(projects, companies, f, portfolios);
   const visibleProjectIds = new Set(filteredProjects.map((project) => project.id));
 
   const filteredBudgetItems = budgetItems.filter((b) => visibleProjectIds.has(b.projectId));
@@ -138,8 +161,21 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   const attentionProjectsCount = filteredProjects.filter((project) => {
     const spend = filteredAllExpenses.filter((expense) => expense.projectId === project.id).reduce((sum, expense) => sum + expense.amount, 0);
     const plan = getTotalPlanned(filteredBudgetItems.filter((item) => item.projectId === project.id));
-    return (plan > 0 && spend / plan > 0.9) || project.status === 'on-hold' || project.status === 'cancelled';
+    return needsAttention(project, spend, plan);
   }).length;
+
+  // Cash position under the period: collected minus counted spend.
+  const netCash = collectedRevenue - totalExpenses;
+  // Invoiced and not yet collected, whatever the period: what clients owe now.
+  const receivables = filteredAllRevenues.filter((r) => r.status === 'invoiced').reduce((s, r) => s + r.amount, 0);
+  // Company indirect costs of the companies on screen. Like the planned
+  // profit they are cumulative, so the net agrees with the company page,
+  // which nets them off the same way. With one company chosen, only its own.
+  const visibleCompanyIds = new Set(filteredProjects.map((p) => p.companyId));
+  if (f.filterCompany !== 'all') visibleCompanyIds.add(f.filterCompany);
+  const indirectTotal = (input.indirectCosts ?? []).filter((c) => visibleCompanyIds.has(c.companyId)).reduce((s, c) => s + c.amount, 0);
+  const netPlannedProfit = plannedProfit - indirectTotal;
+  const netPlannedMargin = effectiveTotalContract > 0 ? (netPlannedProfit / effectiveTotalContract) * 100 : 0;
 
   // The same rows as the total expenses card: visible projects, counted, in the period.
   const companyData = companies.map((c) => {
@@ -158,6 +194,7 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
     defaultVisibleProjectsCount: defaultVisibleCount(projects, companies, f),
     totalContractValue, totalExpenses, approvedChangeImpact, effectiveTotalContract, plannedProfit, plannedProfitMargin,
     collectedRevenue, expenseChange, revenueChange, attentionProjectsCount, companyData, statusData,
+    netCash, receivables, indirectTotal, netPlannedProfit, netPlannedMargin,
   };
 }
 

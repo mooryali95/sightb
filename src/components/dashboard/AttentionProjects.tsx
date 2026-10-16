@@ -1,4 +1,5 @@
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
+import { needsAttention } from '@/pages/dashboard/dashboardFigures';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, RISK_PROBABILITY_LABELS, RISK_PROBABILITY_COLORS } from '@/types/project';
 import type {
   Project, Expense, BudgetItem, Revenue, ChangeOrder, Risk, Portfolio,
@@ -29,7 +30,7 @@ export function AttentionProjects({
     const pRev = revenues.filter((r) => r.projectId === p.id);
     const pCO = changeOrders.filter((co) => co.projectId === p.id);
     const s = getProjectSummary(p, pBud, pExp, pRev, pCO);
-    return s.spendRate > 90 || p.status === 'on-hold' || p.status === 'cancelled';
+    return needsAttention(p, s.totalActual, s.totalPlanned);
   });
 
   const filteredProjectIds = new Set(filteredProjects.map((p) => p.id));

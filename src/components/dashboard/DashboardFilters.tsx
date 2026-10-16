@@ -10,6 +10,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 
 interface Company { id: string; name: string; }
+interface PortfolioOption { id: string; name: string; companyId: string; }
+
+const PERIOD_LABELS: Record<string, string> = { month: 'هذا الشهر', quarter: 'هذا الربع', year: 'هذه السنة' };
 
 const ACTIVE_STATUSES = ['planning', 'pending_approval', 'approved', 'active', 'on-hold'] as const;
 const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'] as const;
@@ -18,6 +21,9 @@ interface DashboardFiltersProps {
   companies: Company[];
   filterCompany: string;
   setFilterCompany: (v: string) => void;
+  portfolios?: PortfolioOption[];
+  filterPortfolio?: string;
+  setFilterPortfolio?: (v: string) => void;
   filterStatus: string;
   setFilterStatus: (v: string) => void;
   searchQuery: string;
@@ -36,12 +42,27 @@ interface DashboardFiltersProps {
 }
 
 export function DashboardFilters({
-  companies, filterCompany, setFilterCompany, filterStatus, setFilterStatus,
+  companies, filterCompany, setFilterCompany, portfolios = [], filterPortfolio = 'all', setFilterPortfolio, filterStatus, setFilterStatus,
   searchQuery, setSearchQuery, timePeriod, setTimePeriod,
   hasActiveFilters, clearFilters, filteredCount, totalCount,
   isMobile, filtersOpen, setFiltersOpen,
   showInactive, setShowInactive,
 }: DashboardFiltersProps) {
+  const portfolioChoices = portfolios.filter((p) => filterCompany === 'all' || p.companyId === filterCompany);
+  const companyName = (id: string) => companies.find((c) => c.id === id)?.name ?? '';
+  // One removable chip per filter in force, in plain words.
+  const chips: { key: string; label: string; clear: () => void }[] = [
+    ...(searchQuery ? [{ key: 'q', label: `بحث: «${searchQuery}»`, clear: () => setSearchQuery('') }] : []),
+    ...(filterCompany !== 'all' ? [{ key: 'company', label: `الشركة: ${companyName(filterCompany)}`, clear: () => setFilterCompany('all') }] : []),
+    ...(filterPortfolio !== 'all' && setFilterPortfolio ? [{
+      key: 'portfolio',
+      label: filterPortfolio === 'standalone' ? 'المشاريع المستقلة' : `المحفظة: ${portfolios.find((p) => p.id === filterPortfolio)?.name ?? ''}`,
+      clear: () => setFilterPortfolio('all'),
+    }] : []),
+    ...(filterStatus !== 'all' ? [{ key: 'status', label: `الحالة: ${PROJECT_STATUS_LABELS[filterStatus as keyof typeof PROJECT_STATUS_LABELS] ?? filterStatus}`, clear: () => setFilterStatus('all') }] : []),
+    ...(timePeriod !== 'all' ? [{ key: 'period', label: `الفترة: ${PERIOD_LABELS[timePeriod] ?? timePeriod}`, clear: () => setTimePeriod('all') }] : []),
+    ...(showInactive ? [{ key: 'inactive', label: 'يشمل المنتهية', clear: () => setShowInactive(false) }] : []),
+  ];
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -57,7 +78,7 @@ export function DashboardFilters({
             <span className="text-xs font-semibold">تصفية</span>
             {hasActiveFilters && (
               <span className="text-xs bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">
-                {[filterCompany !== 'all', filterStatus !== 'all', searchQuery !== '', timePeriod !== 'all', showInactive].filter(Boolean).length}
+                {chips.length}
               </span>
             )}
           </div>
@@ -123,6 +144,21 @@ export function DashboardFilters({
               </SelectContent>
             </Select>
 
+            {setFilterPortfolio && portfolioChoices.length > 0 && (
+              <Select value={filterPortfolio} onValueChange={setFilterPortfolio}>
+                <SelectTrigger className="w-full sm:flex-1 h-9 text-sm" aria-label="المحفظة">
+                  <SelectValue placeholder="جميع المحافظ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع المحافظ</SelectItem>
+                  <SelectItem value="standalone">المشاريع المستقلة</SelectItem>
+                  {portfolioChoices.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}{filterCompany === 'all' ? ` · ${companyName(p.companyId)}` : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
             <Select value={filterStatus} onValueChange={(v) => {
               setFilterStatus(v);
               if ((INACTIVE_STATUSES as readonly string[]).includes(v)) {
@@ -159,6 +195,19 @@ export function DashboardFilters({
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-3" aria-label="التصفية المطبّقة">
+          {chips.map((c) => (
+            <span key={c.key} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs text-primary">
+              {c.label}
+              <button type="button" onClick={c.clear} className="rounded-full hover:bg-primary/20 p-0.5" aria-label={`إزالة ${c.label}`}>
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
       {hasActiveFilters && (
         <motion.p
