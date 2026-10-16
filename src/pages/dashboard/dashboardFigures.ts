@@ -114,6 +114,9 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   const filteredExpenses = filteredAllExpenses.filter((e) => isInRange(e.date, currentRange));
   const filteredAllRevenues = revenues.filter((r) => visibleProjectIds.has(r.projectId));
   const filteredRevenues = filteredAllRevenues.filter((r) => isInRange(r.date, currentRange));
+  // Cash lands on the day it was collected; a payment due in July and
+  // collected in September is September's cash, not July's.
+  const cashDate = (r: Revenue) => r.collectionDate || r.date;
   const filteredChangeOrders = changeOrders.filter((co) => visibleProjectIds.has(co.projectId));
   const filteredMilestones = milestones.filter((m) => visibleProjectIds.has(m.projectId));
   const filteredRisks = risks.filter((r) => !r.projectId || visibleProjectIds.has(r.projectId));
@@ -127,9 +130,9 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   const effectiveTotalContract = totalContractValue + approvedChangeImpact;
   const plannedProfit = effectiveTotalContract - totalPlanned;
   const plannedProfitMargin = effectiveTotalContract > 0 ? (plannedProfit / effectiveTotalContract) * 100 : 0;
-  const collectedRevenue = filteredRevenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
+  const collectedRevenue = filteredAllRevenues.filter((r) => r.status === 'collected' && isInRange(cashDate(r), currentRange)).reduce((s, r) => s + r.amount, 0);
   const prevExpenses = previousRange ? filteredAllExpenses.filter((e) => isInRange(e.date, previousRange)).reduce((s, e) => s + e.amount, 0) : 0;
-  const prevRevenue = previousRange ? filteredAllRevenues.filter((r) => r.status === 'collected' && isInRange(r.date, previousRange)).reduce((s, r) => s + r.amount, 0) : 0;
+  const prevRevenue = previousRange ? filteredAllRevenues.filter((r) => r.status === 'collected' && isInRange(cashDate(r), previousRange)).reduce((s, r) => s + r.amount, 0) : 0;
   const expenseChange = prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : null;
   const revenueChange = prevRevenue > 0 ? ((collectedRevenue - prevRevenue) / prevRevenue) * 100 : null;
   const attentionProjectsCount = filteredProjects.filter((project) => {
