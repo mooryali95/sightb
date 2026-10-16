@@ -105,6 +105,16 @@ describe('dashboardFigures', () => {
     expect(f.defaultVisibleProjectsCount).toBe(1);
   });
 
+  it('counts collected cash in the month it was collected, not the month it was due', () => {
+    const late = { ...input, revenues: [
+      one<Revenue>({ id: 'r-late', projectId: 'p1', amount: 7000, date: '2026-07-01', collectionDate: '2026-09-03', status: 'collected' }),
+      one<Revenue>({ id: 'r-early', projectId: 'p1', amount: 3000, date: '2026-09-01', collectionDate: '2026-08-20', status: 'collected' }),
+    ] };
+    const f = dashboardFigures(late, filters({ timePeriod: 'month' }), NOW);
+    expect(f.collectedRevenue).toBe(7000);
+    expect(f.revenueChange).toBe((7000 - 3000) / 3000 * 100);
+  });
+
   it('derives the contract figures from approved orders and the plan, and reports no change without a previous period', () => {
     const f = dashboardFigures(input, filters(), NOW);
     expect(f.totalContractValue).toBe(100000);

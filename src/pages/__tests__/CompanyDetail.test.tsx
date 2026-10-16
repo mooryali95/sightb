@@ -32,6 +32,10 @@ vi.mock('@/hooks/useRole', () => ({
   }),
 }));
 vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => undefined, useCompanyData: () => undefined }));
+// The company ledger has its own tests (CompanyLedgerSection.test.tsx); here it only has to be placed.
+vi.mock('../company/ledger/CompanyLedgerSection', () => ({
+  CompanyLedgerSection: ({ projects }: { projects: { name: string }[] }) => <div data-testid="ledger">{projects.map((p) => p.name).join('،')}</div>,
+}));
 vi.mock('@/components/AppLayout', () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }),

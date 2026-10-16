@@ -18,6 +18,7 @@ const loaders = {
   notFound: () => import('../pages/NotFound'),
   mobileExpense: () => import('../pages/MobileExpenseCapture'),
   controlCenter: () => import('../pages/ControlCenter'),
+  organize: () => import('../pages/Organize'),
 };
 export type PageKey = keyof typeof loaders;
 export const pageLoaders = loaders;
@@ -43,6 +44,7 @@ export function pageForPath(path: string): PageKey | null {
   if (path === '/audit') return 'audit';
   if (path === '/alerts') return 'alerts';
   if (path === '/control-center') return 'controlCenter';
+  if (path === '/organize') return 'organize';
   return null;
 }
 

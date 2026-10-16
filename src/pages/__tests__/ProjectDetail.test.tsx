@@ -25,10 +25,11 @@ const sections = [
   'AuditLogSection', 'MilestonesSection', 'ChangeOrdersSection', 'RisksSection', 'WhatIfSection', 'CommitmentsSection',
   'SmartBudgetAlerts', 'FundsSection', 'CashLedgerSection', 'ExpenseSpendExplorer',
   'CashFlowSankey', 'ResourcePayablesSection', 'VendorPayablesPanel', 'ExecutiveSummary',
-  'PerformanceComparisonSection', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog',
+  'PerformanceComparisonSection', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog', 'ledger/ChargedCostsCard',
 ];
-for (const name of sections) {
-  vi.doMock(`@/components/project/${name}`, () => ({ [name]: h.section(name) }));
+for (const path of sections) {
+  const name = path.split('/').pop()!;
+  vi.doMock(`@/components/project/${path}`, () => ({ [name]: h.section(name) }));
 }
 // The section stand-ins are registered at run time, so the page is loaded after them.
 let ProjectDetail: React.ComponentType;
@@ -131,6 +132,7 @@ describe('ProjectDetail', () => {
     expect(screen.getByTestId('path')).toHaveTextContent('/project/p1?group=finance&tab=expenses');
     expect(screen.getByTestId('ExpensesSection')).toHaveTextContent('ro=true pid=p1');
     expect(screen.getByTestId('ExpenseSpendExplorer')).toBeInTheDocument();
+    expect(screen.getByTestId('ChargedCostsCard')).toBeInTheDocument();
     expect(screen.queryByTestId('FundsSection')).not.toBeInTheDocument();
     expect(screen.getByTestId('header')).toHaveTextContent('ro=true');
     expect(screen.queryByTestId('fab')).not.toBeInTheDocument();

@@ -31,6 +31,8 @@ export interface ProjectSlice {
   deletePortfolio: (id: string) => Promise<void>;
   addProject: (p: Omit<Project, 'id' | 'createdAt'>) => Promise<string>;
   updateProject: (id: string, p: Partial<Project>) => Promise<void>;
+  /** Moves a project to a company and one of its portfolios, or out to standalone (`null`). */
+  moveProject: (id: string, companyId: string, portfolioId: string | null) => Promise<void>;
   archiveProject: (id: string) => Promise<void>;
   unarchiveProject: (id: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
@@ -123,6 +125,17 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     const { error } = await db.from('projects').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ projects: s.projects.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
+  },
+
+  moveProject: async (id, companyId, portfolioId) => {
+    // The database refuses a portfolio of another company, a move without
+    // edit rights on both companies, and one that would strand ledger links;
+    // its Arabic reason reaches the caller unchanged.
+    const { error } = await db.from('projects').update({ company_id: companyId, portfolio_id: portfolioId }).eq('id', id);
+    if (error) throw new Error(error.message || 'تعذّر نقل المشروع');
+    set((s) => ({
+      projects: s.projects.map((x) => (x.id === id ? { ...x, companyId, portfolioId: portfolioId ?? undefined } : x)),
+    }));
   },
 
   archiveProject: async (id) => {
