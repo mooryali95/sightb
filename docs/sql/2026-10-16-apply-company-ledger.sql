@@ -233,12 +233,30 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.project_charged_costs(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.project_charged_costs(uuid) TO authenticated;
 
+-- ── the second factor, as on every table since 20260924150000 ────────────
+-- Applied only where the second factor exists in the database; the owner
+-- block's verification row reports which.
+DO $$
+BEGIN
+  IF to_regprocedure('public.second_factor_ok()') IS NOT NULL THEN
+    DROP POLICY IF EXISTS second_factor ON public.parties;
+    EXECUTE 'CREATE POLICY second_factor ON public.parties AS RESTRICTIVE FOR ALL TO authenticated USING ((SELECT public.second_factor_ok())) WITH CHECK ((SELECT public.second_factor_ok()))';
+    DROP POLICY IF EXISTS second_factor ON public.company_expenses;
+    EXECUTE 'CREATE POLICY second_factor ON public.company_expenses AS RESTRICTIVE FOR ALL TO authenticated USING ((SELECT public.second_factor_ok())) WITH CHECK ((SELECT public.second_factor_ok()))';
+    DROP POLICY IF EXISTS second_factor ON public.company_expense_allocations;
+    EXECUTE 'CREATE POLICY second_factor ON public.company_expense_allocations AS RESTRICTIVE FOR ALL TO authenticated USING ((SELECT public.second_factor_ok())) WITH CHECK ((SELECT public.second_factor_ok()))';
+    DROP POLICY IF EXISTS second_factor ON public.intercompany_entries;
+    EXECUTE 'CREATE POLICY second_factor ON public.intercompany_entries AS RESTRICTIVE FOR ALL TO authenticated USING ((SELECT public.second_factor_ok())) WITH CHECK ((SELECT public.second_factor_ok()))';
+  END IF;
+END $$;
+
 INSERT INTO supabase_migrations.schema_migrations (version, name)
 VALUES ('20261016120000', 'company_ledger')
 ON CONFLICT (version) DO NOTHING;
 
 SELECT CASE
   WHEN missing = '' THEN '✅ ready — 4 tables, RLS, guards, project costs function, ledger recorded'
+    || CASE WHEN to_regprocedure('public.second_factor_ok()') IS NULL THEN ' (second factor not live here: no policy to add)' ELSE ', second factor on' END
   ELSE '❌ missing: ' || missing END AS company_ledger
 FROM (
   SELECT concat_ws(', ',
@@ -250,6 +268,10 @@ FROM (
     CASE WHEN (SELECT count(*) FROM pg_trigger WHERE tgname = 'company_ledger_check') < 3 THEN 'integrity triggers' END,
     CASE WHEN NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'project_placement_guard') THEN 'project placement guard' END,
     CASE WHEN to_regprocedure('public.project_charged_costs(uuid)') IS NULL THEN 'project_charged_costs' END,
+    CASE WHEN to_regprocedure('public.second_factor_ok()') IS NOT NULL
+          AND (SELECT count(*) FROM pg_policies WHERE policyname = 'second_factor' AND permissive = 'RESTRICTIVE'
+                AND tablename IN ('parties','company_expenses','company_expense_allocations','intercompany_entries')) < 4
+         THEN 'second-factor policies' END,
     CASE WHEN NOT EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '20261016120000') THEN 'ledger row' END,
     (SELECT count(*) || ' existing project(s) in another company''s portfolio' FROM projects pr JOIN portfolios pf ON pf.id = pr.portfolio_id
       WHERE pf.company_id <> pr.company_id HAVING count(*) > 0)

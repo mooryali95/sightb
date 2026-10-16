@@ -223,3 +223,20 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
 $$;
 REVOKE EXECUTE ON FUNCTION public.project_charged_costs(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.project_charged_costs(uuid) TO authenticated;
+
+-- ── the second factor, as on every table since 20260924150000 ────────────
+-- Applied only where the second factor exists in the database; the owner
+-- block's verification row reports which.
+DO $$
+BEGIN
+  IF to_regprocedure('public.second_factor_ok()') IS NOT NULL THEN
+    DROP POLICY IF EXISTS second_factor ON public.parties;
+    EXECUTE 'CREATE POLICY second_factor ON public.parties AS RESTRICTIVE FOR ALL TO authenticated USING ((SELECT public.second_factor_ok())) WITH CHECK ((SELECT public.second_factor_ok()))';
+    DROP POLICY IF EXISTS second_factor ON public.company_expenses;
+    EXECUTE 'CREATE POLICY second_factor ON public.company_expenses AS RESTRICTIVE FOR ALL TO authenticated USING ((SELECT public.second_factor_ok())) WITH CHECK ((SELECT public.second_factor_ok()))';
+    DROP POLICY IF EXISTS second_factor ON public.company_expense_allocations;
+    EXECUTE 'CREATE POLICY second_factor ON public.company_expense_allocations AS RESTRICTIVE FOR ALL TO authenticated USING ((SELECT public.second_factor_ok())) WITH CHECK ((SELECT public.second_factor_ok()))';
+    DROP POLICY IF EXISTS second_factor ON public.intercompany_entries;
+    EXECUTE 'CREATE POLICY second_factor ON public.intercompany_entries AS RESTRICTIVE FOR ALL TO authenticated USING ((SELECT public.second_factor_ok())) WITH CHECK ((SELECT public.second_factor_ok()))';
+  END IF;
+END $$;
