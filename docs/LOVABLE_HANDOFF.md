@@ -39,6 +39,10 @@ does not happen again.
      cache; loaders must keep `meta.noPersist`.
    - `src/lib/finance/**`, `src/services/**` — financial figures and data
      access.
+   - The company ledger and project moves: `src/lib/finance/company-ledger.ts`,
+     `src/services/companyLedgerService.ts`, `src/pages/company/ledger/**`,
+     `src/components/project/ledger/**`, `src/lib/project-placement.ts`,
+     `src/pages/Organize.tsx`, and migration `20261016120000_company_ledger.sql`.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

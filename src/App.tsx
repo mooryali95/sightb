@@ -36,6 +36,7 @@ const AlertsCenter = lazy(pageLoaders.alerts);
 const NotFound = lazy(pageLoaders.notFound);
 const MobileExpenseCapture = lazy(pageLoaders.mobileExpense);
 const ControlCenter = lazy(pageLoaders.controlCenter);
+const Organize = lazy(pageLoaders.organize);
 
 
 function AppBootstrap({ children }: { children: ReactNode }) {
@@ -91,6 +92,7 @@ const App = () => (
                       <Route path="/alerts" element={<ProtectedRoute><ErrorBoundary><AlertsCenter /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
                       <Route path="/control-center" element={<ProtectedRoute><ControlCenter /></ProtectedRoute>} />
+                      <Route path="/organize" element={<ProtectedRoute><ErrorBoundary><Organize /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/m/expense/new" element={<ProtectedRoute><ErrorBoundary><MobileExpenseCapture /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>

@@ -6,7 +6,7 @@ import { useCoreData, useCompanyData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency, getCountedExpenses } from '@/lib/finance';
+import { formatCurrency, getCountedExpenses, getEffectiveContractValue } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
 import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export-lazy';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import {
   Building2, DollarSign, TrendingUp, AlertTriangle,
-  FileSpreadsheet, Pencil, Trash2, Archive, Eye, EyeOff,
+  FileSpreadsheet, Pencil, Trash2, Archive, Eye, EyeOff, Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -25,6 +25,7 @@ import { IndirectCostsCard } from './company/IndirectCostsCard';
 import { PortfolioCards } from './company/PortfolioCards';
 import { StandaloneProjectCards } from './company/StandaloneProjectCards';
 import { buildCompanyExport } from './company/buildCompanyExport';
+import { CompanyLedgerSection } from './company/ledger/CompanyLedgerSection';
 
 /** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
 const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
@@ -57,6 +58,11 @@ export default function CompanyDetail() {
 
   const companyProjects = useMemo(() => projects.filter(p => p.companyId === id), [projects, id]);
   const standaloneProjects = useMemo(() => companyProjects.filter(p => !p.portfolioId), [companyProjects]);
+  // Active projects a company expense can be charged to, weighted by their effective contract for the suggested split.
+  const ledgerProjects = useMemo(() => companyProjects
+    .filter((p) => !INACTIVE_STATUSES.includes(p.status))
+    .map((p) => ({ id: p.id, name: p.name, weight: getEffectiveContractValue(p.contractValue, changeOrders.filter((o) => o.projectId === p.id)) })),
+  [companyProjects, changeOrders]);
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   // The stat card above counts spend through the summary library, which
@@ -143,6 +149,9 @@ export default function CompanyDetail() {
           }
           actions={
             <>
+              <Button variant="outline" size="sm" className="gap-1" onClick={() => navigate('/organize')}>
+                <Layers className="w-4 h-4" />هيكلة المشاريع
+              </Button>
               {inactiveCount > 0 && (
                 <Button
                   variant={showInactive ? 'default' : 'outline'}
@@ -258,6 +267,8 @@ export default function CompanyDetail() {
         )}
 
         <PortfolioCards summaries={summary?.portfolioSummaries ?? []} projects={visibleCompanyProjects} countedExpenses={countedExpenses} changeOrders={changeOrders} />
+
+        <CompanyLedgerSection companyId={id!} projects={ledgerProjects} canEdit={isAdmin || canEdit('company', id!)} />
 
         <IndirectCostsCard companyId={id!} costs={compIndirectCosts} canEdit={isAdmin || canEdit('company', id!)} />
 

@@ -18,6 +18,7 @@ import { FundsSection } from '@/components/project/FundsSection';
 import { CashLedgerSection } from '@/components/project/CashLedgerSection';
 import { ExpenseSpendExplorer } from '@/components/project/ExpenseSpendExplorer';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
+import { ChargedCostsCard } from '@/components/project/ledger/ChargedCostsCard';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { VendorPayablesPanel } from '@/components/project/VendorPayablesPanel';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
@@ -95,6 +96,7 @@ export function ProjectSection({ value, data: d, navigateToTab }: ProjectSection
         <div className="space-y-4">
           <ExpensesSection projectId={project.id} durationMonths={project.durationMonths} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} revenues={pRevenues} contractValue={summary.effectiveContractValue} readOnly={isReadOnly} taxPercent={project.taxPercent} projectStatus={project.status} />
           <ExpenseSpendExplorer projectId={project.id} projectName={project.name} expenses={pExpenses} resources={pResources} custodies={pCustodies} budgetItems={pBudget} />
+          <ChargedCostsCard projectId={project.id} directActual={summary.totalActual} />
         </div>
       );
     case 'funds':
