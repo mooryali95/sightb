@@ -12,7 +12,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { format, subMonths } from 'date-fns';
 import { useStore, type AppState } from '@/store/useStore';
 import { PROJECT_STATUS_LABELS, type BudgetItem, type ChangeOrder, type Company, type Expense, type Project, type Revenue } from '@/types/project';
@@ -97,8 +97,9 @@ const changeOrders: ChangeOrder[] = [
   { id: 'co2', projectId: 'p1', description: 'مقترح', changeType: 'other', amountImpact: 5000, durationImpact: 0, status: 'proposed', createdAt: '' },
 ];
 
-function renderDashboard() {
-  return render(<MemoryRouter><Dashboard /></MemoryRouter>);
+function Where() { const l = useLocation(); return <span data-testid="where">{l.search}</span>; }
+function renderDashboard(at = '/') {
+  return render(<MemoryRouter initialEntries={[at]}><Dashboard /><Where /></MemoryRouter>);
 }
 const stats = () => JSON.parse(screen.getByTestId('stats').textContent || '{}') as Record<string, unknown>;
 const charts = () => JSON.parse(screen.getByTestId('charts').textContent || '{}') as { companyData: { name: string; value: number }[]; statusData: { name: string; value: number }[] };
@@ -167,5 +168,36 @@ describe('a period', () => {
     expect(s.effectiveTotalContract).toBe(110000);
     expect(s.plannedProfit).toBe(80000);
     expect(charts().companyData).toEqual([{ name: 'شركة نشطة', value: 10000 }]);
+  });
+});
+
+describe('filters in the address bar', () => {
+  it('opens on the filters a shared link carries', () => {
+    renderDashboard('/?company=c2');
+    // The archived company's live project only.
+    expect(screen.getByTestId('counts')).toHaveTextContent('1/1');
+    expect(stats().totalContractValue).toBe(30000);
+  });
+
+  it('writes a filter into the link and leaves defaults out', () => {
+    renderDashboard();
+    expect(screen.getByTestId('where')).toHaveTextContent(/^$/);
+    fireEvent.click(screen.getByRole('button', { name: 'period:month' }));
+    fireEvent.click(screen.getByRole('button', { name: 'search:البلدية' }));
+    const search = new URLSearchParams(screen.getByTestId('where').textContent ?? '');
+    expect(search.get('period')).toBe('month');
+    expect(search.get('q')).toBe('البلدية');
+    expect(search.has('company')).toBe(false);
+  });
+});
+
+describe('the financial position', () => {
+  it('nets the company\'s indirect costs off the projects\' planned profit, as the company page does', () => {
+    useStore.setState({ indirectCosts: [{ id: 'ic', companyId: 'c1', amount: 20000, category: 'other', description: '', month: 1, date: '2026-01-01', allocationMethod: 'equal' }] } as Partial<AppState>);
+    renderDashboard();
+    const section = screen.getByRole('region', { name: 'المركز المالي' });
+    expect(section).toHaveTextContent('ربح المشاريع80,000.00');
+    expect(section).toHaveTextContent('تكاليف الشركة غير المباشرة20,000.00');
+    expect(screen.getByLabelText(/^صافي الشركة · 54\.5%: 60,000\.00/)).toBeInTheDocument();
   });
 });

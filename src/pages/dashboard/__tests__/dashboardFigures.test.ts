@@ -6,8 +6,8 @@
  * denominator, and that every headline figure counts the same rows.
  */
 import { describe, it, expect } from 'vitest';
-import type { BudgetItem, ChangeOrder, Company, Expense, Portfolio, Project, Revenue, Risk } from '@/types/project';
-import { dashboardFigures, defaultVisibleCount, filterProjects, isInRange, periodRanges, type DashboardFilters } from '../dashboardFigures';
+import type { BudgetItem, ChangeOrder, Company, Expense, IndirectCost, Portfolio, Project, Revenue, Risk } from '@/types/project';
+import { dashboardFigures, defaultVisibleCount, filterProjects, isInRange, needsAttention, periodRanges, type DashboardFilters } from '../dashboardFigures';
 
 const one = <T,>(row: Partial<T>): T => row as T;
 const NOW = new Date('2026-09-15T12:00:00Z');
@@ -115,6 +115,23 @@ describe('dashboardFigures', () => {
     expect(f.revenueChange).toBe((7000 - 3000) / 3000 * 100);
   });
 
+  it('nets the indirect costs of the companies on screen off the planned profit, as the company page does', () => {
+    const withIndirect = { ...input, indirectCosts: [
+      one<IndirectCost>({ id: 'ic1', companyId: 'c1', amount: 12000 }),
+      one<IndirectCost>({ id: 'ic2', companyId: 'c2', amount: 99999 }), // archived company, not on screen
+    ] };
+    const f = dashboardFigures(withIndirect, filters(), NOW);
+    expect(f.indirectTotal).toBe(12000);
+    expect(f.netPlannedProfit).toBe(30000 - 12000);
+    expect(f.netPlannedMargin).toBeCloseTo((18000 / 110000) * 100, 6);
+  });
+
+  it('reports net cash under the period and what clients owe whatever the period', () => {
+    const f = dashboardFigures(input, filters({ timePeriod: 'month' }), NOW);
+    expect(f.netCash).toBe(5000 - 1000);
+    expect(f.receivables).toBe(9000);
+  });
+
   it('derives the contract figures from approved orders and the plan, and reports no change without a previous period', () => {
     const f = dashboardFigures(input, filters(), NOW);
     expect(f.totalContractValue).toBe(100000);
@@ -134,5 +151,30 @@ describe('dashboardFigures', () => {
     expect(f.filteredProjects).toEqual([]);
     expect(f).toMatchObject({ totalContractValue: 0, totalExpenses: 0, plannedProfitMargin: 0, companyData: [], statusData: [] });
     expect(f.filteredRisks.map((r) => r.id)).toEqual(['k3']);
+  });
+});
+
+describe('filters beyond the company', () => {
+  const portfolios = [one<Portfolio>({ id: 'pf1', companyId: 'c1', name: 'المحفظة السكنية' })];
+  it('narrows to a portfolio or to standalone projects', () => {
+    expect(filterProjects(projects, companies, filters({ filterPortfolio: 'pf1', showInactive: true }), portfolios).map((p) => p.id)).toEqual(['p1']);
+    expect(filterProjects(projects, companies, filters({ filterPortfolio: 'standalone', showInactive: true }), portfolios).map((p) => p.id)).toEqual(['p2']);
+  });
+
+  it('searches ignoring Arabic spelling variants, across the project, its company and its portfolio', () => {
+    expect(filterProjects(projects, companies, filters({ searchQuery: 'الافق', showInactive: true }), portfolios).map((p) => p.id)).toEqual(['p1', 'p2']);
+    expect(filterProjects(projects, companies, filters({ searchQuery: 'السكنيه' }), portfolios).map((p) => p.id)).toEqual(['p1']);
+    expect(filterProjects(projects, companies, filters({ searchQuery: 'جده', showInactive: true }), portfolios).map((p) => p.id)).toEqual(['p2']);
+  });
+});
+
+describe('needsAttention', () => {
+  const p = (status: string) => one<Project>({ id: 'x', status: status as Project['status'] });
+  it('flags spend past 90% of the plan, a project on hold or cancelled, and nothing without a plan', () => {
+    expect(needsAttention(p('active'), 91, 100)).toBe(true);
+    expect(needsAttention(p('active'), 90, 100)).toBe(false);
+    expect(needsAttention(p('active'), 500, 0)).toBe(false);
+    expect(needsAttention(p('on-hold'), 0, 0)).toBe(true);
+    expect(needsAttention(p('cancelled'), 0, 100)).toBe(true);
   });
 });

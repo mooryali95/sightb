@@ -61,8 +61,11 @@ test('needs two points, and follows the filter bar', async ({ page }) => {
   await expect(points(page)).toHaveCount(4);
   await page.getByLabel('بحث عن المشاريع').fill('أحمر');
   await expect(matrix(page)).toHaveCount(0);
+  // Search ignores hamza, so "مشروع أ" also finds the seed's «مشروع الاختبار».
   await page.getByLabel('بحث عن المشاريع').fill('مشروع أ');
-  await expect(points(page)).toHaveCount(2);
+  await expect(points(page)).toHaveCount(3);
+  await page.getByLabel('بحث عن المشاريع').fill('مشروع أح');
+  await expect(matrix(page)).toHaveCount(0);
   await page.getByRole('button', { name: 'مسح' }).click();
   await expect(points(page)).toHaveCount(4);
 });
