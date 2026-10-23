@@ -56,6 +56,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
         {isAdmin && (
           <NavItem collapsed={collapsed} label="إدارة المستخدمين" icon={<Users className="w-4 h-4 shrink-0" />} active={isActive('/users')} onClick={() => navigate('/users')} />
         )}
+        <NavItem collapsed={collapsed} label="الشاشة المالية" icon={<BarChart3 className="w-4 h-4 shrink-0" />} active={isActive('/finance')} onClick={() => navigate('/finance')} />
         <NavItem collapsed={collapsed} label="هيكلة المشاريع" icon={<Layers className="w-4 h-4 shrink-0" />} active={isActive('/organize')} onClick={() => navigate('/organize')} />
         <NavItem collapsed={collapsed} label="مركز التنبيهات" icon={<BellRing className="w-4 h-4 shrink-0" />} active={isActive('/alerts')} onClick={() => navigate('/alerts')} />
         <NavItem collapsed={collapsed} label="الأمان" icon={<KeyRound className="w-4 h-4 shrink-0" />} active={isActive('/security')} onClick={() => navigate('/security')} />
