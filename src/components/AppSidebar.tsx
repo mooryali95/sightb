@@ -1,6 +1,6 @@
 import { useStore } from '@/store/useStore';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Plus, ChevronLeft, Menu, Users, BellRing, ScrollText, KeyRound, ScanSearch, Layers } from 'lucide-react';
+import { LayoutDashboard, Plus, ChevronLeft, Menu, Users, BellRing, ScrollText, KeyRound, ScanSearch, Layers, BarChart3 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
