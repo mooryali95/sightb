@@ -5,7 +5,9 @@
  */
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowDownUp, Info } from 'lucide-react';
+import { ArrowDownUp, Info, Search, AlertTriangle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/AppLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -36,12 +38,24 @@ const COLUMNS: { key: keyof Row | 'spend'; label: string; tip: string }[] = [
 
 const pct = (n: number) => `${n.toFixed(1)}%`;
 const spend = (r: Row) => (r.planned > 0 ? (r.actual / r.planned) * 100 : 0);
+const isRisk = (r: Row) => spend(r) > 90 || r.margin < 0;
+
+function Kpi({ label, value, tone, hint }: { label: string; value: number; tone?: 'destructive' | 'success'; hint?: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-3" title={hint}>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn('text-2xl font-semibold font-mono', tone === 'destructive' && 'text-destructive', tone === 'success' && 'text-success')}>{value}</p>
+    </div>
+  );
+}
 
 export default function FinancialOverview() {
   useCoreData();
   useDetailsData();
   const s = useStore();
   const [sort, setSort] = useState<SortKey>('contract');
+  const [q, setQ] = useState('');
+  const [onlyRisk, setOnlyRisk] = useState(false);
 
   const { companyRows, portfolioRows, projectRows } = useMemo(() => {
     const companyName = (id?: string) => s.companies.find((c) => c.id === id)?.name ?? '—';
@@ -72,14 +86,29 @@ export default function FinancialOverview() {
     return { companyRows, portfolioRows, projectRows };
   }, [s.companies, s.portfolios, s.projects, s.budgetItems, s.expenses, s.revenues, s.changeOrders, s.milestones, s.risks, s.indirectCosts]);
 
-  const order = (rows: Row[]) => [...rows].sort((a, b) =>
-    sort === 'name' ? a.name.localeCompare(b.name, 'ar') : sort === 'spend' ? spend(b) - spend(a) : b[sort] - a[sort]);
+  const order = (rows: Row[]) => [...rows]
+    .filter((r) => (!q.trim() || `${r.name} ${r.parent}`.includes(q.trim())) && (!onlyRisk || isRisk(r)))
+    .sort((a, b) =>
+      sort === 'name' ? a.name.localeCompare(b.name, 'ar') : sort === 'spend' ? spend(b) - spend(a) : b[sort] - a[sort]);
+
+  const riskCount = projectRows.filter(isRisk).length;
 
   return (
     <AppLayout>
       <PageHeader eyebrow="عرض فقط" title="الشاشة المالية المركزية"
         subtitle="مقارنة الشركات والمحافظ والمشاريع بنفس المعادلات المستخدمة في صفحاتها — راجع الأرقام قبل أي تعديل" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <Kpi label="الشركات" value={companyRows.length} />
+        <Kpi label="المحافظ" value={portfolioRows.length} />
+        <Kpi label="المشاريع النشطة" value={projectRows.length} />
+        <Kpi label="مشاريع تحتاج انتباه" value={riskCount} tone={riskCount ? 'destructive' : 'success'}
+          hint="تجاوز الصرف 90% من الموازنة أو هامش ربح سالب." />
+      </div>
       <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative">
+          <Search className="w-4 h-4 absolute top-1/2 -translate-y-1/2 start-3 text-muted-foreground" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالاسم…" className="w-[220px] ps-9" />
+        </div>
         <ArrowDownUp className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">ترتيب حسب</span>
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
@@ -93,6 +122,9 @@ export default function FinancialOverview() {
             <SelectItem value="name">الاسم</SelectItem>
           </SelectContent>
         </Select>
+        <Button variant={onlyRisk ? 'default' : 'outline'} size="sm" onClick={() => setOnlyRisk(!onlyRisk)}>
+          <AlertTriangle className="w-4 h-4 me-1" />ما يحتاج انتباه فقط
+        </Button>
       </div>
       <Tabs defaultValue="companies">
         <TabsList>
