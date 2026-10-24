@@ -45,28 +45,69 @@ for fn in send-invite delete-user admin-email-status; do
 done
 
 # Database functions: after 20260926120000 every SECURITY DEFINER function a
-# user may call carries require_second_factor. A later migration defining one
-# must carry it too, revoke it from authenticated, or re-run that migration's
-# loop (which calls plpgsql_block_begin).
+# user may call carries require_second_factor. A definer function a later
+# migration defines is fine only if
+#   * its body calls public.require_second_factor(), or
+#   * EXECUTE is revoked from both PUBLIC and authenticated (revoking it from
+#     authenticated alone leaves it callable through PUBLIC), or
+#   * a later statement re-runs 20260926120000's loop, which guards every
+#     callable definer function then in the database (it calls
+#     public.plpgsql_block_begin on each body; a bare mention, such as
+#     ALTER FUNCTION plpgsql_block_begin, is not a re-run).
+# Migrations are read in order, statement by statement, so a later GRANT
+# reopens a revoked function and a later unguarded redefinition undoes a
+# guard. Trigger functions are not callable, and the access helpers the
+# policies call are left out, as the loop leaves them out.
 FN_GUARD="20260926120000_second_factor_on_database_functions.sql"
-fn_problems=$(ls supabase/migrations/*.sql | sort | awk -v g="$FN_GUARD" 'found { print } $0 ~ g { found = 1 }' | xargs -r perl -0777 -e '
-  my @out;
+if [ ! -f "supabase/migrations/$FN_GUARD" ]; then
+  echo "second-factor-coverage: $FN_GUARD not found; database functions not checked" >&2
+  exit 2
+fi
+fn_problems=$(ls supabase/migrations/*.sql | sort | awk -v g="$FN_GUARD" 'found { print } index($0, g) { found = 1 }' | xargs -r perl -0777 -e '
   my %helper = map { $_ => 1 } qw(has_role has_access can_edit can_access_expense_receipt can_access_resource_receipt
                                   second_factor_ok second_factor_required require_second_factor plpgsql_block_begin);
+  my (%open, %callable, %where);   # per function: unguarded body; executable by authenticated; file
+  my $name_re = qr/(?:"?public"?\s*\.\s*)?"?(\w+)"?/i;
   for my $f (@ARGV) {
-    open my $fh, "<", $f or die; local $/; my $sql = <$fh>; close $fh;
+    open my $fh, "<", $f or die "$f: $!"; local $/; my $sql = <$fh>; close $fh;
     (my $name = $f) =~ s{.*/}{};
-    next if $sql =~ /plpgsql_block_begin\(/;
-    while ($sql =~ /create\s+(?:or\s+replace\s+)?function\s+(?:"?public"?\.)?"?(\w+)"?\s*\((.*?)\$(\w*)\$(.*?)\$\3\$/gis) {
-      my ($fn, $head, $body) = (lc $1, $2, $4);
-      next unless $head =~ /security\s+definer/i;
-      next if $head =~ /returns\s+trigger/i || $helper{$fn};
-      next if $body =~ /require_second_factor/i;
-      next if $sql =~ /revoke\s+(?:all|execute)\s+on\s+function\s+(?:public\.)?\Q$fn\E\b[^;]*\bauthenticated\b/i;
-      push @out, "  UNGUARDED database function $fn (in $name): add PERFORM public.require_second_factor(); or revoke it from authenticated";
+    $sql =~ s/--[^\n]*//g;    # a comment never guards nor revokes
+    my @ev;
+    while ($sql =~ /\bcreate\s+(?:or\s+replace\s+)?function\s+(?:"?public"?\s*\.\s*)?"?(\w+)"?\s*\((.*?)\$(\w*)\$(.*?)\$\3\$/gis) {
+      push @ev, [$-[0], "def", lc $1, $2, $4];
+    }
+    while ($sql =~ /\brevoke\s+(?:all(?:\s+privileges)?|execute)\s+on\s+function\s+$name_re[^;]*?\bfrom\s+([^;]*)/gis) {
+      push @ev, [$-[0], "revoke", lc $1, $2];
+    }
+    while ($sql =~ /\bgrant\s+(?:all(?:\s+privileges)?|execute)\s+on\s+function\s+$name_re[^;]*?\bto\s+([^;]*)/gis) {
+      push @ev, [$-[0], "grant", lc $1, $2];
+    }
+    while ($sql =~ /\bdrop\s+function\s+(?:if\s+exists\s+)?$name_re/gis) { push @ev, [$-[0], "drop", lc $1] }
+    while ($sql =~ /:=\s*public\.plpgsql_block_begin\s*\(/gis) { push @ev, [$-[0], "loop"] }
+    for my $e (sort { $a->[0] <=> $b->[0] } @ev) {
+      my ($pos, $kind, $fn) = @$e;
+      if ($kind eq "loop") { $open{$_} = 0 for keys %open; next }
+      next if $helper{$fn};
+      if ($kind eq "def") {
+        my ($head, $body) = @$e[3, 4];
+        if ($head !~ /\bsecurity\s+definer\b/i || $head =~ /\breturns\s+trigger\b/i) { delete $open{$fn}; next }
+        $open{$fn} = ($body =~ /\brequire_second_factor\s*\(/i) ? 0 : 1;
+        $callable{$fn} = 1 unless exists $callable{$fn};   # CREATE OR REPLACE keeps the grants it had
+        $where{$fn} = $name;
+      } elsif ($kind eq "revoke") {
+        my $from = $e->[3];
+        $callable{$fn} = 0 if $from =~ /\bpublic\b/i && $from =~ /\bauthenticated\b/i;
+      } elsif ($kind eq "grant") {
+        $callable{$fn} = 1 if $e->[3] =~ /\b(?:public|authenticated)\b/i;
+      } elsif ($kind eq "drop") {
+        delete $open{$fn}; delete $callable{$fn};
+      }
     }
   }
-  print "$_\n" for @out;
+  for my $fn (sort keys %open) {
+    next unless $open{$fn} && $callable{$fn};
+    print "  UNGUARDED database function $fn (in $where{$fn}): add SELECT/PERFORM public.require_second_factor(); first, or revoke EXECUTE from PUBLIC and authenticated\n";
+  }
 ')
 [ -n "$fn_problems" ] && echo "$fn_problems"
 fn_missing=$((fn_missing + $(printf '%s' "$fn_problems" | grep -c . || true)))

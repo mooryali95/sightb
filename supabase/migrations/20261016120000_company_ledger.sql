@@ -212,6 +212,10 @@ REVOKE EXECUTE ON FUNCTION public.project_placement_guard() FROM PUBLIC, anon;
 CREATE OR REPLACE FUNCTION public.project_charged_costs(_project_id uuid)
 RETURNS TABLE (allocation_id uuid, expense_id uuid, date date, kind text, description text, amount numeric, expense_amount numeric)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  -- Runs as its owner, past the second_factor policy on the tables it reads:
+  -- it asks the database's rule itself, as every definer function a user may
+  -- call does since 20260926120000.
+  SELECT public.require_second_factor();
   SELECT a.id, e.id, e.date, e.kind, e.description, a.amount, e.amount
     FROM company_expense_allocations a
     JOIN company_expenses e ON e.id = a.expense_id

@@ -43,6 +43,16 @@ does not happen again.
      `src/services/companyLedgerService.ts`, `src/pages/company/ledger/**`,
      `src/components/project/ledger/**`, `src/lib/project-placement.ts`,
      `src/pages/Organize.tsx`, and migration `20261016120000_company_ledger.sql`.
+   - The second factor on the server: `supabase/functions/_shared/sessionGate.ts`
+     and its test `src/test/edge/session-gate.test.ts`, and migrations
+     `20260924150000_second_factor_on_the_server.sql` and
+     `20260926120000_second_factor_on_database_functions.sql`. In
+     `send-invite`, `delete-user` and `admin-email-status` the call to
+     `requireSecondFactor` stays where it is, right after the user is read
+     from the token: a password-only session must not act through the service
+     role. Any new SECURITY DEFINER function a user may call starts with
+     `public.require_second_factor()`. `scripts/second-factor-coverage.sh`
+     fails the build when either is missing.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages
