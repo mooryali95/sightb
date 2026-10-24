@@ -30,7 +30,7 @@ export function AttentionProjects({
     const pRev = revenues.filter((r) => r.projectId === p.id);
     const pCO = changeOrders.filter((co) => co.projectId === p.id);
     const s = getProjectSummary(p, pBud, pExp, pRev, pCO);
-    return needsAttention(p, s.totalActual, s.totalPlanned);
+    return needsAttention(p, s.totalActual, s.totalPlanned, s.plannedProfit);
   });
 
   const filteredProjectIds = new Set(filteredProjects.map((p) => p.id));

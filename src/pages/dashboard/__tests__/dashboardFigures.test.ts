@@ -176,5 +176,10 @@ describe('needsAttention', () => {
     expect(needsAttention(p('active'), 500, 0)).toBe(false);
     expect(needsAttention(p('on-hold'), 0, 0)).toBe(true);
     expect(needsAttention(p('cancelled'), 0, 100)).toBe(true);
+    // A budget above the effective contract is a planned loss.
+    expect(needsAttention(p('active'), 0, 120, -20)).toBe(true);
+    // A portfolio or a company has no status; only the figures count.
+    expect(needsAttention(null, 50, 100, 10)).toBe(false);
+    expect(needsAttention(null, 95, 100, 10)).toBe(true);
   });
 });

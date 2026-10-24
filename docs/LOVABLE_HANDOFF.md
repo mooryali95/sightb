@@ -43,6 +43,9 @@ does not happen again.
      `src/services/companyLedgerService.ts`, `src/pages/company/ledger/**`,
      `src/components/project/ledger/**`, `src/lib/project-placement.ts`,
      `src/pages/Organize.tsx`, and migration `20261016120000_company_ledger.sql`.
+   - The dashboard's figures and filters: `src/pages/dashboard/**`,
+     `src/hooks/useDashboardFilters.ts`. `src/pages/FinancialOverview.tsx` may
+     be restyled, but its counts must keep using `needsAttention`.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

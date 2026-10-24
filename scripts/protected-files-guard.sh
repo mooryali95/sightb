@@ -21,7 +21,8 @@ for f in \
   src/pages/company/ledger/__tests__/CompanyLedgerSection.test.tsx \
   src/lib/project-placement.ts src/lib/__tests__/project-placement.test.ts \
   src/pages/Organize.tsx src/pages/__tests__/Organize.test.tsx \
-  src/components/project/ledger/ChargedCostsCard.tsx; do
+  src/components/project/ledger/ChargedCostsCard.tsx \
+  src/pages/__tests__/FinancialOverview.test.tsx src/hooks/__tests__/useDashboardFilters.test.tsx; do
   need_file "$f"
 done
 need_text src/components/project/ExpensesSection.tsx "summarizeSpendByResource"
@@ -31,6 +32,8 @@ need_text AGENTS.md "docs/LOVABLE_HANDOFF.md"
 need_text src/pages/CompanyDetail.tsx "CompanyLedgerSection"
 need_text src/pages/project-detail/ProjectSection.tsx "ChargedCostsCard"
 need_text src/App.tsx 'path="/organize"'
+need_text src/pages/FinancialOverview.tsx "needsAttention"
+need_text src/pages/dashboard/dashboardFigures.ts "export function needsAttention"
 
 [ "$fail" = 0 ] && echo "Protected files and behaviours present."
 exit "$fail"
