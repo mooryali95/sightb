@@ -1,10 +1,10 @@
 import {
   Users, Wallet, History, BarChart3, Receipt, PiggyBank, Baseline,
   Milestone as MilestoneIcon, FileEdit, AlertTriangle, DollarSign,
-  FlaskConical, LayoutDashboard, Banknote, HandCoins, GitCompare, Info, Briefcase,
+  FlaskConical, LayoutDashboard, Banknote, HandCoins, GitCompare, Briefcase,
 } from 'lucide-react';
 
-export type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management' | 'ssot';
+export type TabGroup = 'summary' | 'planning' | 'finance' | 'tracking' | 'management';
 
 export type BadgeLevel = 'info' | 'warning' | 'critical';
 
@@ -40,7 +40,6 @@ export function buildTabGroups(badges: TabBadges): TabGroupDef[] {
     { key: 'finance', label: 'المالية', icon: PiggyBank, defaultTab: 'expenses', badge: badges.finance.count, badgeLevel: badges.finance.level, badgeHint: badges.finance.hint },
     { key: 'tracking', label: 'المتابعة', icon: BarChart3, defaultTab: 'charts', badge: badges.tracking.count, badgeLevel: badges.tracking.level, badgeHint: badges.tracking.hint },
     { key: 'management', label: 'الإدارة', icon: FileEdit, defaultTab: 'changeorders', badge: badges.management.count, badgeLevel: badges.management.level, badgeHint: badges.management.hint },
-    { key: 'ssot', label: 'مصدر الحقيقة', icon: Info, defaultTab: 'ssot', badge: 0, badgeLevel: 'info' },
   ];
 }
 
@@ -77,9 +76,6 @@ export function buildSubTabs(isAdmin: boolean): Record<TabGroup, SubTabDef[]> {
       { value: 'changeorders', label: 'أوامر التغيير', icon: FileEdit },
       { value: 'risks', label: 'المخاطر', icon: AlertTriangle },
       ...(isAdmin ? [{ value: 'auditlog', label: 'السجل', icon: History }] : []),
-    ],
-    ssot: [
-      { value: 'ssot', label: 'تفسير الحسابات', icon: Info },
     ],
   };
 }

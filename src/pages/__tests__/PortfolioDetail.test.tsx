@@ -121,8 +121,8 @@ describe('the figures at the top', () => {
     renderPage();
     // 100,000 + 50,000 contracts; 10,000 + 5,000 counted spend; no budget,
     // so planned profit is the whole contract value.
-    expect(statFigure('إجمالي قيمة العقود')).toBe('150,000.00 ر.س');
-    expect(statFigure('إجمالي المصروفات')).toBe('15,000.00 ر.س');
+    expect(statFigure('قيمة العقود الفعّالة')).toBe('150,000.00 ر.س');
+    expect(statFigure('المصروف الفعلي')).toBe('15,000.00 ر.س');
     expect(statFigure('الربح المخطط الإجمالي')).toBe('150,000.00 ر.س');
     // (40 × 100,000 + 20 × 50,000) / 150,000
     expect(statFigure('الإنجاز المرجّح')).toBe('33.3%');

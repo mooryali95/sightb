@@ -59,6 +59,13 @@ Before fixing a lint or style violation, check `git log` on that file. If
 Lovable authored it, excluding it beats repairing it — a gate a generated file
 can flip is a gate people learn to ignore.
 
+Lovable can also delete merged work outright. Between 11 and 14 October it
+removed `src/lib/resource-spend.ts`, the budget-overrun card and **their tests**,
+so the suite stayed green. `docs/LOVABLE_HANDOFF.md` (also set as Lovable's
+project knowledge, and linked from `AGENTS.md`) limits its scope, and
+`scripts/protected-files-guard.sh`, a Quality step, fails when a protected file
+or behaviour disappears. Add new protected work to both.
+
 ## 4. Migrations merged through GitHub are not applied automatically
 
 Proven against the live ledger, not assumed: two migrations sat in
@@ -104,6 +111,12 @@ they are kept for a move off Lovable Cloud. What works instead:
   result. Test it on a local Postgres first, twice, and break the check once.
 - A function arriving through git is deployed when Lovable next builds the
   project; `passkeys` went live that way.
+- **Every SQL block or migration the owner is asked to run comes with a direct
+  link**, never only a path: the file on `main` at
+  `https://github.com/mooryali95/sightb/blob/main/<path>` and its raw form at
+  `https://raw.githubusercontent.com/mooryali95/sightb/main/<path>` for
+  copying. Hand it over only once the file is on `main`, so the link resolves.
+  The owner asked for this on 16 October.
 
 `scripts/security-scan.sh` check 5/5 detects the drift. Version matching is on
 real timestamps with a ±10s tolerance, never string or integer comparison:
@@ -153,6 +166,18 @@ never computed:
   before any job started: **66 runs, zero jobs, not one test executed.**
 - SSOT Tests is green today only because every step is `skipped`. Green means
   "skipped", not "passed", until `SUPABASE_DB_URL` is set.
+
+- The persisted query cache (`src/lib/query-cache.ts`, added 3 October)
+  saved the four data loaders in `src/hooks/useAppData.ts`. Those return
+  `true` and fill the Zustand store as a side effect, so the cache held the
+  flag without the figures: after a reload the query came back fresh, the
+  loader never ran, and every page rendered empty — "المشروع غير موجود" on
+  the project page. Six e2e paths went red on main and stayed red. Loaders
+  carry `meta.noPersist`, and `shouldPersistQuery` refuses boolean data so a
+  new loader written the same way cannot bring it back.
+- A form that `await`s a store action without `try/catch` turns a database
+  refusal into an unhandled promise: no toast, dialog still open, nothing
+  saved. That was the "changing a payment to collected does nothing" report.
 
 So: a tool that cannot run must fail loudly, never be counted as zero. Before
 claiming a fix works, execute it — and where a claim is about behaviour,

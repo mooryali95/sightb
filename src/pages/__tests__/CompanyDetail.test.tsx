@@ -32,6 +32,10 @@ vi.mock('@/hooks/useRole', () => ({
   }),
 }));
 vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => undefined, useCompanyData: () => undefined }));
+// The company ledger has its own tests (CompanyLedgerSection.test.tsx); here it only has to be placed.
+vi.mock('../company/ledger/CompanyLedgerSection', () => ({
+  CompanyLedgerSection: ({ projects }: { projects: { name: string }[] }) => <div data-testid="ledger">{projects.map((p) => p.name).join('،')}</div>,
+}));
 vi.mock('@/components/AppLayout', () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }),
@@ -114,8 +118,8 @@ describe('the figures at the top', () => {
     renderPage();
     // 100,000 + 50,000 + 20,000 contracts; 10,000 + 5,000 counted spend;
     // planned profit 170,000 with no budget, less 5,000 indirect.
-    expect(statFigure('إجمالي العقود')).toBe('170,000.00 ر.س');
-    expect(statFigure('إجمالي المصروفات')).toBe('15,000.00 ر.س');
+    expect(statFigure('قيمة العقود الفعّالة')).toBe('170,000.00 ر.س');
+    expect(statFigure('المصروف الفعلي')).toBe('15,000.00 ر.س');
     expect(statFigure('صافي الربح بعد غير المباشرة')).toBe('165,000.00 ر.س');
     expect(screen.getByText('هامش: 97.1%')).toBeInTheDocument();
   });

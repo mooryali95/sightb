@@ -23,12 +23,13 @@ const h = vi.hoisted(() => {
 const sections = [
   'ResourcesSection', 'BudgetSection', 'BaselineSection', 'ExpensesSection', 'CustodySection', 'RevenueSection', 'ChartsSection',
   'AuditLogSection', 'MilestonesSection', 'ChangeOrdersSection', 'RisksSection', 'WhatIfSection', 'CommitmentsSection',
-  'SmartBudgetAlerts', 'FundsSection', 'CashLedgerSection', 'ExpenseSpendExplorer', 'SpendConsistencyChart', 'CashRepairLogSection',
-  'CashRepairStatusBar', 'CashFlowSankey', 'ResourcePayablesSection', 'VendorPayablesPanel', 'ExecutiveSummary', 'SourceOfTruthSection',
-  'SsotHealthBanner', 'PerformanceComparisonSection', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog',
+  'SmartBudgetAlerts', 'FundsSection', 'CashLedgerSection', 'ExpenseSpendExplorer',
+  'CashFlowSankey', 'ResourcePayablesSection', 'VendorPayablesPanel', 'ExecutiveSummary',
+  'PerformanceComparisonSection', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog', 'ledger/ChargedCostsCard',
 ];
-for (const name of sections) {
-  vi.doMock(`@/components/project/${name}`, () => ({ [name]: h.section(name) }));
+for (const path of sections) {
+  const name = path.split('/').pop()!;
+  vi.doMock(`@/components/project/${path}`, () => ({ [name]: h.section(name) }));
 }
 // The section stand-ins are registered at run time, so the page is loaded after them.
 let ProjectDetail: React.ComponentType;
@@ -113,11 +114,12 @@ describe('ProjectDetail', () => {
     expect(screen.getByTestId('path')).toHaveTextContent('/');
   });
 
-  it('opens on the summary with the header, the banners, the stats and the overview alone, and shows each group with its badge', () => {
+  it('opens on the business summary with the financial position, stats and overview alone, and hides operator diagnostics', () => {
     renderPage();
     expect(screen.getByTestId('header')).toHaveTextContent('ro=false');
-    expect(shown()).toEqual(['CashRepairStatusBar', 'ExecutiveSummary', 'SsotHealthBanner', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog']);
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['الملخص', 'التخطيط', 'المالية3', 'المتابعة', 'الإدارة1', 'مصدر الحقيقة']);
+    expect(screen.getByRole('region', { name: 'الوضع المالي المختصر' })).toBeInTheDocument();
+    expect(shown()).toEqual(['ExecutiveSummary', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['الملخص', 'التخطيط', 'المالية3', 'المتابعة', 'الإدارة1']);
     expect(within(groupTab('المالية')).getByText('3')).toHaveClass('bg-destructive');
     expect(screen.queryByTestId('fab')).not.toBeInTheDocument();
   });
@@ -130,7 +132,7 @@ describe('ProjectDetail', () => {
     expect(screen.getByTestId('path')).toHaveTextContent('/project/p1?group=finance&tab=expenses');
     expect(screen.getByTestId('ExpensesSection')).toHaveTextContent('ro=true pid=p1');
     expect(screen.getByTestId('ExpenseSpendExplorer')).toBeInTheDocument();
-    expect(screen.getByTestId('SpendConsistencyChart')).toBeInTheDocument();
+    expect(screen.getByTestId('ChargedCostsCard')).toBeInTheDocument();
     expect(screen.queryByTestId('FundsSection')).not.toBeInTheDocument();
     expect(screen.getByTestId('header')).toHaveTextContent('ro=true');
     expect(screen.queryByTestId('fab')).not.toBeInTheDocument();
@@ -139,7 +141,6 @@ describe('ProjectDetail', () => {
     await screen.findByTestId('FundsSection');
     expect(screen.getByTestId('path')).toHaveTextContent('tab=funds');
     expect(screen.getByTestId('CashLedgerSection')).toBeInTheDocument();
-    expect(screen.getByTestId('CashRepairLogSection')).toHaveTextContent('ro=true');
     expect(screen.getByTestId('CashFlowSankey')).toBeInTheDocument();
   });
 

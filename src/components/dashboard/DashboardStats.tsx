@@ -1,8 +1,7 @@
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { DollarSign, TrendingDown, TrendingUp, Briefcase, Wallet } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 const stagger = {
   container: { hidden: {}, show: { transition: { staggerChildren: 0.08 } } },
@@ -34,28 +33,35 @@ export function DashboardStats(props: DashboardStatsProps) {
     activeCompaniesCount, archivedCompaniesCount, portfoliosCount,
   } = props;
 
-  const showRevenueCard = timePeriod !== 'all';
-
   return (
     <motion.div
       variants={stagger.container}
       initial="hidden"
       animate="show"
-      className={cn(
-        'grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8',
-        showRevenueCard ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
-      )}
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6"
     >
       {/* Hero card — Total contract value */}
       <motion.div variants={stagger.item}>
         <StatCard
           variant="hero"
-          title="إجمالي قيمة العقود"
+          title="قيمة العقود الفعّالة"
           value={formatCurrency(effectiveTotalContract)}
           icon={<DollarSign className="w-5 h-5" />}
           subtitle={approvedChangeImpact !== 0
             ? `الأصلية: ${formatCurrency(totalContractValue)}`
             : 'القيمة الفعّالة بعد أوامر التغيير'}
+          tooltip="مجموع العقود الأصلية + صافي أوامر التغيير المعتمدة للمشاريع الظاهرة. رقم تراكمي لا يتغير مع فلتر الفترة."
+        />
+      </motion.div>
+
+      <motion.div variants={stagger.item}>
+        <StatCard
+          title="الإيرادات المحصّلة"
+          value={formatCurrency(collectedRevenue)}
+          icon={<Wallet className="w-4 h-4" />}
+          trend={revenueChange !== null ? (revenueChange > 0 ? 'up' : 'down') : undefined}
+          subtitle={revenueChange !== null ? `${revenueChange > 0 ? '↑' : '↓'} ${Math.abs(revenueChange).toFixed(1)}% عن الفترة السابقة` : 'نقد مستلم فعلياً'}
+          tooltip={timePeriod === 'all' ? 'كل الإيرادات التي حالتها «محصّل» للمشاريع الظاهرة.' : 'الإيرادات المحصّلة بتاريخ يقع داخل الفترة المحددة.'}
         />
       </motion.div>
 
@@ -69,6 +75,7 @@ export function DashboardStats(props: DashboardStatsProps) {
           subtitle={expenseChange !== null
             ? `${expenseChange > 0 ? '↑' : '↓'} ${Math.abs(expenseChange).toFixed(1)}% عن الفترة السابقة`
             : undefined}
+          tooltip={timePeriod === 'all' ? 'المصروفات المقبولة بعد استبعاد المرفوض والسلف القائمة.' : 'المصروفات المقبولة داخل الفترة المحددة، بعد استبعاد المرفوض والسلف القائمة.'}
         />
       </motion.div>
 
@@ -80,6 +87,7 @@ export function DashboardStats(props: DashboardStatsProps) {
           icon={plannedProfit >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           trend={plannedProfit >= 0 ? 'up' : 'down'}
           subtitle={`هامش: ${plannedProfitMargin.toFixed(1)}%`}
+          tooltip="قيمة العقود الفعّالة − الموازنة المعتمدة. رقم مخطط تراكمي وليس الربح النقدي المحقق."
         />
       </motion.div>
 
@@ -91,32 +99,9 @@ export function DashboardStats(props: DashboardStatsProps) {
           icon={<Briefcase className="w-4 h-4" />}
           trend="neutral"
           subtitle={`${activeCompaniesCount} شركة${archivedCompaniesCount > 0 ? ` · ${archivedCompaniesCount} مؤرشفة` : ''} · ${portfoliosCount} محفظة`}
+          tooltip="عدد المشاريع التي تطابق فلاتر الشركة والحالة والبحث الحالية."
         />
       </motion.div>
-
-      {/* Conditional 5th card: Collected Revenue */}
-      <AnimatePresence>
-        {showRevenueCard && (
-          <motion.div
-            key="revenue-card"
-            initial={{ opacity: 0, scale: 0.9, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } }}
-            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-          >
-            <StatCard
-              title="الإيرادات المحصّلة"
-              value={formatCurrency(collectedRevenue)}
-              icon={<Wallet className="w-4 h-4" />}
-              trend={revenueChange !== null ? (revenueChange > 0 ? 'up' : 'down') : undefined}
-              subtitle={
-                revenueChange !== null
-                  ? `${revenueChange > 0 ? '↑' : '↓'} ${Math.abs(revenueChange).toFixed(1)}% عن الفترة السابقة`
-                  : 'خلال الفترة المحددة'
-              }
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }

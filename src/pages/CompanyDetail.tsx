@@ -6,7 +6,7 @@ import { useCoreData, useCompanyData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, getCountedExpenses, getEffectiveContractValue } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
 import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export-lazy';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import {
   Building2, DollarSign, TrendingUp, AlertTriangle,
-  FileSpreadsheet, Pencil, Trash2, Archive, Eye, EyeOff,
+  FileSpreadsheet, Pencil, Trash2, Archive, Eye, EyeOff, Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -25,6 +25,7 @@ import { IndirectCostsCard } from './company/IndirectCostsCard';
 import { PortfolioCards } from './company/PortfolioCards';
 import { StandaloneProjectCards } from './company/StandaloneProjectCards';
 import { buildCompanyExport } from './company/buildCompanyExport';
+import { CompanyLedgerSection } from './company/ledger/CompanyLedgerSection';
 
 /** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
 const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
@@ -57,16 +58,18 @@ export default function CompanyDetail() {
 
   const companyProjects = useMemo(() => projects.filter(p => p.companyId === id), [projects, id]);
   const standaloneProjects = useMemo(() => companyProjects.filter(p => !p.portfolioId), [companyProjects]);
+  // Active projects a company expense can be charged to, weighted by their effective contract for the suggested split.
+  const ledgerProjects = useMemo(() => companyProjects
+    .filter((p) => !INACTIVE_STATUSES.includes(p.status))
+    .map((p) => ({ id: p.id, name: p.name, weight: getEffectiveContractValue(p.contractValue, changeOrders.filter((o) => o.projectId === p.id)) })),
+  [companyProjects, changeOrders]);
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   // The stat card above counts spend through the summary library, which
   // leaves out rejected expenses and advances still outstanding. The chart
   // and the project cards must count the same rows or the page disagrees
   // with itself.
-  const countedExpenses = useMemo(
-    () => expenses.filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance),
-    [expenses],
-  );
+  const countedExpenses = useMemo(() => getCountedExpenses(expenses), [expenses]);
 
   const expensesByPortfolio = useMemo(() => {
     const data: { name: string; value: number }[] = [];
@@ -146,6 +149,9 @@ export default function CompanyDetail() {
           }
           actions={
             <>
+              <Button variant="outline" size="sm" className="gap-1" onClick={() => navigate('/organize')}>
+                <Layers className="w-4 h-4" />هيكلة المشاريع
+              </Button>
               {inactiveCount > 0 && (
                 <Button
                   variant={showInactive ? 'default' : 'outline'}
@@ -210,16 +216,17 @@ export default function CompanyDetail() {
         {/* Stats */}
         {summary && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard title="إجمالي العقود" value={formatCurrency(summary.totalContractValue)} icon={<DollarSign className="w-4 h-4" />} />
-            <StatCard title="إجمالي المصروفات" value={formatCurrency(summary.totalActual)} icon={<TrendingUp className="w-4 h-4" />} trend="down" />
+            <StatCard title="قيمة العقود الفعّالة" value={formatCurrency(summary.totalContractValue)} icon={<DollarSign className="w-4 h-4" />} tooltip="العقود الأصلية + أوامر التغيير المعتمدة لكل مشاريع الشركة." />
+            <StatCard title="المصروف الفعلي" value={formatCurrency(summary.totalActual)} icon={<TrendingUp className="w-4 h-4" />} trend="down" tooltip="المصروفات المقبولة، بعد استبعاد المرفوض والسلف القائمة." />
             <StatCard
               title="صافي الربح بعد غير المباشرة"
               value={formatCurrency(summary.netProfitAfterIndirect)}
               icon={<TrendingUp className="w-4 h-4" />}
               trend={summary.netProfitAfterIndirect >= 0 ? 'up' : 'down'}
               subtitle={`هامش: ${summary.netProfitMargin.toFixed(1)}%`}
+              tooltip="الربح المخطط لكل المشاريع − التكاليف غير المباشرة للشركة. لا يساوي الربح النقدي المحقق."
             />
-            <StatCard title="مشاريع متعثرة" value={String(summary.totalAtRiskProjects)} icon={<AlertTriangle className="w-4 h-4" />} trend={summary.totalAtRiskProjects > 0 ? 'down' : 'up'} />
+            <StatCard title="مشاريع متعثرة" value={String(summary.totalAtRiskProjects)} icon={<AlertTriangle className="w-4 h-4" />} trend={summary.totalAtRiskProjects > 0 ? 'down' : 'up'} tooltip="مشاريع معلقة أو ملغاة أو تجاوز صرفها الموازنة المعتمدة." />
           </div>
         )}
 
@@ -259,11 +266,13 @@ export default function CompanyDetail() {
           </div>
         )}
 
-        <PortfolioCards summaries={summary?.portfolioSummaries ?? []} projects={visibleCompanyProjects} countedExpenses={countedExpenses} />
+        <PortfolioCards summaries={summary?.portfolioSummaries ?? []} projects={visibleCompanyProjects} countedExpenses={countedExpenses} changeOrders={changeOrders} />
+
+        <CompanyLedgerSection companyId={id!} projects={ledgerProjects} canEdit={isAdmin || canEdit('company', id!)} />
 
         <IndirectCostsCard companyId={id!} costs={compIndirectCosts} canEdit={isAdmin || canEdit('company', id!)} />
 
-        <StandaloneProjectCards projects={visibleStandaloneProjects} countedExpenses={countedExpenses} />
+        <StandaloneProjectCards projects={visibleStandaloneProjects} countedExpenses={countedExpenses} changeOrders={changeOrders} />
       </motion.div>
     </AppLayout>
   );

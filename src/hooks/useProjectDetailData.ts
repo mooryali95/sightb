@@ -24,7 +24,7 @@ export function useProjectDetailData(id: string | undefined) {
     loadAll, updateProject, archiveProject, deleteProject,
   } = useStore();
 
-  const { detailsLoaded, subscribeToProject, ensureProjectCashData, loadBaselines } = useStore();
+  const { detailsLoaded, subscribeToProject, ensureProjectCashData, loadBaselines, loading: storeLoading } = useStore();
 
   useCoreData();
   useProjectData(detailsLoaded ? undefined : id);
@@ -54,7 +54,7 @@ export function useProjectDetailData(id: string | undefined) {
   const project = projects.find((p) => p.id === id);
 
   if (!project) {
-    return { project: undefined, isAdmin, isSystemAdmin, canEditRole, updateProject, archiveProject, deleteProject } as const;
+    return { project: undefined, loading: storeLoading, isAdmin, isSystemAdmin, canEditRole, updateProject, archiveProject, deleteProject } as const;
   }
 
   const isReadOnly = !canEditRole('project', project.id);
@@ -99,7 +99,7 @@ export function useProjectDetailData(id: string | undefined) {
 
   const activeCommitments = pCommitments.filter((c) => c.status === 'active');
   const totalCommitted = activeCommitments.reduce((s, c) => s + c.totalAmount, 0);
-  const availableBudget = summary.totalPlanned - totalCommitted;
+  const availableBudget = summary.totalPlanned - summary.totalActual - totalCommitted;
 
   const daysRemaining = project.endDate
     ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))

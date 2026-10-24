@@ -50,6 +50,7 @@ function renderLogin(at = '/login') {
     <MemoryRouter initialEntries={[at]}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/login/code" element={<Login />} />
         <Route path="/" element={<Probe />} />
       </Routes>
     </MemoryRouter>
@@ -130,6 +131,20 @@ describe('Login', () => {
     expect(m.invoke).not.toHaveBeenCalledWith('accept-invite', expect.anything());
   });
 
+  it('moves to /login/code after the password, checking once and saying "code sent" once', async () => {
+    // Moving to the code route used to restore the session and check again:
+    // a second request and the same toast twice.
+    otpCheck({ requiresOtp: true, sent: true });
+    renderLogin();
+    submitLogin('pm@example.com', 'secret1');
+    expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 50));
+    const checks = m.invoke.mock.calls.filter(([name, opts]) =>
+      name === 'second-factor' && (opts as { body?: { action?: string } })?.body?.action === 'check');
+    expect(checks).toHaveLength(1);
+    expect(vi.mocked(toast.success).mock.calls.filter(([t]) => t === 'تم إرسال رمز التحقق إلى بريدك الإلكتروني')).toHaveLength(1);
+  });
+
   it('holds an admin on an unknown device at the code, rejects a wrong one, verifies the right one with the fingerprint, and goes home', async () => {
     otpCheck({ requiresOtp: true, sent: true });
     renderLogin();
@@ -166,9 +181,18 @@ describe('Login', () => {
     submitLogin('pm@example.com', 'secret1');
     expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
     expect(toast.warning).toHaveBeenCalledWith('لم يتم إرسال الرمز. حاول "إعادة إرسال الرمز" أو تواصل مع المدير.');
-    fireEvent.click(screen.getByText('إلغاء'));
+    fireEvent.click(screen.getByText('الدخول بحساب آخر'));
     await waitFor(() => expect(screen.getByText('تسجيل الدخول', { selector: 'h2' })).toBeInTheDocument());
     expect(m.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('ends code-route restoration on an HTTP-success server refusal rather than looping home', async () => {
+    otpCheck({ error: 'تعذّر التعرّف على الجلسة. سجّل الدخول من جديد.' });
+    renderLogin('/login/code');
+    await screen.findByText('تسجيل الدخول', { selector: 'h2' });
+    expect(toast.error).toHaveBeenCalledWith('تعذّر التعرّف على الجلسة. سجّل الدخول من جديد.');
+    expect(m.signOut).toHaveBeenCalledTimes(1);
+    expect(m.invoke).not.toHaveBeenCalledWith('accept-invite', expect.anything());
   });
 
   it('sends the reset link for the typed email to the reset page and returns to the form', async () => {
@@ -252,7 +276,7 @@ describe('Login', () => {
 
   it('resumes at the code step for a session sent back to finish it, without asking the password again', async () => {
     otpCheck({ requiresOtp: true, sent: true });
-    renderLogin('/login?step=code');
+    renderLogin('/login/code');
     expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
     expect(m.signInWithPassword).not.toHaveBeenCalled();
     expect(m.invoke).toHaveBeenCalledWith('second-factor', { body: { action: 'check', fingerprint: localStorage.getItem('rouya_device_fp') } });
@@ -260,8 +284,17 @@ describe('Login', () => {
 
   it('goes straight home when the resumed session turns out to have passed already', async () => {
     otpCheck({ requiresOtp: false });
-    renderLogin('/login?step=code');
+    renderLogin('/login/code');
     expect(await screen.findByTestId('path')).toHaveTextContent('/');
+  });
+
+  it('never shows the password form on the code URL and returns cleanly when the session expired', async () => {
+    m.getSession.mockResolvedValueOnce({ data: { session: null } });
+    renderLogin('/login/code');
+    expect(screen.getByRole('status')).toHaveTextContent('جاري تجهيز التحقق الآمن');
+    expect(screen.queryByText('تسجيل الدخول', { selector: 'h2' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('تسجيل الدخول', { selector: 'h2' })).toBeInTheDocument());
+    expect(toast.error).toHaveBeenCalledWith('انتهت جلسة الدخول. أدخل البريد وكلمة المرور من جديد.');
   });
 
   describe('passkey instead of the code', () => {
@@ -330,7 +363,7 @@ describe('Login', () => {
   describe('passkey alone, from the login page', () => {
     /** Answers the passkeys function per action; anything else answers empty. */
     const passkeys = (byAction: Record<string, unknown>) => m.invoke.mockImplementation(async (name: string, opts?: { body?: { action?: string } }) =>
-      ({ data: name === 'passkeys' ? byAction[opts?.body?.action ?? ''] ?? {} : {}, error: null }));
+      ({ data: name === 'passkeys' ? byAction[opts?.body?.action ?? ''] ?? {} : name === 'second-factor' ? { requiresOtp: false } : {}, error: null }));
     const passkeyButton = () => screen.getByRole('button', { name: 'الدخول بمفتاح المرور' });
 
     it('opens the session from the server token, trusts the device, and goes home with no password or code', async () => {

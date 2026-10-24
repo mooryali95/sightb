@@ -16,6 +16,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { toast } from 'sonner';
 import { useStore, type AppState } from '@/store/useStore';
 import type { Revenue } from '@/types/project';
 import { RevenueSection } from '../RevenueSection';
@@ -92,6 +93,8 @@ function fillDescriptionAndAmount(dialog: HTMLElement, description: string, amou
 
 beforeEach(() => {
   Object.values(actions).forEach((fn) => fn.mockClear());
+  vi.mocked(toast.error).mockClear();
+  vi.mocked(toast.success).mockClear();
   useStore.setState({ ...actions } satisfies Partial<AppState>);
 });
 
@@ -266,6 +269,52 @@ describe('editing a revenue', () => {
     const addDialog = openAddForm();
     expect((within(addDialog).getByPlaceholderText(/دفعة أولى من العميل/) as HTMLInputElement).value).toBe('');
     expect(within(addDialog).getByRole('button', { name: 'إضافة' })).toBeInTheDocument();
+  });
+});
+
+describe('a save the server refuses', () => {
+  // The reported bug: changing an invoiced payment to collected "accepts
+  // nothing and shows nothing". The store throws on a database error, and the
+  // form awaited it with no handler, so the rejection went nowhere — no toast,
+  // dialog still open. These pin that every refusal now reaches the screen.
+  it('shows the server\'s reason and keeps the dialog open when moving to collected fails', async () => {
+    actions.updateRevenue.mockRejectedValueOnce({ message: 'رفضت قاعدة البيانات التعديل', code: '42501' });
+    renderSection();
+    const dialog = openEditForm('فاتورة المرحلة الأولى');
+    pick(dialog, 'مُفوتر', /^محصّل$/);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'حفظ التعديلات' }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('رفضت قاعدة البيانات التعديل'));
+    expect(actions.updateRevenue).toHaveBeenCalledWith('rev-invoiced', expect.objectContaining({ status: 'collected' }));
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('saves the move to collected and says so when the server accepts it', async () => {
+    renderSection();
+    const dialog = openEditForm('فاتورة المرحلة الأولى');
+    pick(dialog, 'مُفوتر', /^محصّل$/);
+    fireEvent.change(within(dialog).getAllByDisplayValue('')
+      .find((el) => (el as HTMLInputElement).type === 'date') as HTMLElement, { target: { value: '2026-04-02' } });
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'حفظ التعديلات' }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('تم تعديل الإيراد'));
+    expect(actions.updateRevenue).toHaveBeenCalledWith('rev-invoiced', expect.objectContaining({
+      status: 'collected', invoiceNumber: 'INV-1', collectionDate: '2026-04-02',
+    }));
+  });
+
+  it('says what is missing instead of ignoring the click when the description is empty', async () => {
+    renderSection();
+    const dialog = openAddForm();
+    fireEvent.change(within(dialog).getByRole('spinbutton'), { target: { value: '1000' } });
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'إضافة' }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('أدخل وصف الإيراد'));
+    expect(actions.addRevenue).not.toHaveBeenCalled();
   });
 });
 
