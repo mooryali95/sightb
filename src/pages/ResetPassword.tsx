@@ -143,7 +143,7 @@ export default function ResetPassword() {
     e.preventDefault();
     const result = resetPasswordSchema.safeParse({ password });
     if (!result.success) {
-      toast.error(result.error.errors[0]?.message || 'بيانات غير صالحة');
+      toast.error(result.error.issues[0]?.message || 'بيانات غير صالحة');
       return;
     }
     setLoading(true);
