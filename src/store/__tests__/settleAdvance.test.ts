@@ -68,6 +68,15 @@ describe('settling an advance', () => {
     }));
   });
 
+  it('labels an advance the person keeps as an incentive or dues, as salary, so it reads as an advance that became pay', async () => {
+    await useStore.getState().settleAdvance('adv-1', { type: 'payroll_deduction' });
+
+    expect(svc.createSettlementExpenseRaw).toHaveBeenCalledWith(expect.objectContaining({
+      category: 'salary', amount: 1000, description: 'سلفة تحوّلت إلى حافز أو مستحق: سلفة سفر',
+      source_payment_request_id: 'adv-1',
+    }));
+  });
+
   it('hands the project\'s month to the split settlement too', async () => {
     await useStore.getState().settleAdvanceWithSplit('adv-1', {
       invoiceAmount: 1500, overflowSource: { fundId: 'fund-1' }, expenseCategory: 'travel',

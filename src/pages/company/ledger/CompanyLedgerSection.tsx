@@ -127,7 +127,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit }: Props) {
                           <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                             {split.rows.length === 0
                               ? 'يتبع المنظومة بالكامل'
-                              : <>يتبع المنظومة · حُمِّل {split.rows.map((r) => `${formatCurrency(r.amount)} على ${projectName(r.projectId)}`).join('، ')}
+                              : <>يتبع المنظومة · حُمِّل {split.rows.map((r) => `${formatCurrency(r.amount)} على ${projectName(r.projectId)}${r.settledInProject ? ' (سدّده المشروع من مصروفه)' : ''}`).join('، ')}
                                   {split.retained > 0 && ` · يبقى ${formatCurrency(split.retained)}`}</>}
                           </p>
                         </td>

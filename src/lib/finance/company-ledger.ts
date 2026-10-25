@@ -35,7 +35,24 @@ export interface CompanyExpense {
   kind: CompanyExpenseKind; partyId: string | null; paidByPartyId: string | null;
 }
 
-export interface ExpenseAllocation { id: string; expenseId: string; projectId: string; amount: number }
+export interface ExpenseAllocation {
+  id: string; expenseId: string; projectId: string; amount: number;
+  /** The project already paid this share from its own spend (e.g. it repaid
+   *  the person who paid the company's bill), so it shows as charged but is
+   *  not added to the project's cost again. */
+  settledInProject?: boolean;
+}
+
+/**
+ * What the company charged a project, split by whether the project already
+ * paid it itself: the full cost adds only the part it has not.
+ */
+export function chargedCostTotals(rows: { amount: number; settledInProject?: boolean }[], directActual: number) {
+  const charged = rows.reduce((s, r) => s + r.amount, 0);
+  const settledInProject = rows.filter((r) => r.settledInProject).reduce((s, r) => s + r.amount, 0);
+  const onTop = charged - settledInProject;
+  return { charged, settledInProject, onTop, fullCost: Math.round((directActual + onTop) * 100) / 100 };
+}
 
 export type NodeKind = 'company' | 'project' | 'party';
 /** A side of a movement. The company has no id. */

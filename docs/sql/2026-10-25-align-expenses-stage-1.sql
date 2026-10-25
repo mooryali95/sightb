@@ -127,8 +127,8 @@ FROM (
          THEN (SELECT count(*) FROM backup.expenses_20261025) || ' rows backed up, 63 expected' END,
     CASE WHEN EXISTS (SELECT 1 FROM public.expenses e JOIN backup.expenses_20261025 b USING (id)
                       WHERE e.vendor IS NULL OR e.vendor = '') THEN 'a vendor left empty' END,
-    CASE WHEN (SELECT sum(amount) FROM public.expenses WHERE project_id = 'de74a099-0bf1-4237-8619-39352f38a704' AND approval_status <> 'rejected') <> 203744.16
-         THEN 'Albania total is ' || (SELECT sum(amount) FROM public.expenses WHERE project_id = 'de74a099-0bf1-4237-8619-39352f38a704' AND approval_status <> 'rejected') || ', 203744.16 expected' END,
+    CASE WHEN (SELECT sum(amount) FROM public.expenses WHERE project_id = 'de74a099-0bf1-4237-8619-39352f38a704' AND approval_status <> 'rejected') NOT IN (203744.16, 199133.16)
+         THEN 'Albania total is ' || (SELECT sum(amount) FROM public.expenses WHERE project_id = 'de74a099-0bf1-4237-8619-39352f38a704' AND approval_status <> 'rejected') || ', 203744.16 expected (199133.16 after stage 2)' END,
     CASE WHEN (SELECT sum(amount) FROM public.expenses WHERE project_id = '88b5b124-d642-47a7-a6be-62d33f9cb1dc' AND approval_status <> 'rejected') <> 119566
          THEN 'hackathon total changed' END
   ) AS missing

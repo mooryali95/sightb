@@ -41,7 +41,10 @@ const toExpense = (r: Row): CompanyExpense => ({
   id: r.id as string, companyId: r.company_id as string, date: r.date as string, amount: num(r.amount), description: (r.description as string) ?? '',
   kind: r.kind as CompanyExpenseKind, partyId: (r.party_id as string | null) ?? null, paidByPartyId: (r.paid_by_party_id as string | null) ?? null,
 });
-const toAllocation = (r: Row): ExpenseAllocation => ({ id: r.id as string, expenseId: r.expense_id as string, projectId: r.project_id as string, amount: num(r.amount) });
+const toAllocation = (r: Row): ExpenseAllocation => ({
+  id: r.id as string, expenseId: r.expense_id as string, projectId: r.project_id as string, amount: num(r.amount),
+  settledInProject: r.settled_in_project === true,
+});
 const toEntry = (r: Row): IntercompanyEntry => ({
   id: r.id as string, companyId: r.company_id as string, date: r.date as string, amount: num(r.amount), type: r.type as IntercompanyEntry['type'],
   from: node(r.from_kind, r.from_id), to: node(r.to_kind, r.to_id), note: (r.note as string) ?? '',
@@ -81,7 +84,7 @@ export async function createParty(input: { companyId: string; name: string; kind
 export interface NewCompanyExpense {
   companyId: string; date: string; amount: number; description: string; kind: CompanyExpenseKind;
   partyId: string | null; paidByPartyId: string | null;
-  allocations: { projectId: string; amount: number }[];
+  allocations: { projectId: string; amount: number; settledInProject?: boolean }[];
   /** An open advance repaid out of this salary. */
   deduction?: number;
 }
@@ -99,7 +102,11 @@ export async function createCompanyExpense(input: NewCompanyExpense): Promise<vo
   if (error) fail(error, 'فشل حفظ المصروف');
   const id = (data as Row).id as string;
   try {
-    const rows = input.allocations.filter((a) => a.amount > 0).map((a) => ({ expense_id: id, project_id: a.projectId, amount: a.amount }));
+    const rows = input.allocations.filter((a) => a.amount > 0).map((a) => ({
+      expense_id: id, project_id: a.projectId, amount: a.amount,
+      // Sent only when set, so a database before 20261026090000 still accepts the row.
+      ...(a.settledInProject ? { settled_in_project: true } : {}),
+    }));
     if (rows.length > 0) {
       const r = await db.from('company_expense_allocations').insert(rows);
       if (r.error) fail(r.error, 'فشل حفظ التحميل على المشاريع');
@@ -148,6 +155,8 @@ export interface ChargedCost {
   amount: number;
   /** The whole company expense it came from. */
   expenseAmount: number;
+  /** Already paid by the project from its own spend: shown, not counted again. */
+  settledInProject: boolean;
 }
 
 /** What the company charged to a project, readable by the project's own team (project_charged_costs). */
@@ -160,5 +169,6 @@ export async function listProjectChargedCosts(projectId: string): Promise<Charge
   return ((data ?? []) as Row[]).map((r) => ({
     allocationId: r.allocation_id as string, expenseId: r.expense_id as string, date: r.date as string,
     kind: r.kind as CompanyExpenseKind, description: (r.description as string) ?? '', amount: num(r.amount), expenseAmount: num(r.expense_amount),
+    settledInProject: r.settled_in_project === true,
   }));
 }

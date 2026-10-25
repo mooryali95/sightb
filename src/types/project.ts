@@ -769,7 +769,7 @@ export type AdvanceSettlementType = 'documented' | 'cash_refund' | 'payroll_dedu
 export const ADVANCE_SETTLEMENT_TYPE_LABELS: Record<AdvanceSettlementType, string> = {
   documented: 'تسوية بمستندات (تتحول لمصروف فعلي)',
   cash_refund: 'رد نقدي (يعود للدفعة/العهدة)',
-  payroll_deduction: 'خصم من راتب/مستحقات',
+  payroll_deduction: 'تحوّلت إلى حافز أو خُصمت من مستحقاته',
   written_off: 'شطب (دين معدوم)',
 };
 
