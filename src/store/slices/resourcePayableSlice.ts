@@ -467,7 +467,7 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
 
     if (needsExpense) {
       const descPrefix = input.type === 'documented' ? 'تسوية سلفة بمستندات: '
-        : input.type === 'payroll_deduction' ? 'خصم سلفة من مستحقات: '
+        : input.type === 'payroll_deduction' ? 'سلفة تحوّلت إلى حافز أو مستحق: '
         : 'شطب سلفة (دين معدوم): ';
       const category = input.type === 'payroll_deduction' ? 'salary'
         : input.type === 'written_off' ? 'other'

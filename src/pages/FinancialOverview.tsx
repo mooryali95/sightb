@@ -17,14 +17,16 @@ import { useStore } from '@/store/useStore';
 import { useCoreData, useDetailsData } from '@/hooks/useAppData';
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
 import { getCompanySummary, getPortfolioSummary } from '@/lib/portfolio';
+import { actualProfit } from '@/lib/finance/actual-profit';
 import { cn } from '@/lib/utils';
 
 interface Row {
   id: string; name: string; parent: string; href: string; currency: string; mixed: boolean;
   contract: number; planned: number; actual: number; collected: number; profit: number; margin: number;
+  actualProfit: number; actualMargin: number;
 }
 
-type SortKey = 'contract' | 'actual' | 'profit' | 'margin' | 'spend' | 'name';
+type SortKey = 'contract' | 'actual' | 'profit' | 'margin' | 'actualProfit' | 'actualMargin' | 'spend' | 'name';
 
 const COLUMNS: { key: keyof Row | 'spend'; label: string; tip: string }[] = [
   { key: 'contract', label: 'قيمة العقود الفعّالة', tip: 'العقد الأصلي + أوامر التغيير المعتمدة.' },
@@ -34,6 +36,8 @@ const COLUMNS: { key: keyof Row | 'spend'; label: string; tip: string }[] = [
   { key: 'collected', label: 'المحصّل', tip: 'الإيرادات بحالة «محصّل» فقط.' },
   { key: 'profit', label: 'الربح المخطط', tip: 'قيمة العقود الفعّالة − الموازنة المخططة (للشركة: بعد خصم التكاليف غير المباشرة).' },
   { key: 'margin', label: 'الهامش', tip: 'الربح المخطط ÷ قيمة العقود الفعّالة.' },
+  { key: 'actualProfit', label: 'الربح الفعلي', tip: 'المحصّل − المصروف الفعلي: ما تحقق حتى الآن، لا ما خُطط له. بلا خصم التكاليف غير المباشرة.' },
+  { key: 'actualMargin', label: 'الهامش الفعلي', tip: 'الربح الفعلي ÷ المحصّل. صفر قبل أي تحصيل.' },
 ];
 
 const pct = (n: number) => `${n.toFixed(1)}%`;
@@ -60,7 +64,7 @@ export default function FinancialOverview() {
   const { companyRows, portfolioRows, projectRows } = useMemo(() => {
     const companyName = (id?: string) => s.companies.find((c) => c.id === id)?.name ?? '—';
     const live = s.projects.filter((p) => p.status !== 'archived');
-    const projectRows: Row[] = live.map((p) => {
+    const projectRows: Omit<Row, 'actualProfit' | 'actualMargin'>[] = live.map((p) => {
       const sum = getProjectSummary(p,
         s.budgetItems.filter((b) => b.projectId === p.id), s.expenses.filter((e) => e.projectId === p.id),
         s.revenues.filter((r) => r.projectId === p.id), s.changeOrders.filter((c) => c.projectId === p.id));
@@ -68,13 +72,13 @@ export default function FinancialOverview() {
         href: `/project/${p.id}`, currency: p.currency, mixed: false, contract: sum.effectiveContractValue, planned: sum.totalPlanned,
         actual: sum.totalActual, collected: sum.collectedRevenue, profit: sum.plannedProfit, margin: sum.plannedProfitMargin };
     });
-    const portfolioRows: Row[] = s.portfolios.map((f) => {
+    const portfolioRows: Omit<Row, 'actualProfit' | 'actualMargin'>[] = s.portfolios.map((f) => {
       const sum = getPortfolioSummary(f, s.projects, s.budgetItems, s.expenses, s.revenues, s.changeOrders, s.milestones, s.risks);
       return { id: f.id, name: f.name, parent: companyName(f.companyId), href: `/portfolio/${f.id}`, currency: sum.currency,
         mixed: sum.isMixedCurrency, contract: sum.totalEffectiveValue, planned: sum.totalPlanned, actual: sum.totalActual,
         collected: sum.totalCollectedRevenue, profit: sum.aggregatePlannedProfit, margin: sum.aggregatePlannedMargin };
     });
-    const companyRows: Row[] = s.companies.map((c) => {
+    const companyRows: Omit<Row, 'actualProfit' | 'actualMargin'>[] = s.companies.map((c) => {
       const sum = getCompanySummary(c, s.portfolios, s.projects, s.budgetItems, s.expenses, s.revenues, s.changeOrders, s.milestones, s.risks, s.indirectCosts);
       const parts = [...sum.portfolioSummaries, sum.standaloneProjectsSummary];
       const currencies = new Set(parts.flatMap((p) => p.currencies));
@@ -83,7 +87,11 @@ export default function FinancialOverview() {
         actual: sum.totalActual, collected: parts.reduce((a, p) => a + p.totalCollectedRevenue, 0),
         profit: sum.netProfitAfterIndirect, margin: sum.netProfitMargin };
     });
-    return { companyRows, portfolioRows, projectRows };
+    const withActual = (rows: Omit<Row, 'actualProfit' | 'actualMargin'>[]): Row[] => rows.map((row) => {
+      const a = actualProfit(row.collected, row.actual);
+      return { ...row, actualProfit: a.profit, actualMargin: a.margin };
+    });
+    return { companyRows: withActual(companyRows), portfolioRows: withActual(portfolioRows), projectRows: withActual(projectRows) };
   }, [s.companies, s.portfolios, s.projects, s.budgetItems, s.expenses, s.revenues, s.changeOrders, s.milestones, s.risks, s.indirectCosts]);
 
   const order = (rows: Row[]) => [...rows]
@@ -119,6 +127,8 @@ export default function FinancialOverview() {
             <SelectItem value="spend">نسبة الصرف</SelectItem>
             <SelectItem value="profit">الربح المخطط</SelectItem>
             <SelectItem value="margin">الهامش</SelectItem>
+            <SelectItem value="actualProfit">الربح الفعلي</SelectItem>
+            <SelectItem value="actualMargin">الهامش الفعلي</SelectItem>
             <SelectItem value="name">الاسم</SelectItem>
           </SelectContent>
         </Select>
@@ -173,6 +183,8 @@ function Table({ rows, parentLabel }: { rows: Row[]; parentLabel?: string }) {
                 <td className="p-3 font-mono">{money(r.collected)}</td>
                 <td className={cn('p-3 font-mono', r.profit < 0 && 'text-destructive')}>{money(r.profit)}</td>
                 <td className={cn('p-3 font-mono', r.margin < 0 ? 'text-destructive' : 'text-success')}>{pct(r.margin)}</td>
+                <td className={cn('p-3 font-mono', r.actualProfit < 0 && 'text-destructive')}>{money(r.actualProfit)}</td>
+                <td className={cn('p-3 font-mono', r.actualMargin < 0 ? 'text-destructive' : 'text-success')}>{pct(r.actualMargin)}</td>
               </tr>
             );
           })}
