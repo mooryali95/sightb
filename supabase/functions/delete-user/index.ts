@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireSecondFactor } from "../_shared/sessionGate.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sightb.lovable.app",
@@ -46,6 +47,10 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // A password-only session may not act here: see ../_shared/sessionGate.ts.
+    const refused = await requireSecondFactor(supabase, token, user.id, corsHeaders);
+    if (refused) return refused;
 
     // Check caller is admin
     const { data: isAdmin } = await supabase.rpc("has_role", {

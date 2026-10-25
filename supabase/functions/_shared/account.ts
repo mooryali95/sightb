@@ -164,29 +164,6 @@ export async function liveCodeExists(supabase: SupabaseClient, userId: string, n
   return (data ?? []).length > 0;
 }
 
-/**
- * The database's own rule, second_factor_ok, asked for a session the
- * function holds: through while enforcement is off, for an account whose
- * roles need no second factor, or for a session recorded as having passed.
- * Anything it cannot read counts as not through.
- */
-export async function sessionPassedSecondFactor(supabase: SupabaseClient, userId: string, sessionId: string) {
-  const { data: settings, error: settingsError } = await supabase
-    .from("second_factor_settings").select("enforce").eq("id", 1).maybeSingle();
-  if (settingsError) return isMissingRelation(settingsError);
-  if (!settings?.enforce) return true;
-  const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  if (!(roles ?? []).some((r: { role: string }) => ["owner", "admin", "editor"].includes(r.role))) return true;
-  if (!sessionId) return false;
-  const { data } = await supabase.from("session_second_factor").select("session_id")
-    .eq("session_id", sessionId).eq("user_id", userId).maybeSingle();
-  return !!data;
-}
-
-/** Before its migration is applied, the settings table is simply not there: nothing is enforced yet. */
-function isMissingRelation(error: { code?: string }) {
-  return error.code === "PGRST205" || error.code === "42P01";
-}
 
 /** Records that a session passed the second factor; a later pass keeps the first method. */
 export async function recordSecondFactor(
@@ -199,3 +176,5 @@ export async function recordSecondFactor(
     .upsert({ session_id: sessionId, user_id: userId, method }, { onConflict: "session_id", ignoreDuplicates: true });
   if (error) throw error;
 }
+
+export { sessionPassedSecondFactor } from "./sessionGate.ts";

@@ -567,3 +567,73 @@ GRANT EXECUTE ON FUNCTION public.split_settle_advance(_payment_request_id uuid, 
 
 REVOKE EXECUTE ON FUNCTION public.ssot_explain(_key text, _project_id uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.ssot_explain(_key text, _project_id uuid) TO authenticated, service_role;
+
+-- Also part of the block applied on 26 September, and missing from the
+-- reconstruction above: without them a database rebuilt from the repository
+-- leaves two functions open to every signed-in user, and stops at
+-- 20261002124012, which alters plpgsql_block_begin.
+--
+-- custody_snapshot and fund_total_spent check no access at all: any
+-- signed-in user could read any custody's or fund's totals by id. The app
+-- never calls them; only other definer functions do, which run as the owner
+-- and keep their right to. So users lose it.
+REVOKE EXECUTE ON FUNCTION public.custody_snapshot(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.fund_total_spent(uuid) FROM PUBLIC, anon, authenticated;
+
+-- plpgsql_block_begin(body) returns where a plpgsql body's own BEGIN starts,
+-- skipping comments, quoted strings and names, and dollar-quoted text: the
+-- block used it to put the guard after that BEGIN, since a text search had
+-- put it inside a comment that said "begin". A later block that guards new
+-- functions the same way needs it.
+CREATE OR REPLACE FUNCTION public.plpgsql_block_begin(body text)
+RETURNS integer
+LANGUAGE plpgsql
+IMMUTABLE
+AS $f$
+DECLARE
+  pos int := 1;
+  n int := length(body);
+  c text;
+  tag text;
+  stop int;
+BEGIN
+  WHILE pos <= n LOOP
+    c := substr(body, pos, 1);
+    IF substr(body, pos, 2) = '--' THEN
+      stop := strpos(substr(body, pos), E'\n');
+      pos := CASE WHEN stop = 0 THEN n + 1 ELSE pos + stop END;
+      CONTINUE;
+    ELSIF substr(body, pos, 2) = '/*' THEN
+      stop := strpos(substr(body, pos + 2), '*/');
+      pos := CASE WHEN stop = 0 THEN n + 1 ELSE pos + 2 + stop + 1 END;
+      CONTINUE;
+    ELSIF c = '''' OR c = '"' THEN
+      pos := pos + 1;
+      LOOP
+        EXIT WHEN pos > n;
+        IF substr(body, pos, 1) = c THEN
+          IF substr(body, pos + 1, 1) = c THEN pos := pos + 2; CONTINUE; END IF;
+          EXIT;
+        END IF;
+        pos := pos + 1;
+      END LOOP;
+      pos := pos + 1;
+      CONTINUE;
+    ELSIF c = '$' THEN
+      tag := substring(substr(body, pos) FROM '^\$[A-Za-z_]*\$');
+      IF tag IS NOT NULL THEN
+        stop := strpos(substr(body, pos + length(tag)), tag);
+        pos := CASE WHEN stop = 0 THEN n + 1 ELSE pos + length(tag) + stop - 1 + length(tag) END;
+        CONTINUE;
+      END IF;
+    ELSIF upper(substr(body, pos, 5)) = 'BEGIN'
+      AND (pos = 1 OR substr(body, pos - 1, 1) !~ '[A-Za-z0-9_$]')
+      AND substr(body, pos + 5, 1) !~ '[A-Za-z0-9_$]' THEN
+      RETURN pos;
+    END IF;
+    pos := pos + 1;
+  END LOOP;
+  RETURN 0;
+END;
+$f$;
+REVOKE ALL ON FUNCTION public.plpgsql_block_begin(text) FROM PUBLIC, anon, authenticated;

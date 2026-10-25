@@ -4,6 +4,9 @@
 -- Paste ALL of this into Lovable Cloud's SQL editor and run it once.
 -- Safe to run again: every object is created only if missing.
 -- The last statement returns ONE row: "✅ ready" or what is missing.
+-- Needs the second factor (20260924150000, 20260926120000), live since
+-- 26 September. The row also names any SECURITY DEFINER function a user may
+-- call that does not ask for it.
 -- Source: supabase/migrations/20261016120000_company_ledger.sql
 -- ============================================================================
 
@@ -221,6 +224,10 @@ REVOKE EXECUTE ON FUNCTION public.project_placement_guard() FROM PUBLIC, anon;
 CREATE OR REPLACE FUNCTION public.project_charged_costs(_project_id uuid)
 RETURNS TABLE (allocation_id uuid, expense_id uuid, date date, kind text, description text, amount numeric, expense_amount numeric)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  -- Runs as its owner, past the second_factor policy on the tables it reads:
+  -- it asks the database's rule itself, as every definer function a user may
+  -- call does since 20260926120000.
+  SELECT public.require_second_factor();
   SELECT a.id, e.id, e.date, e.kind, e.description, a.amount, e.amount
     FROM company_expense_allocations a
     JOIN company_expenses e ON e.id = a.expense_id
@@ -268,6 +275,18 @@ FROM (
     CASE WHEN (SELECT count(*) FROM pg_trigger WHERE tgname = 'company_ledger_check') < 3 THEN 'integrity triggers' END,
     CASE WHEN NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'project_placement_guard') THEN 'project placement guard' END,
     CASE WHEN to_regprocedure('public.project_charged_costs(uuid)') IS NULL THEN 'project_charged_costs' END,
+    CASE WHEN pg_get_functiondef(to_regprocedure('public.project_charged_costs(uuid)')) NOT ILIKE '%require_second_factor()%'
+         THEN 'project_charged_costs second factor' END,
+    (SELECT 'unguarded definer functions: ' || string_agg(p.proname, ' ')
+       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.prosecdef AND p.prokind = 'f'
+        AND p.prorettype <> 'trigger'::regtype
+        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+        AND p.proname NOT IN ('has_role', 'has_access', 'can_edit', 'can_access_expense_receipt',
+                              'can_access_resource_receipt', 'second_factor_ok', 'second_factor_required',
+                              'require_second_factor')
+        AND CASE WHEN p.prokind = 'f' THEN pg_get_functiondef(p.oid) END NOT ILIKE '%require_second_factor()%'
+     HAVING count(*) > 0),
     CASE WHEN to_regprocedure('public.second_factor_ok()') IS NOT NULL
           AND (SELECT count(*) FROM pg_policies WHERE policyname = 'second_factor' AND permissive = 'RESTRICTIVE'
                 AND tablename IN ('parties','company_expenses','company_expense_allocations','intercompany_entries')) < 4
