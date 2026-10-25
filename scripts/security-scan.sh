@@ -53,6 +53,31 @@ step "1/6 Dependency audit"
 # npm rather than bun: `bun audit` has no production-only scope (--json,
 # --audit-level and --ignore are the only flags). `npm audit --omit=dev` does,
 # and now works because package-lock.json is back in sync.
+# npm audits package-lock.json, but the app installs from bun.lock, and
+# Lovable updates only bun.lock. On 24 October package-lock still pinned
+# dompurify 3.4.14 while 3.4.17 shipped: the audit reported a critical
+# advisory for code nobody ran. An audit of a tree that does not ship is a
+# result never computed, so the two lockfiles must agree on every production
+# dependency first. Remedy: scripts/sync-package-lock.sh.
+LOCK_DRIFT=$(node -e '
+  const fs = require("fs");
+  const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  const npmLock = JSON.parse(fs.readFileSync("package-lock.json", "utf8")).packages || {};
+  const bun = fs.readFileSync("bun.lock", "utf8");
+  const out = [];
+  for (const name of Object.keys(pkg.dependencies || {})) {
+    const esc = name.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+    const m = bun.match(new RegExp("^    \"" + esc + "\": \\[\"" + esc + "@([^\"]+)\"", "m"));
+    const b = m && m[1];
+    const n = (npmLock["node_modules/" + name] || {}).version;
+    if (b !== n) out.push(name + " bun.lock " + (b || "missing") + ", package-lock " + (n || "missing"));
+  }
+  console.log(out.join("\n"));
+' 2>&1) || LOCK_DRIFT="could not compare the lockfiles: $LOCK_DRIFT"
+if [ -n "$LOCK_DRIFT" ]; then
+  echo "$LOCK_DRIFT" | sed 's/^/  /'
+  fail "package-lock.json disagrees with bun.lock, so the audit would read a tree that does not ship (run scripts/sync-package-lock.sh)"
+fi
 AUDIT_JSON="${TMPDIR:-/tmp}/sightb-audit.json"
 if ! command -v npm >/dev/null 2>&1; then
   fail "npm is not on PATH — the dependency audit did not run"
