@@ -25,10 +25,16 @@ export const COMPANY_EXPENSE_KIND_LABELS: Record<CompanyExpenseKind, string> = {
   other: 'أخرى',
 };
 
-export type PartyKind = 'person' | 'owner' | 'vendor';
-export const PARTY_KIND_LABELS: Record<PartyKind, string> = { person: 'شخص', owner: 'مالك', vendor: 'مورد' };
+export type PartyKind = 'person' | 'owner' | 'vendor' | 'entity';
+export const PARTY_KIND_LABELS: Record<PartyKind, string> = { person: 'شخص', owner: 'مالك', vendor: 'مورد', entity: 'جهة' };
 
-export interface Party { id: string; companyId: string; name: string; kind: PartyKind; archived: boolean }
+export interface Party {
+  id: string; companyId: string; name: string; kind: PartyKind; archived: boolean;
+  /** What they do: «مدير المشروع», «مصمم». */
+  role?: string | null;
+  /** Other spellings they go by, so a name typed on an expense finds them. */
+  aliases?: string[];
+}
 
 export interface CompanyExpense {
   id: string; companyId: string; date: string; amount: number; description: string;

@@ -137,6 +137,8 @@ export interface Expense {
   description: string; amount: number; date: string; month: number;
   responsible?: string; notes?: string; resourceId?: string; custodyId?: string;
   approvalStatus: ApprovalStatus; approvedBy?: string; vendor?: string; invoiceRef?: string;
+  /** Who the money went to, from the company's registry (20261027090000). vendor keeps the text. */
+  partyId?: string;
   isVatExempt: boolean;
   fundId?: string;
   /** سلفة موظف لم تُسوَّ بعد — لا تُحتسب ضمن AC في تقارير الأداء حتى التسوية. */

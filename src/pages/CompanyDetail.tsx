@@ -26,6 +26,7 @@ import { PortfolioCards } from './company/PortfolioCards';
 import { StandaloneProjectCards } from './company/StandaloneProjectCards';
 import { buildCompanyExport } from './company/buildCompanyExport';
 import { CompanyLedgerSection } from './company/ledger/CompanyLedgerSection';
+import { RegistrySection } from './company/registry/RegistrySection';
 
 /** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
 const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
@@ -58,6 +59,11 @@ export default function CompanyDetail() {
 
   const companyProjects = useMemo(() => projects.filter(p => p.companyId === id), [projects, id]);
   const standaloneProjects = useMemo(() => companyProjects.filter(p => !p.portfolioId), [companyProjects]);
+  const registryProjects = useMemo(() => companyProjects.map((p) => ({ id: p.id, name: p.name })), [companyProjects]);
+  const registryExpenses = useMemo(() => {
+    const ids = new Set(companyProjects.map((p) => p.id));
+    return expenses.filter((e) => ids.has(e.projectId));
+  }, [companyProjects, expenses]);
   // Active projects a company expense can be charged to, weighted by their effective contract for the suggested split.
   const ledgerProjects = useMemo(() => companyProjects
     .filter((p) => !INACTIVE_STATUSES.includes(p.status))
@@ -267,6 +273,8 @@ export default function CompanyDetail() {
         )}
 
         <PortfolioCards summaries={summary?.portfolioSummaries ?? []} projects={visibleCompanyProjects} countedExpenses={countedExpenses} changeOrders={changeOrders} />
+
+        <RegistrySection companyId={id!} projects={registryProjects} expenses={registryExpenses} canEdit={isAdmin || canEdit('company', id!)} />
 
         <CompanyLedgerSection companyId={id!} projects={ledgerProjects} canEdit={isAdmin || canEdit('company', id!)} />
 

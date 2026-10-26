@@ -37,6 +37,7 @@ const NotFound = lazy(pageLoaders.notFound);
 const MobileExpenseCapture = lazy(pageLoaders.mobileExpense);
 const ControlCenter = lazy(pageLoaders.controlCenter);
 const FinancialOverview = lazy(pageLoaders.finance);
+const PartyDetail = lazy(pageLoaders.party);
 const Organize = lazy(pageLoaders.organize);
 
 
@@ -84,6 +85,7 @@ const App = () => (
                       <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/companies/new" element={<ProtectedRoute><NewCompany /></ProtectedRoute>} />
                       <Route path="/company/:id" element={<ProtectedRoute><ErrorBoundary><CompanyDetail /></ErrorBoundary></ProtectedRoute>} />
+                      <Route path="/company/:id/party/:partyId" element={<ProtectedRoute><ErrorBoundary><PartyDetail /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/portfolio/new" element={<ProtectedRoute><NewPortfolio /></ProtectedRoute>} />
                       <Route path="/portfolio/:id" element={<ProtectedRoute><ErrorBoundary><PortfolioDetail /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/project/new" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />

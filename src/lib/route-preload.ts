@@ -20,6 +20,7 @@ const loaders = {
   controlCenter: () => import('../pages/ControlCenter'),
   organize: () => import('../pages/Organize'),
   finance: () => import('../pages/FinancialOverview'),
+  party: () => import('../pages/PartyDetail'),
 };
 export type PageKey = keyof typeof loaders;
 export const pageLoaders = loaders;
