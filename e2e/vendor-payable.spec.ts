@@ -87,3 +87,17 @@ test('settling out of a fund is an approved expense on that fund pointing back a
   expect(String(expense.date)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   expect(posts(wire, 'resource_reimbursements')).toHaveLength(0);
 });
+
+test('offline, settling a vendor debt is refused, so it can never be queued and paid twice', async ({ page, context }) => {
+  const wire = await stubSupabase(page, { resource_reimbursements: [payable] });
+  await openVendors(page);
+  await page.getByRole('row').filter({ hasText: 'مؤسسة النور' }).getByRole('button', { name: 'سداد' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('combobox').filter({ hasText: 'اختر…' }).click();
+  await page.getByRole('option', { name: /دفعة #1 — متبقي: 38,000/ }).click();
+  await context.setOffline(true);
+  await dialog.getByRole('button', { name: 'تأكيد السداد' }).click();
+  await expect(page.getByText('سداد الذمة يحتاج اتصالاً').first()).toBeVisible();
+  expect(posts(wire, 'expenses')).toHaveLength(0);
+  await context.setOffline(false);
+});
