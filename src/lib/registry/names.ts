@@ -101,3 +101,25 @@ export function groupUnlinked(rows: { text: string | null | undefined; amount: n
       return wider.length === 1 ? { ...g, mergeInto: wider[0].name } : g;
     });
 }
+
+/**
+ * Registry entries for what is being typed, best first: a whole match on a
+ * name or alias, then a name that starts with it, then one that contains it
+ * anywhere, then one containing every word typed. Archived entries are left out.
+ */
+export function searchParties<T extends NamedParty & { archived?: boolean }>(query: string, parties: T[], limit = 8): T[] {
+  const q = normalizeName(query);
+  const live = parties.filter((p) => !p.archived);
+  if (!q) return live.slice(0, limit);
+  const words = q.split(' ');
+  const rank = (p: T) => {
+    const keys = [p.name, ...(p.aliases ?? [])].flatMap(nameKeys);
+    if (keys.includes(q)) return 0;
+    if (keys.some((k) => k.startsWith(q))) return 1;
+    if (keys.some((k) => k.includes(q))) return 2;
+    if (keys.some((k) => words.every((w) => k.includes(w)))) return 3;
+    return -1;
+  };
+  return live.map((p) => ({ p, r: rank(p) })).filter((x) => x.r >= 0)
+    .sort((a, b) => a.r - b.r || a.p.name.localeCompare(b.p.name, 'ar')).slice(0, limit).map((x) => x.p);
+}

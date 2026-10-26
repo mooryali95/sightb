@@ -18,6 +18,9 @@ import { useStore, type AppState } from '@/store/useStore';
 import type { BudgetItem, Expense, Resource } from '@/types/project';
 import { ResourcesSection } from '../ResourcesSection';
 
+// The registry is empty here, so the name fields stay plain inputs.
+vi.mock('@/hooks/useParties', () => ({ useParties: () => ({ data: [], isSuccess: true }) }));
+
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }),
 }));

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeName, nameKeys, suggestParty, groupUnlinked, initialsOf } from '../names';
+import { normalizeName, nameKeys, suggestParty, groupUnlinked, initialsOf, searchParties } from '../names';
 
 const party = (id: string, name: string, aliases: string[] = []) => ({ id, name, aliases });
 
@@ -70,5 +70,20 @@ describe('initialsOf', () => {
     expect(initialsOf('أحمد صبري (أبو رؤى)')).toBe('أص');
     expect(initialsOf('مؤسسة')).toBe('م');
     expect(initialsOf('')).toBe('؟');
+  });
+});
+
+describe('searchParties', () => {
+  const ps = [party('ayman', 'د أيمن أصلان', ['دأيمن']), party('abd', 'عبدالله أصلان'), party('omar', 'عمر عبدالحميد'),
+    { ...party('old', 'أيمن القديم'), archived: true }];
+  it('puts the exact match first, however it was typed', () => {
+    expect(searchParties('دأيمن', ps).map((p) => p.id)[0]).toBe('ayman');
+    expect(searchParties('أصلان', ps).map((p) => p.id)).toEqual(['ayman', 'abd']);
+  });
+  it('finds by any word, leaves archived entries out, and lists everyone when nothing is typed', () => {
+    expect(searchParties('عبد الحميد', ps).map((p) => p.id)).toEqual(['omar']);
+    expect(searchParties('أيمن', ps).map((p) => p.id)).toEqual(['ayman']);
+    expect(searchParties('', ps)).toHaveLength(3);
+    expect(searchParties('زيد', ps)).toEqual([]);
   });
 });

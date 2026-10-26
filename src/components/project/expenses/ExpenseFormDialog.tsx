@@ -14,6 +14,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { RegistryNamePicker } from '@/components/registry/RegistryNamePicker';
 import { formatCurrency } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS,
@@ -72,6 +73,8 @@ export function ExpenseFormDialog({
   const [fundId, setFundId] = useState<string>(editing?.fundId || '');
   const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>(editing?.approvalStatus || 'approved');
   const [vendor, setVendor] = useState(editing?.vendor || '');
+  const [partyId, setPartyId] = useState<string | undefined>(editing?.partyId);
+  const companyId = useStore((s) => s.projects.find((p) => p.id === projectId)?.companyId);
   const [invoiceRef, setInvoiceRef] = useState(editing?.invoiceRef || '');
   const [isVatExempt, setIsVatExempt] = useState(editing?.isVatExempt || false);
   const [inputInclusive, setInputInclusive] = useState(false);
@@ -142,6 +145,9 @@ export function ExpenseFormDialog({
       responsible: responsible.trim() || undefined,
       approvalStatus,
       vendor: vendor.trim() || undefined,
+      // Only sent once someone picked or cleared a registry link, so a database
+      // without the registry never sees the column.
+      ...(partyId !== editing?.partyId ? { partyId: partyId ?? '' } : {}),
       invoiceRef: invoiceRef.trim() || undefined,
       isVatExempt,
       fundId: source.effectiveFundId,
@@ -269,8 +275,9 @@ export function ExpenseFormDialog({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label>المورّد</Label>
-            <Input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="اختياري" />
+            <Label htmlFor="expense-vendor">المورّد</Label>
+            <RegistryNamePicker id="expense-vendor" ariaLabel="المورّد" companyId={companyId} value={{ text: vendor, partyId }}
+              onChange={(v) => { setVendor(v.text); setPartyId(v.partyId); }} />
           </div>
           <div className="space-y-2">
             <Label>مرجع الفاتورة</Label>

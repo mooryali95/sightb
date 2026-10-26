@@ -49,3 +49,16 @@ export async function unlinkExpenses(expenseIds: string[]): Promise<void> {
   const { error } = await db.from('expenses').update({ party_id: null }).in('id', expenseIds);
   if (error) fail(error, 'فشل فك الربط');
 }
+
+/** The company's registry entries, light: what a picker needs. Empty before 20261027090000 is applied. */
+export async function listParties(companyId: string): Promise<Party[]> {
+  const { data, error } = await db.from('parties').select('id, company_id, name, kind, role, aliases, archived').eq('company_id', companyId).order('name');
+  if (error) {
+    if (error.code === '42703' || error.code === '42P01' || error.code === 'PGRST205' || /does not exist|schema cache/i.test(error.message ?? '')) return [];
+    fail(error, 'فشل تحميل سجل الموارد');
+  }
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    id: r.id as string, companyId: r.company_id as string, name: r.name as string, kind: r.kind as PartyKind,
+    archived: !!r.archived, role: (r.role as string | null) ?? null, aliases: Array.isArray(r.aliases) ? (r.aliases as string[]) : [],
+  }));
+}

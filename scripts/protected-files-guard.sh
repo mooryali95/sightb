@@ -30,6 +30,7 @@ for f in \
   src/lib/registry/party-summary.ts src/lib/registry/__tests__/party-summary.test.ts \
   src/services/registryService.ts src/pages/company/registry/RegistrySection.tsx \
   src/pages/company/registry/LinkNamesSheet.tsx src/pages/PartyDetail.tsx \
+  src/components/registry/RegistryNamePicker.tsx src/hooks/useParties.ts \
   e2e/resource-registry.spec.ts supabase/migrations/20261027090000_resource_registry.sql; do
   need_file "$f"
 done

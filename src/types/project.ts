@@ -103,6 +103,8 @@ export const COST_CLASS_LABELS: Record<CostClass, string> = {
 
 export interface Resource {
   id: string; projectId: string; name: string; role?: string; monthlyCost: number; createdAt: string;
+  /** The registry entry this resource stands for, once linked. */
+  partyId?: string;
 }
 
 export interface Custody {

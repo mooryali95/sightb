@@ -15,6 +15,9 @@ import { useStore, type AppState } from '@/store/useStore';
 import { ExpenseFormDialog } from '../ExpenseFormDialog';
 import { PROJECT_ID, FUND_ID, RESOURCE_ID, expense, expenses, fund, resource } from '../../__tests__/expenses-fixtures';
 
+// The registry is empty here, so the name fields stay plain inputs.
+vi.mock('@/hooks/useParties', () => ({ useParties: () => ({ data: [], isSuccess: true }) }));
+
 vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }) }));
 
 const actions = {

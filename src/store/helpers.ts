@@ -101,6 +101,7 @@ export function mapResource(d: Tables<'resources'>): Resource {
   return {
     id: d.id, projectId: d.project_id, name: d.name,
     role: d.role || undefined, monthlyCost: Number(d.monthly_cost), createdAt: d.created_at,
+    partyId: (d as { party_id?: string | null }).party_id || undefined,
   };
 }
 
