@@ -25,7 +25,7 @@ const sections = [
   'AuditLogSection', 'MilestonesSection', 'ChangeOrdersSection', 'RisksSection', 'WhatIfSection', 'CommitmentsSection',
   'SmartBudgetAlerts', 'FundsSection', 'CashLedgerSection', 'ExpenseSpendExplorer',
   'CashFlowSankey', 'ResourcePayablesSection', 'VendorPayablesPanel', 'ExecutiveSummary',
-  'PerformanceComparisonSection', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog', 'ledger/ChargedCostsCard',
+  'PerformanceComparisonSection', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog', 'ledger/ChargedCostsCard', 'ledger/CompanyFundingCard',
 ];
 for (const path of sections) {
   const name = path.split('/').pop()!;

@@ -18,8 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { StatCard } from '@/components/StatCard';
-import { ArrowLeftRight, BellRing, Building2, Clock, HandCoins, Landmark, Receipt, Scale, Share2 } from 'lucide-react';
-import { fundingByProject, lenderRepaymentDue, loansByLender, recoveryAlerts, type Collected } from '@/lib/finance/loans';
+import { ArrowLeftRight, BellRing, CalendarClock, Info, Building2, Clock, HandCoins, Landmark, Receipt, Scale, Share2 } from 'lucide-react';
+import { arabicDays, dueLoans, fundingByProject, lenderRepaymentDue, loansByLender, plainSummary, recoveryAlerts, type Collected } from '@/lib/finance/loans';
 import { toast } from 'sonner';
 import { CompanyExpenseDialog, AllocationBar } from './CompanyExpenseDialog';
 import { LedgerEntryDialog } from './LedgerEntryDialog';
@@ -52,7 +52,8 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
   const funding = useMemo(() => (data ? fundingByProject(data.entries) : []), [data]);
   const recoveries = useMemo(() => recoveryAlerts(funding, collected), [funding, collected]);
   const lenderDue = useMemo(() => (data ? lenderRepaymentDue(loans, data.entries) : null), [loans, data]);
-  const alertCount = recoveries.length + (lenderDue ? 1 : 0) + loans.filter((l) => l.overdue).length;
+  const due = useMemo(() => dueLoans(loans, today), [loans, today]);
+  const alertCount = recoveries.length + (lenderDue ? 1 : 0) + due.length;
 
   if (ledger.error instanceof LedgerNotReady) {
     return (
@@ -91,7 +92,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
           <div className="flex gap-2">
             <Button size="sm" className="gap-1" onClick={() => expenseForm.open(true)}><Receipt className="w-4 h-4" />مصروف منظومة</Button>
             <Button size="sm" variant="outline" className="gap-1" onClick={() => loanForm.open(true)}><HandCoins className="w-4 h-4" />قرض</Button>
-            <Button size="sm" variant="outline" className="gap-1" onClick={() => entryForm.open({})}><ArrowLeftRight className="w-4 h-4" />حركة ذمم</Button>
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => entryForm.open({})} title="سلفة أو سداد بين المنظومة ومشروع أو شخص"><ArrowLeftRight className="w-4 h-4" />سلفة أو سداد</Button>
           </div>
         )}
       </div>
@@ -104,11 +105,25 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
           tooltip="الجزء الذي يدخل تكلفة المشاريع. لا يُحسب مرتين: يُطرح من مصاريف المنظومة العامة." />
         <StatCard title="باقٍ على المنظومة" value={formatCurrency(summary.retained)} icon={<Landmark className="w-4 h-4" />} trend="down"
           tooltip="مصروف تشغيلي عام يُطرح من ربح المشاريع للوصول إلى صافي الشركة." />
-        <StatCard title="صافي الذمم" value={formatCurrency(Math.abs(receivable - payable))} icon={<Scale className="w-4 h-4" />}
+        <StatCard title="الصافي: لنا أو علينا" value={formatCurrency(Math.abs(receivable - payable))} icon={<Scale className="w-4 h-4" />}
           trend={receivable - payable >= 0 ? 'up' : 'down'}
-          subtitle={`لنا ${formatCurrency(receivable)} · علينا ${formatCurrency(payable)}`}
+          subtitle={`لنا عند الغير ${formatCurrency(receivable)} · علينا للغير ${formatCurrency(payable)}`}
           tooltip="لنا: ما على المشاريع والأشخاص للمنظومة. علينا: ما على المنظومة لهم (سُلف منهم أو مصاريف دفعوها من جيوبهم)." />
       </div>
+
+      {(() => {
+        const plain = plainSummary(balances.map((b) => ({ name: name(b.node), owesCompany: b.owesCompany })), formatCurrency);
+        return (
+          <div className="rounded-lg border bg-muted/30 px-4 py-3" aria-label="الخلاصة ببساطة">
+            <p className="text-sm font-semibold flex items-center gap-1.5"><Info className="w-4 h-4 text-primary" />الخلاصة ببساطة</p>
+            {plain.lines.length === 0
+              ? <p className="text-sm text-muted-foreground mt-1">لا أحد مدين لأحد الآن.</p>
+              : <ul className="mt-1 space-y-0.5 text-sm">{plain.lines.map((l) => <li key={l}>• {l}</li>)}
+                  {plain.more > 0 && <li className="text-muted-foreground">• و{plain.more} غيرهم في «من له ومن عليه»</li>}</ul>}
+            <p className="text-[11px] text-muted-foreground mt-1.5">السلفة والقرض ليسا مصروفاً: مال يعود. المصروف وحده يُنقص الربح.</p>
+          </div>
+        );
+      })()}
 
       {alertCount > 0 && tab !== 'loans' && (
         <button type="button" onClick={() => setTab('loans')}
@@ -122,7 +137,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
       <Tabs value={tab} onValueChange={setTab} dir="rtl">
         <TabsList>
           <TabsTrigger value="expenses">المصاريف والتحميل</TabsTrigger>
-          <TabsTrigger value="balances">الذمم {balances.length > 0 && <Badge variant="secondary" className="mr-1">{balances.length}</Badge>}</TabsTrigger>
+          <TabsTrigger value="balances">من له ومن عليه {balances.length > 0 && <Badge variant="secondary" className="mr-1">{balances.length}</Badge>}</TabsTrigger>
           <TabsTrigger value="loans">القروض {alertCount > 0 && <Badge variant="destructive" className="mr-1">{alertCount}</Badge>}</TabsTrigger>
           <TabsTrigger value="kinds">حسب النوع</TabsTrigger>
         </TabsList>
@@ -186,7 +201,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
                         <p className="font-semibold truncate">{name(b.node)}</p>
                         <p className="text-[11px] text-muted-foreground">{nodeTag(b.node, data.parties)}</p>
                       </div>
-                      <Badge variant={settled ? 'secondary' : ours ? 'default' : 'destructive'}>{settled ? 'متساوٍ' : ours ? 'لنا' : 'علينا'}</Badge>
+                      <Badge variant={settled ? 'secondary' : ours ? 'default' : 'destructive'}>{settled ? 'متساوٍ' : ours ? 'لنا عنده' : 'علينا له'}</Badge>
                     </div>
                     <p className={`stat-value mt-2 ${ours ? 'text-primary' : settled ? '' : 'text-destructive'}`}>{formatCurrency(Math.abs(b.owesCompany))}</p>
                     <p className="text-xs text-muted-foreground">
@@ -220,6 +235,25 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
               {canEdit && (
                 <Button size="sm" onClick={() => entryForm.open({ preset: { from: { kind: 'project', id: r.projectId }, to: COMPANY, type: 'repayment', amount: r.suggested } })}>
                   استرداد {formatCurrency(r.suggested)}
+                </Button>
+              )}
+            </div>
+          ))}
+          {due.map((l) => (
+            <div key={`due-${l.partyId}`} role="alert" className={`stat-card flex flex-wrap items-center gap-3 ${l.days < 0 ? 'border-destructive/50' : 'border-warning/40'}`}>
+              <CalendarClock className={`w-5 h-5 shrink-0 ${l.days < 0 ? 'text-destructive' : 'text-warning'}`} />
+              <div className="flex-1 min-w-[200px]">
+                <p className="text-sm font-semibold">
+                  {l.days < 0 ? `تأخر سداد قرض ${partyName(l.partyId)} ${arabicDays(-l.days)}`
+                    : l.days === 0 ? `يستحق اليوم سداد قرض ${partyName(l.partyId)}`
+                    : `يستحق سداد قرض ${partyName(l.partyId)} بعد ${arabicDays(l.days)}`}
+                </p>
+                <p className="text-xs text-muted-foreground">المستحق {formatCurrency(l.dueAmount)} · الموعد {l.dueDate}{l.outstanding > l.dueAmount && ` · وباقي القرض ${formatCurrency(l.outstanding - l.dueAmount)} بلا موعد قريب`}</p>
+              </div>
+              {canEdit && (
+                <Button size="sm" variant={l.days < 0 ? 'destructive' : 'default'}
+                  onClick={() => entryForm.open({ preset: { from: COMPANY, to: { kind: 'party', id: l.partyId }, type: 'repayment', amount: l.dueAmount } })}>
+                  سداد {formatCurrency(l.dueAmount)}
                 </Button>
               )}
             </div>
@@ -352,7 +386,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
                         <td className="font-mono text-xs font-semibold">{formatCurrency(r.balance)}</td>
                         <td>
                           {canEdit && r.source === 'entry' && (
-                            <ConfirmDeleteDialog title="حذف الحركة" description="تُحذف الحركة ويُعاد حساب الرصيد."
+                            <ConfirmDeleteDialog title="حذف الحركة" description={/قرض|تمويل/.test(r.label) ? 'تُحذف هذه الحركة وحدها. القرض وتمويل المشروع منه حركتان، ولكل تمويل دفعة في المشروع: احذف ما يقابلها أيضاً حتى لا يبقى طرف معلّق.' : 'تُحذف الحركة ويُعاد حساب الرصيد.'}
                               onConfirm={async () => { try { await removeEntry.mutateAsync(r.sourceId); toast.success('تم الحذف'); } catch (err) { toast.error((err as Error).message); } }} />
                           )}
                         </td>

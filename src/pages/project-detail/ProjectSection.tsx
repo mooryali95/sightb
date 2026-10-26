@@ -19,6 +19,7 @@ import { CashLedgerSection } from '@/components/project/CashLedgerSection';
 import { ExpenseSpendExplorer } from '@/components/project/ExpenseSpendExplorer';
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ChargedCostsCard } from '@/components/project/ledger/ChargedCostsCard';
+import { CompanyFundingCard } from '@/components/project/ledger/CompanyFundingCard';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { VendorPayablesPanel } from '@/components/project/VendorPayablesPanel';
 import { ExecutiveSummary } from '@/components/project/ExecutiveSummary';
@@ -103,6 +104,7 @@ export function ProjectSection({ value, data: d, navigateToTab }: ProjectSection
       return (
         <div className="space-y-4">
           <CashLedgerSection projectId={project.id} funds={projectFunds} settlements={fundSettlements} expenses={pExpenses} custodies={pCustodies} />
+          <CompanyFundingCard projectId={project.id} companyId={project.companyId} revenues={pRevenues} />
           <CashFlowSankey
             projectId={project.id} funds={projectFunds} expenses={pExpenses} custodies={pCustodies}
             paymentRequests={paymentRequests} cashTransfers={cashTransfers || []}
