@@ -31,7 +31,7 @@ for f in \
   src/services/registryService.ts src/pages/company/registry/RegistrySection.tsx \
   src/pages/company/registry/LinkNamesSheet.tsx src/pages/PartyDetail.tsx \
   src/components/registry/RegistryNamePicker.tsx src/hooks/useParties.ts \
-  src/components/project/ledger/CompanyFundingCard.tsx \
+  src/components/project/ledger/CompanyFundingCard.tsx src/lib/finance/company-net.ts \
   src/lib/finance/loans.ts src/lib/finance/__tests__/loans.test.ts src/pages/company/ledger/LoanDialog.tsx e2e/company-loans.spec.ts \
   e2e/resource-registry.spec.ts supabase/migrations/20261027090000_resource_registry.sql; do
   need_file "$f"

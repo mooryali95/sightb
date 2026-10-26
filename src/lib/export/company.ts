@@ -18,7 +18,10 @@ export interface CompanyExportData {
     netProfitAfterIndirect: number;
     netProfitMargin: number;
     totalAtRiskProjects: number;
+    /** The company's own spend (salaries, rent, fees…), already taken off the net. */
+    companyExpenses: number;
   };
+  companyExpenses: { date: string; kind: string; description: string; amount: number; allocated: number }[];
   portfolioSummaries: { name: string; projects: number; contractValue: number; actual: number; profit: number; completion: number; health: string }[];
   indirectCosts: { category: string; description: string; amount: number; month: number }[];
 }
@@ -33,7 +36,8 @@ export async function exportCompanyToExcel(data: CompanyExportData) {
     { 'البند': 'إجمالي المصروفات', 'القيمة': data.summary.totalActual },
     { 'البند': 'الربح المخطط', 'القيمة': data.summary.totalPlannedProfit },
     { 'البند': 'تكاليف غير مباشرة', 'القيمة': data.summary.totalIndirectCosts },
-    { 'البند': 'صافي الربح', 'القيمة': data.summary.netProfitAfterIndirect },
+    { 'البند': 'مصاريف المنظومة', 'القيمة': data.summary.companyExpenses },
+    { 'البند': 'صافي ربح الشركة', 'القيمة': data.summary.netProfitAfterIndirect },
     { 'البند': 'هامش صافي الربح %', 'القيمة': data.summary.netProfitMargin.toFixed(1) },
     { 'البند': 'مشاريع متعثرة', 'القيمة': data.summary.totalAtRiskProjects },
   ];
@@ -64,6 +68,13 @@ export async function exportCompanyToExcel(data: CompanyExportData) {
     appendSheet(wb, icRows, 'تكاليف غير مباشرة');
   }
 
+  if (data.companyExpenses.length > 0) {
+    appendSheet(wb, data.companyExpenses.map((e) => ({
+      'التاريخ': e.date, 'النوع': e.kind, 'الوصف': e.description, 'المبلغ': e.amount,
+      'محمَّل على المشاريع': e.allocated, 'باقٍ على المنظومة': Math.round((e.amount - e.allocated) * 100) / 100,
+    })), 'مصاريف المنظومة');
+  }
+
   await writeWorkbook(wb, `${data.companyName}_تقرير_شركة.xlsx`);
 }
 
@@ -85,7 +96,8 @@ export function exportCompanyToPDF(data: CompanyExportData) {
       ['Total Expenses', formatCurrency(data.summary.totalActual)],
       ['Planned Profit', formatCurrency(data.summary.totalPlannedProfit)],
       ['Indirect Costs', formatCurrency(data.summary.totalIndirectCosts)],
-      ['Net Profit (After Indirect)', formatCurrency(data.summary.netProfitAfterIndirect)],
+      ['Company Expenses', formatCurrency(data.summary.companyExpenses)],
+      ['Company Net Profit', formatCurrency(data.summary.netProfitAfterIndirect)],
       ['Net Profit Margin', `${data.summary.netProfitMargin.toFixed(1)}%`],
       ['At-Risk Projects', String(data.summary.totalAtRiskProjects)],
     ],
@@ -126,6 +138,19 @@ export function exportCompanyToPDF(data: CompanyExportData) {
       body: data.indirectCosts.map(ic => [
         ic.category, ic.description, formatCurrency(ic.amount), `Month ${ic.month}`,
       ]),
+      theme: 'grid',
+      headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
+      styles: { fontSize: 7.5 },
+    });
+  }
+
+  if (data.companyExpenses.length > 0) {
+    doc.addPage();
+    y = addSectionTitle(doc, 'Company Expenses', 20);
+    doc.autoTable({
+      startY: y,
+      head: [['Date', 'Kind', 'Description', 'Amount', 'Charged to projects']],
+      body: data.companyExpenses.map((e) => [e.date, e.kind, e.description, formatCurrency(e.amount), formatCurrency(e.allocated)]),
       theme: 'grid',
       headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8 },
       styles: { fontSize: 7.5 },
