@@ -20,6 +20,10 @@ import Dashboard from '../Dashboard';
 
 vi.mock('@/hooks/useRole', () => ({ useRole: () => ({ isAdmin: true, canEdit: () => true, isAdminFor: () => true, hasAccess: () => true, loading: false }) }));
 vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => ({ isError: false }), useDetailsData: () => undefined }));
+// One company expense of 5,000 on c1 and one on a company not on screen.
+vi.mock('@/hooks/useCompanyLedger', () => ({
+  useCompanyExpenseAmounts: () => ({ data: [{ companyId: 'c1', amount: 5000 }, { companyId: 'elsewhere', amount: 999 }] }),
+}));
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
 vi.mock('@/components/AppLayout', () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }) }));
@@ -192,12 +196,13 @@ describe('filters in the address bar', () => {
 });
 
 describe('the financial position', () => {
-  it('nets the company\'s indirect costs off the projects\' planned profit, as the company page does', () => {
+  it('nets the companies\' own spend and indirect costs off the projects\' planned profit, as the company page does', () => {
     useStore.setState({ indirectCosts: [{ id: 'ic', companyId: 'c1', amount: 20000, category: 'other', description: '', month: 1, date: '2026-01-01', allocationMethod: 'equal' }] } as Partial<AppState>);
     renderDashboard();
     const section = screen.getByRole('region', { name: 'المركز المالي' });
     expect(section).toHaveTextContent('ربح المشاريع80,000.00');
-    expect(section).toHaveTextContent('تكاليف الشركة غير المباشرة20,000.00');
-    expect(screen.getByLabelText(/^صافي الشركة · 54\.5%: 60,000\.00/)).toBeInTheDocument();
+    // 20,000 indirect + 5,000 company expenses of c1; the other company's 999 stays out.
+    expect(section).toHaveTextContent('مصاريف الشركات25,000.00');
+    expect(screen.getByLabelText(/^صافي الشركة · 50\.0%: 55,000\.00/)).toBeInTheDocument();
   });
 });

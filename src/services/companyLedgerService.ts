@@ -57,6 +57,13 @@ const toEntry = (r: Row): IntercompanyEntry => ({
 
 export interface CompanyLedger { parties: Party[]; expenses: CompanyExpense[]; allocations: ExpenseAllocation[]; entries: IntercompanyEntry[] }
 
+/** Every company expense the user may see, as company and amount: what the dashboard nets off. Empty before the ledger exists. */
+export async function listCompanyExpenseAmounts(): Promise<{ companyId: string; amount: number }[]> {
+  const { data, error } = await db.from('company_expenses').select('company_id, amount');
+  if (error) return [];
+  return ((data ?? []) as Row[]).map((r) => ({ companyId: r.company_id as string, amount: Number(r.amount) }));
+}
+
 export async function loadCompanyLedger(companyId: string): Promise<CompanyLedger> {
   const [parties, expenses, entries] = await Promise.all([
     db.from('parties').select('*').eq('company_id', companyId).order('name'),
