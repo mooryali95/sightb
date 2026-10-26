@@ -18,19 +18,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { StatCard } from '@/components/StatCard';
-import { ArrowLeftRight, Building2, Clock, Landmark, Receipt, Scale, Share2 } from 'lucide-react';
+import { ArrowLeftRight, BellRing, Building2, Clock, HandCoins, Landmark, Receipt, Scale, Share2 } from 'lucide-react';
+import { fundingByProject, lenderRepaymentDue, loansByLender, recoveryAlerts, type Collected } from '@/lib/finance/loans';
 import { toast } from 'sonner';
 import { CompanyExpenseDialog, AllocationBar } from './CompanyExpenseDialog';
 import { LedgerEntryDialog } from './LedgerEntryDialog';
+import { LoanDialog } from './LoanDialog';
 import { nodeName, nodeTag, type LedgerProject } from './nodes';
 
-interface Props { companyId: string; projects: LedgerProject[]; canEdit: boolean }
+interface Props {
+  companyId: string; projects: LedgerProject[]; canEdit: boolean;
+  /** Money the projects collected, to tell when a funded project can pay back. */
+  collected?: Collected[];
+}
 
-export function CompanyLedgerSection({ companyId, projects, canEdit }: Props) {
+export function CompanyLedgerSection({ companyId, projects, canEdit, collected = [] }: Props) {
   const ledger = useCompanyLedger(companyId);
   const expenseForm = useDialogSession<true>();
   const entryForm = useDialogSession<{ preset?: { from: LedgerNode; to: LedgerNode; type: IntercompanyEntry['type']; amount?: number } }>();
   const [statementFor, setStatementFor] = useState<LedgerNode | null>(null);
+  const [tab, setTab] = useState('expenses');
+  const loanForm = useDialogSession<true>();
   const removeExpense = useLedgerMutation(companyId, deleteCompanyExpense);
   const removeEntry = useLedgerMutation(companyId, deleteEntry);
 
@@ -39,6 +47,12 @@ export function CompanyLedgerSection({ companyId, projects, canEdit }: Props) {
   const balances = useMemo(() => (data ? balancesWithCompany(data.entries, data.expenses) : []), [data]);
   const receivable = balances.filter((b) => b.owesCompany > 0).reduce((s, b) => s + b.owesCompany, 0);
   const payable = balances.filter((b) => b.owesCompany < 0).reduce((s, b) => s - b.owesCompany, 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const loans = useMemo(() => (data ? loansByLender(data.entries, today) : []), [data, today]);
+  const funding = useMemo(() => (data ? fundingByProject(data.entries) : []), [data]);
+  const recoveries = useMemo(() => recoveryAlerts(funding, collected), [funding, collected]);
+  const lenderDue = useMemo(() => (data ? lenderRepaymentDue(loans, data.entries) : null), [loans, data]);
+  const alertCount = recoveries.length + (lenderDue ? 1 : 0) + loans.filter((l) => l.overdue).length;
 
   if (ledger.error instanceof LedgerNotReady) {
     return (
@@ -76,6 +90,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit }: Props) {
         {canEdit && (
           <div className="flex gap-2">
             <Button size="sm" className="gap-1" onClick={() => expenseForm.open(true)}><Receipt className="w-4 h-4" />مصروف منظومة</Button>
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => loanForm.open(true)}><HandCoins className="w-4 h-4" />قرض</Button>
             <Button size="sm" variant="outline" className="gap-1" onClick={() => entryForm.open({})}><ArrowLeftRight className="w-4 h-4" />حركة ذمم</Button>
           </div>
         )}
@@ -95,10 +110,20 @@ export function CompanyLedgerSection({ companyId, projects, canEdit }: Props) {
           tooltip="لنا: ما على المشاريع والأشخاص للمنظومة. علينا: ما على المنظومة لهم (سُلف منهم أو مصاريف دفعوها من جيوبهم)." />
       </div>
 
-      <Tabs defaultValue="expenses" dir="rtl">
+      {alertCount > 0 && tab !== 'loans' && (
+        <button type="button" onClick={() => setTab('loans')}
+          className="w-full flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-right hover:bg-warning/15 transition-colors">
+          <BellRing className="w-4 h-4 text-warning shrink-0" />
+          <span className="flex-1">{alertCount === 1 ? 'تنبيه قرض واحد ينتظرك' : `${alertCount} تنبيهات قروض تنتظرك`}: استرداد أو سداد مستحق.</span>
+          <span className="text-xs text-primary font-medium">عرض</span>
+        </button>
+      )}
+
+      <Tabs value={tab} onValueChange={setTab} dir="rtl">
         <TabsList>
           <TabsTrigger value="expenses">المصاريف والتحميل</TabsTrigger>
           <TabsTrigger value="balances">الذمم {balances.length > 0 && <Badge variant="secondary" className="mr-1">{balances.length}</Badge>}</TabsTrigger>
+          <TabsTrigger value="loans">القروض {alertCount > 0 && <Badge variant="destructive" className="mr-1">{alertCount}</Badge>}</TabsTrigger>
           <TabsTrigger value="kinds">حسب النوع</TabsTrigger>
         </TabsList>
 
@@ -184,6 +209,95 @@ export function CompanyLedgerSection({ companyId, projects, canEdit }: Props) {
           )}
         </TabsContent>
 
+        <TabsContent value="loans" className="space-y-3">
+          {recoveries.map((r) => (
+            <div key={r.projectId} role="alert" className="stat-card border-warning/40 flex flex-wrap items-center gap-3">
+              <BellRing className="w-5 h-5 text-warning shrink-0" />
+              <div className="flex-1 min-w-[200px]">
+                <p className="text-sm font-semibold">حان استرداد التمويل من «{projectName(r.projectId)}»</p>
+                <p className="text-xs text-muted-foreground">حصّل المشروع {formatCurrency(r.available)} منذ تمويله، وما زال مديناً للمنظومة.</p>
+              </div>
+              {canEdit && (
+                <Button size="sm" onClick={() => entryForm.open({ preset: { from: { kind: 'project', id: r.projectId }, to: COMPANY, type: 'repayment', amount: r.suggested } })}>
+                  استرداد {formatCurrency(r.suggested)}
+                </Button>
+              )}
+            </div>
+          ))}
+          {lenderDue && (
+            <div role="alert" className="stat-card border-primary/40 flex flex-wrap items-center gap-3">
+              <HandCoins className="w-5 h-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-[200px]">
+                <p className="text-sm font-semibold">استردّت المنظومة ما يكفي لسداد {partyName(lenderDue.partyId)}</p>
+                <p className="text-xs text-muted-foreground">ما عاد من المشاريع ولم يُسدَّد بعد للمُقرض.</p>
+              </div>
+              {canEdit && (
+                <Button size="sm" onClick={() => entryForm.open({ preset: { from: COMPANY, to: { kind: 'party', id: lenderDue.partyId }, type: 'repayment', amount: lenderDue.suggested } })}>
+                  سداد {formatCurrency(lenderDue.suggested)}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {loans.length === 0 ? (
+            <div className="stat-card text-center py-8">
+              <HandCoins className="w-8 h-8 mx-auto text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground mt-2">لا قروض للمنظومة. القرض منك أو من أي شخص يدخل المنظومة، وهي تموّل منه المشروع.</p>
+              {canEdit && <Button size="sm" className="mt-3 gap-1" onClick={() => loanForm.open(true)}><HandCoins className="w-4 h-4" />تسجيل قرض</Button>}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {loans.map((l) => {
+                const pct = l.lent > 0 ? Math.min(100, (l.repaid / l.lent) * 100) : 0;
+                return (
+                  <article key={l.partyId} aria-label={`قرض ${partyName(l.partyId)}`} className="stat-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">{partyName(l.partyId)}</p>
+                        <p className="text-[11px] text-muted-foreground">أقرض المنظومة {formatCurrency(l.lent)} · منذ {l.firstDate}</p>
+                      </div>
+                      {l.outstanding <= 0 ? <Badge variant="secondary">مسدَّد</Badge>
+                        : l.overdue ? <Badge variant="destructive">متأخر</Badge>
+                        : l.dueDate ? <Badge variant="outline">يستحق {l.dueDate}</Badge> : null}
+                    </div>
+                    <p className="stat-value mt-2 text-destructive">{formatCurrency(l.outstanding)}</p>
+                    <p className="text-xs text-muted-foreground">باقٍ على المنظومة · سُدِّد {formatCurrency(l.repaid)}</p>
+                    <div className="h-1.5 rounded-full bg-muted mt-2 overflow-hidden" aria-hidden>
+                      <div className="h-full bg-success" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => setStatementFor({ kind: 'party', id: l.partyId })}>كشف الحساب</Button>
+                      {canEdit && l.outstanding > 0 && (
+                        <Button size="sm" className="flex-1" onClick={() => entryForm.open({ preset: { from: COMPANY, to: { kind: 'party', id: l.partyId }, type: 'repayment', amount: l.outstanding } })}>سداد للمُقرض</Button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+
+          {funding.length > 0 && (
+            <div className="stat-card">
+              <p className="text-sm font-semibold mb-2">المشاريع المموَّلة من المنظومة</p>
+              <table className="data-table">
+                <thead><tr><th>المشروع</th><th>موَّل</th><th>عاد</th><th>باقٍ عليه</th><th /></tr></thead>
+                <tbody>
+                  {funding.map((f) => (
+                    <tr key={f.projectId}>
+                      <td className="text-sm">{projectName(f.projectId)}</td>
+                      <td className="font-mono text-sm">{formatCurrency(f.funded)}</td>
+                      <td className="font-mono text-sm">{formatCurrency(f.returned)}</td>
+                      <td className={`font-mono text-sm font-semibold ${f.outstanding > 0 ? 'text-primary' : ''}`}>{formatCurrency(f.outstanding)}</td>
+                      <td><Button size="sm" variant="ghost" onClick={() => setStatementFor({ kind: 'project', id: f.projectId })}>كشف</Button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="kinds" className="stat-card">
           {summary.byKind.length === 0 ? (
             <p className="text-center py-8 text-sm text-muted-foreground">لا توجد مصاريف.</p>
@@ -206,6 +320,9 @@ export function CompanyLedgerSection({ companyId, projects, canEdit }: Props) {
       {canEdit && expenseForm.value !== null && (
         <CompanyExpenseDialog key={expenseForm.session} open onOpenChange={(v) => { if (!v) expenseForm.close(); }}
           companyId={companyId} parties={data.parties} projects={projects} expenses={data.expenses} entries={data.entries} />
+      )}
+      {canEdit && loanForm.value !== null && (
+        <LoanDialog key={loanForm.session} open onOpenChange={(v) => { if (!v) loanForm.close(); }} companyId={companyId} projects={projects} />
       )}
       {canEdit && entryForm.value !== null && (
         <LedgerEntryDialog key={entryForm.session} open onOpenChange={(v) => { if (!v) entryForm.close(); }}
