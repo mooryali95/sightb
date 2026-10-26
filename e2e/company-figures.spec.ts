@@ -35,7 +35,7 @@ test('rolls the projects up, nets the indirect costs off the profit, and counts 
   await expect(stat(page, 'قيمة العقود الفعّالة')).toContainText('1,400,000.00 ر.س');
   await expect(stat(page, 'المصروف الفعلي')).toContainText('52,000.00 ر.س');
   // Planned profit 600,000 + 200,000 + 100,000 (no plan) less 50,000 of rent.
-  await expect(stat(page, 'صافي الربح بعد غير المباشرة')).toContainText('850,000.00 ر.س');
+  await expect(stat(page, 'صافي ربح الشركة')).toContainText('850,000.00 ر.س');
   await expect(stat(page, 'مشاريع متعثرة')).toContainText('1');
 });
 

@@ -31,6 +31,13 @@ vi.mock('@/hooks/useRole', () => ({
     isAdminFor: () => roleState.isAdmin, canEdit: () => roleState.canEdit, hasAccess: () => true, loading: false,
   }),
 }));
+// One company expense of 20,000, 5,000 of it charged to a project: the net takes off all 20,000.
+vi.mock('@/hooks/useCompanyLedger', () => ({
+  useCompanyLedger: () => ({ data: {
+    expenses: [{ id: 'ce1', companyId: 'c', date: '2026-01-01', amount: 20000, description: 'رواتب', kind: 'salary', partyId: null, paidByPartyId: null }],
+    allocations: [{ id: 'a1', expenseId: 'ce1', projectId: 'p', amount: 5000 }], entries: [], parties: [],
+  } }),
+}));
 vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => undefined, useCompanyData: () => undefined }));
 // The company ledger has its own tests (CompanyLedgerSection.test.tsx); here it only has to be placed.
 vi.mock('../company/ledger/CompanyLedgerSection', () => ({
@@ -121,11 +128,12 @@ describe('the figures at the top', () => {
   it('rolls the three projects up and nets the indirect costs off the planned profit', () => {
     renderPage();
     // 100,000 + 50,000 + 20,000 contracts; 10,000 + 5,000 counted spend;
-    // planned profit 170,000 with no budget, less 5,000 indirect.
+    // planned profit 170,000 with no budget, less 5,000 indirect and the
+    // company's own 20,000, allocated part included.
     expect(statFigure('قيمة العقود الفعّالة')).toBe('170,000.00 ر.س');
     expect(statFigure('المصروف الفعلي')).toBe('15,000.00 ر.س');
-    expect(statFigure('صافي الربح بعد غير المباشرة')).toBe('165,000.00 ر.س');
-    expect(screen.getByText('هامش: 97.1%')).toBeInTheDocument();
+    expect(statFigure('صافي ربح الشركة')).toBe('145,000.00 ر.س');
+    expect(screen.getByText(/هامش 85\.3% · بعد مصاريف المنظومة 20,000\.00 ر\.س وغير المباشرة 5,000\.00 ر\.س/)).toBeInTheDocument();
   });
 
   it('counts the same expenses in the pie chart as in the stat card', () => {
@@ -261,6 +269,9 @@ describe('editing, exporting, archiving and deleting the company', () => {
       expect.objectContaining({ category: 'إيجار', amount: 4000 }),
       expect.objectContaining({ category: 'تسويق', amount: 1000 }),
     ]);
+    // The report says what the page says.
+    expect(excel.summary).toMatchObject({ companyExpenses: 20000, netProfitAfterIndirect: 145000 });
+    expect(excel.companyExpenses).toEqual([expect.objectContaining({ kind: 'رواتب', amount: 20000, allocated: 5000 })]);
     expect(vi.mocked(exportCompanyToPDF).mock.calls[0][0]).toEqual(excel);
   });
 

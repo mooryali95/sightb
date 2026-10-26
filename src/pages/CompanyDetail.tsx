@@ -8,6 +8,9 @@ import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getCountedExpenses, getEffectiveContractValue } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
+import { companyNet } from '@/lib/finance/company-net';
+import { summarizeCompanyExpenses } from '@/lib/finance/company-ledger';
+import { useCompanyLedger } from '@/hooks/useCompanyLedger';
 import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export-lazy';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -56,6 +59,11 @@ export default function CompanyDetail() {
       changeOrders, milestones, risks, indirectCosts,
     );
   }, [company, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts]);
+  // Company expenses live in the ledger; they come off the company's net with the indirect costs.
+  const ledger = useCompanyLedger(id);
+  const ledgerTotals = useMemo(() => (ledger.data ? summarizeCompanyExpenses(ledger.data.expenses, ledger.data.allocations) : null), [ledger.data]);
+  const net = useMemo(() => (summary ? companyNet(summary, ledgerTotals?.total ?? 0) : null), [summary, ledgerTotals]);
+  const exportLedger = useMemo(() => (ledger.data && net ? { net, expenses: ledger.data.expenses, allocations: ledger.data.allocations } : undefined), [ledger.data, net]);
 
   const companyProjects = useMemo(() => projects.filter(p => p.companyId === id), [projects, id]);
   const standaloneProjects = useMemo(() => companyProjects.filter(p => !p.portfolioId), [companyProjects]);
@@ -181,7 +189,7 @@ export default function CompanyDetail() {
               )}
               {summary && (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                  exportCompanyToExcel(buildCompanyExport(company.name, summary, compIndirectCosts));
+                  exportCompanyToExcel(buildCompanyExport(company.name, summary, compIndirectCosts, exportLedger));
                   toast.success('تم تصدير تقرير الشركة');
                 }}>
                   <FileSpreadsheet className="w-3.5 h-3.5" />Excel
@@ -189,7 +197,7 @@ export default function CompanyDetail() {
               )}
               {summary && (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                  exportCompanyToPDF(buildCompanyExport(company.name, summary, compIndirectCosts));
+                  exportCompanyToPDF(buildCompanyExport(company.name, summary, compIndirectCosts, exportLedger));
                   toast.success('تم تصدير تقرير PDF');
                 }}>
                   <FileSpreadsheet className="w-3.5 h-3.5" />PDF
@@ -225,17 +233,17 @@ export default function CompanyDetail() {
         <EditCompanyDialog key={edit.session} company={company} open={edit.value !== null} onOpenChange={(v) => { if (!v) edit.close(); }} />
 
         {/* Stats */}
-        {summary && (
+        {summary && net && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard title="قيمة العقود الفعّالة" value={formatCurrency(summary.totalContractValue)} icon={<DollarSign className="w-4 h-4" />} tooltip="العقود الأصلية + أوامر التغيير المعتمدة لكل مشاريع الشركة." />
             <StatCard title="المصروف الفعلي" value={formatCurrency(summary.totalActual)} icon={<TrendingUp className="w-4 h-4" />} trend="down" tooltip="المصروفات المقبولة، بعد استبعاد المرفوض والسلف القائمة." />
             <StatCard
-              title="صافي الربح بعد غير المباشرة"
-              value={formatCurrency(summary.netProfitAfterIndirect)}
+              title="صافي ربح الشركة"
+              value={formatCurrency(net.net)}
               icon={<TrendingUp className="w-4 h-4" />}
-              trend={summary.netProfitAfterIndirect >= 0 ? 'up' : 'down'}
-              subtitle={`هامش: ${summary.netProfitMargin.toFixed(1)}%`}
-              tooltip="الربح المخطط لكل المشاريع − التكاليف غير المباشرة للشركة. لا يساوي الربح النقدي المحقق."
+              trend={net.net >= 0 ? 'up' : 'down'}
+              subtitle={`هامش ${net.margin.toFixed(1)}% · بعد مصاريف المنظومة ${formatCurrency(net.companyExpenses)}${net.indirectCosts ? ` وغير المباشرة ${formatCurrency(net.indirectCosts)}` : ''}`}
+              tooltip="ربح المشاريع المخطط، ناقص كل ما صرفته المنظومة على نفسها (رواتب، إيجار، رسوم…) والتكاليف غير المباشرة. لا يساوي النقد المحقق."
             />
             <StatCard title="مشاريع متعثرة" value={String(summary.totalAtRiskProjects)} icon={<AlertTriangle className="w-4 h-4" />} trend={summary.totalAtRiskProjects > 0 ? 'down' : 'up'} tooltip="مشاريع معلقة أو ملغاة أو تجاوز صرفها الموازنة المعتمدة." />
           </div>
