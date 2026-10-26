@@ -61,6 +61,12 @@ does not happen again.
    - Loans through the company: `src/lib/finance/loans.ts` and
      `src/pages/company/ledger/LoanDialog.tsx`. A loan is lender → company,
      funding is company → project; never record a loan straight to a project.
+   - The money loop (migration `20261028090000_close_the_money_loop.sql`):
+     cash left at a settlement is carried to the next fund, never dropped;
+     a project's repayment names the fund it left (`source_fund_id`) and is
+     never booked as an expense; company funding links its fund
+     (`ledger_entry_id`). Company overhead is recorded only as a company
+     expense; the indirect-cost form is gone on purpose.
      A name on an expense is linked to a registry entry, never retyped.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.

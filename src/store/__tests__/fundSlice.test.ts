@@ -21,7 +21,7 @@ function builder(table: string) {
       return Promise.resolve(next).then(resolve, reject);
     },
   };
-  for (const op of ['select', 'eq', 'order', 'limit', 'insert', 'update', 'delete', 'single']) {
+  for (const op of ['select', 'eq', 'neq', 'in', 'order', 'limit', 'insert', 'update', 'delete', 'single']) {
     b[op] = (...args: unknown[]) => { call.ops.push([op, args]); return b; };
   }
   return b;
@@ -67,7 +67,7 @@ describe('loadFundsForProject', () => {
     expect(s.projectFunds[1]).toMatchObject({ amount: 1234.5, notes: 'x', acknowledgedAt: undefined });
     expect(s.fundSettlements.map((st) => st.id)).toEqual(['s-new']);
     expect(s.fundSettlements[0].attachments).toEqual([{ name: 'a' }]);
-    expect(calls.map((c) => c.table)).toEqual(['project_funds', 'fund_settlements']);
+    expect(calls.map((c) => c.table)).toEqual(['project_funds', 'fund_settlements', 'intercompany_entries']);
   });
 });
 
@@ -230,5 +230,57 @@ describe('deleteFund', () => {
     await expect(useStore.getState().deleteFund('f1')).rejects.toEqual({ message: 'denied' });
     expect(calls).toHaveLength(1);
     expect(useStore.getState().projectFunds).toHaveLength(1);
+  });
+});
+
+describe('cash left at settlement is carried, never dropped', () => {
+  it('joins the next open fund at once, recorded as carried in', async () => {
+    useStore.setState({
+      projectFunds: [fund({ status: 'acknowledged' }), fund({ id: 'f2', fundNumber: 2, amount: 1000, status: 'acknowledged' })],
+      fundSettlements: [settlement({ status: 'submitted', remainingCash: 224, totalReceived: 5000, totalSpent: 4776 })],
+    });
+    answers.push({ data: settlementRow({ status: 'approved', remaining_cash: '224' }), error: null });
+    answers.push({ data: fundRow({ status: 'settled' }), error: null });
+    answers.push({ data: null, error: null }); // carry_status pending
+    answers.push({ data: fundRow({ id: 'f2', fund_number: 2, amount: '1224', carried_in: '224', status: 'acknowledged' }), error: null });
+    answers.push({ data: null, error: null }); // settlement carried
+    answers.push({ data: null, error: null }); // f2's draft received
+    await useStore.getState().approveSettlement('s1');
+    expect(argOf(2, 'update')).toEqual({ carry_status: 'pending' });
+    expect(calls[3].table).toBe('project_funds');
+    expect(argOf(3, 'update')).toEqual({ amount: 1224, carried_in: 224 });
+    expect(argOf(4, 'update')).toEqual({ carry_status: 'carried', carried_to_fund_id: 'f2' });
+    // f2's own draft settlement now expects the larger amount, or it would show a false gap.
+    expect(argOf(5, 'update')).toEqual({ total_received: 1224 });
+    expect(ops(5)).toContainEqual(['neq', 'status', 'approved']);
+    const s = useStore.getState();
+    expect(s.projectFunds.find((f) => f.id === 'f2')).toMatchObject({ amount: 1224, carriedIn: 224 });
+    expect(s.fundSettlements[0]).toMatchObject({ carryStatus: 'carried', carriedToFundId: 'f2' });
+  });
+
+  it('waits when this was the last fund, and joins the next fund when it is created', async () => {
+    useStore.setState({ projectFunds: [fund({ status: 'acknowledged' })], fundSettlements: [settlement({ status: 'submitted', remainingCash: 224, totalReceived: 5000, totalSpent: 4776 })] });
+    answers.push({ data: settlementRow({ status: 'approved', remaining_cash: '224' }), error: null });
+    answers.push({ data: fundRow({ status: 'settled' }), error: null });
+    answers.push({ data: null, error: null });
+    await useStore.getState().approveSettlement('s1');
+    expect(calls).toHaveLength(3);
+    expect(useStore.getState().fundSettlements[0]).toMatchObject({ carryStatus: 'pending' });
+
+    calls.length = 0;
+    answers.push({ data: [fundRow({ status: 'settled' })], error: null }, { data: [settlementRow({ status: 'approved', remaining_cash: '224', carry_status: 'pending' })], error: null });
+    answers.push({ data: [{ fund_number: 1 }], error: null });
+    answers.push({ data: fundRow({ id: 'f2', fund_number: 2, amount: '1000' }), error: null });
+    answers.push({ data: fundRow({ id: 'f2', fund_number: 2, amount: '1224', carried_in: '224' }), error: null });
+    answers.push({ data: null, error: null });
+    await useStore.getState().createFund(P, 1000, '2026-11-01');
+    expect(argOf(4, 'update')).toEqual({ amount: 1224, carried_in: 224 });
+    expect(useStore.getState().fundSettlements[0]).toMatchObject({ carryStatus: 'carried', carriedToFundId: 'f2' });
+  });
+
+  it('reads what each fund paid back to the company', async () => {
+    answers.push({ data: [fundRow()], error: null }, { data: [], error: null }, { data: [{ source_fund_id: 'f1', amount: 700 }, { source_fund_id: 'f1', amount: 300 }], error: null });
+    await useStore.getState().loadFundsForProject(P);
+    expect(useStore.getState().projectFunds[0].returnedOut).toBe(1000);
   });
 });

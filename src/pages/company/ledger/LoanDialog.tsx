@@ -60,19 +60,15 @@ export function LoanDialog({ open, onOpenChange, companyId, projects }: Props) {
       companyId, date, amount: toProject, type: 'advance', from: COMPANY, to: { kind: 'project', id: projectId },
       note: `تمويل من قرض ${lender.text}`, dueDate: null,
     });
+    let ids: string[] = [];
     try {
-      await save.mutateAsync(rows);
+      ids = await save.mutateAsync(rows);
     } catch (e) { toast.error(e instanceof Error ? e.message : 'فشل الحفظ'); return; }
     if (toProject > 0) {
       // The project can spend only through its funds: the funding arrives as
-      // one, so its expenses can draw on it. With a fund still open it goes
-      // in as an out-of-turn fund, which the project's rules allow with a reason.
-      const fundNote = `تمويل من قرض ${lender.text} عبر المنظومة`;
+      // one, linked to its ledger movement, even while another fund is open.
       try {
-        await createFund(projectId, toProject, date, fundNote).catch(async (err: Error) => {
-          if (!/قبل تسوية الدفعة/.test(err.message)) throw err;
-          await createFund(projectId, toProject, date, undefined, { emergency: true, emergencyReason: fundNote });
-        });
+        await createFund(projectId, toProject, date, `تمويل من قرض ${lender.text} عبر المنظومة`, { fromCompany: { ledgerEntryId: ids[1] } });
       } catch (e) {
         toast.warning(`سُجّل القرض والتمويل، لكن تعذّر إنشاء دفعة «${projectName}»: ${e instanceof Error ? e.message : ''}. أنشئها من تبويب الدفعات في المشروع.`, { duration: 10000 });
         onOpenChange(false);

@@ -1,15 +1,14 @@
 /**
- * The company's indirect costs: the list, its total, and the form to add
- * one. Adding and deleting go to the store from here; the page only says
- * whether this user may write.
+ * Indirect costs recorded the older way, before company expenses. New
+ * company spend is recorded once, as a company expense («مصروف منظومة»),
+ * so this card only lists what is left here, with its total, and lets it
+ * be deleted once moved. With nothing left it does not show.
  */
 import { useStore } from '@/store/useStore';
-import { useDialogSession } from '@/hooks/useDialogSession';
 import { formatCurrency } from '@/lib/finance';
 import { INDIRECT_COST_CATEGORY_LABELS, type IndirectCost } from '@/types/project';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { toast } from 'sonner';
-import { IndirectCostFormDialog } from './IndirectCostFormDialog';
 
 interface Props {
   companyId: string;
@@ -19,22 +18,15 @@ interface Props {
 
 export function IndirectCostsCard({ companyId, costs, canEdit }: Props) {
   const deleteIndirectCost = useStore((s) => s.deleteIndirectCost);
-  // Remounted on open so the form starts blank every time; see useDialogSession.
-  const form = useDialogSession<true>();
+  if (costs.length === 0) return null;
   const totalIndirect = costs.reduce((s, ic) => s + ic.amount, 0);
   return (
     <div className="stat-card mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">التكاليف غير المباشرة</h3>
-        {canEdit && (
-          <IndirectCostFormDialog
-            key={form.session}
-            open={form.value !== null}
-            onOpenChange={(v) => { if (!v) form.close(); }}
-            onRequestOpen={() => form.open(true)}
-            companyId={companyId}
-          />
-        )}
+        <div>
+          <h3 className="text-sm font-semibold">التكاليف غير المباشرة (سجل قديم)</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">تُطرح من صافي الشركة كما هي. أي مصروف جديد للشركة يُسجَّل من «مصروف منظومة» فقط، حتى لا يُسجَّل مرتين.</p>
+        </div>
       </div>
 
       {costs.length > 0 ? (

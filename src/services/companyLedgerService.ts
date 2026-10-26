@@ -52,6 +52,7 @@ const toEntry = (r: Row): IntercompanyEntry => ({
   id: r.id as string, companyId: r.company_id as string, date: r.date as string, amount: num(r.amount), type: r.type as IntercompanyEntry['type'],
   from: node(r.from_kind, r.from_id), to: node(r.to_kind, r.to_id), note: (r.note as string) ?? '',
   dueDate: (r.due_date as string | null) ?? null, salaryExpenseId: (r.salary_expense_id as string | null) ?? null,
+  sourceFundId: (r.source_fund_id as string | null) ?? null,
 });
 
 export interface CompanyLedger { parties: Party[]; expenses: CompanyExpense[]; allocations: ExpenseAllocation[]; entries: IntercompanyEntry[] }
@@ -140,26 +141,49 @@ export async function deleteCompanyExpense(id: string): Promise<void> {
 export interface NewEntry {
   companyId: string; date: string; amount: number; type: IntercompanyEntry['type'];
   from: LedgerNode; to: LedgerNode; note: string; dueDate: string | null;
+  /** A project's repayment out of one of its funds (20261028090000). */
+  sourceFundId?: string | null;
 }
 
 const entryRow = (input: NewEntry) => ({
   company_id: input.companyId, date: input.date, amount: input.amount, type: input.type,
   from_kind: input.from.kind, from_id: input.from.id, to_kind: input.to.kind, to_id: input.to.id,
   note: input.note.trim(), due_date: input.dueDate,
+  ...(input.sourceFundId ? { source_fund_id: input.sourceFundId } : {}),
 });
 
-export async function createEntry(input: NewEntry): Promise<void> {
-  const { error } = await db.from('intercompany_entries').insert(entryRow(input));
+export async function createEntry(input: NewEntry): Promise<string> {
+  const { data, error } = await db.from('intercompany_entries').insert(entryRow(input) as never).select('id').single();
   if (error) fail(error, 'فشل حفظ الحركة');
+  return (data as { id: string }).id;
 }
 
 /** Several movements in one insert, so a loan and its funding land together or not at all. */
-export async function createEntries(inputs: NewEntry[]): Promise<void> {
-  const { error } = await db.from('intercompany_entries').insert(inputs.map(entryRow));
+export async function createEntries(inputs: NewEntry[]): Promise<string[]> {
+  const { data, error } = await db.from('intercompany_entries').insert(inputs.map(entryRow) as never).select('id');
   if (error) fail(error, 'فشل حفظ الحركات');
+  return ((data ?? []) as { id: string }[]).map((r) => r.id);
 }
 
+/**
+ * A movement and the project fund it created go together: the fund goes
+ * first while nothing was spent from it; once something was, the movement
+ * stays and says why.
+ */
 export async function deleteEntry(id: string): Promise<void> {
+  const { data: funds } = await db.from('project_funds').select('id, fund_number, status').eq('ledger_entry_id' as never, id);
+  for (const f of (funds ?? []) as unknown as { id: string; fund_number: number }[]) {
+    const [exp, cust] = await Promise.all([
+      db.from('expenses').select('id', { count: 'exact', head: true }).eq('fund_id', f.id),
+      db.from('custodies').select('id', { count: 'exact', head: true }).eq('source_fund_id', f.id),
+    ]);
+    if ((exp.count ?? 0) > 0 || (cust.count ?? 0) > 0) {
+      throw new Error(`صُرف من الدفعة رقم ${f.fund_number} التي أنشأها هذا التمويل. احذف مصروفاتها أو انقلها أولاً، ثم احذف التمويل.`);
+    }
+    await db.from('fund_settlements').delete().eq('fund_id', f.id);
+    const { error: fErr } = await db.from('project_funds').delete().eq('id', f.id);
+    if (fErr) fail(fErr, 'فشل حذف دفعة التمويل');
+  }
   const { error } = await db.from('intercompany_entries').delete().eq('id', id);
   if (error) fail(error, 'فشل حذف الحركة');
 }

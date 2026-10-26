@@ -32,6 +32,7 @@ for f in \
   src/pages/company/registry/LinkNamesSheet.tsx src/pages/PartyDetail.tsx \
   src/components/registry/RegistryNamePicker.tsx src/hooks/useParties.ts \
   src/components/project/ledger/CompanyFundingCard.tsx src/lib/finance/company-net.ts \
+  src/components/project/funds/PendingCarryCard.tsx supabase/migrations/20261028090000_close_the_money_loop.sql \
   src/lib/finance/loans.ts src/lib/finance/__tests__/loans.test.ts src/pages/company/ledger/LoanDialog.tsx e2e/company-loans.spec.ts \
   e2e/resource-registry.spec.ts supabase/migrations/20261027090000_resource_registry.sql; do
   need_file "$f"

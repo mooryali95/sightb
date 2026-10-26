@@ -67,6 +67,8 @@ export interface LedgerNode { kind: NodeKind; id: string | null }
 export interface IntercompanyEntry {
   id: string; companyId: string; date: string; amount: number; type: 'advance' | 'repayment';
   from: LedgerNode; to: LedgerNode; note: string; dueDate: string | null; salaryExpenseId: string | null;
+  /** A project's repayment: the fund the cash left. */
+  sourceFundId?: string | null;
 }
 
 export const COMPANY: LedgerNode = { kind: 'company', id: null };

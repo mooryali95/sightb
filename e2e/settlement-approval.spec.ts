@@ -42,9 +42,12 @@ test('approving a submitted settlement stamps the approver and settles the fund'
   await expect(page.getByText('تم اعتماد التسوية')).toBeVisible();
 
   await expect.poll(() => patches(wire, 'project_funds').length).toBe(1);
-  expect(patches(wire, 'fund_settlements').at(-1)).toMatchObject({ status: 'approved', approved_by: USER_ID });
-  expect(typeof patches(wire, 'fund_settlements').at(-1)!.approval_date).toBe('string');
+  const approval = patches(wire, 'fund_settlements').find((p) => p.status === 'approved');
+  expect(approval).toMatchObject({ status: 'approved', approved_by: USER_ID });
+  expect(typeof approval!.approval_date).toBe('string');
   expect(patches(wire, 'project_funds')[0]).toMatchObject({ status: 'settled' });
+  // The 20,000 returned in hand is kept for the project's next fund, not dropped.
+  await expect.poll(() => patches(wire, 'fund_settlements').at(-1)).toEqual({ carry_status: 'pending' });
 });
 
 test('rejecting needs a written reason and hands the fund back as acknowledged', async ({ page }) => {

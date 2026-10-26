@@ -602,6 +602,12 @@ export interface ProjectFund {
   acknowledgedBy?: string;
   createdAt: string;
   updatedAt: string;
+  /** Part of `amount` carried from an earlier fund's settlement, not newly transferred. */
+  carriedIn?: number;
+  /** The company ledger movement this fund came from, when the company funded it. */
+  ledgerEntryId?: string;
+  /** Cash paid back from this fund to the company (a repayment, not an expense). */
+  returnedOut?: number;
 }
 
 export interface FundSettlementAttachment {
@@ -625,6 +631,9 @@ export interface FundSettlement {
   status: SettlementStatus;
   rejectionReason?: string;
   differenceReason?: string;
+  /** Where the cash left at settlement went: into a later fund, waiting for one, or back to the company. */
+  carryStatus?: 'pending' | 'carried' | 'returned';
+  carriedToFundId?: string;
   attachments: FundSettlementAttachment[];
   createdAt: string;
   updatedAt: string;
