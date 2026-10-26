@@ -89,8 +89,8 @@ export function LedgerEntryDialog({ open, onOpenChange, companyId, parties, proj
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>حركة ذمم</DialogTitle>
-          <DialogDescription>سلفة أو سداد بين المنظومة ومشاريعها والأشخاص. السلفة ليست مصروفاً.</DialogDescription>
+          <DialogTitle>سلفة أو سداد</DialogTitle>
+          <DialogDescription>مال يخرج من طرف إلى آخر ثم يعود. ليس مصروفاً ولا يُنقص الربح. «سلفة» حين يخرج، و«سداد» حين يعود.</DialogDescription>
         </DialogHeader>
         <ToggleGroup type="single" value={type} onValueChange={(v) => v && setType(v as IntercompanyEntry['type'])} className="justify-start">
           <ToggleGroupItem value="advance" aria-label="سلفة">سلفة</ToggleGroupItem>

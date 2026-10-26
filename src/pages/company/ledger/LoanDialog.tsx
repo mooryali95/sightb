@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, HandCoins } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, HandCoins } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/finance';
 import { COMPANY } from '@/lib/finance/company-ledger';
@@ -33,18 +33,21 @@ export function LoanDialog({ open, onOpenChange, companyId, projects }: Props) {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState('');
+  // What the loan is for: the company's own spend, or funding a project.
+  const [purpose, setPurpose] = useState<'company' | 'project'>('company');
   const [projectId, setProjectId] = useState<string>(projects.length === 1 ? projects[0].id : NONE);
   const [funded, setFunded] = useState('');
   const [note, setNote] = useState('');
   const save = useLedgerMutation(companyId, createEntries);
 
   const value = parseFloat(amount) || 0;
-  const toProject = projectId !== NONE ? (funded === '' ? value : parseFloat(funded) || 0) : 0;
+  const toProject = purpose === 'project' && projectId !== NONE ? (funded === '' ? value : parseFloat(funded) || 0) : 0;
   const projectName = projects.find((p) => p.id === projectId)?.name ?? '';
 
   const submit = async () => {
     if (!lender.partyId) { toast.error('اختر المُقرض من السجل أو أضفه إليه'); return; }
     if (value <= 0) { toast.error('مبلغ القرض يجب أن يكون أكبر من صفر'); return; }
+    if (purpose === 'project' && projectId === NONE) { toast.error('اختر المشروع الذي يموّله القرض'); return; }
     if (toProject < 0 || toProject > value) { toast.error('تمويل المشروع لا يتجاوز مبلغ القرض'); return; }
     const label = note.trim();
     const rows: NewEntry[] = [{
@@ -82,21 +85,33 @@ export function LoanDialog({ open, onOpenChange, companyId, projects }: Props) {
           <div className="space-y-1"><Label htmlFor="loan-note">ملاحظة</Label><Input id="loan-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="اختياري" /></div>
         </div>
 
-        <div className="rounded-lg border p-3 space-y-3">
-          <p className="text-sm font-medium">تمويل مشروع من القرض</p>
-          <div className="grid grid-cols-2 gap-3">
-            <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger aria-label="المشروع المموَّل"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>يبقى في المنظومة</SelectItem>
-                {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {projectId !== NONE && (
-              <Input aria-label="مبلغ التمويل" type="number" min="0" step="0.01" value={funded} placeholder={value ? String(value) : 'كامل القرض'} onChange={(e) => setFunded(e.target.value)} />
-            )}
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium mb-2">القرض لماذا؟</legend>
+          <div role="radiogroup" aria-label="القرض لماذا؟" className="grid grid-cols-2 gap-2">
+            {([
+              ['company', Building2, 'مصاريف المنظومة', 'رواتب، إيجار، رسوم… تسدّدها المنظومة من دخلها'],
+              ['project', FolderKanban, 'تمويل مشروع', 'يُسترد من المشروع حين يحصّل دفعاته'],
+            ] as const).map(([key, Icon, title, hint]) => (
+              <button key={key} type="button" role="radio" aria-checked={purpose === key} onClick={() => setPurpose(key)}
+                className={`rounded-lg border p-3 text-right transition-colors ${purpose === key ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}>
+                <Icon className={`w-5 h-5 mb-1 ${purpose === key ? 'text-primary' : 'text-muted-foreground'}`} />
+                <span className="block text-sm font-semibold">{title}</span>
+                <span className="block text-[11px] text-muted-foreground leading-snug">{hint}</span>
+              </button>
+            ))}
           </div>
-        </div>
+          {purpose === 'project' && (
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <Select value={projectId} onValueChange={setProjectId}>
+                <SelectTrigger aria-label="المشروع المموَّل"><SelectValue placeholder="اختر المشروع" /></SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Input aria-label="مبلغ التمويل" type="number" min="0" step="0.01" value={funded} placeholder={value ? `كامل القرض (${value})` : 'كامل القرض'} onChange={(e) => setFunded(e.target.value)} />
+            </div>
+          )}
+        </fieldset>
 
         {value > 0 && (
           <div role="status" className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-sm space-y-1.5">
@@ -108,7 +123,8 @@ export function LoanDialog({ open, onOpenChange, companyId, projects }: Props) {
             <p className="text-xs text-muted-foreground">
               {COMPANY_LABEL} مدينة لـ{lender.text || 'المُقرض'} بـ {formatCurrency(value)}
               {toProject > 0 && <>، و«{projectName}» مدين لـ{COMPANY_LABEL} بـ {formatCurrency(toProject)}</>}.
-              {toProject > 0 && toProject < value && ` يبقى ${formatCurrency(value - toProject)} في المنظومة.`}
+              {toProject > 0 && toProject < value && ` يبقى ${formatCurrency(value - toProject)} في المنظومة لمصاريفها.`}
+              {purpose === 'company' && ' المبلغ في المنظومة لمصاريفها، ويُسدَّد من دخلها؛ ننبّهك قبل موعد السداد.'}
             </p>
           </div>
         )}

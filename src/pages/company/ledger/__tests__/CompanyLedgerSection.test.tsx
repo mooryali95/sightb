@@ -71,7 +71,7 @@ describe('CompanyLedgerSection', () => {
     expect(card('محمَّل على المشاريع')).toHaveTextContent('50% من مصاريف المنظومة');
     expect(card('باقٍ على المنظومة')).toHaveTextContent('6,000.00');
     // Owed to the company: Ayman 3,000 + project 40,000; owed by it: Omar's 2,000 rent.
-    expect(card('صافي الذمم')).toHaveTextContent('لنا 43,000.00 ر.س · علينا 2,000.00 ر.س');
+    expect(card('الصافي: لنا أو علينا')).toHaveTextContent('لنا عند الغير 43,000.00 ر.س · علينا للغير 2,000.00 ر.س');
   });
 
   it('says under each expense what belongs to the company and what was charged where', async () => {
@@ -86,8 +86,8 @@ describe('CompanyLedgerSection', () => {
   it('lists each balance with its direction and opens its statement', async () => {
     renderSection();
     await screen.findByText('راتب أكتوبر');
-    fireEvent.mouseDown(screen.getByRole('tab', { name: /الذمم/ }));
-    fireEvent.click(screen.getByRole('tab', { name: /الذمم/ }));
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /من له ومن عليه/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /من له ومن عليه/ }));
     const project = (await screen.findByText('مجمع المدار')).closest('.stat-card') as HTMLElement;
     expect(project).toHaveTextContent('لنا');
     expect(project).toHaveTextContent('مجمع المدار مدين للمنظومة');
@@ -103,7 +103,7 @@ describe('CompanyLedgerSection', () => {
     renderSection(false);
     await screen.findByText('راتب أكتوبر');
     expect(screen.queryByRole('button', { name: /مصروف منظومة/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /حركة ذمم/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /سلفة أو سداد/ })).not.toBeInTheDocument();
   });
 
   it('suggests a split by contract value and refuses charging more than the amount', async () => {
@@ -140,8 +140,8 @@ describe('settling a balance', () => {
   it('prefills the repayment, says the account closes, and records the movement', async () => {
     renderSection();
     await screen.findByText('راتب أكتوبر');
-    fireEvent.mouseDown(screen.getByRole('tab', { name: /الذمم/ }));
-    fireEvent.click(screen.getByRole('tab', { name: /الذمم/ }));
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /من له ومن عليه/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /من له ومن عليه/ }));
     const project = (await screen.findByText('مجمع المدار')).closest('.stat-card') as HTMLElement;
     fireEvent.click(within(project).getByRole('button', { name: 'تسجيل سداد' }));
     const dialog = await screen.findByRole('dialog');
