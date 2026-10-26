@@ -108,6 +108,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
       responsible: e.responsible || null, notes: e.notes || null,
       resource_id: e.resourceId || null, custody_id: e.custodyId || null,
       approval_status: e.approvalStatus || 'approved',
+      ...(e.partyId ? { party_id: e.partyId } : {}),
       approved_by: e.approvedBy || null,
       vendor: e.vendor || null,
       invoice_ref: e.invoiceRef || null,
@@ -156,6 +157,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (e.invoiceRef !== undefined) updates.invoice_ref = e.invoiceRef;
     if (e.isVatExempt !== undefined) updates.is_vat_exempt = e.isVatExempt;
     if (e.fundId !== undefined) updates.fund_id = e.fundId || null;
+    if (e.partyId !== undefined) updates.party_id = e.partyId || null;
     const { error } = await db.from('expenses').update(updates).eq('id', id);
     if (error) throw error;
     const existing = get().expenses.find((x) => x.id === id);

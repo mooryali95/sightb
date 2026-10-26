@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { RegistryNamePicker } from '@/components/registry/RegistryNamePicker';
 
 /** What the section needs to offer a budget item for a resource just added. */
 export interface AddedResource {
@@ -43,22 +44,31 @@ export function ResourceFormDialog({ open, onOpenChange, onRequestOpen, editing,
   const [name, setName] = useState(editing?.name ?? '');
   const [role, setRole] = useState(editing?.role ?? '');
   const [monthlyCost, setMonthlyCost] = useState(editing ? String(editing.monthlyCost) : '');
+  const [partyId, setPartyId] = useState<string | undefined>(editing?.partyId);
+  const companyId = useStore((s) => s.projects.find((p) => p.id === projectId)?.companyId);
+  // Sent only when the link changed, so a database without the registry never sees it.
+  const link = partyId !== editing?.partyId ? { partyId: partyId ?? '' } : {};
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
-    if (editingId) {
-      await updateResource(editingId, {
-        name: name.trim(), role: role.trim() || undefined,
-        monthlyCost: parseFloat(monthlyCost) || 0,
-      });
-      toast.success('تم تعديل المورد');
-    } else {
-      const newId = await addResource({
-        projectId, name: name.trim(),
-        role: role.trim() || undefined, monthlyCost: parseFloat(monthlyCost) || 0,
-      });
-      toast.success('تمت إضافة المورد');
-      onAdded({ resourceId: newId, name: name.trim(), role: role.trim(), monthlyCost: parseFloat(monthlyCost) || 0 });
+    try {
+      if (editingId) {
+        await updateResource(editingId, {
+          name: name.trim(), role: role.trim() || undefined,
+          monthlyCost: parseFloat(monthlyCost) || 0, ...link,
+        });
+        toast.success('تم تعديل المورد');
+      } else {
+        const newId = await addResource({
+          projectId, name: name.trim(),
+          role: role.trim() || undefined, monthlyCost: parseFloat(monthlyCost) || 0, ...link,
+        });
+        toast.success('تمت إضافة المورد');
+        onAdded({ resourceId: newId, name: name.trim(), role: role.trim(), monthlyCost: parseFloat(monthlyCost) || 0 });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'تعذّر حفظ المورد');
+      return;
     }
     onOpenChange(false);
   };
@@ -75,7 +85,9 @@ export function ResourceFormDialog({ open, onOpenChange, onRequestOpen, editing,
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label>الاسم</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: أحمد محمد" />
+            <RegistryNamePicker ariaLabel="اسم المورد" companyId={companyId} value={{ text: name, partyId }}
+              placeholder="استدعاء من السجل أو كتابة اسم" plainPlaceholder="مثال: أحمد محمد"
+              onChange={(v, party) => { setName(v.text); setPartyId(v.partyId); if (party?.role && !role.trim()) setRole(party.role); }} />
           </div>
           <div className="space-y-2">
             <Label>الدور / المسمى الوظيفي</Label>

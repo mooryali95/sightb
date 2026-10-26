@@ -56,6 +56,8 @@ does not happen again.
    - The company's resource registry: `src/lib/registry/**`,
      `src/services/registryService.ts`, `src/pages/company/registry/**`,
      `src/pages/PartyDetail.tsx` and migration `20261027090000_resource_registry.sql`.
+     The vendor on an expense and the name of a project resource are picked
+     with `src/components/registry/RegistryNamePicker.tsx`; keep it there.
      A name on an expense is linked to a registry entry, never retyped.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.

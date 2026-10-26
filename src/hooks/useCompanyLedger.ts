@@ -23,6 +23,10 @@ export function useLedgerMutation<T, R>(companyId: string, fn: (input: T) => Pro
   const client = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSettled: () => client.invalidateQueries({ queryKey: companyLedgerKey(companyId) }),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: companyLedgerKey(companyId) });
+      // Pickers read the registry on its own key (useParties).
+      client.invalidateQueries({ queryKey: ['parties', companyId] });
+    },
   });
 }

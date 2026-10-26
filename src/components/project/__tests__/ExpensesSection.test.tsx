@@ -20,6 +20,8 @@ import { ExpensesSection } from '../ExpensesSection';
 import {
   PROJECT_ID, FUND_ID, RESOURCE_ID, expenses, fund, outstandingAdvanceExpense, resource,
 } from './expenses-fixtures';
+// The registry is empty here, so the name fields stay plain inputs.
+vi.mock('@/hooks/useParties', () => ({ useParties: () => ({ data: [], isSuccess: true }) }));
 
 type Role = 'admin' | 'editor' | 'viewer';
 const roleState: { role: Role } = { role: 'admin' };
