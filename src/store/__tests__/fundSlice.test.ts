@@ -178,6 +178,17 @@ describe('the settlement', () => {
     expect(s.projectFunds[0].status).toBe('settled');
   });
 
+  it('never approves a gap nobody explained, and approves it once a reason is written', async () => {
+    useStore.setState({ projectFunds: [fund({ status: 'acknowledged' })], fundSettlements: [settlement({ status: 'submitted', difference: 3211 })] });
+    await expect(useStore.getState().approveSettlement('s1')).rejects.toThrow('فرق 3,211 دون سبب مكتوب');
+    expect(calls).toHaveLength(0);
+    useStore.setState({ fundSettlements: [settlement({ status: 'submitted', difference: 3211, differenceReason: 'صُرف على الملتقى بلا فواتير' })] });
+    answers.push({ data: settlementRow({ status: 'approved' }), error: null });
+    answers.push({ data: fundRow({ status: 'settled' }), error: null });
+    await useStore.getState().approveSettlement('s1');
+    expect(calls).toHaveLength(2);
+  });
+
   it('rejects with a trimmed reason, never without one, and hands the fund back to acknowledged', async () => {
     useStore.setState({ projectFunds: [fund({ status: 'acknowledged' })], fundSettlements: [settlement({ status: 'submitted' })] });
     await expect(useStore.getState().rejectSettlement('s1', '  ')).rejects.toThrow('يجب كتابة سبب الرفض');
