@@ -137,8 +137,8 @@ SELECT CASE WHEN missing = '' THEN '✅ aligned — Albania 199,133.16 direct, 4
   ELSE '❌ ' || missing END AS stages_2_and_3
 FROM (
   SELECT concat_ws(', ',
-    CASE WHEN (SELECT sum(amount) FROM public.expenses WHERE project_id = 'de74a099-0bf1-4237-8619-39352f38a704' AND approval_status <> 'rejected') <> 199133.16
-         THEN 'Albania direct spend is ' || (SELECT sum(amount) FROM public.expenses WHERE project_id = 'de74a099-0bf1-4237-8619-39352f38a704' AND approval_status <> 'rejected') || ', 199133.16 expected' END,
+    CASE WHEN (SELECT sum(amount) FROM public.expenses WHERE project_id = 'de74a099-0bf1-4237-8619-39352f38a704' AND approval_status <> 'rejected') NOT IN (199133.16, 201233.16)
+         THEN 'Albania direct spend is ' || (SELECT sum(amount) FROM public.expenses WHERE project_id = 'de74a099-0bf1-4237-8619-39352f38a704' AND approval_status <> 'rejected') || ', 199133.16 expected (201233.16 after stage 4)' END,
     CASE WHEN (SELECT coalesce(sum(a.amount), 0) FROM public.company_expense_allocations a
                WHERE a.project_id = 'de74a099-0bf1-4237-8619-39352f38a704' AND a.settled_in_project AND a.expense_id IN ('f3e743ef-b7f1-4912-a535-7567fc5a8332', '6515b300-0b27-4084-a39a-764017a99a6e', '77859c6f-d5a0-454b-96d7-9f88a8c615f3', 'cfe6b4f9-045b-4e9e-bba2-bab47de2a910', '53d99002-dc3f-42b0-b786-c5b85177fc39', '628d1d3a-de68-4bc2-9ac5-0b4a9c04c8bd')) <> 4611
          THEN 'the 4,611 is not charged to Albania as settled' END,
