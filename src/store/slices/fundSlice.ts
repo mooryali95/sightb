@@ -1,3 +1,4 @@
+import { needsReason } from '@/components/project/funds/settlementFigures';
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
 import { logger } from '@/lib/logger';
@@ -303,6 +304,12 @@ export const createFundSlice: StateCreator<AppState, [], [], FundSlice> = (set, 
     if (!settlement) throw new Error('التسوية غير موجودة');
     if (settlement.status !== 'submitted') {
       throw new Error('لا يمكن اعتماد تسوية ليست في حالة "مُرسلة"');
+    }
+    // A gap between what the fund received, what it spent and the cash
+    // returned is never approved silently: fund 4 of Albania was, and 3,211
+    // left no trace.
+    if (needsReason(settlement.difference) && !settlement.differenceReason?.trim()) {
+      throw new Error(`لا يمكن اعتماد تسوية فيها فرق ${settlement.difference.toLocaleString('en-US')} دون سبب مكتوب. أعدها لمعدّها ليوضح أين ذهب المبلغ.`);
     }
 
     const now = new Date().toISOString();
