@@ -142,13 +142,21 @@ export interface NewEntry {
   from: LedgerNode; to: LedgerNode; note: string; dueDate: string | null;
 }
 
+const entryRow = (input: NewEntry) => ({
+  company_id: input.companyId, date: input.date, amount: input.amount, type: input.type,
+  from_kind: input.from.kind, from_id: input.from.id, to_kind: input.to.kind, to_id: input.to.id,
+  note: input.note.trim(), due_date: input.dueDate,
+});
+
 export async function createEntry(input: NewEntry): Promise<void> {
-  const { error } = await db.from('intercompany_entries').insert({
-    company_id: input.companyId, date: input.date, amount: input.amount, type: input.type,
-    from_kind: input.from.kind, from_id: input.from.id, to_kind: input.to.kind, to_id: input.to.id,
-    note: input.note.trim(), due_date: input.dueDate,
-  });
+  const { error } = await db.from('intercompany_entries').insert(entryRow(input));
   if (error) fail(error, 'فشل حفظ الحركة');
+}
+
+/** Several movements in one insert, so a loan and its funding land together or not at all. */
+export async function createEntries(inputs: NewEntry[]): Promise<void> {
+  const { error } = await db.from('intercompany_entries').insert(inputs.map(entryRow));
+  if (error) fail(error, 'فشل حفظ الحركات');
 }
 
 export async function deleteEntry(id: string): Promise<void> {

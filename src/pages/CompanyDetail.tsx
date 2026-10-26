@@ -69,6 +69,11 @@ export default function CompanyDetail() {
     .filter((p) => !INACTIVE_STATUSES.includes(p.status))
     .map((p) => ({ id: p.id, name: p.name, weight: getEffectiveContractValue(p.contractValue, changeOrders.filter((o) => o.projectId === p.id)) })),
   [companyProjects, changeOrders]);
+  const ledgerCollected = useMemo(() => {
+    const ids = new Set(companyProjects.map((p) => p.id));
+    return revenues.filter((r) => ids.has(r.projectId) && r.status === 'collected')
+      .map((r) => ({ projectId: r.projectId, amount: r.amount, date: r.collectionDate || r.date }));
+  }, [companyProjects, revenues]);
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   // The stat card above counts spend through the summary library, which
@@ -276,7 +281,7 @@ export default function CompanyDetail() {
 
         <RegistrySection companyId={id!} projects={registryProjects} expenses={registryExpenses} canEdit={isAdmin || canEdit('company', id!)} />
 
-        <CompanyLedgerSection companyId={id!} projects={ledgerProjects} canEdit={isAdmin || canEdit('company', id!)} />
+        <CompanyLedgerSection companyId={id!} projects={ledgerProjects} collected={ledgerCollected} canEdit={isAdmin || canEdit('company', id!)} />
 
         <IndirectCostsCard companyId={id!} costs={compIndirectCosts} canEdit={isAdmin || canEdit('company', id!)} />
 
