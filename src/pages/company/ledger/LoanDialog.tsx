@@ -18,6 +18,7 @@ import { createEntries, type NewEntry } from '@/services/companyLedgerService';
 import { useLedgerMutation } from '@/hooks/useCompanyLedger';
 import { RegistryNamePicker, type RegistryName } from '@/components/registry/RegistryNamePicker';
 import { COMPANY_LABEL, type LedgerProject } from './nodes';
+import { useStore } from '@/store/useStore';
 
 interface Props {
   open: boolean;
@@ -39,6 +40,7 @@ export function LoanDialog({ open, onOpenChange, companyId, projects }: Props) {
   const [funded, setFunded] = useState('');
   const [note, setNote] = useState('');
   const save = useLedgerMutation(companyId, createEntries);
+  const createFund = useStore((s) => s.createFund);
 
   const value = parseFloat(amount) || 0;
   const toProject = purpose === 'project' && projectId !== NONE ? (funded === '' ? value : parseFloat(funded) || 0) : 0;
@@ -60,9 +62,25 @@ export function LoanDialog({ open, onOpenChange, companyId, projects }: Props) {
     });
     try {
       await save.mutateAsync(rows);
-      toast.success(toProject > 0 ? `سُجّل القرض وتمويل «${projectName}»` : 'سُجّل القرض');
-      onOpenChange(false);
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'فشل الحفظ'); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'فشل الحفظ'); return; }
+    if (toProject > 0) {
+      // The project can spend only through its funds: the funding arrives as
+      // one, so its expenses can draw on it. With a fund still open it goes
+      // in as an out-of-turn fund, which the project's rules allow with a reason.
+      const fundNote = `تمويل من قرض ${lender.text} عبر المنظومة`;
+      try {
+        await createFund(projectId, toProject, date, fundNote).catch(async (err: Error) => {
+          if (!/قبل تسوية الدفعة/.test(err.message)) throw err;
+          await createFund(projectId, toProject, date, undefined, { emergency: true, emergencyReason: fundNote });
+        });
+      } catch (e) {
+        toast.warning(`سُجّل القرض والتمويل، لكن تعذّر إنشاء دفعة «${projectName}»: ${e instanceof Error ? e.message : ''}. أنشئها من تبويب الدفعات في المشروع.`, { duration: 10000 });
+        onOpenChange(false);
+        return;
+      }
+    }
+    toast.success(toProject > 0 ? `سُجّل القرض وتمويل «${projectName}»، ووصلت المشروع دفعة بالمبلغ` : 'سُجّل القرض');
+    onOpenChange(false);
   };
 
   return (

@@ -386,7 +386,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
                         <td className="font-mono text-xs font-semibold">{formatCurrency(r.balance)}</td>
                         <td>
                           {canEdit && r.source === 'entry' && (
-                            <ConfirmDeleteDialog title="حذف الحركة" description="تُحذف الحركة ويُعاد حساب الرصيد."
+                            <ConfirmDeleteDialog title="حذف الحركة" description={/قرض|تمويل/.test(r.label) ? 'تُحذف هذه الحركة وحدها. القرض وتمويل المشروع منه حركتان، ولكل تمويل دفعة في المشروع: احذف ما يقابلها أيضاً حتى لا يبقى طرف معلّق.' : 'تُحذف الحركة ويُعاد حساب الرصيد.'}
                               onConfirm={async () => { try { await removeEntry.mutateAsync(r.sourceId); toast.success('تم الحذف'); } catch (err) { toast.error((err as Error).message); } }} />
                           )}
                         </td>
