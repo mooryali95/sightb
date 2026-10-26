@@ -53,6 +53,10 @@ does not happen again.
      role. Any new SECURITY DEFINER function a user may call starts with
      `public.require_second_factor()`. `scripts/second-factor-coverage.sh`
      fails the build when either is missing.
+   - The company's resource registry: `src/lib/registry/**`,
+     `src/services/registryService.ts`, `src/pages/company/registry/**`,
+     `src/pages/PartyDetail.tsx` and migration `20261027090000_resource_registry.sql`.
+     A name on an expense is linked to a registry entry, never retyped.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

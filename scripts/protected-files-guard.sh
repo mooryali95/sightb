@@ -25,7 +25,12 @@ for f in \
   supabase/functions/_shared/sessionGate.ts src/test/edge/session-gate.test.ts \
   supabase/migrations/20260924150000_second_factor_on_the_server.sql \
   supabase/migrations/20260926120000_second_factor_on_database_functions.sql \
-  scripts/second-factor-coverage.sh; do
+  scripts/second-factor-coverage.sh \
+  src/lib/registry/names.ts src/lib/registry/__tests__/names.test.ts \
+  src/lib/registry/party-summary.ts src/lib/registry/__tests__/party-summary.test.ts \
+  src/services/registryService.ts src/pages/company/registry/RegistrySection.tsx \
+  src/pages/company/registry/LinkNamesSheet.tsx src/pages/PartyDetail.tsx \
+  e2e/resource-registry.spec.ts supabase/migrations/20261027090000_resource_registry.sql; do
   need_file "$f"
 done
 need_text src/components/project/ExpensesSection.tsx "summarizeSpendByResource"
@@ -37,6 +42,8 @@ need_text src/pages/project-detail/ProjectSection.tsx "ChargedCostsCard"
 need_text src/App.tsx 'path="/organize"'
 need_text supabase/migrations/20261016120000_company_ledger.sql "SELECT public.require_second_factor();"
 need_text .github/workflows/quality.yml "second-factor-coverage.sh"
+need_text src/pages/CompanyDetail.tsx "RegistrySection"
+need_text src/App.tsx 'path="/company/:id/party/:partyId"'
 
 [ "$fail" = 0 ] && echo "Protected files and behaviours present."
 exit "$fail"

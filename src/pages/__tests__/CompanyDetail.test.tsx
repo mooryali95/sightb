@@ -36,6 +36,10 @@ vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => undefined, useCompanyD
 vi.mock('../company/ledger/CompanyLedgerSection', () => ({
   CompanyLedgerSection: ({ projects }: { projects: { name: string }[] }) => <div data-testid="ledger">{projects.map((p) => p.name).join('،')}</div>,
 }));
+// The registry has its own path (e2e/resource-registry.spec.ts); here it only has to be placed, with the company's projects.
+vi.mock('../company/registry/RegistrySection', () => ({
+  RegistrySection: ({ projects }: { projects: { name: string }[] }) => <div data-testid="registry">{projects.map((p) => p.name).join('،')}</div>,
+}));
 vi.mock('@/components/AppLayout', () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }),

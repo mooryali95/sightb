@@ -36,7 +36,10 @@ type Row = Record<string, unknown>;
 const num = (v: unknown) => Number(v ?? 0);
 const node = (kind: unknown, id: unknown): LedgerNode => ({ kind: kind as NodeKind, id: (id as string | null) ?? null });
 
-const toParty = (r: Row): Party => ({ id: r.id as string, companyId: r.company_id as string, name: r.name as string, kind: r.kind as PartyKind, archived: !!r.archived });
+const toParty = (r: Row): Party => ({
+  id: r.id as string, companyId: r.company_id as string, name: r.name as string, kind: r.kind as PartyKind, archived: !!r.archived,
+  role: (r.role as string | null | undefined) ?? null, aliases: Array.isArray(r.aliases) ? (r.aliases as string[]) : [],
+});
 const toExpense = (r: Row): CompanyExpense => ({
   id: r.id as string, companyId: r.company_id as string, date: r.date as string, amount: num(r.amount), description: (r.description as string) ?? '',
   kind: r.kind as CompanyExpenseKind, partyId: (r.party_id as string | null) ?? null, paidByPartyId: (r.paid_by_party_id as string | null) ?? null,
@@ -75,8 +78,12 @@ export async function loadCompanyLedger(companyId: string): Promise<CompanyLedge
   };
 }
 
-export async function createParty(input: { companyId: string; name: string; kind: PartyKind }): Promise<Party> {
-  const { data, error } = await db.from('parties').insert({ company_id: input.companyId, name: input.name.trim(), kind: input.kind }).select().single();
+export async function createParty(input: { companyId: string; name: string; kind: PartyKind; role?: string | null; aliases?: string[] }): Promise<Party> {
+  const row: Row = { company_id: input.companyId, name: input.name.trim(), kind: input.kind };
+  // Sent only when given, so a database before 20261027090000 still accepts a plain party.
+  if (input.role?.trim()) row.role = input.role.trim();
+  if (input.aliases?.length) row.aliases = input.aliases;
+  const { data, error } = await db.from('parties').insert(row).select().single();
   if (error) fail(error, 'فشل إضافة الطرف');
   return toParty(data);
 }
