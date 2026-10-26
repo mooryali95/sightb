@@ -112,7 +112,7 @@ function projectCard(name: string): HTMLElement {
 }
 
 function indirectBlock(): HTMLElement {
-  return screen.getByText('التكاليف غير المباشرة').closest('div.stat-card') as HTMLElement;
+  return screen.getByText('التكاليف غير المباشرة (سجل قديم)').closest('div.stat-card') as HTMLElement;
 }
 
 beforeEach(() => {
@@ -179,23 +179,11 @@ describe('indirect costs', () => {
     expect(within(block).getByText('5,000.00 ر.س')).toBeInTheDocument();
   });
 
-  it('adds one against the company, and refuses one without a description', async () => {
+  it('takes no new ones: company spend is recorded once, as a company expense', () => {
     renderPage();
-    fireEvent.click(within(indirectBlock()).getByRole('button', { name: /إضافة/ }));
-    const dialog = screen.getByRole('dialog');
-
-    fireEvent.click(within(dialog).getByRole('button', { name: 'إضافة' }));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('الوصف مطلوب'));
-    expect(actions.addIndirectCost).not.toHaveBeenCalled();
-
-    fireEvent.change(within(dialog).getByPlaceholderText('وصف التكلفة'), { target: { value: 'اشتراك برمجيات' } });
-    const [amount] = within(dialog).getAllByRole('spinbutton');
-    fireEvent.change(amount, { target: { value: '1500' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'إضافة' }));
-
-    await waitFor(() => expect(actions.addIndirectCost).toHaveBeenCalledWith(expect.objectContaining({
-      companyId: COMPANY_ID, category: 'other', description: 'اشتراك برمجيات', amount: 1500, month: 1, allocationMethod: 'equal',
-    })));
+    const block = indirectBlock();
+    expect(within(block).queryByRole('button', { name: /إضافة/ })).not.toBeInTheDocument();
+    expect(within(block).getByText(/يُسجَّل من «مصروف منظومة» فقط/)).toBeInTheDocument();
   });
 
   it('deletes one after confirmation', async () => {

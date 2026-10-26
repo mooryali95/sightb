@@ -3,11 +3,9 @@ import { stubSupabase } from './support/stub';
 import { COMPANY_ID, USER_ID } from './support/seed';
 
 /**
- * The company's overhead. Indirect costs are not tied to a project, so they
- * live on the company page and are spread over its projects later; what
- * matters here is that a new cost is written against the right company with
- * the category, month and amount typed, that a blank description never
- * reaches the database, and that deleting one takes it out of the total.
+ * Indirect costs recorded the older way. Company spend is now recorded once,
+ * as a company expense, so no new indirect cost can be added; those left
+ * are listed with their total until deleted, and the card goes with the last.
  */
 const INDIRECT = 'التكاليف غير المباشرة';
 const card = (page: import('@playwright/test').Page) => page.locator('.stat-card', { hasText: INDIRECT });
@@ -20,42 +18,12 @@ async function openCompany(page: import('@playwright/test').Page) {
   await expect(card(page)).toBeVisible();
 }
 
-test('adding a rent cost writes it against the company and lifts the overhead total', async ({ page }) => {
+test('company spend is recorded once: no indirect-cost form, and no card while none are left', async ({ page }) => {
   const wire = await stubSupabase(page);
-  await openCompany(page);
-  await expect(card(page).getByText('لا توجد تكاليف غير مباشرة')).toBeVisible();
-
-  await card(page).getByRole('button', { name: 'إضافة' }).click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('heading', { name: 'إضافة تكلفة غير مباشرة' })).toBeVisible();
-
-  // A blank description is refused before any write.
-  await dialog.getByRole('button', { name: 'إضافة', exact: true }).click();
-  await expect(page.getByText('الوصف مطلوب')).toBeVisible();
+  await page.goto(`/company/${COMPANY_ID}`);
+  await expect(page.getByText('شركة الاختبار').first()).toBeVisible();
+  await expect(card(page)).toHaveCount(0);
   expect(rows(wire, 'indirect_costs', 'POST')).toHaveLength(0);
-
-  await dialog.getByRole('combobox').click();
-  await page.getByRole('option', { name: 'إيجار' }).click();
-  await dialog.getByPlaceholder('وصف التكلفة').fill('إيجار المكتب الرئيسي');
-  const numbers = dialog.locator('input[type="number"]');
-  await numbers.nth(0).fill('24000');
-  await numbers.nth(1).fill('3');
-  await dialog.getByRole('button', { name: 'إضافة', exact: true }).click();
-  await expect(page.getByText('تم إضافة التكلفة')).toBeVisible();
-
-  await expect.poll(() => rows(wire, 'indirect_costs', 'POST').length).toBe(1);
-  const posted = rows(wire, 'indirect_costs', 'POST')[0] as Record<string, unknown>;
-  expect(posted).toMatchObject({
-    company_id: COMPANY_ID, user_id: USER_ID, category: 'rent',
-    description: 'إيجار المكتب الرئيسي', month: 3, allocation_method: 'equal',
-  });
-  expect(Number(posted.amount)).toBe(24000);
-
-  const row = card(page).getByRole('row').filter({ hasText: 'إيجار المكتب الرئيسي' });
-  await expect(row).toContainText('إيجار');
-  await expect(row).toContainText('24,000.00');
-  await expect(row).toContainText('شهر 3');
-  await expect(card(page).getByText(/24,000\.00/).last()).toBeVisible();
 });
 
 test('deleting a cost asks first, then drops it from the list and the total', async ({ page }) => {

@@ -35,7 +35,8 @@ export interface SettlementFigures {
 /** The figures the settlement dialog shows for a fund, given the cash typed in. */
 export function settlementFigures(fund: ProjectFund, rows: FundRows, remainingCash: number): SettlementFigures {
   const { expenses, custodies, paymentRequests, cashTransfers } = rows;
-  const spent = getFundSpent(fund.id, expenses, custodies, paymentRequests, cashTransfers);
+  // Paid back to the company from the fund leaves it like spend, though it is no expense.
+  const spent = getFundSpent(fund.id, expenses, custodies, paymentRequests, cashTransfers) + (fund.returnedOut ?? 0);
   return {
     spent,
     breakdown: {
