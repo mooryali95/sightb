@@ -143,6 +143,12 @@ describe('payment requests', () => {
     expect(useStore.getState().paymentRequests[0].status).toBe('cancelled');
   });
 
+  it('refuses to cancel a paid request, whose cash and expense already moved', async () => {
+    useStore.setState({ paymentRequests: [advance({ status: 'paid' })] });
+    await expect(useStore.getState().cancelPaymentRequest('pr1')).rejects.toThrow('لا يُلغى طلب مدفوع');
+    expect(svc.updatePaymentRequestRaw).not.toHaveBeenCalled();
+  });
+
   it('pays from one source, reloads the payables, and brings the expense the database created', async () => {
     useStore.setState({ paymentRequests: [advance({ status: 'scheduled', isAdvanceOutstanding: false })] });
     vi.mocked(svc.updatePaymentRequestRaw).mockResolvedValue(reqRow({ status: 'paid', paid_date: '2026-04-02', auto_created_expense_id: 'e-auto', is_advance_outstanding: true }) as never);
@@ -181,6 +187,8 @@ describe('settling an advance', () => {
     vi.useFakeTimers({ now: new Date('2026-03-15T10:00:00Z'), toFake: ['Date'] });
     useStore.setState({ paymentRequests: [advance({ paidFromFundId: 'f1', budgetItemId: 'b1' })] });
     vi.mocked(svc.createSettlementExpenseRaw).mockResolvedValue({ id: 'e-doc' } as never);
+    // First read: still outstanding (the guard); then the row the trigger settled.
+    vi.mocked(prs.getPaymentRequestRaw).mockResolvedValueOnce(reqRow({ status: 'paid', is_advance_outstanding: true, refunded_amount: '500', budget_item_id: 'b1' }) as never);
     vi.mocked(prs.getPaymentRequestRaw).mockResolvedValue(reqRow({ is_advance_outstanding: false, refunded_amount: '2000' }) as never);
     vi.mocked(prs.getExpenseRaw).mockResolvedValue({ id: 'e-doc', project_id: P, amount: '1500', category: 'travel', description: 'x', date: 'd', month: 3 } as never);
     vi.mocked(prs.listSettlementEventsRaw).mockResolvedValue([{ id: 'ev1', payment_request_id: 'pr1', project_id: P, event_type: 'documented', amount: '1500', created_by: 'user-1', created_at: 'c' }] as never);
@@ -195,6 +203,21 @@ describe('settling an advance', () => {
     expect(s.expenses.map((e) => e.id)).toEqual(['e-doc']);
     expect(s.settlementEvents.map((e) => e.eventType)).toEqual(['documented']);
     vi.useRealTimers();
+  });
+
+  it('reads the advance from the database first: one settled in another tab is not settled again', async () => {
+    useStore.setState({ paymentRequests: [advance()] });
+    vi.mocked(prs.getPaymentRequestRaw).mockResolvedValueOnce(reqRow({ is_advance_outstanding: false }) as never);
+    await expect(useStore.getState().settleAdvance('pr1', { type: 'documented' })).rejects.toThrow('السلفة مسوّاة بالفعل');
+    expect(svc.createSettlementExpenseRaw).not.toHaveBeenCalled();
+  });
+
+  it('undoes the settlement expense when its event is refused, so the cost is not counted twice', async () => {
+    useStore.setState({ paymentRequests: [advance()] });
+    vi.mocked(svc.createSettlementExpenseRaw).mockResolvedValue({ id: 'e-orphan' } as never);
+    vi.mocked(svc.createSettlementEventRaw).mockRejectedValueOnce(new Error('refused'));
+    await expect(useStore.getState().settleAdvance('pr1', { type: 'documented' })).rejects.toThrow('refused');
+    expect(svc.deleteExpenseRaw).toHaveBeenCalledWith('e-orphan');
   });
 
   it('refunds cash to the source it came from with no expense, and writes a deduction off as VAT-exempt salary', async () => {
@@ -237,6 +260,15 @@ describe('settling an advance', () => {
     expect(useStore.getState().expenses).toEqual([]);
     expect(svc.createSettlementEventRaw).toHaveBeenCalledWith({ payment_request_id: 'pr1', project_id: P, event_type: 'reverse', amount: 1500, reversed_event_id: 'ev1', notes: 'خطأ في المبلغ', created_by: 'user-1' });
     expect(prs.listSettlementEventsRaw).toHaveBeenCalledWith('pr1');
+    // The reverse event goes in before the expense goes out.
+    expect(vi.mocked(svc.createSettlementEventRaw).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(svc.deleteExpenseRaw).mock.invocationCallOrder[0]);
+  });
+
+  it('leaves the expense in place when the reverse event is refused', async () => {
+    vi.mocked(svc.getSettlementEventRaw).mockResolvedValue({ id: 'ev1', event_type: 'documented', amount: '1500', payment_request_id: 'pr1', project_id: P, expense_id: 'e-doc' } as never);
+    vi.mocked(svc.createSettlementEventRaw).mockRejectedValueOnce(new Error('refused'));
+    await expect(useStore.getState().reverseSettlementEvent('ev1', 'خطأ')).rejects.toThrow('refused');
+    expect(svc.deleteExpenseRaw).not.toHaveBeenCalled();
   });
 });
 
