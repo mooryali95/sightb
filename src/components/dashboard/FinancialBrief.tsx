@@ -60,10 +60,10 @@ export function FinancialBrief({ netCash, receivables, plannedProfit, indirectTo
           <div className="grid grid-cols-3">
             <Figure icon={<TrendingUp className="w-3.5 h-3.5" />} label="ربح المشاريع" value={formatCurrency(plannedProfit)} tone={plannedProfit >= 0 ? undefined : 'bad'}
               formula="قيمة العقود الفعّالة − الموازنات المعتمدة للمشاريع الظاهرة." />
-            <Figure icon={<Building2 className="w-3.5 h-3.5" />} label="تكاليف الشركة غير المباشرة" value={formatCurrency(indirectTotal)} tone="muted"
-              formula="التكاليف غير المباشرة المسجّلة على الشركات الظاهرة. تُطرح من ربح المشاريع كما في صفحة الشركة." />
+            <Figure icon={<Building2 className="w-3.5 h-3.5" />} label="مصاريف الشركات" value={formatCurrency(indirectTotal)} tone="muted"
+              formula="ما صرفته الشركات الظاهرة على نفسها (رواتب، إيجار، رسوم…) مع التكاليف غير المباشرة القديمة. تُطرح من ربح المشاريع كما في صفحة الشركة." />
             <Figure icon={<Landmark className="w-3.5 h-3.5" />} label={`صافي الشركة · ${netPlannedMargin.toFixed(1)}%`} value={formatCurrency(netPlannedProfit)} tone={netPlannedProfit >= 0 ? 'good' : 'bad'}
-              formula="ربح المشاريع − تكاليف الشركة غير المباشرة. ربح مخطط، وليس الربح النقدي المحقق." />
+              formula="ربح المشاريع − مصاريف الشركات. يساوي «صافي ربح الشركة» في صفحتها. ربح مخطط، وليس الربح النقدي المحقق." />
           </div>
         </div>
       </div>

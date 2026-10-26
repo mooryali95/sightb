@@ -44,6 +44,8 @@ export interface DashboardInput {
   milestones: Milestone[];
   risks: Risk[];
   indirectCosts?: IndirectCost[];
+  /** Company expenses (salaries, rent, fees), by company: they come off the net like on the company page. */
+  companyExpenses?: { companyId: string; amount: number }[];
 }
 
 export interface DateRange { start: Date; end: Date }
@@ -173,7 +175,8 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   // which nets them off the same way. With one company chosen, only its own.
   const visibleCompanyIds = new Set(filteredProjects.map((p) => p.companyId));
   if (f.filterCompany !== 'all') visibleCompanyIds.add(f.filterCompany);
-  const indirectTotal = (input.indirectCosts ?? []).filter((c) => visibleCompanyIds.has(c.companyId)).reduce((s, c) => s + c.amount, 0);
+  const indirectTotal = (input.indirectCosts ?? []).filter((c) => visibleCompanyIds.has(c.companyId)).reduce((s, c) => s + c.amount, 0)
+    + (input.companyExpenses ?? []).filter((c) => visibleCompanyIds.has(c.companyId)).reduce((s, c) => s + c.amount, 0);
   const netPlannedProfit = plannedProfit - indirectTotal;
   const netPlannedMargin = effectiveTotalContract > 0 ? (netPlannedProfit / effectiveTotalContract) * 100 : 0;
 

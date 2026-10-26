@@ -1,3 +1,4 @@
+import { useCompanyExpenseAmounts } from '@/hooks/useCompanyLedger';
 import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
@@ -48,6 +49,7 @@ export default function Dashboard() {
   const setShowInactive = (v: boolean) => update({ showInactive: v });
 
   const core = useCoreData();
+  const companyExpenses = useCompanyExpenseAmounts();
   useDetailsData();
 
   useEffect(() => {
@@ -57,8 +59,8 @@ export default function Dashboard() {
   }, [core.isError]);
 
   const figures = useMemo(
-    () => dashboardFigures({ companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts }, filters),
-    [companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, filters],
+    () => dashboardFigures({ companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, companyExpenses: companyExpenses.data }, filters),
+    [companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, companyExpenses.data, filters],
   );
   const {
     filteredProjects, filteredBudgetItems, filteredAllExpenses, filteredAllRevenues, filteredChangeOrders,
