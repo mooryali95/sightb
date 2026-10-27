@@ -75,3 +75,22 @@ test('the vendor is picked from the registry, so the expense is linked to the pe
   await expect.poll(() => posts(wire).length).toBe(1);
   expect(posts(wire)[0]).toMatchObject({ vendor: 'د أيمن أصلان', party_id: AYMAN });
 });
+
+test('more than the fund holds: the fund pays what it has, and the rest is owed to the project manager who paid it', async ({ page }) => {
+  const MANAGER = 'bbbbbbbb-0000-4000-8000-0000000000bb';
+  const wire = await stubSupabase(page, {
+    resources: [{ id: MANAGER, project_id: PROJECT_ID, name: 'عمر عبدالحميد', role: 'مدير مشروع', monthly_cost: 0, user_id: USER_ID, created_at: '2026-01-01T00:00:00Z' }],
+  });
+  const dialog = await openForm(page);
+  await dialog.getByPlaceholder('0').fill('40000');
+  const note = dialog.getByRole('status').filter({ hasText: 'المبلغ أكبر مما في المصدر' });
+  await expect(note).toContainText('2,000.00');
+  await expect(note.getByRole('combobox', { name: 'من دفع الزائد' })).toContainText('عمر عبدالحميد');
+  await dialog.getByRole('button', { name: 'إضافة', exact: true }).click();
+  await expect(page.getByText(/مستحقة لمن دفع الزائد/)).toBeVisible();
+
+  await expect.poll(() => posts(wire).length).toBe(1);
+  expect(posts(wire)[0]).toMatchObject({ fund_id: FUND_ID, amount: 38000, description: 'إيجار رافعة' });
+  const owed = wire.writes.find((w) => w.method === 'POST' && w.table === 'resource_reimbursements')?.body as Record<string, unknown>;
+  expect(owed).toMatchObject({ resource_id: MANAGER, source_kind: 'resource', amount: 2000, status: 'approved' });
+});

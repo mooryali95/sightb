@@ -30,6 +30,7 @@ import { StandaloneProjectCards } from './company/StandaloneProjectCards';
 import { buildCompanyExport } from './company/buildCompanyExport';
 import { CompanyLedgerSection } from './company/ledger/CompanyLedgerSection';
 import { RegistrySection } from './company/registry/RegistrySection';
+import { IntegrityCard } from './company/IntegrityCard';
 
 /** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
 const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
@@ -288,6 +289,8 @@ export default function CompanyDetail() {
         <PortfolioCards summaries={summary?.portfolioSummaries ?? []} projects={visibleCompanyProjects} countedExpenses={countedExpenses} changeOrders={changeOrders} />
 
         <RegistrySection companyId={id!} projects={registryProjects} expenses={registryExpenses} canEdit={isAdmin || canEdit('company', id!)} />
+
+        <IntegrityCard projects={companyProjects} />
 
         <CompanyLedgerSection companyId={id!} projects={ledgerProjects} collected={ledgerCollected} canEdit={isAdmin || canEdit('company', id!)} />
 
