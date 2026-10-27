@@ -38,6 +38,8 @@ export interface SourceResolution {
   error: string | null;
   /** The message deserves a longer toast. */
   long?: boolean;
+  /** The amount is more than the source holds: what it still holds, and the rest. */
+  over?: { available: number; excess: number };
 }
 
 /**
@@ -53,7 +55,8 @@ export function resolveExpenseSource(i: SourceInput): SourceResolution {
   const effectiveFundId = hasCustody
     ? undefined
     : (chosen(i.fundId) ?? (fundIsRequired && !i.editing ? i.activeFund?.id : undefined));
-  const done = (error: string | null, long?: boolean): SourceResolution => ({ effectiveFundId, custodyId, error, long });
+  const done = (error: string | null, long?: boolean, over?: SourceResolution['over']): SourceResolution => ({ effectiveFundId, custodyId, error, long, over });
+  const overOf = (available: number) => ({ available: Math.max(0, available), excess: Math.round((i.amount - Math.max(0, available)) * 100) / 100 });
 
   if (fundBlocksSubmit) {
     return done(`الدفعة #${i.activeFund!.fundNumber} لم يُقَرّ باستلامها بعد. اضغط "إقرار الاستلام" أعلى النموذج.`);
@@ -72,14 +75,14 @@ export function resolveExpenseSource(i: SourceInput): SourceResolution {
     if (i.amount > remaining) {
       return done(
         `المبلغ (${formatCurrency(i.amount)}) يتجاوز المتبقي في العهدة (${formatCurrency(remaining)}). قسّم المصروف لجزأين: الأول من هذه العهدة بالمبلغ المتاح، والباقي من عهدة/دفعة أخرى.`,
-        true,
+        true, overOf(remaining),
       );
     }
   }
   if (!i.editing && !hasCustody && effectiveFundId && effectiveFundId === i.activeFund?.id && i.amount > i.activeFundRemaining) {
     return done(
       `المبلغ (${formatCurrency(i.amount)}) يتجاوز المتبقي في الدفعة #${i.activeFund!.fundNumber} (${formatCurrency(i.activeFundRemaining)}). قسّم المصروف، أو سجّل دفعة جديدة، أو حرّر سلفة قائمة.`,
-      true,
+      true, overOf(i.activeFundRemaining),
     );
   }
   return done(null);

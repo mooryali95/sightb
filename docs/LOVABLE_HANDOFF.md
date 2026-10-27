@@ -67,6 +67,10 @@ does not happen again.
      never booked as an expense; company funding links its fund
      (`ledger_entry_id`). Company overhead is recorded only as a company
      expense; the indirect-cost form is gone on purpose.
+   - Data integrity (`src/lib/finance/integrity.ts`, «سلامة البيانات» on the
+     company page): every amount has a source, nothing twice, every custody
+     and fund balances, every gap has its reason. An expense beyond its
+     source books the source's part and owes the rest to whoever paid it.
      A name on an expense is linked to a registry entry, never retyped.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
