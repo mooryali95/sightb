@@ -8,7 +8,7 @@ import {
   startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear,
   subMonths, subQuarters, subYears, isWithinInterval, parseISO,
 } from 'date-fns';
-import { getCountedExpenses, getTotalPlanned } from '@/lib/finance';
+import { getCountedExpenses, getEffectiveContractValue, getTotalPlanned } from '@/lib/finance';
 import { normalizeArabicName } from '@/lib/resource-spend';
 import {
   PROJECT_STATUS_LABELS,
@@ -81,11 +81,14 @@ export function isInRange(dateStr: string, range: DateRange | null): boolean {
 }
 
 /**
- * One rule for "needs attention", for the count in the strip and the list
- * below it: spend past 90% of the budget, or a project on hold or cancelled.
+ * One rule for "needs attention", wherever it is counted (the dashboard's
+ * strip and list, the financial overview): spend past 90% of the budget, a
+ * planned loss (a budget above the effective contract), or a project on hold
+ * or cancelled. `status` is omitted for a portfolio or a company.
  */
-export function needsAttention(project: Project, actual: number, planned: number): boolean {
-  return (planned > 0 && actual / planned > 0.9) || project.status === 'on-hold' || project.status === 'cancelled';
+export function needsAttention(project: Pick<Project, 'status'> | null, actual: number, planned: number, plannedProfit = 0): boolean {
+  return (planned > 0 && actual / planned > 0.9) || plannedProfit < 0
+    || project?.status === 'on-hold' || project?.status === 'cancelled';
 }
 
 /** The projects the filters leave visible. */
@@ -163,7 +166,8 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   const attentionProjectsCount = filteredProjects.filter((project) => {
     const spend = filteredAllExpenses.filter((expense) => expense.projectId === project.id).reduce((sum, expense) => sum + expense.amount, 0);
     const plan = getTotalPlanned(filteredBudgetItems.filter((item) => item.projectId === project.id));
-    return needsAttention(project, spend, plan);
+    const contract = getEffectiveContractValue(project.contractValue, filteredChangeOrders.filter((o) => o.projectId === project.id));
+    return needsAttention(project, spend, plan, contract - plan);
   }).length;
 
   // Cash position under the period: collected minus counted spend.

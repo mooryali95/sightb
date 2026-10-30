@@ -22,6 +22,7 @@ for f in \
   src/lib/project-placement.ts src/lib/__tests__/project-placement.test.ts \
   src/pages/Organize.tsx src/pages/__tests__/Organize.test.tsx \
   src/components/project/ledger/ChargedCostsCard.tsx \
+  src/pages/__tests__/FinancialOverview.test.tsx src/hooks/__tests__/useDashboardFilters.test.tsx \
   supabase/functions/_shared/sessionGate.ts src/test/edge/session-gate.test.ts \
   supabase/migrations/20260924150000_second_factor_on_the_server.sql \
   supabase/migrations/20260926120000_second_factor_on_database_functions.sql \
@@ -45,6 +46,8 @@ need_text AGENTS.md "docs/LOVABLE_HANDOFF.md"
 need_text src/pages/CompanyDetail.tsx "CompanyLedgerSection"
 need_text src/pages/project-detail/ProjectSection.tsx "ChargedCostsCard"
 need_text src/App.tsx 'path="/organize"'
+need_text src/pages/FinancialOverview.tsx "needsAttention"
+need_text src/pages/dashboard/dashboardFigures.ts "export function needsAttention"
 need_text supabase/migrations/20261016120000_company_ledger.sql "SELECT public.require_second_factor();"
 need_text .github/workflows/quality.yml "second-factor-coverage.sh"
 need_text src/pages/CompanyDetail.tsx "RegistrySection"

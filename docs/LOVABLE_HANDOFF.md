@@ -43,6 +43,9 @@ does not happen again.
      `src/services/companyLedgerService.ts`, `src/pages/company/ledger/**`,
      `src/components/project/ledger/**`, `src/lib/project-placement.ts`,
      `src/pages/Organize.tsx`, and migration `20261016120000_company_ledger.sql`.
+   - The dashboard's figures and filters: `src/pages/dashboard/**`,
+     `src/hooks/useDashboardFilters.ts`. `src/pages/FinancialOverview.tsx` may
+     be restyled, but its counts must keep using `needsAttention`.
    - The second factor on the server: `supabase/functions/_shared/sessionGate.ts`
      and its test `src/test/edge/session-gate.test.ts`, and migrations
      `20260924150000_second_factor_on_the_server.sql` and

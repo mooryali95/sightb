@@ -19,8 +19,13 @@ import { formatCurrency, getProjectSummary } from '@/lib/finance';
 import { getCompanySummary, getPortfolioSummary } from '@/lib/portfolio';
 import { actualProfit } from '@/lib/finance/actual-profit';
 import { cn } from '@/lib/utils';
+import { normalizeArabicName } from '@/lib/resource-spend';
+import { INACTIVE_STATUSES, needsAttention } from '@/pages/dashboard/dashboardFigures';
+import type { ProjectStatus } from '@/types/project';
 
 interface Row {
+  /** Projects only; a portfolio or a company has none. */
+  status?: ProjectStatus;
   id: string; name: string; parent: string; href: string; currency: string; mixed: boolean;
   contract: number; planned: number; actual: number; collected: number; profit: number; margin: number;
   actualProfit: number; actualMargin: number;
@@ -42,7 +47,8 @@ const COLUMNS: { key: keyof Row | 'spend'; label: string; tip: string }[] = [
 
 const pct = (n: number) => `${n.toFixed(1)}%`;
 const spend = (r: Row) => (r.planned > 0 ? (r.actual / r.planned) * 100 : 0);
-const isRisk = (r: Row) => spend(r) > 90 || r.margin < 0;
+// The same rule as the dashboard's "needs attention", so the two counts agree.
+const isRisk = (r: Row) => needsAttention(r.status ? { status: r.status } : null, r.actual, r.planned, r.profit);
 
 function Kpi({ label, value, tone, hint }: { label: string; value: number; tone?: 'destructive' | 'success'; hint?: string }) {
   return (
@@ -68,7 +74,7 @@ export default function FinancialOverview() {
       const sum = getProjectSummary(p,
         s.budgetItems.filter((b) => b.projectId === p.id), s.expenses.filter((e) => e.projectId === p.id),
         s.revenues.filter((r) => r.projectId === p.id), s.changeOrders.filter((c) => c.projectId === p.id));
-      return { id: p.id, name: p.name, parent: s.portfolios.find((f) => f.id === p.portfolioId)?.name ?? companyName(p.companyId),
+      return { status: p.status, id: p.id, name: p.name, parent: s.portfolios.find((f) => f.id === p.portfolioId)?.name ?? companyName(p.companyId),
         href: `/project/${p.id}`, currency: p.currency, mixed: false, contract: sum.effectiveContractValue, planned: sum.totalPlanned,
         actual: sum.totalActual, collected: sum.collectedRevenue, profit: sum.plannedProfit, margin: sum.plannedProfitMargin };
     });
@@ -95,11 +101,14 @@ export default function FinancialOverview() {
   }, [s.companies, s.portfolios, s.projects, s.budgetItems, s.expenses, s.revenues, s.changeOrders, s.milestones, s.risks, s.indirectCosts]);
 
   const order = (rows: Row[]) => [...rows]
-    .filter((r) => (!q.trim() || `${r.name} ${r.parent}`.includes(q.trim())) && (!onlyRisk || isRisk(r)))
+    .filter((r) => (!query || normalizeArabicName(`${r.name} ${r.parent}`).includes(query)) && (!onlyRisk || isRisk(r)))
     .sort((a, b) =>
       sort === 'name' ? a.name.localeCompare(b.name, 'ar') : sort === 'spend' ? spend(b) - spend(a) : b[sort] - a[sort]);
 
-  const riskCount = projectRows.filter(isRisk).length;
+  const query = normalizeArabicName(q);
+  // "Active" means not finished: completed and cancelled projects are listed but not counted here.
+  const activeProjects = projectRows.filter((r) => !r.status || !INACTIVE_STATUSES.includes(r.status));
+  const riskCount = activeProjects.filter(isRisk).length;
 
   return (
     <AppLayout>
@@ -108,9 +117,9 @@ export default function FinancialOverview() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Kpi label="الشركات" value={companyRows.length} />
         <Kpi label="المحافظ" value={portfolioRows.length} />
-        <Kpi label="المشاريع النشطة" value={projectRows.length} />
+        <Kpi label="المشاريع النشطة" value={activeProjects.length} hint="بدون المكتملة والملغاة والمؤرشفة." />
         <Kpi label="مشاريع تحتاج انتباه" value={riskCount} tone={riskCount ? 'destructive' : 'success'}
-          hint="تجاوز الصرف 90% من الموازنة أو هامش ربح سالب." />
+          hint="بنفس قاعدة لوحة التحكم: صرف يتجاوز 90% من الموازنة، أو خسارة مخططة، أو مشروع معلّق أو ملغى." />
       </div>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative">
