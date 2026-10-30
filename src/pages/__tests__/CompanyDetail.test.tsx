@@ -31,10 +31,21 @@ vi.mock('@/hooks/useRole', () => ({
     isAdminFor: () => roleState.isAdmin, canEdit: () => roleState.canEdit, hasAccess: () => true, loading: false,
   }),
 }));
+// One company expense of 20,000, 5,000 of it charged to a project: the net takes off all 20,000.
+vi.mock('@/hooks/useCompanyLedger', () => ({
+  useCompanyLedger: () => ({ data: {
+    expenses: [{ id: 'ce1', companyId: 'c', date: '2026-01-01', amount: 20000, description: 'رواتب', kind: 'salary', partyId: null, paidByPartyId: null }],
+    allocations: [{ id: 'a1', expenseId: 'ce1', projectId: 'p', amount: 5000 }], entries: [], parties: [],
+  } }),
+}));
 vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => undefined, useCompanyData: () => undefined }));
 // The company ledger has its own tests (CompanyLedgerSection.test.tsx); here it only has to be placed.
 vi.mock('../company/ledger/CompanyLedgerSection', () => ({
   CompanyLedgerSection: ({ projects }: { projects: { name: string }[] }) => <div data-testid="ledger">{projects.map((p) => p.name).join('،')}</div>,
+}));
+// The registry has its own path (e2e/resource-registry.spec.ts); here it only has to be placed, with the company's projects.
+vi.mock('../company/registry/RegistrySection', () => ({
+  RegistrySection: ({ projects }: { projects: { name: string }[] }) => <div data-testid="registry">{projects.map((p) => p.name).join('،')}</div>,
 }));
 vi.mock('@/components/AppLayout', () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('sonner', () => ({
@@ -101,7 +112,7 @@ function projectCard(name: string): HTMLElement {
 }
 
 function indirectBlock(): HTMLElement {
-  return screen.getByText('التكاليف غير المباشرة').closest('div.stat-card') as HTMLElement;
+  return screen.getByText('التكاليف غير المباشرة (سجل قديم)').closest('div.stat-card') as HTMLElement;
 }
 
 beforeEach(() => {
@@ -117,11 +128,12 @@ describe('the figures at the top', () => {
   it('rolls the three projects up and nets the indirect costs off the planned profit', () => {
     renderPage();
     // 100,000 + 50,000 + 20,000 contracts; 10,000 + 5,000 counted spend;
-    // planned profit 170,000 with no budget, less 5,000 indirect.
+    // planned profit 170,000 with no budget, less 5,000 indirect and the
+    // company's own 20,000, allocated part included.
     expect(statFigure('قيمة العقود الفعّالة')).toBe('170,000.00 ر.س');
     expect(statFigure('المصروف الفعلي')).toBe('15,000.00 ر.س');
-    expect(statFigure('صافي الربح بعد غير المباشرة')).toBe('165,000.00 ر.س');
-    expect(screen.getByText('هامش: 97.1%')).toBeInTheDocument();
+    expect(statFigure('صافي ربح الشركة')).toBe('145,000.00 ر.س');
+    expect(screen.getByText(/هامش 85\.3% · بعد مصاريف المنظومة 20,000\.00 ر\.س وغير المباشرة 5,000\.00 ر\.س/)).toBeInTheDocument();
   });
 
   it('counts the same expenses in the pie chart as in the stat card', () => {
@@ -167,23 +179,11 @@ describe('indirect costs', () => {
     expect(within(block).getByText('5,000.00 ر.س')).toBeInTheDocument();
   });
 
-  it('adds one against the company, and refuses one without a description', async () => {
+  it('takes no new ones: company spend is recorded once, as a company expense', () => {
     renderPage();
-    fireEvent.click(within(indirectBlock()).getByRole('button', { name: /إضافة/ }));
-    const dialog = screen.getByRole('dialog');
-
-    fireEvent.click(within(dialog).getByRole('button', { name: 'إضافة' }));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('الوصف مطلوب'));
-    expect(actions.addIndirectCost).not.toHaveBeenCalled();
-
-    fireEvent.change(within(dialog).getByPlaceholderText('وصف التكلفة'), { target: { value: 'اشتراك برمجيات' } });
-    const [amount] = within(dialog).getAllByRole('spinbutton');
-    fireEvent.change(amount, { target: { value: '1500' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'إضافة' }));
-
-    await waitFor(() => expect(actions.addIndirectCost).toHaveBeenCalledWith(expect.objectContaining({
-      companyId: COMPANY_ID, category: 'other', description: 'اشتراك برمجيات', amount: 1500, month: 1, allocationMethod: 'equal',
-    })));
+    const block = indirectBlock();
+    expect(within(block).queryByRole('button', { name: /إضافة/ })).not.toBeInTheDocument();
+    expect(within(block).getByText(/يُسجَّل من «مصروف منظومة» فقط/)).toBeInTheDocument();
   });
 
   it('deletes one after confirmation', async () => {
@@ -257,6 +257,9 @@ describe('editing, exporting, archiving and deleting the company', () => {
       expect.objectContaining({ category: 'إيجار', amount: 4000 }),
       expect.objectContaining({ category: 'تسويق', amount: 1000 }),
     ]);
+    // The report says what the page says.
+    expect(excel.summary).toMatchObject({ companyExpenses: 20000, netProfitAfterIndirect: 145000 });
+    expect(excel.companyExpenses).toEqual([expect.objectContaining({ kind: 'رواتب', amount: 20000, allocated: 5000 })]);
     expect(vi.mocked(exportCompanyToPDF).mock.calls[0][0]).toEqual(excel);
   });
 

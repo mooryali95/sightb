@@ -85,6 +85,8 @@ export function mapExpense(d: Tables<'expenses'>): Expense {
     approvalStatus: (d.approval_status || 'approved') as Expense['approvalStatus'],
     approvedBy: d.approved_by || undefined,
     vendor: d.vendor || undefined,
+    // Not in the generated types until Lovable regenerates them after 20261027090000.
+    partyId: (d as { party_id?: string | null }).party_id || undefined,
     invoiceRef: d.invoice_ref || undefined,
     isVatExempt: d.is_vat_exempt ?? false,
     fundId: d.fund_id || undefined,
@@ -99,6 +101,7 @@ export function mapResource(d: Tables<'resources'>): Resource {
   return {
     id: d.id, projectId: d.project_id, name: d.name,
     role: d.role || undefined, monthlyCost: Number(d.monthly_cost), createdAt: d.created_at,
+    partyId: (d as { party_id?: string | null }).party_id || undefined,
   };
 }
 

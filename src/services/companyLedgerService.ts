@@ -36,19 +36,33 @@ type Row = Record<string, unknown>;
 const num = (v: unknown) => Number(v ?? 0);
 const node = (kind: unknown, id: unknown): LedgerNode => ({ kind: kind as NodeKind, id: (id as string | null) ?? null });
 
-const toParty = (r: Row): Party => ({ id: r.id as string, companyId: r.company_id as string, name: r.name as string, kind: r.kind as PartyKind, archived: !!r.archived });
+const toParty = (r: Row): Party => ({
+  id: r.id as string, companyId: r.company_id as string, name: r.name as string, kind: r.kind as PartyKind, archived: !!r.archived,
+  role: (r.role as string | null | undefined) ?? null, aliases: Array.isArray(r.aliases) ? (r.aliases as string[]) : [],
+});
 const toExpense = (r: Row): CompanyExpense => ({
   id: r.id as string, companyId: r.company_id as string, date: r.date as string, amount: num(r.amount), description: (r.description as string) ?? '',
   kind: r.kind as CompanyExpenseKind, partyId: (r.party_id as string | null) ?? null, paidByPartyId: (r.paid_by_party_id as string | null) ?? null,
 });
-const toAllocation = (r: Row): ExpenseAllocation => ({ id: r.id as string, expenseId: r.expense_id as string, projectId: r.project_id as string, amount: num(r.amount) });
+const toAllocation = (r: Row): ExpenseAllocation => ({
+  id: r.id as string, expenseId: r.expense_id as string, projectId: r.project_id as string, amount: num(r.amount),
+  settledInProject: r.settled_in_project === true,
+});
 const toEntry = (r: Row): IntercompanyEntry => ({
   id: r.id as string, companyId: r.company_id as string, date: r.date as string, amount: num(r.amount), type: r.type as IntercompanyEntry['type'],
   from: node(r.from_kind, r.from_id), to: node(r.to_kind, r.to_id), note: (r.note as string) ?? '',
   dueDate: (r.due_date as string | null) ?? null, salaryExpenseId: (r.salary_expense_id as string | null) ?? null,
+  sourceFundId: (r.source_fund_id as string | null) ?? null,
 });
 
 export interface CompanyLedger { parties: Party[]; expenses: CompanyExpense[]; allocations: ExpenseAllocation[]; entries: IntercompanyEntry[] }
+
+/** Every company expense the user may see, as company and amount: what the dashboard nets off. Empty before the ledger exists. */
+export async function listCompanyExpenseAmounts(): Promise<{ companyId: string; amount: number }[]> {
+  const { data, error } = await db.from('company_expenses').select('company_id, amount');
+  if (error) return [];
+  return ((data ?? []) as Row[]).map((r) => ({ companyId: r.company_id as string, amount: Number(r.amount) }));
+}
 
 export async function loadCompanyLedger(companyId: string): Promise<CompanyLedger> {
   const [parties, expenses, entries] = await Promise.all([
@@ -72,8 +86,12 @@ export async function loadCompanyLedger(companyId: string): Promise<CompanyLedge
   };
 }
 
-export async function createParty(input: { companyId: string; name: string; kind: PartyKind }): Promise<Party> {
-  const { data, error } = await db.from('parties').insert({ company_id: input.companyId, name: input.name.trim(), kind: input.kind }).select().single();
+export async function createParty(input: { companyId: string; name: string; kind: PartyKind; role?: string | null; aliases?: string[] }): Promise<Party> {
+  const row: Row = { company_id: input.companyId, name: input.name.trim(), kind: input.kind };
+  // Sent only when given, so a database before 20261027090000 still accepts a plain party.
+  if (input.role?.trim()) row.role = input.role.trim();
+  if (input.aliases?.length) row.aliases = input.aliases;
+  const { data, error } = await db.from('parties').insert(row).select().single();
   if (error) fail(error, 'فشل إضافة الطرف');
   return toParty(data);
 }
@@ -81,7 +99,7 @@ export async function createParty(input: { companyId: string; name: string; kind
 export interface NewCompanyExpense {
   companyId: string; date: string; amount: number; description: string; kind: CompanyExpenseKind;
   partyId: string | null; paidByPartyId: string | null;
-  allocations: { projectId: string; amount: number }[];
+  allocations: { projectId: string; amount: number; settledInProject?: boolean }[];
   /** An open advance repaid out of this salary. */
   deduction?: number;
 }
@@ -99,7 +117,11 @@ export async function createCompanyExpense(input: NewCompanyExpense): Promise<vo
   if (error) fail(error, 'فشل حفظ المصروف');
   const id = (data as Row).id as string;
   try {
-    const rows = input.allocations.filter((a) => a.amount > 0).map((a) => ({ expense_id: id, project_id: a.projectId, amount: a.amount }));
+    const rows = input.allocations.filter((a) => a.amount > 0).map((a) => ({
+      expense_id: id, project_id: a.projectId, amount: a.amount,
+      // Sent only when set, so a database before 20261026090000 still accepts the row.
+      ...(a.settledInProject ? { settled_in_project: true } : {}),
+    }));
     if (rows.length > 0) {
       const r = await db.from('company_expense_allocations').insert(rows);
       if (r.error) fail(r.error, 'فشل حفظ التحميل على المشاريع');
@@ -126,18 +148,49 @@ export async function deleteCompanyExpense(id: string): Promise<void> {
 export interface NewEntry {
   companyId: string; date: string; amount: number; type: IntercompanyEntry['type'];
   from: LedgerNode; to: LedgerNode; note: string; dueDate: string | null;
+  /** A project's repayment out of one of its funds (20261028090000). */
+  sourceFundId?: string | null;
 }
 
-export async function createEntry(input: NewEntry): Promise<void> {
-  const { error } = await db.from('intercompany_entries').insert({
-    company_id: input.companyId, date: input.date, amount: input.amount, type: input.type,
-    from_kind: input.from.kind, from_id: input.from.id, to_kind: input.to.kind, to_id: input.to.id,
-    note: input.note.trim(), due_date: input.dueDate,
-  });
+const entryRow = (input: NewEntry) => ({
+  company_id: input.companyId, date: input.date, amount: input.amount, type: input.type,
+  from_kind: input.from.kind, from_id: input.from.id, to_kind: input.to.kind, to_id: input.to.id,
+  note: input.note.trim(), due_date: input.dueDate,
+  ...(input.sourceFundId ? { source_fund_id: input.sourceFundId } : {}),
+});
+
+export async function createEntry(input: NewEntry): Promise<string> {
+  const { data, error } = await db.from('intercompany_entries').insert(entryRow(input) as never).select('id').single();
   if (error) fail(error, 'فشل حفظ الحركة');
+  return (data as { id: string }).id;
 }
 
+/** Several movements in one insert, so a loan and its funding land together or not at all. */
+export async function createEntries(inputs: NewEntry[]): Promise<string[]> {
+  const { data, error } = await db.from('intercompany_entries').insert(inputs.map(entryRow) as never).select('id');
+  if (error) fail(error, 'فشل حفظ الحركات');
+  return ((data ?? []) as { id: string }[]).map((r) => r.id);
+}
+
+/**
+ * A movement and the project fund it created go together: the fund goes
+ * first while nothing was spent from it; once something was, the movement
+ * stays and says why.
+ */
 export async function deleteEntry(id: string): Promise<void> {
+  const { data: funds } = await db.from('project_funds').select('id, fund_number, status').eq('ledger_entry_id' as never, id);
+  for (const f of (funds ?? []) as unknown as { id: string; fund_number: number }[]) {
+    const [exp, cust] = await Promise.all([
+      db.from('expenses').select('id', { count: 'exact', head: true }).eq('fund_id', f.id),
+      db.from('custodies').select('id', { count: 'exact', head: true }).eq('source_fund_id', f.id),
+    ]);
+    if ((exp.count ?? 0) > 0 || (cust.count ?? 0) > 0) {
+      throw new Error(`صُرف من الدفعة رقم ${f.fund_number} التي أنشأها هذا التمويل. احذف مصروفاتها أو انقلها أولاً، ثم احذف التمويل.`);
+    }
+    await db.from('fund_settlements').delete().eq('fund_id', f.id);
+    const { error: fErr } = await db.from('project_funds').delete().eq('id', f.id);
+    if (fErr) fail(fErr, 'فشل حذف دفعة التمويل');
+  }
   const { error } = await db.from('intercompany_entries').delete().eq('id', id);
   if (error) fail(error, 'فشل حذف الحركة');
 }
@@ -148,6 +201,8 @@ export interface ChargedCost {
   amount: number;
   /** The whole company expense it came from. */
   expenseAmount: number;
+  /** Already paid by the project from its own spend: shown, not counted again. */
+  settledInProject: boolean;
 }
 
 /** What the company charged to a project, readable by the project's own team (project_charged_costs). */
@@ -160,5 +215,6 @@ export async function listProjectChargedCosts(projectId: string): Promise<Charge
   return ((data ?? []) as Row[]).map((r) => ({
     allocationId: r.allocation_id as string, expenseId: r.expense_id as string, date: r.date as string,
     kind: r.kind as CompanyExpenseKind, description: (r.description as string) ?? '', amount: num(r.amount), expenseAmount: num(r.expense_amount),
+    settledInProject: r.settled_in_project === true,
   }));
 }

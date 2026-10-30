@@ -103,6 +103,8 @@ export const COST_CLASS_LABELS: Record<CostClass, string> = {
 
 export interface Resource {
   id: string; projectId: string; name: string; role?: string; monthlyCost: number; createdAt: string;
+  /** The registry entry this resource stands for, once linked. */
+  partyId?: string;
 }
 
 export interface Custody {
@@ -137,6 +139,8 @@ export interface Expense {
   description: string; amount: number; date: string; month: number;
   responsible?: string; notes?: string; resourceId?: string; custodyId?: string;
   approvalStatus: ApprovalStatus; approvedBy?: string; vendor?: string; invoiceRef?: string;
+  /** Who the money went to, from the company's registry (20261027090000). vendor keeps the text. */
+  partyId?: string;
   isVatExempt: boolean;
   fundId?: string;
   /** سلفة موظف لم تُسوَّ بعد — لا تُحتسب ضمن AC في تقارير الأداء حتى التسوية. */
@@ -598,6 +602,12 @@ export interface ProjectFund {
   acknowledgedBy?: string;
   createdAt: string;
   updatedAt: string;
+  /** Part of `amount` carried from an earlier fund's settlement, not newly transferred. */
+  carriedIn?: number;
+  /** The company ledger movement this fund came from, when the company funded it. */
+  ledgerEntryId?: string;
+  /** Cash paid back from this fund to the company (a repayment, not an expense). */
+  returnedOut?: number;
 }
 
 export interface FundSettlementAttachment {
@@ -621,6 +631,9 @@ export interface FundSettlement {
   status: SettlementStatus;
   rejectionReason?: string;
   differenceReason?: string;
+  /** Where the cash left at settlement went: into a later fund, waiting for one, or back to the company. */
+  carryStatus?: 'pending' | 'carried' | 'returned';
+  carriedToFundId?: string;
   attachments: FundSettlementAttachment[];
   createdAt: string;
   updatedAt: string;
@@ -769,7 +782,7 @@ export type AdvanceSettlementType = 'documented' | 'cash_refund' | 'payroll_dedu
 export const ADVANCE_SETTLEMENT_TYPE_LABELS: Record<AdvanceSettlementType, string> = {
   documented: 'تسوية بمستندات (تتحول لمصروف فعلي)',
   cash_refund: 'رد نقدي (يعود للدفعة/العهدة)',
-  payroll_deduction: 'خصم من راتب/مستحقات',
+  payroll_deduction: 'تحوّلت إلى حافز أو خُصمت من مستحقاته',
   written_off: 'شطب (دين معدوم)',
 };
 

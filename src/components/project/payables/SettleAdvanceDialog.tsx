@@ -134,7 +134,7 @@ export function SettleAdvanceDialog({
     return evs.map<Row>((e) => {
       const label = e.eventType === 'cash_refund' ? 'رد نقدي'
         : e.eventType === 'documented' ? 'تسوية بمستندات'
-        : e.eventType === 'payroll_deduction' ? 'خصم من مستحقات'
+        : e.eventType === 'payroll_deduction' ? 'تحوّلت إلى حافز أو مستحق'
         : e.eventType === 'written_off' ? 'شطب'
         : 'تراجع';
       const kind: Row['kind'] = e.eventType === 'reverse' ? 'reverse'

@@ -493,6 +493,109 @@ export type Database = {
         }
         Relationships: []
       }
+      company_expense_allocations: {
+        Row: {
+          amount: number
+          created_at: string
+          expense_id: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          expense_id: string
+          id?: string
+          project_id: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          expense_id?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_expense_allocations_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "company_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_expense_allocations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_expenses: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          kind: string
+          paid_by_party_id: string | null
+          party_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          created_at?: string
+          date: string
+          description?: string
+          id?: string
+          kind?: string
+          paid_by_party_id?: string | null
+          party_id?: string | null
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          kind?: string
+          paid_by_party_id?: string | null
+          party_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_expenses_paid_by_party_id_fkey"
+            columns: ["paid_by_party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_expenses_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cost_baselines: {
         Row: {
           created_at: string
@@ -926,6 +1029,72 @@ export type Database = {
           },
         ]
       }
+      intercompany_entries: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          date: string
+          due_date: string | null
+          from_id: string | null
+          from_kind: string
+          id: string
+          note: string
+          salary_expense_id: string | null
+          to_id: string | null
+          to_kind: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          created_at?: string
+          date: string
+          due_date?: string | null
+          from_id?: string | null
+          from_kind: string
+          id?: string
+          note?: string
+          salary_expense_id?: string | null
+          to_id?: string | null
+          to_kind: string
+          type: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          date?: string
+          due_date?: string | null
+          from_id?: string | null
+          from_kind?: string
+          id?: string
+          note?: string
+          salary_expense_id?: string | null
+          to_id?: string | null
+          to_kind?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intercompany_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intercompany_entries_salary_expense_id_fkey"
+            columns: ["salary_expense_id"]
+            isOneToOne: false
+            referencedRelation: "company_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milestones: {
         Row: {
           actual_end: string | null
@@ -991,6 +1160,44 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parties: {
+        Row: {
+          archived: boolean
+          company_id: string
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          kind?: string
+          name: string
+          user_id?: string
+        }
+        Update: {
+          archived?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parties_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -2198,6 +2405,18 @@ export type Database = {
         Returns: string
       }
       plpgsql_block_begin: { Args: { body: string }; Returns: number }
+      project_charged_costs: {
+        Args: { _project_id: string }
+        Returns: {
+          allocation_id: string
+          amount: number
+          date: string
+          description: string
+          expense_amount: number
+          expense_id: string
+          kind: string
+        }[]
+      }
       project_financial_summary: {
         Args: { _project_id: string }
         Returns: Json

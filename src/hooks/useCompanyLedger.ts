@@ -4,7 +4,7 @@
  * so every figure on the page is recomputed from what the database holds.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { LedgerNotReady, loadCompanyLedger } from '@/services/companyLedgerService';
+import { LedgerNotReady, listCompanyExpenseAmounts, loadCompanyLedger } from '@/services/companyLedgerService';
 
 export const companyLedgerKey = (companyId: string) => ['company-ledger', companyId] as const;
 
@@ -19,10 +19,20 @@ export function useCompanyLedger(companyId: string | undefined) {
   });
 }
 
+/** All companies' expenses, for the dashboard's company net. */
+export function useCompanyExpenseAmounts() {
+  return useQuery({ queryKey: ['company-expense-amounts'], queryFn: listCompanyExpenseAmounts, staleTime: 60_000 });
+}
+
 export function useLedgerMutation<T, R>(companyId: string, fn: (input: T) => Promise<R>) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSettled: () => client.invalidateQueries({ queryKey: companyLedgerKey(companyId) }),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: companyLedgerKey(companyId) });
+      // Pickers read the registry on its own key (useParties).
+      client.invalidateQueries({ queryKey: ['parties', companyId] });
+      client.invalidateQueries({ queryKey: ['company-expense-amounts'] });
+    },
   });
 }

@@ -32,6 +32,22 @@ describe('ChargedCostsCard', () => {
     expect(card).toHaveTextContent('رواتب الملاك');
   });
 
+  it('lists a share the project already paid, marked, and does not add it to the full cost again', async () => {
+    // Manzouma's insurance, paid by Dr Saleh, charged to the project, repaid from its own spend.
+    svc.listProjectChargedCosts.mockResolvedValue([
+      { allocationId: 'a1', expenseId: 'e1', date: '2026-08-06', kind: 'government', description: 'التأمينات الاجتماعية', amount: 1400, expenseAmount: 1400, settledInProject: true },
+      { allocationId: 'a2', expenseId: 'e2', date: '2026-10-01', kind: 'rent', description: 'إيجار المكتب', amount: 1000, expenseAmount: 4000, settledInProject: false },
+    ]);
+    renderCard();
+    const card = await screen.findByRole('region', { name: 'محمَّل من المنظومة' });
+    expect(screen.getAllByText('محمَّل من المنظومة')[1].parentElement).toHaveTextContent('2,400.00');
+    // 12,000 direct + only the 1,000 not already paid.
+    expect(screen.getByText('التكلفة الشاملة').parentElement).toHaveTextContent('13,000.00');
+    expect(screen.getByText('التأمينات الاجتماعية').closest('tr')).toHaveTextContent('مسدَّد ضمن مصروف المشروع');
+    expect(screen.getByText('إيجار المكتب').closest('tr')).not.toHaveTextContent('مسدَّد ضمن مصروف المشروع');
+    expect(card).toHaveTextContent('منها 1,400.00 ر.س سدّدها المشروع من مصروفه');
+  });
+
   it('renders nothing while the ledger is not live, or when nothing was charged', async () => {
     const { LedgerNotReady } = await import('@/services/companyLedgerService');
     svc.listProjectChargedCosts.mockRejectedValue(new LedgerNotReady());

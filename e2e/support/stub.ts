@@ -24,6 +24,12 @@ function applyFilters(rows: Record<string, unknown>[], url: string) {
     if (key.startsWith('select') || key.startsWith('order') || key.startsWith('limit') || key.startsWith('offset')) continue;
     const eq = raw.match(/^eq\.(.*)$/);
     if (eq) out = out.filter((r) => String(r[key] ?? '') === eq[1]);
+    // in.(a,b,"c d"): what .in() sends; without it a filtered update touched every row.
+    const inList = raw.match(/^in\.\((.*)\)$/);
+    if (inList) {
+      const values = new Set(inList[1].split(',').map((v) => v.replace(/^"|"$/g, '')));
+      out = out.filter((r) => values.has(String(r[key] ?? '')));
+    }
   }
   return out;
 }

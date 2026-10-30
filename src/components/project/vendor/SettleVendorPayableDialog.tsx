@@ -57,6 +57,12 @@ export function SettleVendorPayableDialog({ payable, projectId, onClose }: Props
       toast({ title: 'اختر المصدر', variant: 'destructive' }); return;
     }
     if (!project) { toast({ title: 'المشروع غير موجود', variant: 'destructive' }); return; }
+    // Offline the payment would only be queued while the payable still shows
+    // open, and a second try would queue a second payment.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      toast({ title: 'لا اتصال', description: 'سداد الذمة يحتاج اتصالاً حتى تُقفل مرة واحدة. أعد المحاولة بعد عودة الاتصال.', variant: 'destructive' });
+      return;
+    }
     setSettling(true);
     try {
       const now = new Date();

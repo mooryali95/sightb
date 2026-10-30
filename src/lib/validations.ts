@@ -24,7 +24,7 @@ export const projectSchema = z.object({
   companyId: z.string().uuid('يرجى اختيار الشركة'),
   portfolioId: z.string().optional(),
   description: nStr.pipe(z.string().trim().max(500, 'الوصف طويل جداً')).optional(),
-  contractValue: z.number({ invalid_type_error: 'قيمة العقد مطلوبة' }).positive('قيمة العقد يجب أن تكون أكبر من صفر'),
+  contractValue: z.number({ error: 'قيمة العقد مطلوبة' }).positive('قيمة العقد يجب أن تكون أكبر من صفر'),
   durationMonths: z.number().int().min(1, 'المدة يجب أن تكون شهر واحد على الأقل').max(120, 'المدة طويلة جداً'),
   resourceCount: z.number().int().min(1).max(1000),
   startDate: z.string().optional(),
@@ -34,7 +34,7 @@ export const projectSchema = z.object({
 // Expense form
 export const expenseSchema = z.object({
   description: nStr.pipe(z.string().trim().min(1, 'الوصف مطلوب').max(300, 'الوصف طويل جداً')),
-  amount: z.number({ invalid_type_error: 'المبلغ مطلوب' }).positive('المبلغ يجب أن يكون أكبر من صفر'),
+  amount: z.number({ error: 'المبلغ مطلوب' }).positive('المبلغ يجب أن يكون أكبر من صفر'),
   category: z.string().min(1, 'الفئة مطلوبة'),
   month: z.number().int().min(1).max(120),
   date: z.string().min(1, 'التاريخ مطلوب'),
@@ -48,7 +48,7 @@ export const expenseSchema = z.object({
 // Budget item form
 export const budgetItemSchema = z.object({
   description: nStr.pipe(z.string().trim().min(1, 'الوصف مطلوب').max(300, 'الوصف طويل جداً')),
-  plannedAmount: z.number({ invalid_type_error: 'المبلغ مطلوب' }).min(0, 'المبلغ لا يمكن أن يكون سالباً'),
+  plannedAmount: z.number({ error: 'المبلغ مطلوب' }).min(0, 'المبلغ لا يمكن أن يكون سالباً'),
   category: z.string().min(1, 'الفئة مطلوبة'),
   month: z.number().int().min(1).max(120).optional().nullable(),
   resourceId: z.string().uuid().optional().nullable(),
@@ -57,7 +57,7 @@ export const budgetItemSchema = z.object({
 // Revenue form
 export const revenueSchema = z.object({
   description: nStr.pipe(z.string().trim().min(1, 'الوصف مطلوب').max(300, 'الوصف طويل جداً')),
-  amount: z.number({ invalid_type_error: 'المبلغ مطلوب' }).positive('المبلغ يجب أن يكون أكبر من صفر'),
+  amount: z.number({ error: 'المبلغ مطلوب' }).positive('المبلغ يجب أن يكون أكبر من صفر'),
   month: z.number().int().min(1).max(120),
   date: z.string().min(1, 'التاريخ مطلوب'),
 });
@@ -66,13 +66,13 @@ export const revenueSchema = z.object({
 export const resourceSchema = z.object({
   name: nStr.pipe(z.string().trim().min(1, 'اسم المورد مطلوب').max(100, 'الاسم طويل جداً')),
   role: nStr.pipe(z.string().trim().max(100)).optional(),
-  monthlyCost: z.number({ invalid_type_error: 'التكلفة مطلوبة' }).min(0, 'التكلفة لا يمكن أن تكون سالبة'),
+  monthlyCost: z.number({ error: 'التكلفة مطلوبة' }).min(0, 'التكلفة لا يمكن أن تكون سالبة'),
 });
 
 // Custody form
 export const custodySchema = z.object({
   resourceName: nStr.pipe(z.string().trim().min(1, 'اسم المستلم مطلوب').max(100, 'الاسم طويل جداً')),
-  amount: z.number({ invalid_type_error: 'المبلغ مطلوب' }).positive('المبلغ يجب أن يكون أكبر من صفر'),
+  amount: z.number({ error: 'المبلغ مطلوب' }).positive('المبلغ يجب أن يكون أكبر من صفر'),
   notes: nStr.pipe(z.string().trim().max(500)).optional(),
 });
 

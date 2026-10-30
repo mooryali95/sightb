@@ -27,7 +27,7 @@ export default function NewCompany() {
     e.preventDefault();
     const result = companySchema.safeParse({ name, description: description || undefined });
     if (!result.success) {
-      toast.error(result.error.errors[0]?.message || 'بيانات غير صالحة');
+      toast.error(result.error.issues[0]?.message || 'بيانات غير صالحة');
       return;
     }
     setLoading(true);

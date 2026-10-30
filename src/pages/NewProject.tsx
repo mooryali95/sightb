@@ -65,7 +65,7 @@ export default function NewProject() {
       endDate: endDate || undefined,
     });
     if (!result.success) {
-      toast.error(result.error.errors[0]?.message || 'بيانات غير صالحة');
+      toast.error(result.error.issues[0]?.message || 'بيانات غير صالحة');
       return;
     }
     setLoading(true);

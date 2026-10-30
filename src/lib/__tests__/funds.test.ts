@@ -401,3 +401,29 @@ describe('getProjectOutstandingAdvances', () => {
     expect(getProjectOutstandingAdvances(PID, prs)).toEqual({ total: 8000, count: 3 });
   });
 });
+
+describe('carried cash and repayments to the company', () => {
+  it('counts a carried amount once in what was transferred, and keeps waiting cash in hand', () => {
+    const funds = [
+      makeFund({ id: 'f4', fundNumber: 4, amount: 5000, status: 'settled' }),
+      makeFund({ id: 'f7', fundNumber: 7, amount: 60224, carriedIn: 224, status: 'acknowledged' }),
+    ];
+    const s = getProjectFundsSummary(PID, funds, [makeSettlement({ fundId: 'f4', status: 'approved', remainingCash: 224, carryStatus: 'carried' })], []);
+    expect(s.totalTransferred).toBe(65000);
+    expect(s.remainingInManagerHand).toBe(60224);
+    expect(s.pendingCarry).toBe(0);
+
+    const waiting = getProjectFundsSummary(PID, [makeFund({ id: 'f4', amount: 5000, status: 'settled' })],
+      [makeSettlement({ fundId: 'f4', status: 'approved', remainingCash: 224, carryStatus: 'pending' })], []);
+    expect(waiting.pendingCarry).toBe(224);
+    expect(waiting.remainingInManagerHand).toBe(224);
+  });
+
+  it('takes a repayment out of the fund it left, without calling it spend', () => {
+    const f = makeFund({ id: 'f7', amount: 1000, status: 'acknowledged', returnedOut: 700 });
+    expect(getFundRemaining(f, [])).toBe(300);
+    expect(getFundRemainingBreakdown(f, [])).toMatchObject({ direct: 0, returnedToCompany: 700, spent: 700, remaining: 300 });
+    const s = getProjectFundsSummary(PID, [f], [], []);
+    expect(s).toMatchObject({ totalDocumentedSpend: 0, totalReturnedToCompany: 700, remainingInManagerHand: 300 });
+  });
+});

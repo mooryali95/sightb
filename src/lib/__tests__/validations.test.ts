@@ -64,9 +64,9 @@ describe('the money forms', () => {
     expect(messages(expenseSchema, { description: 'x', amount: Number.NaN, category: 'c', month: 1, date: 'd', custodyId: 'nope' })).toEqual({
       amount: 'المبلغ مطلوب', custodyId: expect.any(String),
     });
-    // Recorded, not changed (the file is Lovable-authored): a number left undefined gets zod's English
-    // "Required", not the Arabic message. No page sends undefined; each parses its input to a number first.
-    expect(messages(expenseSchema, { description: 'x', category: 'c', month: 1, date: 'd' })).toEqual({ amount: 'Required' });
+    // A number left undefined: zod 3 answered its English "Required"; zod 4's `error` covers a missing
+    // value too, so the person reads the Arabic message.
+    expect(messages(expenseSchema, { description: 'x', category: 'c', month: 1, date: 'd' })).toEqual({ amount: 'المبلغ مطلوب' });
     expect(parsed(expenseSchema, { description: ' وقود ', amount: 5, category: 'travel', month: 1, date: '2026-09-01', responsible: ' أحمد ', budgetItemId: null, resourceId: UUID })).toEqual({
       description: 'وقود', amount: 5, category: 'travel', month: 1, date: '2026-09-01', responsible: 'أحمد', budgetItemId: null, resourceId: UUID,
     });

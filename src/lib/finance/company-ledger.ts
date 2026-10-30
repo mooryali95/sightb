@@ -25,17 +25,40 @@ export const COMPANY_EXPENSE_KIND_LABELS: Record<CompanyExpenseKind, string> = {
   other: 'أخرى',
 };
 
-export type PartyKind = 'person' | 'owner' | 'vendor';
-export const PARTY_KIND_LABELS: Record<PartyKind, string> = { person: 'شخص', owner: 'مالك', vendor: 'مورد' };
+export type PartyKind = 'person' | 'owner' | 'vendor' | 'entity';
+export const PARTY_KIND_LABELS: Record<PartyKind, string> = { person: 'شخص', owner: 'مالك', vendor: 'مورد', entity: 'جهة' };
 
-export interface Party { id: string; companyId: string; name: string; kind: PartyKind; archived: boolean }
+export interface Party {
+  id: string; companyId: string; name: string; kind: PartyKind; archived: boolean;
+  /** What they do: «مدير المشروع», «مصمم». */
+  role?: string | null;
+  /** Other spellings they go by, so a name typed on an expense finds them. */
+  aliases?: string[];
+}
 
 export interface CompanyExpense {
   id: string; companyId: string; date: string; amount: number; description: string;
   kind: CompanyExpenseKind; partyId: string | null; paidByPartyId: string | null;
 }
 
-export interface ExpenseAllocation { id: string; expenseId: string; projectId: string; amount: number }
+export interface ExpenseAllocation {
+  id: string; expenseId: string; projectId: string; amount: number;
+  /** The project already paid this share from its own spend (e.g. it repaid
+   *  the person who paid the company's bill), so it shows as charged but is
+   *  not added to the project's cost again. */
+  settledInProject?: boolean;
+}
+
+/**
+ * What the company charged a project, split by whether the project already
+ * paid it itself: the full cost adds only the part it has not.
+ */
+export function chargedCostTotals(rows: { amount: number; settledInProject?: boolean }[], directActual: number) {
+  const charged = rows.reduce((s, r) => s + r.amount, 0);
+  const settledInProject = rows.filter((r) => r.settledInProject).reduce((s, r) => s + r.amount, 0);
+  const onTop = charged - settledInProject;
+  return { charged, settledInProject, onTop, fullCost: Math.round((directActual + onTop) * 100) / 100 };
+}
 
 export type NodeKind = 'company' | 'project' | 'party';
 /** A side of a movement. The company has no id. */
@@ -44,6 +67,8 @@ export interface LedgerNode { kind: NodeKind; id: string | null }
 export interface IntercompanyEntry {
   id: string; companyId: string; date: string; amount: number; type: 'advance' | 'repayment';
   from: LedgerNode; to: LedgerNode; note: string; dueDate: string | null; salaryExpenseId: string | null;
+  /** A project's repayment: the fund the cash left. */
+  sourceFundId?: string | null;
 }
 
 export const COMPANY: LedgerNode = { kind: 'company', id: null };

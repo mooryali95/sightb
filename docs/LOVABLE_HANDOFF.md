@@ -46,6 +46,35 @@ does not happen again.
    - The dashboard's figures and filters: `src/pages/dashboard/**`,
      `src/hooks/useDashboardFilters.ts`. `src/pages/FinancialOverview.tsx` may
      be restyled, but its counts must keep using `needsAttention`.
+   - The second factor on the server: `supabase/functions/_shared/sessionGate.ts`
+     and its test `src/test/edge/session-gate.test.ts`, and migrations
+     `20260924150000_second_factor_on_the_server.sql` and
+     `20260926120000_second_factor_on_database_functions.sql`. In
+     `send-invite`, `delete-user` and `admin-email-status` the call to
+     `requireSecondFactor` stays where it is, right after the user is read
+     from the token: a password-only session must not act through the service
+     role. Any new SECURITY DEFINER function a user may call starts with
+     `public.require_second_factor()`. `scripts/second-factor-coverage.sh`
+     fails the build when either is missing.
+   - The company's resource registry: `src/lib/registry/**`,
+     `src/services/registryService.ts`, `src/pages/company/registry/**`,
+     `src/pages/PartyDetail.tsx` and migration `20261027090000_resource_registry.sql`.
+     The vendor on an expense and the name of a project resource are picked
+     with `src/components/registry/RegistryNamePicker.tsx`; keep it there.
+   - Loans through the company: `src/lib/finance/loans.ts` and
+     `src/pages/company/ledger/LoanDialog.tsx`. A loan is lender → company,
+     funding is company → project; never record a loan straight to a project.
+   - The money loop (migration `20261028090000_close_the_money_loop.sql`):
+     cash left at a settlement is carried to the next fund, never dropped;
+     a project's repayment names the fund it left (`source_fund_id`) and is
+     never booked as an expense; company funding links its fund
+     (`ledger_entry_id`). Company overhead is recorded only as a company
+     expense; the indirect-cost form is gone on purpose.
+   - Data integrity (`src/lib/finance/integrity.ts`, «سلامة البيانات» on the
+     company page): every amount has a source, nothing twice, every custody
+     and fund balances, every gap has its reason. An expense beyond its
+     source books the source's part and owes the rest to whoever paid it.
+     A name on an expense is linked to a registry entry, never retyped.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

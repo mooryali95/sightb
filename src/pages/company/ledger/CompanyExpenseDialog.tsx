@@ -43,7 +43,7 @@ export function CompanyExpenseDialog({ open, onOpenChange, companyId, parties, p
   const [description, setDescription] = useState('');
   const [partyId, setPartyId] = useState<string | null>(null);
   const [paidBy, setPaidBy] = useState<string>(COMPANY_PAID);
-  const [lines, setLines] = useState<{ projectId: string; amount: string }[]>([]);
+  const [lines, setLines] = useState<{ projectId: string; amount: string; settled?: boolean }[]>([]);
   const [deduct, setDeduct] = useState(true);
   const [deduction, setDeduction] = useState<string | null>(null);
 
@@ -77,7 +77,7 @@ export function CompanyExpenseDialog({ open, onOpenChange, companyId, parties, p
       await save.mutateAsync({
         companyId, date, amount: total, description, kind, partyId,
         paidByPartyId: paidBy === COMPANY_PAID ? null : paidBy,
-        allocations: lines.map((l) => ({ projectId: l.projectId, amount: parseFloat(l.amount) || 0 })),
+        allocations: lines.map((l) => ({ projectId: l.projectId, amount: parseFloat(l.amount) || 0, settledInProject: l.settled === true })),
         deduction: isPay && deduct && deductionValue > 0 ? Math.min(deductionValue, proposed) : 0,
       });
       toast.success('تم حفظ مصروف المنظومة');
@@ -168,6 +168,12 @@ export function CompanyExpenseDialog({ open, onOpenChange, companyId, parties, p
               </Select>
               <Input type="number" className="w-36" aria-label={`مبلغ السطر ${i + 1}`} value={l.amount}
                 onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))} />
+              <label className="flex items-center gap-1 text-[11px] text-muted-foreground whitespace-nowrap"
+                title="المشروع دفع هذه الحصة من مصروفه (مثلاً سدّد لمن دفع الفاتورة)، فتظهر محمّلة عليه ولا تُضاف إلى تكلفته مرة ثانية.">
+                <Checkbox checked={l.settled === true} aria-label={`سدّده المشروع، السطر ${i + 1}`}
+                  onCheckedChange={(v) => setLines(lines.map((x, j) => (j === i ? { ...x, settled: v === true } : x)))} />
+                سدّده المشروع
+              </label>
               <span className="w-12 text-xs text-muted-foreground text-left">{total > 0 ? `${(((parseFloat(l.amount) || 0) / total) * 100).toFixed(0)}%` : ''}</span>
               <Button type="button" size="icon" variant="ghost" aria-label="حذف السطر" onClick={() => setLines(lines.filter((_, j) => j !== i))}><Trash2 className="w-4 h-4" /></Button>
             </div>

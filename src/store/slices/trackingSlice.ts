@@ -284,6 +284,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     const { data, error } = await db.from('resources').insert({
       user_id: userId, project_id: r.projectId,
       name: r.name, role: r.role || null, monthly_cost: r.monthlyCost,
+      ...(r.partyId ? { party_id: r.partyId } : {}),
     }).select().single();
     if (error) throw error;
     const mapped = mapResource(data);
@@ -296,10 +297,11 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
   },
 
   updateResource: async (id, r) => {
-    const updates: { name?: string; role?: string; monthly_cost?: number } = {};
+    const updates: { name?: string; role?: string; monthly_cost?: number; party_id?: string | null } = {};
     if (r.name !== undefined) updates.name = r.name;
     if (r.role !== undefined) updates.role = r.role;
     if (r.monthlyCost !== undefined) updates.monthly_cost = r.monthlyCost;
+    if (r.partyId !== undefined) updates.party_id = r.partyId || null;
     const { error } = await db.from('resources').update(updates).eq('id', id);
     if (error) throw error;
     set((s) => ({ resources: s.resources.map((x) => (x.id === id ? { ...x, ...r } : x)) }));

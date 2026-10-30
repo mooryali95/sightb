@@ -8,6 +8,9 @@ import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency, getCountedExpenses, getEffectiveContractValue } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
+import { companyNet } from '@/lib/finance/company-net';
+import { summarizeCompanyExpenses } from '@/lib/finance/company-ledger';
+import { useCompanyLedger } from '@/hooks/useCompanyLedger';
 import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export-lazy';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -26,6 +29,8 @@ import { PortfolioCards } from './company/PortfolioCards';
 import { StandaloneProjectCards } from './company/StandaloneProjectCards';
 import { buildCompanyExport } from './company/buildCompanyExport';
 import { CompanyLedgerSection } from './company/ledger/CompanyLedgerSection';
+import { RegistrySection } from './company/registry/RegistrySection';
+import { IntegrityCard } from './company/IntegrityCard';
 
 /** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
 const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
@@ -55,14 +60,29 @@ export default function CompanyDetail() {
       changeOrders, milestones, risks, indirectCosts,
     );
   }, [company, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts]);
+  // Company expenses live in the ledger; they come off the company's net with the indirect costs.
+  const ledger = useCompanyLedger(id);
+  const ledgerTotals = useMemo(() => (ledger.data ? summarizeCompanyExpenses(ledger.data.expenses, ledger.data.allocations) : null), [ledger.data]);
+  const net = useMemo(() => (summary ? companyNet(summary, ledgerTotals?.total ?? 0) : null), [summary, ledgerTotals]);
+  const exportLedger = useMemo(() => (ledger.data && net ? { net, expenses: ledger.data.expenses, allocations: ledger.data.allocations } : undefined), [ledger.data, net]);
 
   const companyProjects = useMemo(() => projects.filter(p => p.companyId === id), [projects, id]);
   const standaloneProjects = useMemo(() => companyProjects.filter(p => !p.portfolioId), [companyProjects]);
+  const registryProjects = useMemo(() => companyProjects.map((p) => ({ id: p.id, name: p.name })), [companyProjects]);
+  const registryExpenses = useMemo(() => {
+    const ids = new Set(companyProjects.map((p) => p.id));
+    return expenses.filter((e) => ids.has(e.projectId));
+  }, [companyProjects, expenses]);
   // Active projects a company expense can be charged to, weighted by their effective contract for the suggested split.
   const ledgerProjects = useMemo(() => companyProjects
     .filter((p) => !INACTIVE_STATUSES.includes(p.status))
     .map((p) => ({ id: p.id, name: p.name, weight: getEffectiveContractValue(p.contractValue, changeOrders.filter((o) => o.projectId === p.id)) })),
   [companyProjects, changeOrders]);
+  const ledgerCollected = useMemo(() => {
+    const ids = new Set(companyProjects.map((p) => p.id));
+    return revenues.filter((r) => ids.has(r.projectId) && r.status === 'collected')
+      .map((r) => ({ projectId: r.projectId, amount: r.amount, date: r.collectionDate || r.date }));
+  }, [companyProjects, revenues]);
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   // The stat card above counts spend through the summary library, which
@@ -170,7 +190,7 @@ export default function CompanyDetail() {
               )}
               {summary && (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                  exportCompanyToExcel(buildCompanyExport(company.name, summary, compIndirectCosts));
+                  exportCompanyToExcel(buildCompanyExport(company.name, summary, compIndirectCosts, exportLedger));
                   toast.success('تم تصدير تقرير الشركة');
                 }}>
                   <FileSpreadsheet className="w-3.5 h-3.5" />Excel
@@ -178,7 +198,7 @@ export default function CompanyDetail() {
               )}
               {summary && (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                  exportCompanyToPDF(buildCompanyExport(company.name, summary, compIndirectCosts));
+                  exportCompanyToPDF(buildCompanyExport(company.name, summary, compIndirectCosts, exportLedger));
                   toast.success('تم تصدير تقرير PDF');
                 }}>
                   <FileSpreadsheet className="w-3.5 h-3.5" />PDF
@@ -214,17 +234,17 @@ export default function CompanyDetail() {
         <EditCompanyDialog key={edit.session} company={company} open={edit.value !== null} onOpenChange={(v) => { if (!v) edit.close(); }} />
 
         {/* Stats */}
-        {summary && (
+        {summary && net && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard title="قيمة العقود الفعّالة" value={formatCurrency(summary.totalContractValue)} icon={<DollarSign className="w-4 h-4" />} tooltip="العقود الأصلية + أوامر التغيير المعتمدة لكل مشاريع الشركة." />
             <StatCard title="المصروف الفعلي" value={formatCurrency(summary.totalActual)} icon={<TrendingUp className="w-4 h-4" />} trend="down" tooltip="المصروفات المقبولة، بعد استبعاد المرفوض والسلف القائمة." />
             <StatCard
-              title="صافي الربح بعد غير المباشرة"
-              value={formatCurrency(summary.netProfitAfterIndirect)}
+              title="صافي ربح الشركة"
+              value={formatCurrency(net.net)}
               icon={<TrendingUp className="w-4 h-4" />}
-              trend={summary.netProfitAfterIndirect >= 0 ? 'up' : 'down'}
-              subtitle={`هامش: ${summary.netProfitMargin.toFixed(1)}%`}
-              tooltip="الربح المخطط لكل المشاريع − التكاليف غير المباشرة للشركة. لا يساوي الربح النقدي المحقق."
+              trend={net.net >= 0 ? 'up' : 'down'}
+              subtitle={`هامش ${net.margin.toFixed(1)}% · بعد مصاريف المنظومة ${formatCurrency(net.companyExpenses)}${net.indirectCosts ? ` وغير المباشرة ${formatCurrency(net.indirectCosts)}` : ''}`}
+              tooltip="ربح المشاريع المخطط، ناقص كل ما صرفته المنظومة على نفسها (رواتب، إيجار، رسوم…) والتكاليف غير المباشرة. لا يساوي النقد المحقق."
             />
             <StatCard title="مشاريع متعثرة" value={String(summary.totalAtRiskProjects)} icon={<AlertTriangle className="w-4 h-4" />} trend={summary.totalAtRiskProjects > 0 ? 'down' : 'up'} tooltip="مشاريع معلقة أو ملغاة أو تجاوز صرفها الموازنة المعتمدة." />
           </div>
@@ -268,7 +288,11 @@ export default function CompanyDetail() {
 
         <PortfolioCards summaries={summary?.portfolioSummaries ?? []} projects={visibleCompanyProjects} countedExpenses={countedExpenses} changeOrders={changeOrders} />
 
-        <CompanyLedgerSection companyId={id!} projects={ledgerProjects} canEdit={isAdmin || canEdit('company', id!)} />
+        <RegistrySection companyId={id!} projects={registryProjects} expenses={registryExpenses} canEdit={isAdmin || canEdit('company', id!)} />
+
+        <IntegrityCard projects={companyProjects} />
+
+        <CompanyLedgerSection companyId={id!} projects={ledgerProjects} collected={ledgerCollected} canEdit={isAdmin || canEdit('company', id!)} />
 
         <IndirectCostsCard companyId={id!} costs={compIndirectCosts} canEdit={isAdmin || canEdit('company', id!)} />
 

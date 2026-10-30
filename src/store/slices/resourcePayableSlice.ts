@@ -436,13 +436,21 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
   },
 
   cancelPaymentRequest: async (id) => {
+    // A paid request has moved cash and booked its expense; cancelling it would
+    // leave both behind. It is undone by deleting it, which removes the expense.
+    if (get().paymentRequests.find((r) => r.id === id)?.status === 'paid') {
+      throw new Error('لا يُلغى طلب مدفوع: المبلغ خرج وسُجّل مصروفه. احذفه إن كان خطأً، فيُحذف مصروفه معه.');
+    }
     const data = await svc.updatePaymentRequestRaw(id, { status: 'cancelled' });
     set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? mapReq(data) : r) }));
   },
 
   settleAdvance: async (id, input) => {
     const userId = await getUserId();
-    const cur = get().paymentRequests.find((r) => r.id === id);
+    // Read the advance from the database, not the screen: another tab or a
+    // double click may have settled it already.
+    const fresh = await paymentRequestService.getPaymentRequestRaw(id);
+    const cur = fresh ? mapReq(fresh) : get().paymentRequests.find((r) => r.id === id);
     if (!cur) throw new Error('طلب الصرف غير موجود');
     if (cur.requestType !== 'advance') throw new Error('هذه العملية متاحة للسلف فقط');
     if (!cur.isAdvanceOutstanding) throw new Error('السلفة مسوّاة بالفعل');
@@ -467,7 +475,7 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
 
     if (needsExpense) {
       const descPrefix = input.type === 'documented' ? 'تسوية سلفة بمستندات: '
-        : input.type === 'payroll_deduction' ? 'خصم سلفة من مستحقات: '
+        : input.type === 'payroll_deduction' ? 'سلفة تحوّلت إلى حافز أو مستحق: '
         : 'شطب سلفة (دين معدوم): ';
       const category = input.type === 'payroll_deduction' ? 'salary'
         : input.type === 'written_off' ? 'other'
@@ -494,7 +502,9 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     }
 
     // إدراج حدث التسوية — المحفّز سيُعيد حساب payment_requests تلقائياً
-    await svc.createSettlementEventRaw({
+    // Without its event the expense would count on top of the advance still
+    // outstanding: undo it if the event is refused.
+    try { await svc.createSettlementEventRaw({
       payment_request_id: id,
       project_id: cur.projectId,
       event_type: input.type,
@@ -508,7 +518,13 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
       budget_item_id: input.expenseBudgetItemId || cur.budgetItemId || null,
       notes: input.notes?.trim() || null,
       created_by: userId,
-    });
+    }); } catch (e) {
+      if (createdExpenseId) {
+        try { await svc.deleteExpenseRaw(createdExpenseId); }
+        catch (undoErr) { console.warn('Failed to undo the settlement expense:', undoErr); }
+      }
+      throw e;
+    }
 
     // إعادة جلب السلفة بعد تحديث المحفّز
     const refreshed = await paymentRequestService.getPaymentRequestRaw(id);
@@ -572,12 +588,15 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
       set((s) => ({ paymentRequests: s.paymentRequests.map((r) => r.id === id ? req : r) }));
     }
     if (result.expenseId) {
-      const exp = await paymentRequestService.getExpenseRaw(result.expenseId);
-      if (exp) {
-        const { mapExpense } = await import('@/store/helpers');
-        const mapped = mapExpense(exp);
-        set((s) => ({ expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)] }));
-      }
+      // The settlement is done; a failed reload must not invite a second one.
+      try {
+        const exp = await paymentRequestService.getExpenseRaw(result.expenseId);
+        if (exp) {
+          const { mapExpense } = await import('@/store/helpers');
+          const mapped = mapExpense(exp);
+          set((s) => ({ expenses: [mapped, ...s.expenses.filter((e) => e.id !== mapped.id)] }));
+        }
+      } catch (e) { console.warn(e); }
     }
     await get().loadSettlementEventsForRequest(id);
   },
@@ -627,12 +646,8 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
 
     const prId = orig.payment_request_id as string;
 
-    // Delete linked expense (if any) — trigger will recalc after reverse insert
-    if (orig.expense_id) {
-      await svc.deleteExpenseRaw(orig.expense_id);
-      set((s) => ({ expenses: s.expenses.filter((e) => e.id !== orig.expense_id) }));
-    }
-
+    // The reverse event first: if it is refused nothing has changed. Deleting
+    // the expense first lost the money from both cost and the advance.
     await svc.createSettlementEventRaw({
       payment_request_id: prId,
       project_id: orig.project_id,
@@ -642,6 +657,14 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
       notes: trimmedReason,
       created_by: userId,
     });
+    if (orig.expense_id) {
+      try {
+        await svc.deleteExpenseRaw(orig.expense_id);
+        set((s) => ({ expenses: s.expenses.filter((e) => e.id !== orig.expense_id) }));
+      } catch (e) {
+        throw new Error('أُلغيت التسوية، لكن تعذّر حذف مصروفها؛ احذفه من المصروفات حتى لا يُحسب مرتين. ' + errorMessage(e, ''));
+      }
+    }
 
     // Refresh payment request + events
     const refreshed = await paymentRequestService.getPaymentRequestRaw(prId);
@@ -735,7 +758,8 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
             ),
           }));
         } catch (upErr) {
-          console.warn('Failed to close reimbursements on settlement sign:', upErr);
+          // Left open, they could be paid a second time through a payment request.
+          throw new Error('وُقّعت التسوية، لكن تعذّر إقفال طلبات الاسترداد المرتبطة بها؛ أعد المحاولة قبل صرف أي منها. ' + errorMessage(upErr, ''));
         }
       }
     }

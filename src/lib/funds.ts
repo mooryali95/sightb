@@ -18,6 +18,10 @@ export interface ProjectFundsSummary {
   totalCustodyDraw: number;       // مجموع العهد المسحوبة من دفعات
   totalOutstandingAdvances: number; // سلف قائمة على الموردين (محجوزة من الدفعات)
   remainingInManagerHand: number;
+  /** Cash left at approved settlements, waiting for the project's next fund. Part of what is in hand. */
+  pendingCarry: number;
+  /** Paid back to the company out of the funds (loan repayments): not spend. */
+  totalReturnedToCompany: number;
   activeFund: ProjectFund | null;
   unsettledFunds: ProjectFund[];
   fundCount: number;
@@ -252,6 +256,8 @@ export interface FundRemainingBreakdown {
   custodyDraw: number;
   outstandingAdvances: number;
   cashTransfersOut: number;
+  /** Paid back to the company from this fund. */
+  returnedToCompany: number;
   spent: number;
   remaining: number;
 }
@@ -267,13 +273,15 @@ export function getFundRemainingBreakdown(
   const custodyDraw = getFundCustodyDraw(fund.id, custodies);
   const outstandingAdvances = getFundOutstandingAdvances(fund.id, paymentRequests);
   const cashTransfersOut = getFundCashTransfersOut(fund.id, cashTransfers);
-  const spent = direct + custodyDraw + outstandingAdvances + cashTransfersOut;
+  const returnedToCompany = fund.returnedOut ?? 0;
+  const spent = direct + custodyDraw + outstandingAdvances + cashTransfersOut + returnedToCompany;
   return {
     amount: fund.amount,
     direct,
     custodyDraw,
     outstandingAdvances,
     cashTransfersOut,
+    returnedToCompany,
     spent,
     remaining: fund.amount - spent,
   };
@@ -286,7 +294,7 @@ export function getFundRemaining(
   paymentRequests: PaymentRequest[] = [],
   cashTransfers: CashTransfer[] = [],
 ): number {
-  return fund.amount - getFundSpent(fund.id, expenses, custodies, paymentRequests, cashTransfers);
+  return fund.amount - getFundSpent(fund.id, expenses, custodies, paymentRequests, cashTransfers) - (fund.returnedOut ?? 0);
 }
 
 /**
@@ -331,7 +339,9 @@ export function getProjectFundsSummary(
   const projectPRs = paymentRequests.filter((p) => p.projectId === projectId);
   const projectTransfers = cashTransfers.filter((t) => t.projectId === projectId);
 
-  const totalTransferred = projectFunds.reduce((s, f) => s + f.amount, 0);
+  // A carried amount was transferred once already, with the fund it came from.
+  const totalTransferred = projectFunds.reduce((s, f) => s + f.amount - (f.carriedIn ?? 0), 0);
+  const totalReturnedToCompany = projectFunds.reduce((s, f) => s + (f.returnedOut ?? 0), 0);
 
   const totalDocumentedSpend = projectFunds.reduce(
     (s, f) => s + getFundDirectSpent(f.id, expenses, projectCustodies),
@@ -373,8 +383,13 @@ export function getProjectFundsSummary(
   const transfersOutOnActive = projectTransfers
     .filter((t) => activeFundIds.has(t.fromFundId))
     .reduce((s, t) => s + t.amount, 0);
+  const returnedOnActive = activeOrAckFunds.reduce((s, f) => s + (f.returnedOut ?? 0), 0);
+  const pendingCarry = approvedSettlements
+    .filter((st) => st.carryStatus === 'pending')
+    .reduce((s, st) => s + st.remainingCash, 0);
   const cashStillWithManager =
-    activeFundsTotal - directSpendOnActive - custodyDrawOnActive - advancesOnActive - transfersOutOnActive;
+    activeFundsTotal - directSpendOnActive - custodyDrawOnActive - advancesOnActive - transfersOutOnActive - returnedOnActive
+    + pendingCarry;
 
   const unsettledFunds = projectFunds.filter((f) => f.status !== 'settled');
   const activeFund = getActiveFund(projectId, funds);
@@ -386,6 +401,8 @@ export function getProjectFundsSummary(
     totalCustodyDraw,
     totalOutstandingAdvances,
     remainingInManagerHand: cashStillWithManager,
+    pendingCarry,
+    totalReturnedToCompany,
     activeFund,
     unsettledFunds,
     fundCount: projectFunds.length,

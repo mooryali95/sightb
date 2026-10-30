@@ -146,7 +146,7 @@ export default function Login() {
     const { loginSchema } = await import('@/lib/validations');
     const validation = loginSchema.safeParse({ email: email.trim(), password });
     if (!validation.success) {
-      toast.error(validation.error.errors[0]?.message || 'بيانات غير صالحة');
+      toast.error(validation.error.issues[0]?.message || 'بيانات غير صالحة');
       return;
     }
     setLoading(true);

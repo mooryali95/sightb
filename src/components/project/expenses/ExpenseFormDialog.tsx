@@ -14,6 +14,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { RegistryNamePicker } from '@/components/registry/RegistryNamePicker';
 import { formatCurrency } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS,
@@ -52,11 +53,13 @@ interface Props {
   isAdmin: boolean;
 }
 
+const OTHER_PAYER = '__other';
+
 export function ExpenseFormDialog({
   open, onOpenChange, onRequestOpen, editing, projectId, durationMonths, expenses, resources, custodies,
   budgetItems, taxPercent, projectStatus, isAdmin,
 }: Props) {
-  const { addExpense, updateExpense, projectFunds, acknowledgeFund, updateProject } = useStore();
+  const { addExpense, updateExpense, projectFunds, acknowledgeFund, updateProject, createReimbursement } = useStore();
   const activeFund = useMemo(() => getActiveFund(projectId, projectFunds), [projectId, projectFunds]);
 
   const editingId = editing?.id ?? null;
@@ -72,6 +75,8 @@ export function ExpenseFormDialog({
   const [fundId, setFundId] = useState<string>(editing?.fundId || '');
   const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>(editing?.approvalStatus || 'approved');
   const [vendor, setVendor] = useState(editing?.vendor || '');
+  const [partyId, setPartyId] = useState<string | undefined>(editing?.partyId);
+  const companyId = useStore((s) => s.projects.find((p) => p.id === projectId)?.companyId);
   const [invoiceRef, setInvoiceRef] = useState(editing?.invoiceRef || '');
   const [isVatExempt, setIsVatExempt] = useState(editing?.isVatExempt || false);
   const [inputInclusive, setInputInclusive] = useState(false);
@@ -92,6 +97,10 @@ export function ExpenseFormDialog({
   const activeFundRemaining = activeFund ? getFundRemaining(activeFund, expenses, custodies, projPRs, projTransfers) : 0;
   const matchingBudgetItems = budgetItems.filter((b) => b.category === category);
   const parsedAmount = parseFloat(amount) || 0;
+  // Who paid what the source could not cover: the project manager unless chosen otherwise.
+  const manager = resources.find((r) => /مدير/.test(r.role ?? ''));
+  const [excessPayer, setExcessPayer] = useState<string>(manager?.id ?? '');
+  const [excessPayerName, setExcessPayerName] = useState('');
 
   // Auto-fill fundId for NEW expense ONLY when the source mode is "fund".
   // Single-source rule: custody-backed expense MUST NOT also link to a fund.
@@ -120,13 +129,43 @@ export function ExpenseFormDialog({
 
   const submitHeld = fundBlocksSubmit(!!editingId, activeFund, custodyId);
 
+  const sourceFor = (value: number) => resolveExpenseSource({
+    editing: !!editingId, activeFund, fundId, custodyId, amount: value, activeFundRemaining,
+    custodyRemaining: (id) => custodyBreakdowns.get(id)?.remaining ?? 0,
+  });
+  const liveOver = parsedAmount > 0 ? sourceFor(bookedAmount(parsedAmount, inputInclusive, isVatExempt, taxPercent)).over : undefined;
+  const excessBy = excessPayer === OTHER_PAYER ? (excessPayerName.trim() ? { vendorName: excessPayerName.trim() } : null)
+    : excessPayer ? { resourceId: excessPayer } : null;
+
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
     const finalAmount = bookedAmount(parseFloat(amount), inputInclusive, isVatExempt, taxPercent);
-    const source = resolveExpenseSource({
-      editing: !!editingId, activeFund, fundId, custodyId, amount: finalAmount, activeFundRemaining,
-      custodyRemaining: (id) => custodyBreakdowns.get(id)?.remaining ?? 0,
-    });
+    const source = sourceFor(finalAmount);
+    if (source.over && excessBy) {
+      // The source pays what it holds; the rest is owed to whoever paid it.
+      try {
+        if (source.over.available > 0.005) {
+          await addExpense({
+            projectId, category, description: description.trim(), amount: source.over.available, date, month: parseInt(month),
+            responsible: responsible.trim() || undefined, approvalStatus, vendor: vendor.trim() || undefined,
+            invoiceRef: invoiceRef.trim() || undefined, isVatExempt, fundId: source.effectiveFundId,
+            resourceId: chosen(resourceId), custodyId: source.custodyId, budgetItemId: chosen(budgetItemId),
+            ...(partyId ? { partyId } : {}),
+          });
+        }
+        await createReimbursement({
+          projectId, category, amount: source.over.excess, expenseDate: date, autoApprove: true,
+          description: `${description.trim()} — الزائد عن المصدر دفعه من جيبه`,
+          budgetItemId: chosen(budgetItemId),
+          ...('resourceId' in excessBy ? { sourceKind: 'resource' as const, resourceId: excessBy.resourceId } : { sourceKind: 'vendor' as const, vendorName: excessBy.vendorName }),
+        });
+        toast.success(`سُجّل المصروف، و${formatCurrency(source.over.excess)} مستحقة لمن دفع الزائد`);
+        onOpenChange(false);
+      } catch (err) {
+        toast.error(translateDbError(errorMessage(err, '')) || 'تعذّر حفظ المصروف');
+      }
+      return;
+    }
     if (source.error) {
       if (source.long) toast.error(source.error, { duration: 8000 });
       else toast.error(source.error);
@@ -142,6 +181,9 @@ export function ExpenseFormDialog({
       responsible: responsible.trim() || undefined,
       approvalStatus,
       vendor: vendor.trim() || undefined,
+      // Only sent once someone picked or cleared a registry link, so a database
+      // without the registry never sees the column.
+      ...(partyId !== editing?.partyId ? { partyId: partyId ?? '' } : {}),
       invoiceRef: invoiceRef.trim() || undefined,
       isVatExempt,
       fundId: source.effectiveFundId,
@@ -248,6 +290,27 @@ export function ExpenseFormDialog({
           </div>
         </div>
 
+        {!editingId && liveOver && (
+          <div role="status" className="rounded-lg border border-warning/40 bg-warning/10 p-3 space-y-2 text-sm">
+            <p>
+              المبلغ أكبر مما في المصدر بـ <b>{formatCurrency(liveOver.excess)}</b>. يُسجَّل {formatCurrency(liveOver.available)} من المصدر،
+              والزائد دَين على المشروع لمن دفعه من جيبه، يظهر في المستحقات حتى يُسدَّد.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <Select value={excessPayer} onValueChange={setExcessPayer}>
+                <SelectTrigger aria-label="من دفع الزائد"><SelectValue placeholder="من دفع الزائد؟" /></SelectTrigger>
+                <SelectContent>
+                  {resources.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}{r.role ? ` (${r.role})` : ''}</SelectItem>)}
+                  <SelectItem value={OTHER_PAYER}>شخص آخر أو مورد</SelectItem>
+                </SelectContent>
+              </Select>
+              {excessPayer === OTHER_PAYER && (
+                <Input aria-label="اسم من دفع الزائد" value={excessPayerName} onChange={(e) => setExcessPayerName(e.target.value)} placeholder="الاسم" />
+              )}
+            </div>
+          </div>
+        )}
+
         <VatControls
           amount={parsedAmount}
           taxPercent={taxPercent}
@@ -269,8 +332,9 @@ export function ExpenseFormDialog({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label>المورّد</Label>
-            <Input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="اختياري" />
+            <Label htmlFor="expense-vendor">المورّد</Label>
+            <RegistryNamePicker id="expense-vendor" ariaLabel="المورّد" companyId={companyId} value={{ text: vendor, partyId }}
+              onChange={(v) => { setVendor(v.text); setPartyId(v.partyId); }} />
           </div>
           <div className="space-y-2">
             <Label>مرجع الفاتورة</Label>

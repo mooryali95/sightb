@@ -191,7 +191,7 @@ export function PaymentRequestsTab({
                 {req.status === 'paid' && req.requestType === 'advance' && !req.isAdvanceOutstanding && req.advanceSettledAt && (
                   <Badge variant="outline" className="text-emerald-600 border-emerald-300">
                     {req.settlementType === 'cash_refund' ? 'رد نقدي' :
-                     req.settlementType === 'payroll_deduction' ? 'خصم من راتب' :
+                     req.settlementType === 'payroll_deduction' ? 'تحوّلت إلى حافز' :
                      req.settlementType === 'written_off' ? 'مشطوبة' :
                      'مسوّاة بمستندات'} — {String(req.advanceSettledAt).split('T')[0]}
                   </Badge>
