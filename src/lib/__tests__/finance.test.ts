@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { BaselineItem, ChangeOrder, Expense } from '@/types/project';
-import { getTotalPlanned, calculateEVM, getEffectiveContractValue, getCurrentMonth, calcVAT, addVAT, removeVAT, getCountedExpenses } from '../finance';
+import { getTotalPlanned, calculateEVM, getEffectiveContractValue, getCurrentMonth, calcVAT, addVAT, removeVAT, getCountedExpenses, getCollectedRevenue, getOutstandingInvoiced, getBilledRevenue } from '../finance';
 
 describe('getTotalPlanned', () => {
   it('should sum fixed items normally', () => {
@@ -42,6 +42,16 @@ describe('getCountedExpenses', () => {
       expense('approved', 'approved'), expense('pending', 'pending'),
       expense('rejected', 'rejected'), expense('advance', 'approved', true),
     ]).map((row) => row.id)).toEqual(['approved', 'pending']);
+  });
+});
+
+describe('revenue rules', () => {
+  const rows = [{ status: 'collected', amount: 100 }, { status: 'invoiced', amount: 40 }, { status: 'planned', amount: 7 }, { status: 'collected', amount: 0.5 }] as { status: 'collected' | 'invoiced' | 'planned'; amount: number }[];
+  it('keeps cash received, owed now and billed apart', () => {
+    expect(getCollectedRevenue(rows)).toBe(100.5);
+    expect(getOutstandingInvoiced(rows)).toBe(40);
+    expect(getBilledRevenue(rows)).toBe(140.5);
+    expect(getBilledRevenue(rows)).toBe(getCollectedRevenue(rows) + getOutstandingInvoiced(rows));
   });
 });
 

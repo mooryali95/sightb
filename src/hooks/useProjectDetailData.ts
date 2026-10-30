@@ -2,10 +2,7 @@ import { useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { useCoreData, useProjectData } from '@/hooks/useAppData';
-import {
-  getProjectSummary, getExpensesByCategory, getMonthlyBreakdown,
-  calculateEVM, getCurrentMonth,
-} from '@/lib/finance';
+import { getProjectSummary, getExpensesByCategory, getMonthlyBreakdown, calculateEVM, getCurrentMonth, getCountedExpenses } from '@/lib/finance';
 import { EXPENSE_CATEGORY_LABELS, type BudgetItem, type ExpenseCategory } from '@/types/project';
 
 /**
@@ -82,7 +79,7 @@ export function useProjectDetailData(id: string | undefined) {
 
   // Spend against an item is what the summary counts as spend: not a
   // rejected expense, not an advance still outstanding.
-  const countedExpenses = pExpenses.filter((e) => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
+  const countedExpenses = getCountedExpenses(pExpenses);
   const getActualForItem = (item: BudgetItem) =>
     countedExpenses.filter((e) => e.budgetItemId === item.id).reduce((s, e) => s + e.amount, 0);
 

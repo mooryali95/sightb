@@ -3,8 +3,27 @@ import { getEffectiveContractValue, getCurrentMonth } from './contract';
 import { getTotalPlanned } from './budget';
 import { addVAT, calcVAT } from './vat';
 
+/**
+ * The money rules, one function each. Every screen, export and check uses
+ * these; scripts/ssot-guard.sh fails the build on a hand-copied version.
+ */
+type RevenueLike = Pick<Revenue, 'status' | 'amount'>;
+const sum = (rows: { amount: number }[]) => rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+/** Cash received: revenues marked collected. */
+export function getCollectedRevenue(revenues: RevenueLike[]): number {
+  return sum(revenues.filter((r) => r.status === 'collected'));
+}
+/** Owed by the client now: invoiced and not yet collected. */
+export function getOutstandingInvoiced(revenues: RevenueLike[]): number {
+  return sum(revenues.filter((r) => r.status === 'invoiced'));
+}
+/** Everything billed so far: invoiced, collected or not. */
+export function getBilledRevenue(revenues: RevenueLike[]): number {
+  return sum(revenues.filter((r) => r.status === 'invoiced' || r.status === 'collected'));
+}
+
 /** Expenses that belong in actual cost everywhere in the product. */
-export function getCountedExpenses(expenses: Expense[]): Expense[] {
+export function getCountedExpenses<T extends { approvalStatus?: string; isOutstandingAdvance?: boolean }>(expenses: T[]): T[] {
   return expenses.filter((expense) => expense.approvalStatus !== 'rejected' && !expense.isOutstandingAdvance);
 }
 
@@ -26,8 +45,8 @@ export function getProjectSummary(
   const plannedProfit = effectiveContractValue - totalPlanned;
   const plannedProfitMargin = effectiveContractValue > 0 ? (plannedProfit / effectiveContractValue) * 100 : 0;
 
-  const collectedRevenue = revenues.filter(r => r.status === 'collected').reduce((sum, r) => sum + r.amount, 0);
-  const invoicedRevenue = revenues.filter(r => r.status === 'invoiced').reduce((sum, r) => sum + r.amount, 0);
+  const collectedRevenue = getCollectedRevenue(revenues);
+  const invoicedRevenue = getOutstandingInvoiced(revenues);
   const totalPlannedRevenue = revenues.filter(r => r.status === 'planned').reduce((sum, r) => sum + r.amount, 0);
   const realizedProfit = collectedRevenue - totalActual;
   const realizedProfitMargin = collectedRevenue > 0 ? (realizedProfit / collectedRevenue) * 100 : 0;

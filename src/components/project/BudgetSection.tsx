@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useDialogSession } from '@/hooks/useDialogSession';
-import { formatCurrency, getTotalPlanned } from '@/lib/finance';
+import { formatCurrency, getTotalPlanned, getCountedExpenses } from '@/lib/finance';
 import { getProjectOutstandingAdvances } from '@/lib/funds';
 import {
   EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type Resource,
@@ -47,7 +47,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
   // What counts as spend, here as on every other screen: not a rejected
   // expense, and not the expense of an advance still outstanding, which the
   // summary shows apart as recoverable. Every actual figure below reads this list.
-  const countedExpenses = expenses.filter((e) => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
+  const countedExpenses = getCountedExpenses(expenses);
 
   const totalPlanned = getTotalPlanned(budgetItems);
   const totalActual = countedExpenses.reduce((s, e) => s + e.amount, 0);

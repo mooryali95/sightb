@@ -2,6 +2,7 @@
  * Budget vs Planned vs Actual comparison helpers.
  * Pure functions — no side effects, fully testable.
  */
+import { getCountedExpenses } from '@/lib/finance';
 import {
   BudgetItem, Expense, ExpenseCategory, EXPENSE_CATEGORY_LABELS,
 } from '@/types/project';
@@ -95,10 +96,8 @@ export function getPlannedInRange(
 
 /** Sum of actual expenses linked to this budget item, excluding outstanding advances and rejected. */
 export function getActualForBudgetItem(itemId: string, expenses: Expense[]): number {
-  return expenses
+  return getCountedExpenses(expenses)
     .filter(e => e.budgetItemId === itemId)
-    .filter(e => e.approvalStatus !== 'rejected')
-    .filter(e => !e.isOutstandingAdvance)
     .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 }
 
@@ -106,10 +105,8 @@ export function getActualForBudgetItem(itemId: string, expenses: Expense[]): num
 export function getActualInRange(
   itemId: string, expenses: Expense[], fromMonth: number, toMonth: number,
 ): number {
-  return expenses
+  return getCountedExpenses(expenses)
     .filter(e => e.budgetItemId === itemId)
-    .filter(e => e.approvalStatus !== 'rejected')
-    .filter(e => !e.isOutstandingAdvance)
     .filter(e => (e.month ?? 0) >= fromMonth && (e.month ?? 0) <= toMonth)
     .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 }
@@ -118,10 +115,8 @@ export function getActualInRange(
 export function getExpensesForBudgetItem(
   itemId: string, expenses: Expense[], fromMonth?: number, toMonth?: number,
 ): Expense[] {
-  return expenses
+  return getCountedExpenses(expenses)
     .filter(e => e.budgetItemId === itemId)
-    .filter(e => e.approvalStatus !== 'rejected')
-    .filter(e => !e.isOutstandingAdvance)
     .filter(e => fromMonth == null || (e.month ?? 0) >= fromMonth)
     .filter(e => toMonth == null || (e.month ?? 0) <= toMonth)
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));

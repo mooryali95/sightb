@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useDialogSession } from '@/hooks/useDialogSession';
-import { formatCurrency, calcVAT, addVAT } from '@/lib/finance';
+import { formatCurrency, calcVAT, addVAT, getCollectedRevenue, getOutstandingInvoiced } from '@/lib/finance';
 import {
   REVENUE_TYPE_LABELS, REVENUE_STATUS_LABELS, REVENUE_STATUS_COLORS, MILESTONE_STATUS_COLORS,
   type RevenueType, type RevenueStatus, type Revenue, type Milestone, type MilestoneStatus,
@@ -51,10 +51,10 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
   const total = revenues.reduce((s, r) => s + r.amount, 0);
   const totalTax = taxPercent > 0 ? total * (taxPercent / 100) : 0;
   const totalWithTax = total + totalTax;
-  const collectedTotal = revenues.filter((r) => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
+  const collectedTotal = getCollectedRevenue(revenues);
   // Statuses never overlap, so the invoiced total is the receivable, as in
   // the summary library; nothing is subtracted from it.
-  const invoicedTotal = revenues.filter((r) => r.status === 'invoiced').reduce((s, r) => s + r.amount, 0);
+  const invoicedTotal = getOutstandingInvoiced(revenues);
   const plannedTotal = revenues.filter((r) => r.status === 'planned').reduce((s, r) => s + r.amount, 0);
 
   const showVAT = taxPercent > 0;

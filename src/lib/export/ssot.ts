@@ -4,7 +4,7 @@
  */
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { formatCurrency } from '../finance';
+import { formatCurrency, getCollectedRevenue, getBilledRevenue } from '../finance';
 import type { SsotReportInput } from '../ssot-report';
 import { PDF_COLORS, addPdfFooter, addCoverPage, addSectionTitle } from './pdf-helpers';
 
@@ -20,8 +20,8 @@ export function exportSsotReportPDF(data: SsotReportInput & { currency?: string 
   const doc = new jsPDF({ orientation: 'landscape', putOnlyUsedFonts: true });
   const p = data.profitability;
 
-  const collected = p.revenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
-  const invoiced = p.revenues.filter(r => r.status === 'invoiced' || r.status === 'collected').reduce((s, r) => s + r.amount, 0);
+  const collected = getCollectedRevenue(p.revenues);
+  const invoiced = getBilledRevenue(p.revenues);
   const effectiveContract = p.contractValue + p.approvedChangeOrders;
   const profit = effectiveContract - p.totalActualExpenses;
 
@@ -37,7 +37,7 @@ export function exportSsotReportPDF(data: SsotReportInput & { currency?: string 
       ['Approved Change Orders', formatCurrency(p.approvedChangeOrders, cur)],
       ['Effective Contract Value', formatCurrency(effectiveContract, cur)],
       ['Collected Revenue', formatCurrency(collected, cur)],
-      ['Invoiced Revenue', formatCurrency(invoiced, cur)],
+      ['Billed Revenue (invoiced + collected)', formatCurrency(invoiced, cur)],
       ['Actual Expenses', formatCurrency(p.totalActualExpenses, cur)],
       ['Expected Profit', formatCurrency(profit, cur)],
       ['Margin %', effectiveContract > 0 ? `${((profit / effectiveContract) * 100).toFixed(1)}%` : 'N/A'],

@@ -4,6 +4,7 @@
  * their own pocket, and where their account with the company stands.
  * The page of a registry entry reads only this.
  */
+import { getCountedExpenses } from '@/lib/finance';
 import { balancesWithCompany, type CompanyExpense, type IntercompanyEntry } from '@/lib/finance/company-ledger';
 
 interface ExpenseLike {
@@ -39,7 +40,7 @@ export function summarizeParty(partyId: string, data: {
   companyExpenses: CompanyExpense[]; entries: IntercompanyEntry[];
 }): PartySummary {
   const projectName = new Map(data.projects.map((p) => [p.id, p.name]));
-  const mine = data.expenses.filter((e) => e.partyId === partyId && e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
+  const mine = getCountedExpenses(data.expenses.filter((e) => e.partyId === partyId));
 
   const byProject = new Map<string, { projectId: string; name: string; total: number; count: number }>();
   const byCategory = new Map<string, number>();

@@ -41,11 +41,24 @@ describe('checkIntegrity', () => {
     expect(found).toEqual([expect.objectContaining({ rule: 'cash_left_finished', amount: 50 })]);
   });
 
+  it('keeps a finished project\'s books open until its settlements are approved', () => {
+    const s = { id: 's', fundId: 'f1', projectId: P, status: 'draft', difference: 0, remainingCash: 0 } as FundSettlement;
+    expect(rules(base({ projects: [project('completed')], settlements: [s] }))).toContain('settlement_pending_finished');
+    expect(rules(base({ projects: [project('completed')], settlements: [{ ...s, status: 'approved' }] }))).not.toContain('settlement_pending_finished');
+    expect(rules(base({ settlements: [s] }))).not.toContain('settlement_pending_finished');
+  });
+
+  it('names a collected revenue that has no collection date', () => {
+    const rev = { id: 'r', projectId: P, amount: 6000, status: 'collected', description: 'دفعة أخيرة' } as Revenue;
+    expect(checkIntegrity(base({ revenues: [rev] }))).toEqual([expect.objectContaining({ rule: 'collected_no_date', amount: 6000, severity: 'warning' })]);
+    expect(rules(base({ revenues: [{ ...rev, collectionDate: '2026-07-02' }] }))).toEqual([]);
+  });
+
   it('flags a settlement gap with no reason, and more collected than the contract', () => {
     const s = { id: 's', fundId: 'f1', projectId: P, status: 'approved', difference: 3211, remainingCash: 0 } as FundSettlement;
     expect(rules(base({ settlements: [s] }))).toEqual(['gap_no_reason']);
     expect(rules(base({ settlements: [{ ...s, differenceReason: 'غير موثّقة' }] }))).toEqual([]);
-    const rev = { id: 'r', projectId: P, amount: 10500, status: 'collected' } as Revenue;
+    const rev = { id: 'r', projectId: P, amount: 10500, status: 'collected', collectionDate: '2026-05-01' } as Revenue;
     expect(checkIntegrity(base({ revenues: [rev] }))).toEqual([expect.objectContaining({ rule: 'revenue_over_contract', amount: 500 })]);
     expect(checkIntegrity(base({ projects: [project('archived')], funds: [], revenues: [rev] }))[0].severity).toBe('info');
   });
