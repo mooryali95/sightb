@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useDialogSession } from '@/hooks/useDialogSession';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, getCountedExpenses } from '@/lib/finance';
 import { type Resource, type BudgetItem, type Expense } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Pencil, Eye } from 'lucide-react';
@@ -40,7 +40,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
   const pExpenses = propExpenses || storeExpenses.filter(e => e.projectId === projectId);
   // What a resource is charged with is what every summary counts as spend:
   // not a rejected expense, not an advance still outstanding.
-  const countedExpenses = pExpenses.filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
+  const countedExpenses = getCountedExpenses(pExpenses);
   const figuresFor = (r: Resource) => resourceFigures(r, budgetItems, countedExpenses, durationMonths);
 
   const totalMonthlyCost = resources.reduce((s, r) => s + r.monthlyCost, 0);

@@ -177,6 +177,18 @@ describe('adding a revenue', () => {
     }));
   });
 
+  it('never saves a collected revenue without the day the cash arrived', async () => {
+    renderSection();
+    const dialog = openAddForm();
+    fillDescriptionAndAmount(dialog, 'دفعة جديدة', '1000');
+    // Prefilled; the record keeps it.
+    expect((within(dialog).getByLabelText('تاريخ التحصيل') as HTMLInputElement).value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    fireEvent.change(within(dialog).getByLabelText('تاريخ التحصيل'), { target: { value: '' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'إضافة' }));
+    expect(toast.error).toHaveBeenCalledWith('أدخل تاريخ التحصيل');
+    expect(actions.addRevenue).not.toHaveBeenCalled();
+  });
+
   it('strips VAT when the amount typed includes it', async () => {
     renderSection();
     const dialog = openAddForm();
@@ -291,12 +303,21 @@ describe('a save the server refuses', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
+  it('refuses a collection dated before its invoice', async () => {
+    renderSection();
+    const dialog = openEditForm('فاتورة المرحلة الأولى');
+    pick(dialog, 'مُفوتر', /^محصّل$/);
+    fireEvent.change(within(dialog).getByLabelText('تاريخ التحصيل'), { target: { value: '2000-01-01' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'حفظ التعديلات' }));
+    expect(toast.error).toHaveBeenCalledWith('تاريخ التحصيل قبل تاريخ الفاتورة');
+    expect(actions.updateRevenue).not.toHaveBeenCalled();
+  });
+
   it('saves the move to collected and says so when the server accepts it', async () => {
     renderSection();
     const dialog = openEditForm('فاتورة المرحلة الأولى');
     pick(dialog, 'مُفوتر', /^محصّل$/);
-    fireEvent.change(within(dialog).getAllByDisplayValue('')
-      .find((el) => (el as HTMLInputElement).type === 'date') as HTMLElement, { target: { value: '2026-04-02' } });
+    fireEvent.change(within(dialog).getByLabelText('تاريخ التحصيل'), { target: { value: '2026-04-02' } });
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'حفظ التعديلات' }));
 

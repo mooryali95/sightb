@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { getCountedExpenses } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
 
 export interface TabBadgeInfo {
@@ -47,7 +48,7 @@ export function useTabBadges(projectId?: string): TabBadges {
     const pendingExpenses = pExp.filter(e => e.approvalStatus === 'pending').length;
     // Spend against an item is what the finance tab counts as spend: not a
     // rejected expense, not an advance still outstanding.
-    const countedExpenses = pExp.filter(e => e.approvalStatus !== 'rejected' && !e.isOutstandingAdvance);
+    const countedExpenses = getCountedExpenses(pExp);
     const overBudgetItems = pBud.filter(b => {
       const actual = countedExpenses
         .filter(e => e.budgetItemId === b.id)

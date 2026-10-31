@@ -4,7 +4,7 @@
 import { bookNew, appendSheet, writeWorkbook } from '../xlsx-writer';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { formatCurrency, getCashFlowForecast, addVAT, getMonthlyBudgetPlan } from '../finance';
+import { formatCurrency, getCashFlowForecast, addVAT, getMonthlyBudgetPlan, getCollectedRevenue } from '../finance';
 import {
   EXPENSE_CATEGORY_LABELS, CHANGE_ORDER_TYPE_LABELS, CHANGE_ORDER_STATUS_LABELS, COST_TYPE_LABELS, APPROVAL_STATUS_LABELS,
   type ExpenseCategory, type ChangeOrder, type BudgetItem, type Revenue, type Expense, type CostType, type ApprovalStatus,
@@ -159,7 +159,7 @@ export async function exportToExcel(data: ExportBudgetData) {
   // Summary sheet. The rate is the project's own; only a missing one falls
   // back to 15, so a project with no VAT prints 0%.
   const vatRate = data.vatRate ?? 15;
-  const collectedRevenue = data.revenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
+  const collectedRevenue = getCollectedRevenue(data.revenues);
   const approvedCOImpact = (data.changeOrders || []).filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
   const effectiveContract = data.contractValue + approvedCOImpact;
 
@@ -190,7 +190,7 @@ export function exportToPDF(data: ExportBudgetData) {
   const approvedCOImpact = (data.changeOrders || []).filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
   const effectiveContract = data.contractValue + approvedCOImpact;
   const plannedProfit = data.plannedProfit !== undefined ? data.plannedProfit : effectiveContract - data.totalPlanned;
-  const collectedRevenue = data.revenues.filter(r => r.status === 'collected').reduce((s, r) => s + r.amount, 0);
+  const collectedRevenue = getCollectedRevenue(data.revenues);
 
   // Cover page
   addCoverPage(doc, data.projectName, 'Financial Report');

@@ -4,6 +4,7 @@
  * gap has its reason, and a finished project holds no cash. Each problem is
  * said in plain words, with the amount and the project it is in.
  */
+import { getCollectedRevenue } from './summary';
 import type { CashTransfer, Custody, Expense, FundSettlement, PaymentRequest, Project, ProjectFund, ResourceReimbursement, Revenue } from '@/types/project';
 import { getCustodyRemaining, getFundRemaining } from '@/lib/funds';
 
@@ -11,7 +12,7 @@ export type IntegritySeverity = 'error' | 'warning' | 'info';
 
 export interface IntegrityIssue {
   severity: IntegritySeverity;
-  rule: 'no_source' | 'duplicate' | 'custody_over' | 'fund_over' | 'gap_no_reason' | 'cash_left_finished' | 'revenue_over_contract' | 'owed';
+  rule: 'no_source' | 'duplicate' | 'custody_over' | 'fund_over' | 'gap_no_reason' | 'cash_left_finished' | 'revenue_over_contract' | 'owed' | 'settlement_pending_finished' | 'collected_no_date';
   projectId: string;
   text: string;
   amount: number;
@@ -89,12 +90,25 @@ export function checkIntegrity(i: IntegrityInput): IntegrityIssue[] {
       }
     }
 
+    // 4b. A finished project's settlements are approved, or its books stay open.
+    if (FINISHED.includes(p.status)) {
+      for (const s of i.settlements.filter((x) => x.projectId === p.id && (x.status === 'draft' || x.status === 'submitted'))) {
+        const n = i.funds.find((f) => f.id === s.fundId)?.fundNumber;
+        out.push({ severity: 'warning', rule: 'settlement_pending_finished', projectId: p.id, amount: Math.abs(s.difference) + (s.remainingCash ?? 0), text: `المشروع منتهٍ وتسوية الدفعة رقم ${n} لم تُعتمد بعد: اعتمدها لإغلاق الحساب` });
+      }
+    }
+
     // 5. Never more collected than the contract.
-    const collected = r2(i.revenues.filter((r) => r.projectId === p.id && r.status === 'collected').reduce((s, r) => s + r.amount, 0));
+    const collected = r2(getCollectedRevenue(i.revenues.filter((r) => r.projectId === p.id)));
     const contract = i.contractOf(p.id);
     if (contract > 0 && collected - contract > 1) {
       // An archived project's figures are kept as its accounts were closed: noted, not to fix.
       out.push({ severity: p.status === 'archived' ? 'info' : 'warning', rule: 'revenue_over_contract', projectId: p.id, amount: r2(collected - contract), text: `المحصّل (${collected.toLocaleString('en-US')}) أكثر من قيمة العقد (${contract.toLocaleString('en-US')})` });
+    }
+
+    // 5b. Collected cash carries the day it arrived, or no period can count it.
+    for (const r of i.revenues.filter((x) => x.projectId === p.id && x.status === 'collected' && !x.collectionDate)) {
+      out.push({ severity: 'warning', rule: 'collected_no_date', projectId: p.id, amount: r.amount, text: `«${r.description}» محصّل بلا تاريخ تحصيل: أضف اليوم الذي وصل فيه المبلغ` });
     }
 
     // 6. What the project owes people stays in view until paid.

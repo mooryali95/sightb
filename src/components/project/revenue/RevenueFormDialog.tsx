@@ -55,7 +55,13 @@ export function RevenueFormDialog({
   const [status, setStatus] = useState<RevenueStatus>(editing?.status || 'collected');
   const [invoiceNumber, setInvoiceNumber] = useState(editing?.invoiceNumber || '');
   const [invoiceDate, setInvoiceDate] = useState(editing?.invoiceDate || '');
-  const [collectionDate, setCollectionDate] = useState(editing?.collectionDate || '');
+  // A collected revenue always carries the day the cash arrived: prefilled
+  // (the revenue's own date, or today when it is marked collected now) and
+  // required on save, so the dashboard can place the cash in its period.
+  const today = new Date().toISOString().split('T')[0];
+  const [collectionDate, setCollectionDate] = useState(
+    editing?.collectionDate || ((editing?.status || 'collected') === 'collected' ? (editing?.date ?? today) : ''),
+  );
   const [milestoneId, setMilestoneId] = useState(editing?.milestoneId || '');
   const [inputInclusive, setInputInclusive] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,6 +77,10 @@ export function RevenueFormDialog({
     if (!description.trim()) { toast.error('أدخل وصف الإيراد'); return; }
     const parsed = parseFloat(amount);
     if (!amount || !Number.isFinite(parsed) || parsed <= 0) { toast.error('أدخل مبلغاً أكبر من صفر'); return; }
+    // Collected cash belongs to the day it arrived; without that day the
+    // dashboard cannot place it in a period (4 live rows had none, 30 October).
+    if (status === 'collected' && !collectionDate) { toast.error('أدخل تاريخ التحصيل'); return; }
+    if (status === 'collected' && invoiceDate && collectionDate < invoiceDate) { toast.error('تاريخ التحصيل قبل تاريخ الفاتورة'); return; }
     if (saving) return;
     const rawAmount = parseFloat(amount);
     const finalAmount = inputInclusive && taxPercent > 0 ? removeVAT(rawAmount, taxPercent) : rawAmount;
@@ -171,7 +181,7 @@ export function RevenueFormDialog({
             </div>
             <div className="space-y-2">
               <Label>الحالة</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as RevenueStatus)}>
+              <Select value={status} onValueChange={(v) => { setStatus(v as RevenueStatus); if (v === 'collected' && !collectionDate) setCollectionDate(today); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(REVENUE_STATUS_LABELS).map(([k, v]) => (
@@ -216,8 +226,8 @@ export function RevenueFormDialog({
           )}
           {status === 'collected' && (
             <div className="space-y-2">
-              <Label>تاريخ التحصيل</Label>
-              <Input type="date" value={collectionDate} onChange={(e) => setCollectionDate(e.target.value)} />
+              <Label>تاريخ التحصيل *</Label>
+              <Input type="date" aria-label="تاريخ التحصيل" value={collectionDate} onChange={(e) => setCollectionDate(e.target.value)} />
             </div>
           )}
       </div>

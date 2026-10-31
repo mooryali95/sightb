@@ -8,7 +8,7 @@ import {
   startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear,
   subMonths, subQuarters, subYears, isWithinInterval, parseISO,
 } from 'date-fns';
-import { getCountedExpenses, getEffectiveContractValue, getTotalPlanned } from '@/lib/finance';
+import { getCountedExpenses, getEffectiveContractValue, getOutstandingInvoiced, getTotalPlanned } from '@/lib/finance';
 import { normalizeArabicName } from '@/lib/resource-spend';
 import {
   PROJECT_STATUS_LABELS,
@@ -173,7 +173,7 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   // Cash position under the period: collected minus counted spend.
   const netCash = collectedRevenue - totalExpenses;
   // Invoiced and not yet collected, whatever the period: what clients owe now.
-  const receivables = filteredAllRevenues.filter((r) => r.status === 'invoiced').reduce((s, r) => s + r.amount, 0);
+  const receivables = getOutstandingInvoiced(filteredAllRevenues);
   // Company indirect costs of the companies on screen. Like the planned
   // profit they are cumulative, so the net agrees with the company page,
   // which nets them off the same way. With one company chosen, only its own.
