@@ -500,6 +500,7 @@ export type Database = {
           expense_id: string
           id: string
           project_id: string
+          settled_in_project: boolean
           user_id: string
         }
         Insert: {
@@ -508,6 +509,7 @@ export type Database = {
           expense_id: string
           id?: string
           project_id: string
+          settled_in_project?: boolean
           user_id?: string
         }
         Update: {
@@ -516,6 +518,7 @@ export type Database = {
           expense_id?: string
           id?: string
           project_id?: string
+          settled_in_project?: boolean
           user_id?: string
         }
         Relationships: [
@@ -811,6 +814,7 @@ export type Database = {
           month: number
           notes: string | null
           ocr_extracted_data: Json | null
+          party_id: string | null
           project_id: string
           receipt_attachments: Json
           reimburses_payable_id: string | null
@@ -839,6 +843,7 @@ export type Database = {
           month?: number
           notes?: string | null
           ocr_extracted_data?: Json | null
+          party_id?: string | null
           project_id: string
           receipt_attachments?: Json
           reimburses_payable_id?: string | null
@@ -867,6 +872,7 @@ export type Database = {
           month?: number
           notes?: string | null
           ocr_extracted_data?: Json | null
+          party_id?: string | null
           project_id?: string
           receipt_attachments?: Json
           reimburses_payable_id?: string | null
@@ -889,6 +895,13 @@ export type Database = {
             columns: ["custody_id"]
             isOneToOne: false
             referencedRelation: "custodies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
             referencedColumns: ["id"]
           },
           {
@@ -919,6 +932,8 @@ export type Database = {
           approval_date: string | null
           approved_by: string | null
           attachments: Json
+          carried_to_fund_id: string | null
+          carry_status: string | null
           created_at: string
           difference: number | null
           difference_reason: string | null
@@ -938,6 +953,8 @@ export type Database = {
           approval_date?: string | null
           approved_by?: string | null
           attachments?: Json
+          carried_to_fund_id?: string | null
+          carry_status?: string | null
           created_at?: string
           difference?: number | null
           difference_reason?: string | null
@@ -957,6 +974,8 @@ export type Database = {
           approval_date?: string | null
           approved_by?: string | null
           attachments?: Json
+          carried_to_fund_id?: string | null
+          carry_status?: string | null
           created_at?: string
           difference?: number | null
           difference_reason?: string | null
@@ -973,6 +992,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fund_settlements_carried_to_fund_id_fkey"
+            columns: ["carried_to_fund_id"]
+            isOneToOne: false
+            referencedRelation: "project_funds"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fund_settlements_fund_id_fkey"
             columns: ["fund_id"]
@@ -1041,6 +1067,7 @@ export type Database = {
           id: string
           note: string
           salary_expense_id: string | null
+          source_fund_id: string | null
           to_id: string | null
           to_kind: string
           type: string
@@ -1057,6 +1084,7 @@ export type Database = {
           id?: string
           note?: string
           salary_expense_id?: string | null
+          source_fund_id?: string | null
           to_id?: string | null
           to_kind: string
           type: string
@@ -1073,6 +1101,7 @@ export type Database = {
           id?: string
           note?: string
           salary_expense_id?: string | null
+          source_fund_id?: string | null
           to_id?: string | null
           to_kind?: string
           type?: string
@@ -1091,6 +1120,13 @@ export type Database = {
             columns: ["salary_expense_id"]
             isOneToOne: false
             referencedRelation: "company_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intercompany_entries_source_fund_id_fkey"
+            columns: ["source_fund_id"]
+            isOneToOne: false
+            referencedRelation: "project_funds"
             referencedColumns: ["id"]
           },
         ]
@@ -1166,30 +1202,36 @@ export type Database = {
       }
       parties: {
         Row: {
+          aliases: string[]
           archived: boolean
           company_id: string
           created_at: string
           id: string
           kind: string
           name: string
+          role: string | null
           user_id: string
         }
         Insert: {
+          aliases?: string[]
           archived?: boolean
           company_id: string
           created_at?: string
           id?: string
           kind?: string
           name: string
+          role?: string | null
           user_id?: string
         }
         Update: {
+          aliases?: string[]
           archived?: boolean
           company_id?: string
           created_at?: string
           id?: string
           kind?: string
           name?: string
+          role?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1593,10 +1635,12 @@ export type Database = {
           acknowledged_at: string | null
           acknowledged_by: string | null
           amount: number
+          carried_in: number
           created_at: string
           created_by: string
           fund_number: number
           id: string
+          ledger_entry_id: string | null
           notes: string | null
           project_id: string
           status: Database["public"]["Enums"]["fund_status"]
@@ -1607,10 +1651,12 @@ export type Database = {
           acknowledged_at?: string | null
           acknowledged_by?: string | null
           amount?: number
+          carried_in?: number
           created_at?: string
           created_by: string
           fund_number: number
           id?: string
+          ledger_entry_id?: string | null
           notes?: string | null
           project_id: string
           status?: Database["public"]["Enums"]["fund_status"]
@@ -1621,17 +1667,27 @@ export type Database = {
           acknowledged_at?: string | null
           acknowledged_by?: string | null
           amount?: number
+          carried_in?: number
           created_at?: string
           created_by?: string
           fund_number?: number
           id?: string
+          ledger_entry_id?: string | null
           notes?: string | null
           project_id?: string
           status?: Database["public"]["Enums"]["fund_status"]
           transfer_date?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "project_funds_ledger_entry_id_fkey"
+            columns: ["ledger_entry_id"]
+            isOneToOne: false
+            referencedRelation: "intercompany_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {
@@ -1878,6 +1934,7 @@ export type Database = {
           id: string
           monthly_cost: number
           name: string
+          party_id: string | null
           project_id: string
           role: string | null
           user_id: string
@@ -1887,6 +1944,7 @@ export type Database = {
           id?: string
           monthly_cost?: number
           name: string
+          party_id?: string | null
           project_id: string
           role?: string | null
           user_id: string
@@ -1896,11 +1954,19 @@ export type Database = {
           id?: string
           monthly_cost?: number
           name?: string
+          party_id?: string | null
           project_id?: string
           role?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "resources_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "resources_project_id_fkey"
             columns: ["project_id"]
@@ -2415,6 +2481,7 @@ export type Database = {
           expense_amount: number
           expense_id: string
           kind: string
+          settled_in_project: boolean
         }[]
       }
       project_financial_summary: {
