@@ -9,6 +9,7 @@
 - [x] 2026-10-10 — Financial labels standardized; project page now separates budget availability from manager cash, dashboard prioritizes liquidity/profitability, and company project contracts use effective values.
 
 ## Open
+- [ ] 2026-11-01 — Confirmed QA finding `80df4e61-da79-5b5a-9888-63cdf427f69a`: company IntegrityCard can calculate without loading cash transfers. Approved handoff plan: `.lovable/plan/تصحيح-تنبيهات-سلامة-البيانات-على-صفحة-الشركة-2026-11-01.md`. Blocker: the card is protected under LOVABLE_HANDOFF and belongs to GitHub PR #150; Claude / the GitHub team must implement and verify the fix. Finding remains unresolved; no protected code changed.
 - [ ] Publish the latest frontend so the error messages and the saved cache reach sight.basserh.com. Waits on: the owner publishing.
 - [ ] `user_roles` "Admins can manage all roles" also reads its own table inside its policy. Check whether role edits hit the same recursion before changing it. Waits on: a safe test (role changes are sensitive).
 - [ ] Second-factor enforcement stays off until the owner decides.
