@@ -5,7 +5,8 @@
  */
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowDownUp, Info, Search, AlertTriangle } from 'lucide-react';
+import { ArrowDownUp, Info, Search, AlertTriangle, Download } from 'lucide-react';
+import { buildOverviewCsv, downloadCsv } from '@/pages/financial-overview/overviewCsv';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/AppLayout';
@@ -50,6 +51,37 @@ const spend = (r: Row) => (r.planned > 0 ? (r.actual / r.planned) * 100 : 0);
 // The same rule as the dashboard's "needs attention", so the two counts agree.
 const isRisk = (r: Row) => needsAttention(r.status ? { status: r.status } : null, r.actual, r.planned, r.profit);
 
+/** Budget vs actual for the top 8 rows in the current order — plain bars, no chart library on this screen. */
+function SpendBars({ rows }: { rows: Row[] }) {
+  const top = rows.filter((r) => r.planned > 0 || r.actual > 0).slice(0, 8);
+  if (!top.length) return null;
+  const max = Math.max(...top.map((r) => Math.max(r.planned, r.actual)), 1);
+  return (
+    <div className="rounded-lg border border-border bg-card p-4 my-3 space-y-3">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">الموازنة مقابل المصروف الفعلي (أول 8 حسب الترتيب)</span>
+        <span className="flex gap-3">
+          <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-muted-foreground/40" />الموازنة</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-primary" />المصروف</span>
+        </span>
+      </div>
+      {top.map((r) => {
+        const over = r.planned > 0 && r.actual > r.planned;
+        return (
+          <div key={r.id} className="grid grid-cols-[minmax(80px,160px)_1fr_auto] items-center gap-3 text-xs">
+            <span className="truncate" title={r.name}>{r.name}</span>
+            <div className="space-y-1">
+              <div className="h-2 rounded-sm bg-muted-foreground/40" style={{ width: `${(r.planned / max) * 100}%` }} />
+              <div className={cn('h-2 rounded-sm', over ? 'bg-destructive' : 'bg-primary')} style={{ width: `${(r.actual / max) * 100}%` }} />
+            </div>
+            <span className={cn('font-mono', over && 'text-destructive')}>{pct(spend(r))}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Kpi({ label, value, tone, hint }: { label: string; value: number; tone?: 'destructive' | 'success'; hint?: string }) {
   return (
     <div className="rounded-lg border border-border bg-card p-3" title={hint}>
@@ -66,6 +98,7 @@ export default function FinancialOverview() {
   const [sort, setSort] = useState<SortKey>('contract');
   const [q, setQ] = useState('');
   const [onlyRisk, setOnlyRisk] = useState(false);
+  const [tab, setTab] = useState<'companies' | 'portfolios' | 'projects'>('companies');
 
   const { companyRows, portfolioRows, projectRows } = useMemo(() => {
     const companyName = (id?: string) => s.companies.find((c) => c.id === id)?.name ?? '—';
@@ -110,6 +143,13 @@ export default function FinancialOverview() {
   const activeProjects = projectRows.filter((r) => !r.status || !INACTIVE_STATUSES.includes(r.status));
   const riskCount = activeProjects.filter(isRisk).length;
 
+  const exportCurrent = () => {
+    const map = { companies: [companyRows, 'الشركة الأم'], portfolios: [portfolioRows, 'الشركة'], projects: [projectRows, 'المحفظة / الشركة'] } as const;
+    const [rows, label] = map[tab];
+    const date = new Date().toISOString().slice(0, 10);
+    downloadCsv(buildOverviewCsv(order(rows), label), `financial-${tab}-${date}.csv`);
+  };
+
   return (
     <AppLayout>
       <PageHeader eyebrow="عرض فقط" title="الشاشة المالية المركزية"
@@ -145,15 +185,20 @@ export default function FinancialOverview() {
           <AlertTriangle className="w-4 h-4 me-1" />ما يحتاج انتباه فقط
         </Button>
       </div>
-      <Tabs defaultValue="companies">
-        <TabsList>
-          <TabsTrigger value="companies">الشركات ({companyRows.length})</TabsTrigger>
-          <TabsTrigger value="portfolios">المحافظ ({portfolioRows.length})</TabsTrigger>
-          <TabsTrigger value="projects">المشاريع ({projectRows.length})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="companies"><Table rows={order(companyRows)} /></TabsContent>
-        <TabsContent value="portfolios"><Table rows={order(portfolioRows)} parentLabel="الشركة" /></TabsContent>
-        <TabsContent value="projects"><Table rows={order(projectRows)} parentLabel="المحفظة / الشركة" /></TabsContent>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TabsList>
+            <TabsTrigger value="companies">الشركات ({companyRows.length})</TabsTrigger>
+            <TabsTrigger value="portfolios">المحافظ ({portfolioRows.length})</TabsTrigger>
+            <TabsTrigger value="projects">المشاريع ({projectRows.length})</TabsTrigger>
+          </TabsList>
+          <Button variant="outline" size="sm" onClick={exportCurrent}>
+            <Download className="w-4 h-4 me-1" />تصدير CSV
+          </Button>
+        </div>
+        <TabsContent value="companies"><SpendBars rows={order(companyRows)} /><Table rows={order(companyRows)} /></TabsContent>
+        <TabsContent value="portfolios"><SpendBars rows={order(portfolioRows)} /><Table rows={order(portfolioRows)} parentLabel="الشركة" /></TabsContent>
+        <TabsContent value="projects"><SpendBars rows={order(projectRows)} /><Table rows={order(projectRows)} parentLabel="المحفظة / الشركة" /></TabsContent>
       </Tabs>
     </AppLayout>
   );
