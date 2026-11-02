@@ -14,3 +14,6 @@
 - [ ] `user_roles` "Admins can manage all roles" also reads its own table inside its policy. Check whether role edits hit the same recursion before changing it. Waits on: a safe test (role changes are sensitive).
 - [ ] Second-factor enforcement stays off until the owner decides.
 - [ ] Authenticated screenshot review of dashboard, project, portfolio, company, revenue update, advance settlement, and passkey registration. Blocker: injected review session is rejected by second-factor with “تعذّر التعرّف على الجلسة”; no verified session identifier. No bypass performed.
+- [x] 2026-11-02 — Finance screen: CSV export of the shown tab (same filter/order) and budget-vs-actual bars.
+- [ ] 2026-11-02 — Loading skeletons + persistent sidebar (plan item 6), and lighter mobile project header (item 7). Next Lovable task, visual only.
+- [ ] 2026-11-02 — For Claude/GitHub: Integrity card fix (item 2) and `user_roles` policy check (item 4).
