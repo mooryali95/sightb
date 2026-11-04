@@ -50,6 +50,11 @@ export async function exportCompanyToPDF(data: CompanyExportData) {
   return (await load()).exportCompanyToPDF(data);
 }
 
+/** «الكشف المالي الموحّد» in the owner's layout; build it with buildUnifiedStatement. */
+export async function exportUnifiedStatement(statement: import('./finance/unified-statement').UnifiedStatement) {
+  return (await load()).exportUnifiedStatement(statement);
+}
+
 export async function exportOutstandingAdvancesExcel(rows: OutstandingAdvanceRow[], projectName: string) {
   return (await load()).exportOutstandingAdvancesExcel(rows, projectName);
 }

@@ -37,7 +37,24 @@ export type SheetRow = Record<string, unknown>;
 interface WorkbookSheet {
   name: string;
   rows: SheetRow[];
+  /** A laid-out sheet (title, blocks, side tables) instead of one table; see appendGrid. */
+  grid?: GridCell[][];
+  widths?: number[];
 }
+
+/** One cell of a laid-out sheet: a value, or a value with its look. */
+export type GridCell =
+  | string | number | null
+  | {
+      value: string | number | null;
+      bold?: boolean;
+      /** Excel number format, e.g. '#,##0.00' or '0.0%'. */
+      format?: string;
+      fill?: string;
+      color?: string;
+      size?: number;
+      span?: number;
+    };
 
 export interface Workbook {
   sheets: WorkbookSheet[];
@@ -53,6 +70,29 @@ export const bookNew = (): Workbook => ({ sheets: [] });
  */
 export function appendSheet(wb: Workbook, rows: SheetRow[], name: string): void {
   wb.sheets.push({ name, rows });
+}
+
+/** Excel refuses a sheet name over 31 characters or holding : \\ / ? * [ ]. */
+export function sheetName(raw: string): string {
+  return raw.replace(/[:\\/?*[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || 'ورقة';
+}
+
+/** Append a laid-out sheet: rows of cells, with optional column widths in characters. */
+export function appendGrid(wb: Workbook, grid: GridCell[][], name: string, widths?: number[]): void {
+  wb.sheets.push({ name, rows: [], grid, widths });
+}
+
+function gridCell(c: GridCell) {
+  if (c === null || typeof c !== 'object') return c === null || c === undefined ? null : { value: c };
+  return {
+    value: c.value ?? undefined,
+    ...(c.bold ? { fontWeight: 'bold' as const } : {}),
+    ...(c.format ? { format: c.format } : {}),
+    ...(c.fill ? { backgroundColor: c.fill } : {}),
+    ...(c.color ? { textColor: c.color } : {}),
+    ...(c.size ? { fontSize: c.size } : {}),
+    ...(c.span && c.span > 1 ? { columnSpan: c.span } : {}),
+  };
 }
 
 /** Column headers: union of all keys, in first-seen order. See the note above. */
@@ -101,7 +141,8 @@ export async function writeWorkbook(wb: Workbook, fileName: string): Promise<voi
   // detects this by the first element being an object rather than an array,
   // and throws outright on the older "array of grids" form.
   const sheets = wb.sheets.map((s) => ({
-    data: sheetGrid(s.rows),
+    data: s.grid ? s.grid.map((row) => row.map(gridCell)) : sheetGrid(s.rows),
+    ...(s.widths ? { columns: s.widths.map((width) => ({ width })) } : {}),
     sheet: s.name,
     // These reports are Arabic. SheetJS offered no equivalent, so every
     // workbook it produced opened left-to-right with column A on the wrong

@@ -10,3 +10,4 @@ export {
   type OutstandingAdvanceRow, type SettlementEventRow,
 } from './export/payables';
 export { exportSsotReportPDF } from './export/ssot';
+export { exportUnifiedStatement } from './export/unified-statement';

@@ -11,7 +11,9 @@ import { getCompanySummary } from '@/lib/portfolio';
 import { companyNet } from '@/lib/finance/company-net';
 import { summarizeCompanyExpenses } from '@/lib/finance/company-ledger';
 import { useCompanyLedger } from '@/hooks/useCompanyLedger';
-import { exportCompanyToExcel, exportCompanyToPDF } from '@/lib/export-lazy';
+import { exportCompanyToExcel, exportCompanyToPDF, exportUnifiedStatement } from '@/lib/export-lazy';
+import { buildUnifiedStatement } from '@/lib/finance/unified-statement';
+import { useParties } from '@/hooks/useParties';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +46,7 @@ export default function CompanyDetail() {
   const { isAdmin, canEdit } = useRole();
   const {
     companies, portfolios, projects, budgetItems, expenses, revenues,
-    changeOrders, milestones, risks, indirectCosts,
+    changeOrders, milestones, risks, indirectCosts, resources,
     loading, deleteCompany, archiveCompany,
   } = useStore();
 
@@ -85,6 +87,11 @@ export default function CompanyDetail() {
     return revenues.filter((r) => ids.has(r.projectId) && r.status === 'collected')
       .map((r) => ({ projectId: r.projectId, amount: r.amount, date: r.collectionDate || r.date }));
   }, [companyProjects, revenues]);
+  const parties = useParties(id);
+  const statement = () => buildUnifiedStatement({
+    companyName: company?.name ?? '', projects: companyProjects, expenses, revenues, changeOrders, resources,
+    parties: (parties.data ?? []).map((p) => ({ id: p.id, name: p.name })),
+  });
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   // The stat card above counts spend through the summary library, which
@@ -196,6 +203,18 @@ export default function CompanyDetail() {
                   toast.success('تم تصدير تقرير الشركة');
                 }}>
                   <FileSpreadsheet className="w-3.5 h-3.5" />Excel
+                </Button>
+              )}
+              {companyProjects.length > 0 && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={async () => {
+                  try {
+                    await exportUnifiedStatement(statement());
+                    toast.success('تم تصدير الكشف المالي الموحّد');
+                  } catch {
+                    toast.error('تعذّر تصدير الكشف');
+                  }
+                }}>
+                  <FileSpreadsheet className="w-3.5 h-3.5" />الكشف الموحّد
                 </Button>
               )}
               {summary && (

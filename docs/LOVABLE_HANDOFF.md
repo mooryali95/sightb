@@ -79,6 +79,10 @@ does not happen again.
      `user_roles` itself (42P17); ask `has_role()` instead. Its WITH CHECK
      must require an admin on its own, since INSERT applies only WITH CHECK.
      A name on an expense is linked to a registry entry, never retyped.
+   - «الكشف المالي الموحّد» (`src/lib/finance/unified-statement.ts`,
+     `src/lib/export/unified-statement.ts`, the «الكشف الموحّد» button on the
+     company page): the owner's monthly statement, built from the same money
+     rules as the screens. Do not compute its figures any other way.
    - Accessibility and Arabic layout, held by `e2e/accessibility.spec.ts`
      (axe on 13 pages, phone and desktop, light and dark): `src/lib/a11y/**`,
      `src/components/charts/labelled-sector.tsx`, the label linking in
