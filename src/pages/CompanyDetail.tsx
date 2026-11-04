@@ -53,7 +53,7 @@ export default function CompanyDetail() {
   const detailsLoaded = useStore((s) => s.detailsLoaded);
 
   useCoreData();
-  useCompanyData(detailsLoaded ? undefined : id);
+  const companyData = useCompanyData(detailsLoaded ? undefined : id);
 
   const company = companies.find(c => c.id === id);
 
@@ -88,6 +88,8 @@ export default function CompanyDetail() {
       .map((r) => ({ projectId: r.projectId, amount: r.amount, date: r.collectionDate || r.date }));
   }, [companyProjects, revenues]);
   const parties = useParties(id);
+  // The statement reads the store at the click: only once the company's expenses and its registry are in.
+  const statementReady = (detailsLoaded || companyData.isSuccess) && !parties.isPending;
   const statement = () => buildUnifiedStatement({
     companyName: company?.name ?? '', projects: companyProjects, expenses, revenues, changeOrders, resources,
     parties: (parties.data ?? []).map((p) => ({ id: p.id, name: p.name })),
@@ -206,7 +208,7 @@ export default function CompanyDetail() {
                 </Button>
               )}
               {companyProjects.length > 0 && (
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={async () => {
+                <Button variant="outline" size="sm" className="gap-1.5" disabled={!statementReady} title={statementReady ? undefined : 'جارٍ تحميل الحركات…'} onClick={async () => {
                   try {
                     await exportUnifiedStatement(statement());
                     toast.success('تم تصدير الكشف المالي الموحّد');
