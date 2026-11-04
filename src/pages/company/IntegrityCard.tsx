@@ -4,9 +4,9 @@
  * in one line; otherwise each problem in plain words, with its project and
  * amount, and a link straight to it.
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Info, ShieldCheck, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, Loader2, ShieldCheck, XCircle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { formatCurrency, getEffectiveContractValue } from '@/lib/finance';
 import { checkIntegrity, type IntegritySeverity } from '@/lib/finance/integrity';
@@ -20,15 +20,21 @@ const ICON: Record<IntegritySeverity, JSX.Element> = {
 
 export function IntegrityCard({ projects }: { projects: Project[] }) {
   const s = useStore();
-  const { loadFundsForProject, loadResourcePayablesForProject } = s;
-  // Funds and payables load per project; bring the company's in once.
+  const { loadFundsForProject, loadResourcePayablesForProject, loadCashTransfersForProject } = s;
+  // Funds, payables and cash transfers load per project. No verdict until
+  // all of them are in: judged on missing transfers, a custody fed by one
+  // looked overspent and a fund that sent one looked unspent.
   const ids = projects.map((p) => p.id).join(',');
+  const [loaded, setLoaded] = useState<'loading' | 'ready' | 'failed'>('loading');
   useEffect(() => {
-    for (const id of ids.split(',').filter(Boolean)) {
-      loadFundsForProject(id).catch(() => undefined);
-      loadResourcePayablesForProject(id).catch(() => undefined);
-    }
-  }, [ids, loadFundsForProject, loadResourcePayablesForProject]);
+    let live = true;
+    setLoaded('loading');
+    const list = ids.split(',').filter(Boolean);
+    Promise.all(list.flatMap((id) => [loadFundsForProject(id), loadResourcePayablesForProject(id), loadCashTransfersForProject(id)]))
+      .then(() => { if (live) setLoaded('ready'); })
+      .catch(() => { if (live) setLoaded('failed'); });
+    return () => { live = false; };
+  }, [ids, loadFundsForProject, loadResourcePayablesForProject, loadCashTransfersForProject]);
 
   const issues = useMemo(() => checkIntegrity({
     projects, expenses: s.expenses, custodies: s.custodies, funds: s.projectFunds, settlements: s.fundSettlements,
@@ -48,12 +54,16 @@ export function IntegrityCard({ projects }: { projects: Project[] }) {
         <h3 className="text-sm font-semibold flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" />سلامة البيانات</h3>
         <span className="text-[11px] text-muted-foreground">كل مبلغ له مصدر · لا تكرار · كل عهدة ودفعة متوازنة · كل فرق له سبب</span>
       </div>
-      {problems.length === 0 ? (
+      {loaded === 'loading' ? (
+        <p className="mt-2 text-sm flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />جارٍ فحص الحسابات…</p>
+      ) : loaded === 'failed' ? (
+        <p role="alert" className="mt-2 text-sm text-destructive">تعذّر تحميل بيانات الفحص، فلا حكم على الحسابات الآن. أعد تحميل الصفحة.</p>
+      ) : problems.length === 0 ? (
         <p className="mt-2 text-sm flex items-center gap-2 text-success"><CheckCircle2 className="w-4 h-4" />الحسابات مغلقة: لا مبلغ بلا مصدر ولا تكرار ولا رصيد مكشوف.</p>
       ) : (
         <p className="mt-2 text-sm text-destructive">{problems.length === 1 ? 'ملاحظة واحدة تحتاج تصحيحاً' : `${problems.length} ملاحظات تحتاج تصحيحاً`}</p>
       )}
-      {issues.length > 0 && (
+      {loaded === 'ready' && issues.length > 0 && (
         <ul className="mt-3 space-y-1.5">
           {issues.map((i, n) => (
             <li key={n} className="flex items-start gap-2 text-sm">
