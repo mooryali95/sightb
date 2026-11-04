@@ -37,6 +37,11 @@ psql "$SUPABASE_DB_URL" \
   -v ON_ERROR_STOP=1 \
   -f supabase/tests/roles.sql
 
+echo "▶ Running fund-advance test (an advance settled from its fund is counted once)…"
+psql "$SUPABASE_DB_URL" \
+  -v ON_ERROR_STOP=1 \
+  -f supabase/tests/fund-advance.sql
+
 echo "▶ Running Vitest suite (finance / funds / budget-comparison / advance-settlement)…"
 bunx vitest run
 
