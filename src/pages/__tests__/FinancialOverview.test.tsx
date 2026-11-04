@@ -54,7 +54,8 @@ describe('FinancialOverview', () => {
     fireEvent.mouseDown(screen.getByRole('tab', { name: /المشاريع/ }));
     fireEvent.click(screen.getByRole('tab', { name: /المشاريع/ }));
     fireEvent.change(screen.getByPlaceholderText('بحث بالاسم…'), { target: { value: 'الانارة' } });
-    expect(screen.getByText('مستودع الإنارة')).toBeInTheDocument();
+    // The name shows in the table and again in the budget bars above it.
+    expect(screen.getAllByText('مستودع الإنارة').length).toBeGreaterThan(0);
     expect(screen.queryByText('برج سليم')).not.toBeInTheDocument();
   });
 });
