@@ -45,7 +45,7 @@ export function RevenueInspector({ revenue, milestones, taxPercent, readOnly, on
         <>
           <Button variant="outline" size="sm" onClick={onClose}>إغلاق</Button>
           <Button size="sm" onClick={() => onEdit(inspected)}>
-            <Pencil className="w-3.5 h-3.5 ml-1.5" />تعديل
+            <Pencil className="w-3.5 h-3.5 me-1.5" />تعديل
           </Button>
         </>
       ) : null}

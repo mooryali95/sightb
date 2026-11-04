@@ -36,7 +36,7 @@ export function ProjectGroupTabs({ groups, subTabs, activeGroup, activeTab, onGr
               <Icon className="w-4 h-4 shrink-0" />
               <span className="leading-tight whitespace-nowrap">{group.label}</span>
               {group.badge > 0 && (
-                <span className={`min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center px-1 ${BADGE_CLASS[group.badgeLevel]}`}>
+                <span className={`min-w-[18px] h-[18px] rounded-full text-xs font-bold flex items-center justify-center px-1 ${BADGE_CLASS[group.badgeLevel]}`}>
                   {group.badge}
                 </span>
               )}

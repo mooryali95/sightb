@@ -37,7 +37,9 @@ for f in \
   src/lib/finance/integrity.ts src/lib/finance/__tests__/integrity.test.ts src/pages/company/IntegrityCard.tsx e2e/data-integrity.spec.ts \
   supabase/migrations/20261104090000_user_roles_policy_without_recursion.sql supabase/tests/roles.sql supabase/tests/fund-advance.sql \
   src/lib/finance/loans.ts src/lib/finance/__tests__/loans.test.ts src/pages/company/ledger/LoanDialog.tsx e2e/company-loans.spec.ts \
-  e2e/resource-registry.spec.ts supabase/migrations/20261027090000_resource_registry.sql; do
+  e2e/resource-registry.spec.ts supabase/migrations/20261027090000_resource_registry.sql \
+  e2e/accessibility.spec.ts src/lib/a11y/auto-label.ts src/lib/a11y/scroll-regions.ts src/lib/a11y/page-enter.ts \
+  src/lib/a11y/__tests__/auto-label.test.ts src/components/charts/labelled-sector.tsx src/components/ui/__tests__/date-input.test.tsx; do
   need_file "$f"
 done
 need_text src/components/project/ExpensesSection.tsx "summarizeSpendByResource"
@@ -55,6 +57,16 @@ need_text supabase/migrations/20261016120000_company_ledger.sql "SELECT public.r
 need_text .github/workflows/quality.yml "second-factor-coverage.sh"
 need_text src/pages/CompanyDetail.tsx "RegistrySection"
 need_text src/App.tsx 'path="/company/:id/party/:partyId"'
+need_text src/components/ui/input.tsx "useAutoLabel"
+need_text src/components/ui/input.tsx "DateInput"
+need_text src/components/ui/select.tsx "useAutoLabel"
+need_text src/components/ui/button.tsx 'size === "icon" ? props.title'
+need_text src/App.tsx "DirectionProvider"
+need_text src/App.tsx 'MotionConfig reducedMotion="user"'
+need_text src/App.tsx "useScrollRegions"
+need_text tailwind.config.ts "hoverOnlyWhenSupported"
+need_text src/index.css "prefers-reduced-motion: reduce"
+need_text src/index.css ".stat-tile { container-type: inline-size; }"
 
 [ "$fail" = 0 ] && echo "Protected files and behaviours present."
 exit "$fail"

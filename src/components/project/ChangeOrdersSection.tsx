@@ -89,7 +89,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
                   {!readOnly && (
                   <td>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" onClick={() => form.open({ order: co })}>
+                      <Button variant="ghost" size="icon" title="تعديل أمر التغيير" onClick={() => form.open({ order: co })}>
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
                       <ConfirmDeleteDialog title="حذف أمر التغيير" description="هل أنت متأكد من حذف أمر التغيير هذا؟" onConfirm={() => deleteChangeOrder(co.id)} />

@@ -15,16 +15,16 @@ export function ComparisonView({ amendment }: { amendment: BudgetAmendment }) {
         <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
           <p className="text-xs text-muted-foreground">قبل التعديل</p>
           <p className="text-sm font-mono font-bold mt-1">{formatCurrency(amendment.totalBefore)}</p>
-          <p className="text-[10px] text-muted-foreground">{before.length} بند</p>
+          <p className="text-xs text-muted-foreground">{before.length} بند</p>
         </div>
         <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
           <p className="text-xs text-muted-foreground">بعد التعديل</p>
           <p className="text-sm font-mono font-bold mt-1">{formatCurrency(amendment.totalAfter ?? 0)}</p>
-          <p className="text-[10px] text-muted-foreground">{after.length} بند</p>
+          <p className="text-xs text-muted-foreground">{after.length} بند</p>
         </div>
         <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
           <p className="text-xs text-muted-foreground">الفرق</p>
-          <p className={`text-sm font-mono font-bold mt-1 ${delta >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+          <p className={`text-sm font-mono font-bold mt-1 ${delta >= 0 ? 'text-success' : 'text-destructive'}`}>
             {delta >= 0 ? '+' : ''}{formatCurrency(delta)}
           </p>
         </div>
@@ -68,12 +68,12 @@ export function ComparisonView({ amendment }: { amendment: BudgetAmendment }) {
               const label = r.type === 'added' ? 'مُضاف' : r.type === 'removed' ? 'محذوف' : r.type === 'modified' ? 'مُعدّل' : '—';
               return (
                 <tr key={r.key} className={r.type === 'unchanged' ? 'opacity-60' : ''}>
-                  <td><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${badgeClass}`}>{label}</span></td>
+                  <td><span className={`text-xs px-1.5 py-0.5 rounded-full ${badgeClass}`}>{label}</span></td>
                   <td className="text-xs">{EXPENSE_CATEGORY_LABELS[item?.category as ExpenseCategory] || item?.category}</td>
                   <td className="text-xs">{item?.description}</td>
                   <td className="font-mono text-xs">{r.before ? formatCurrency(beforeAmt) : '—'}</td>
                   <td className="font-mono text-xs">{r.after ? formatCurrency(afterAmt) : '—'}</td>
-                  <td className={`font-mono text-xs ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  <td className={`font-mono text-xs ${diff > 0 ? 'text-success' : diff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {diff !== 0 ? `${diff > 0 ? '+' : ''}${formatCurrency(diff)}` : '—'}
                   </td>
                 </tr>

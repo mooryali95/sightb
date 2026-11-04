@@ -66,7 +66,7 @@ test('the menu button slides the sidebar in and the overlay slides it out', asyn
   await stubSupabase(page);
   await openDashboard(page);
   await expect(sidebar(page)).not.toBeInViewport();
-  await page.getByRole('button', { name: 'القائمة' }).click();
+  await page.getByRole('button', { name: 'القائمة', exact: true }).click();
   await expect(sidebar(page)).toBeInViewport();
   await expect(sidebar(page).getByRole('button', { name: 'شركة الاختبار', exact: true })).toBeVisible();
   await page.mouse.click(20, 400);

@@ -1,4 +1,6 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { usePageEnter } from '@/lib/a11y/page-enter';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,9 +13,12 @@ import { AppBreadcrumb } from '@/components/AppBreadcrumb';
 export function AppLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const content = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+  usePageEnter(content, pathname);
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex min-h-dvh w-full">
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -24,7 +29,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Sidebar - hidden on mobile unless open */}
       <div className={cn(
-        'fixed right-0 top-0 bottom-0 md:relative z-30 md:z-auto transition-transform duration-300 ease-out',
+        'fixed start-0 top-0 bottom-0 md:relative z-30 md:z-auto transition-transform duration-300 ease-out',
         mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
       )}>
         <AppSidebar
@@ -65,7 +70,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
 
         {/* Content wrapper — fixed p-6 (responsive comes from inner grids) */}
-        <div className="p-6 max-w-[1400px] mx-auto">
+        <div ref={content} className="p-6 pb-28 md:pb-6 max-w-[1400px] mx-auto">
           {children}
         </div>
       </main>

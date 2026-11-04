@@ -37,7 +37,7 @@ export function SmartBudgetAlerts({ onNavigate, ...ctx }: SmartBudgetAlertsProps
     return (
       <div className="stat-card border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-900/10">
         <div className="flex items-center gap-2.5">
-          <ShieldCheck className="w-5 h-5 text-emerald-600" />
+          <ShieldCheck className="w-5 h-5 text-success" />
           <div>
             <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">المشروع ضمن الحدود الصحية</p>
             <p className="text-xs text-muted-foreground">لا توجد تنبيهات مالية أو إدارية تستوجب الانتباه حالياً</p>
@@ -53,7 +53,7 @@ export function SmartBudgetAlerts({ onNavigate, ...ctx }: SmartBudgetAlertsProps
     <div className="stat-card">
       <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600" />
+          <AlertTriangle className="w-4 h-4 text-warning" />
           <h3 className="text-sm font-semibold">التنبيهات الذكية</h3>
           <Badge variant="secondary" className="text-xs h-5">{alerts.length}</Badge>
         </div>
@@ -62,7 +62,7 @@ export function SmartBudgetAlerts({ onNavigate, ...ctx }: SmartBudgetAlertsProps
           <FilterChip active={filter === 'critical'} onClick={() => setFilter('critical')} label="حرج" count={counts.critical} sev="critical" />
           <FilterChip active={filter === 'warning'} onClick={() => setFilter('warning')} label="تحذير" count={counts.warning} sev="warning" />
           <FilterChip active={filter === 'info'} onClick={() => setFilter('info')} label="تنبيه" count={counts.info} sev="info" />
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCollapsed(c => !c)}>
+          <Button variant="ghost" size="icon" title={collapsed ? 'إظهار التنبيهات' : 'إخفاء التنبيهات'} aria-expanded={!collapsed} className="h-7 w-7" onClick={() => setCollapsed(c => !c)}>
             {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           </Button>
         </div>

@@ -149,7 +149,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
       {/* Pending approval alert */}
       {pendingCount > 0 && !readOnly && (
         <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/30">
-          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+          <AlertCircle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-amber-700 dark:text-amber-400">
             {pendingCount} مصروف بانتظار الاعتماد
           </p>
@@ -164,7 +164,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
             <span>{formatCurrency(totalExpenses)} / {formatCurrency(contractValue)}</span>
           </div>
           <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all bg-primary" style={{ width: `${Math.min(spendFromContract, 100)}%` }} />
+            <div className="h-full rounded-full transition-[width] bg-primary" style={{ width: `${Math.min(spendFromContract, 100)}%` }} />
           </div>
         </div>
         {totalRevenue > 0 && (
@@ -174,7 +174,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
               <span>{formatCurrency(totalExpenses)} / {formatCurrency(totalRevenue)}</span>
             </div>
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(spendFromRevenue, 100)}%`, backgroundColor: spendFromRevenue > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
+              <div className="h-full rounded-full transition-[width]" style={{ width: `${Math.min(spendFromRevenue, 100)}%`, backgroundColor: spendFromRevenue > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
             </div>
           </div>
         )}
@@ -214,13 +214,13 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     onClick={() => setFilterResource(selected ? null : r.key)}
                     aria-pressed={selected}
                     title={selected ? 'إلغاء التصفية' : 'عرض مصروفاته في الجدول'}
-                    className={`text-right p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    className={`text-start p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       selected ? 'border-primary bg-primary/10' : unlinked ? 'border-dashed border-amber-400/60 bg-amber-50/50 dark:bg-amber-900/10' : 'border-border bg-muted/30 hover:bg-muted/60'
                     }`}
                   >
                     <p className="text-xs text-muted-foreground truncate">{r.name}</p>
                     <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(r.total)}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {r.role ? `${r.role} · ` : ''}{r.count} مصروف · {share.toFixed(0)}%
                       {r.matchedByName > 0 && !unlinked && ` · ${r.matchedByName} بالاسم`}
                     </p>
@@ -351,7 +351,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                           {exp.description}
                           {exp.vendor && <span className="block text-xs text-muted-foreground">{exp.vendor}</span>}
                           {exp.sourcePaymentRequestId && (
-                            <Badge variant="outline" className="mt-1 text-[10px] border-amber-300 text-amber-700 dark:text-amber-400">
+                            <Badge variant="outline" className="mt-1 text-xs border-amber-300 text-amber-700 dark:text-amber-400">
                               تسوية سلفة
                             </Badge>
                           )}
@@ -362,7 +362,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                         {exp.isVatExempt ? (
                           <span className="text-muted-foreground">معفى</span>
                         ) : taxPercent > 0 ? (
-                          <span className="text-emerald-600" title={`شامل: ${formatCurrency(addVAT(exp.amount, taxPercent))}`}>
+                          <span className="text-success" title={`شامل: ${formatCurrency(addVAT(exp.amount, taxPercent))}`}>
                             +{formatCurrency(calcVAT(exp.amount, taxPercent))}
                           </span>
                         ) : (
@@ -404,10 +404,10 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                                   title={`ربط بالدفعة #${activeFund.fundNumber}`}
                                   onClick={() => handleQuickLinkFund(exp.id)}
                                 >
-                                  <Wallet className="w-3.5 h-3.5 text-amber-600" />
+                                  <Wallet className="w-3.5 h-3.5 text-warning" />
                                 </Button>
                               )}
-                              <Button variant="ghost" size="icon" onClick={() => form.open({ expense: exp })}>
+                              <Button variant="ghost" size="icon" title="تعديل المصروف" onClick={() => form.open({ expense: exp })}>
                                 <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                               </Button>
                               <ConfirmDeleteDialog title="حذف المصروف" description="هل أنت متأكد من حذف هذا المصروف؟" onConfirm={() => deleteExpense(exp.id)} />

@@ -290,7 +290,7 @@ export function SettleAdvanceDialog({
                       : advance.paidFromFundId
                         ? `دفعة #${projectFunds.find((f) => f.id === advance.paidFromFundId)?.fundNumber ?? ''}`
                         : '—'}
-                    <span className="block text-[11px] text-muted-foreground">
+                    <span className="block text-xs text-muted-foreground">
                       التسوية تُقيَّد على المصدر نفسه الذي صُرفت منه السلفة
                     </span>
                   </span>
@@ -315,28 +315,28 @@ export function SettleAdvanceDialog({
                     <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/40 border">
                       {prevPct > 0 && (
                         <div
-                          className="h-full bg-muted-foreground/40 transition-all"
+                          className="h-full bg-muted-foreground/40 transition-[width]"
                           style={{ width: `${prevPct}%` }}
                           title={`مسوّى سابقاً: ${formatCurrency(prev)}`}
                         />
                       )}
                       {opPct > 0 && (
                         <div
-                          className={cn('h-full transition-all', overflow ? 'bg-destructive' : 'bg-primary')}
+                          className={cn('h-full transition-[width]', overflow ? 'bg-destructive' : 'bg-primary')}
                           style={{ width: `${opPct}%` }}
                           title={`هذه العملية: ${formatCurrency(opVisible)}`}
                         />
                       )}
                       {overflowPct > 0 && (
                         <div
-                          className="h-full bg-warning transition-all"
+                          className="h-full bg-warning transition-[width]"
                           style={{ width: `${overflowPct}%` }}
                           title={`فائض (مصروف جديد): ${formatCurrency(overflowAmount)}`}
                         />
                       )}
                       {remPct > 0 && !overflow && (
                         <div
-                          className="h-full bg-warning/60 transition-all"
+                          className="h-full bg-warning/60 transition-[width]"
                           style={{ width: `${remPct}%` }}
                           title={`المتبقي: ${formatCurrency(remainder)}`}
                         />
@@ -406,13 +406,13 @@ export function SettleAdvanceDialog({
                               <span className="text-muted-foreground truncate">— {ev.sub}</span>
                             )}
                             {ev.overflowAmount && ev.overflowAmount > 0 && (
-                              <Badge variant="secondary" className="h-4 px-1 text-[10px] shrink-0">
+                              <Badge variant="secondary" className="h-4 px-1 text-xs shrink-0">
                                 + فائض {formatCurrency(ev.overflowAmount)}
                                 {ev.overflowSourceLabel ? ` · ${ev.overflowSourceLabel}` : ''}
                               </Badge>
                             )}
                             {ev.reversed && (
-                              <Badge variant="outline" className="h-4 px-1 text-[10px]">ملغى</Badge>
+                              <Badge variant="outline" className="h-4 px-1 text-xs">ملغى</Badge>
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">

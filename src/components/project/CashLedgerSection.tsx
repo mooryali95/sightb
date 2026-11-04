@@ -176,7 +176,7 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
         <Card className="p-4 rounded-xl">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold">مسار توزيع الأموال</p>
-            <span className="text-[10px] text-muted-foreground">من إجمالي {formatCurrency(transferred)}</span>
+            <span className="text-xs text-muted-foreground">من إجمالي {formatCurrency(transferred)}</span>
           </div>
           <div className="flex h-3 w-full rounded-full overflow-hidden bg-muted">
             <div className="bg-primary h-full" style={{ width: `${pct(directSpend)}%` }} title={`مصروف مباشر: ${formatCurrency(directSpend)}`} />
@@ -184,7 +184,7 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
             <div className="bg-orange-300 h-full" style={{ width: `${pct(inHandsOfHolders)}%` }} title={`بيد حاملي العُهد: ${formatCurrency(inHandsOfHolders)}`} />
             <div className="bg-emerald-500 h-full" style={{ width: `${pct(summary.remainingInManagerHand)}%` }} title={`بيد المدير: ${formatCurrency(summary.remainingInManagerHand)}`} />
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-primary" /> مصروف مباشر {formatCurrency(directSpend)}</span>
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-500" /> صُرف من العُهد {formatCurrency(custodyTotalSpend)}</span>
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-orange-300" /> بيد حاملي العُهد {formatCurrency(inHandsOfHolders)}</span>
@@ -225,7 +225,7 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
           {pendingPayables.total > 0 && (
             <Card className="p-3 rounded-xl border-amber-300/40 bg-amber-50/40 dark:bg-amber-900/10">
               <div className="flex items-start gap-3">
-                <Clock className="w-4 h-4 mt-0.5 text-amber-600 dark:text-amber-400" />
+                <Clock className="w-4 h-4 mt-0.5 text-warning dark:text-amber-400" />
                 <div className="flex-1 text-xs">
                   <p className="font-semibold text-amber-800 dark:text-amber-300">
                     مستحقات موارد معلّقة — لم تُصرف بعد (لا تُطرح من النقد)

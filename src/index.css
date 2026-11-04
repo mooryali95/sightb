@@ -60,7 +60,7 @@
     --muted: 220 15% 94%;
     --muted-foreground: 220 12% 42%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 44%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 18% 88%;
@@ -69,15 +69,18 @@
 
     --radius: 0.75rem;
 
-    --success: 160 60% 38%;
+    --success: 160 70% 28%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 45%;
+    --warning: 34 92% 30%;
     --warning-foreground: 0 0% 100%;
     --info: 215 80% 50%;
     --info-foreground: 0 0% 100%;
 
-    --profit: 160 60% 36%;
-    --loss: 0 72% 48%;
+    --profit: 160 70% 28%;
+    --loss: 0 72% 44%;
+
+    /* Gold for small text: the fill gold is too light to read on white (2.4:1). */
+    --accent-text: 36 70% 34%;
 
     --gold: 40 55% 50%;
     --gold-light: 40 60% 70%;
@@ -139,9 +142,18 @@
     --secondary-foreground: 40 20% 85%;
     --muted: 222 25% 14%;
     --muted-foreground: 220 12% 62%;
-    --destructive: 0 62% 55%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 75% 65%;
+    --destructive-foreground: 222 30% 8%;
     --border: 222 25% 18%;
+
+    /* Semantic colours lifted for AA on the dark card. */
+    --success: 160 60% 50%;
+    --success-foreground: 222 30% 8%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 222 30% 8%;
+    --profit: 160 60% 50%;
+    --loss: 0 75% 65%;
+    --accent-text: 40 55% 60%;
     --input: 222 25% 18%;
     --ring: 40 55% 60%;
 
@@ -168,6 +180,16 @@
   .font-mono, .stat-value, td, input[type="number"] {
     font-variant-numeric: tabular-nums;
   }
+  /* Every control can be hit: 24px at least (WCAG 2.5.8), whatever its icon size. */
+  button:not([role="checkbox"]):not([role="radio"]), [role="button"], [role="tab"], [role="combobox"] {
+    min-height: 24px;
+    min-width: 24px;
+  }
+
+  /* An amount is set in mono; it never wraps «ر.س» onto a line of its own. */
+  p.font-mono, span.font-mono, div.font-mono, td.font-mono {
+    white-space: nowrap;
+  }
 }
 
 @layer components {
@@ -175,30 +197,47 @@
   .stat-card {
     @apply bg-card rounded-xl p-4 border border-border;
     box-shadow: var(--shadow-card);
-    transition: all 0.2s ease;
-    direction: rtl;
-    text-align: right;
+    transition: box-shadow var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+    text-align: start;
+    min-width: 0;
   }
-  .stat-card:hover {
-    box-shadow: var(--shadow-elevated);
-    transform: translateY(-1px);
+  /* A figure tile scales its figure with the tile, not the viewport: four
+   * tiles beside a sidebar used to clip «1,000,000.00 ر.س» at 1440px. Only
+   * on tiles (StatCard), since containment would collapse a panel that sizes
+   * to its content. */
+  .stat-tile { container-type: inline-size; }
+  .stat-tile .stat-value { font-size: clamp(0.8rem, 7.5cqi, 1.5rem); }
+  .stat-tile .stat-value-hero { font-size: clamp(0.9rem, 8.5cqi, 1.875rem); }
+  @media (hover: hover) {
+    .stat-card:hover {
+      box-shadow: var(--shadow-elevated);
+      transform: translateY(-1px);
+    }
   }
   .stat-card-hero {
     background: var(--gradient-gold-soft);
     border-color: hsl(var(--gold) / 0.25);
   }
-  .stat-card-hero:hover {
-    box-shadow: var(--shadow-gold);
+  @media (hover: hover) {
+    .stat-card-hero:hover {
+      box-shadow: var(--shadow-gold);
+    }
   }
 
   .stat-value {
     font-family: var(--font-mono);
-    @apply text-xl md:text-2xl font-semibold tracking-tight;
+    @apply font-semibold text-xl md:text-2xl;
+    line-height: 1.3;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
   .stat-value-hero {
     font-family: var(--font-mono);
-    @apply text-2xl md:text-3xl font-bold tracking-tight;
-    color: hsl(var(--gold));
+    @apply font-bold text-2xl md:text-3xl;
+    line-height: 1.25;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: hsl(var(--accent-text));
   }
 
   /* Filter bar — slightly different surface than data cards */
@@ -406,3 +445,47 @@
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 }
+
+/* ============= Interaction baseline (WCAG 2.2, Apple HIG, Material 3) =============
+ * Unlayered on purpose: it comes after every utility, so a bare `outline-none`
+ * can no longer erase the keyboard focus ring. Elements that draw their own
+ * ring with `focus-visible:ring-*` or `focus:ring-*` keep it and get no outline. */
+:focus-visible:not([class*="focus-visible:ring"]):not([class*="focus:ring"]) {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+::selection { background: hsl(var(--accent) / 0.28); }
+input, textarea { caret-color: hsl(var(--accent-text)); }
+
+/* A small control keeps its look but takes a 24px tap area (WCAG 2.5.8). */
+.hit { position: relative; }
+.hit::after { content: ""; position: absolute; inset: -4px; }
+
+/* Wide tables: a soft shadow on the edge that hides content says there is more.
+ * The covers scroll with the content (local), the shadows stay (scroll). */
+[data-scroll-region] {
+  background:
+    linear-gradient(to right, hsl(var(--card)), hsl(var(--card) / 0)) left center / 24px 100% no-repeat local,
+    linear-gradient(to left, hsl(var(--card)), hsl(var(--card) / 0)) right center / 24px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, hsl(var(--foreground) / 0.14), transparent) left center / 10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, hsl(var(--foreground) / 0.14), transparent) right center / 10px 100% no-repeat scroll;
+}
+[data-scroll-region]:focus-visible { outline-offset: -2px; }
+
+/* Amounts never break between the figure and its currency. */
+.money { white-space: nowrap; font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
+
+/* Reduced motion: no travel, no scale, no stagger; a short fade at most. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Date fields: the native text hides at rest, the Arabic reading shows over it (see ui/input). */
+.date-native:not(:focus) { color: transparent; }
+.date-native::-webkit-calendar-picker-indicator { opacity: 0.7; cursor: pointer; }

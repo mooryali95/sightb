@@ -40,7 +40,7 @@ export function ReservesCard({ budgetItems, countedExpenses, totalPlanned, manag
             </div>
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground">المتبقي من الاحتياطي</p>
-              <p className={`text-sm font-mono font-bold mt-1 ${contingencyRemaining >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+              <p className={`text-sm font-mono font-bold mt-1 ${contingencyRemaining >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {formatCurrency(contingencyRemaining)}
               </p>
             </div>

@@ -110,7 +110,7 @@ export function ResponsiveFormDialog({
 // to gain control over RTL alignment alongside our custom close button).
 function DialogTitleText({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="flex-1 text-base font-semibold text-foreground text-right truncate">
+    <h2 className="flex-1 text-base font-semibold text-foreground text-start truncate">
       {children}
     </h2>
   );

@@ -60,7 +60,7 @@ export function SpendTemplatesBar({ projectId, current, onApply }: Props) {
           {templates.map((t) => (
             <span key={t.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-background ps-2 pe-1 py-0.5">
               <button type="button" className="text-xs" onClick={() => onApply(t)}>{t.name}</button>
-              {!t.projectId && <Badge variant="outline" className="text-[9px]">عام</Badge>}
+              {!t.projectId && <Badge variant="outline" className="text-xs">عام</Badge>}
               <button type="button" aria-label="حذف القالب" onClick={() => remove(t.id)}>
                 <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
               </button>

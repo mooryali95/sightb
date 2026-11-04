@@ -83,7 +83,7 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
               </div>
               <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all"
+                  className="h-full rounded-full transition-[width]"
                   style={{
                     width: `${Math.min(spendRate, 100)}%`,
                     backgroundColor: spendRate > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',
@@ -98,7 +98,7 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
                   </div>
                   <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all bg-primary/60"
+                      className="h-full rounded-full transition-[width] bg-primary/60"
                       style={{ width: `${Math.min(budgetUtilization, 100)}%` }}
                     />
                   </div>

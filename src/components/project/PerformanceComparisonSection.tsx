@@ -107,16 +107,16 @@ export function PerformanceComparisonSection({
       <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
         <CalendarRange className="w-4 h-4 text-muted-foreground" />
         <span className="text-xs font-semibold text-foreground">النطاق الزمني:</span>
-        <span className="text-[11px] text-muted-foreground">من</span>
+        <span className="text-xs text-muted-foreground">من</span>
         <MonthSelect value={normalizedFrom} onChange={setFromMonth} durationMonths={durationMonths} placeholder="من" />
-        <span className="text-[11px] text-muted-foreground">إلى</span>
+        <span className="text-xs text-muted-foreground">إلى</span>
         <MonthSelect value={normalizedTo} onChange={setToMonth} durationMonths={durationMonths} placeholder="إلى" />
         {!isDefaultRange && (
-          <Button variant="ghost" size="sm" className="h-8 text-[11px]" onClick={resetRange}>
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={resetRange}>
             استعادة الافتراضي (1 — {currentMonth})
           </Button>
         )}
-        <span className="text-[11px] text-muted-foreground mr-auto">
+        <span className="text-xs text-muted-foreground ms-auto">
           المقارنة تشمل ما خُطِّط وما صُرف ضمن هذه الأشهر فقط.
         </span>
       </div>
@@ -124,12 +124,12 @@ export function PerformanceComparisonSection({
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="ابحث عن فئة أو بند…"
-            className="pr-9"
+            className="ps-9"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -139,7 +139,7 @@ export function PerformanceComparisonSection({
             onClick={() => setOnlyDeviated(v => !v)}
             className="text-xs"
           >
-            <Filter className="w-3.5 h-3.5 ml-1" />
+            <Filter className="w-3.5 h-3.5 me-1" />
             {onlyDeviated ? 'إظهار الكل' : 'المنحرف فقط'}
           </Button>
           <Button variant="ghost" size="sm" className="text-xs" onClick={expandAll}>فتح الكل</Button>
@@ -148,7 +148,7 @@ export function PerformanceComparisonSection({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--success))]" /> ضمن الحدود (≤ 5%)</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--warning))]" /> انحراف متوسط (5–15%)</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--destructive))]" /> انحراف حرج ({'>'} 15%)</span>
@@ -181,7 +181,7 @@ export function PerformanceComparisonSection({
                     transition={{ duration: 0.25, ease: 'easeOut' }}
                     className="overflow-hidden"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pr-4 md:pr-6 border-r-2 border-border/60">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 ps-4 md:ps-6 border-s-2 border-border/60">
                       {g.items.map(it => (
                         <ItemRow
                           key={it.id}

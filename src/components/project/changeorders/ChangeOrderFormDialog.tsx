@@ -151,7 +151,7 @@ export function ChangeOrderFormDialog({ open, onOpenChange, onRequestOpen, editi
                 <Package className="w-4 h-4 text-primary" />
                 <span className="text-sm font-semibold">بنود موازنة مرتبطة</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">تُضاف للموازنة تلقائياً عند الاعتماد</p>
+              <p className="text-xs text-muted-foreground">تُضاف للموازنة تلقائياً عند الاعتماد</p>
             </div>
 
             {budgetItemsList.length > 0 && (
@@ -161,7 +161,7 @@ export function ChangeOrderFormDialog({ open, onOpenChange, onRequestOpen, editi
                     <span className="truncate flex-1">
                       {EXPENSE_CATEGORY_LABELS[bi.category]} — {bi.description} — {formatCurrency(bi.plannedAmount)} ({COST_TYPE_LABELS[bi.costType]})
                     </span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setBudgetItemsList(prev => prev.filter((_, i) => i !== idx))}>
+                    <Button variant="ghost" size="icon" title="إزالة البند" className="h-6 w-6 shrink-0" onClick={() => setBudgetItemsList(prev => prev.filter((_, i) => i !== idx))}>
                       <X className="w-3 h-3" />
                     </Button>
                   </div>

@@ -69,15 +69,15 @@ export function ProjectDetailHeader({
           <DropdownMenuLabel>إجراءات المشروع</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={onEdit}>
-            <Pencil className="w-4 h-4 ml-2" />تعديل البيانات
+            <Pencil className="w-4 h-4 me-2" />تعديل البيانات
           </DropdownMenuItem>
           {(isAdmin || canEditProject) && (
             <>
               <DropdownMenuItem onSelect={onExportExcel}>
-                <FileSpreadsheet className="w-4 h-4 ml-2" />تصدير Excel
+                <FileSpreadsheet className="w-4 h-4 me-2" />تصدير Excel
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onExportPDF}>
-                <FileText className="w-4 h-4 ml-2" />تصدير PDF
+                <FileText className="w-4 h-4 me-2" />تصدير PDF
               </DropdownMenuItem>
             </>
           )}
@@ -91,7 +91,7 @@ export function ProjectDetailHeader({
                 onConfirm={onArchive}
                 trigger={
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-warning focus:text-warning">
-                    <Archive className="w-4 h-4 ml-2" />أرشفة المشروع
+                    <Archive className="w-4 h-4 me-2" />أرشفة المشروع
                   </DropdownMenuItem>
                 }
               />
@@ -105,7 +105,7 @@ export function ProjectDetailHeader({
               onConfirm={onDelete}
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                  <Trash2 className="w-4 h-4 ml-2" />حذف نهائي
+                  <Trash2 className="w-4 h-4 me-2" />حذف نهائي
                 </DropdownMenuItem>
               }
             />

@@ -8,7 +8,7 @@ export function ItemRow({ item, currency, onOpenDetails }: { item: ItemCompariso
     <button
       type="button"
       onClick={onOpenDetails}
-      className="text-right p-3 rounded-md border border-dashed border-border/70 bg-background/60 hover:bg-muted/30 hover:border-primary/50 motion-fast transition-colors"
+      className="text-start p-3 rounded-md border border-dashed border-border/70 bg-background/60 hover:bg-muted/30 hover:border-primary/50 motion-fast transition-colors"
     >
       <div className="flex items-center justify-between gap-3 mb-2">
         <span className="text-sm text-foreground truncate flex items-center gap-1.5">
@@ -24,7 +24,7 @@ export function ItemRow({ item, currency, onOpenDetails }: { item: ItemCompariso
         <Metric label="المتبقي للفترة" value={formatCurrency(item.remaining, currency)} />
       </div>
       <ComparisonBar planned={item.planned} actual={item.actual} plannedToDate={item.plannedToDate} severity={item.severity} />
-      <div className="mt-1.5 text-[11px] text-muted-foreground text-left tabular-nums">
+      <div className="mt-1.5 text-xs text-muted-foreground text-end tabular-nums">
         نسبة الاستهلاك من BAC {formatPercent(item.consumptionPct * 100)}
       </div>
     </button>

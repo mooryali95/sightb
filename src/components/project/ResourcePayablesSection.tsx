@@ -306,10 +306,10 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => exportOutstandingAdvancesPDF(buildOutstandingRows(), projectName || 'Project')}>
-                  <FileDown className="h-4 w-4 ml-2" /> PDF
+                  <FileDown className="h-4 w-4 me-2" /> PDF
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => exportOutstandingAdvancesExcel(buildOutstandingRows(), projectName || 'Project')}>
-                  <FileSpreadsheet className="h-4 w-4 ml-2" /> Excel
+                  <FileSpreadsheet className="h-4 w-4 me-2" /> Excel
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -323,10 +323,10 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => exportSettlementEventsPDF(buildSettlementEventRows(), projectName || 'Project')}>
-                  <FileDown className="h-4 w-4 ml-2" /> PDF
+                  <FileDown className="h-4 w-4 me-2" /> PDF
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => exportSettlementEventsExcel(buildSettlementEventRows(), projectName || 'Project')}>
-                  <FileSpreadsheet className="h-4 w-4 ml-2" /> Excel
+                  <FileSpreadsheet className="h-4 w-4 me-2" /> Excel
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -348,12 +348,12 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th className="text-right py-2">المورد</th>
-                  <th className="text-right py-2">المعتمد</th>
-                  <th className="text-right py-2">المدفوع</th>
-                  <th className="text-right py-2">الرصيد المستحق</th>
-                  <th className="text-right py-2">طلبات معلقة</th>
-                  <th className="text-right py-2">إجراء</th>
+                  <th className="text-start py-2">المورد</th>
+                  <th className="text-start py-2">المعتمد</th>
+                  <th className="text-start py-2">المدفوع</th>
+                  <th className="text-start py-2">الرصيد المستحق</th>
+                  <th className="text-start py-2">طلبات معلقة</th>
+                  <th className="text-start py-2">إجراء</th>
                 </tr>
               </thead>
               <tbody>
@@ -363,8 +363,8 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                     <tr key={res.id} className="border-b hover:bg-muted/30">
                       <td className="py-2 font-medium">{res.name}{res.role && <span className="text-muted-foreground text-xs"> — {res.role}</span>}</td>
                       <td className="py-2">{formatCurrency(bal.totalApprovedReimbursements)}</td>
-                      <td className="py-2 text-emerald-600">{formatCurrency(bal.totalPaidReimbursements)}</td>
-                      <td className={cn('py-2 font-semibold', bal.outstandingBalance > 0 && 'text-amber-600')}>
+                      <td className="py-2 text-success">{formatCurrency(bal.totalPaidReimbursements)}</td>
+                      <td className={cn('py-2 font-semibold', bal.outstandingBalance > 0 && 'text-warning')}>
                         {formatCurrency(bal.outstandingBalance)}
                       </td>
                       <td className="py-2">{bal.pendingPaymentRequests}</td>
@@ -388,7 +388,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
                                 } });
                               }}
                             >
-                              <HandCoins className="h-4 w-4 ml-1" />
+                              <HandCoins className="h-4 w-4 me-1" />
                               دفع المستحقات
                             </Button>
                           )}

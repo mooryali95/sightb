@@ -42,7 +42,7 @@ export default function ControlCenter() {
         <ScanSearch className="w-5 h-5 text-primary" />
         <div className="min-w-[220px] flex-1">
           <p className="text-xs font-semibold">اختر المشروع المراد فحصه</p>
-          <p className="text-[11px] text-muted-foreground">تُعرض بيانات الخادم والواجهة وسجل إصلاح النقد لهذا المشروع فقط.</p>
+          <p className="text-xs text-muted-foreground">تُعرض بيانات الخادم والواجهة وسجل إصلاح النقد لهذا المشروع فقط.</p>
         </div>
         <Select value={selectedId} onValueChange={setProjectId}>
           <SelectTrigger className="w-full sm:w-[320px]"><SelectValue placeholder="اختر مشروعاً" /></SelectTrigger>

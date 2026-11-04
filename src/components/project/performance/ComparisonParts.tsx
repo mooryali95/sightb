@@ -49,7 +49,7 @@ export function ComparisonBar({
         initial={{ width: 0 }}
         animate={{ width: `${actualPct}%` }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className={cn('absolute inset-y-0 right-0 rounded-full', severityFill[severity])}
+        className={cn('absolute inset-y-0 start-0 rounded-full', severityFill[severity])}
         style={{ width: `${actualPct}%` }}
       />
       {planned > 0 && (
@@ -72,7 +72,7 @@ export function ComparisonBar({
 export function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-xs font-semibold text-foreground tabular-nums">{value}</span>
     </div>
   );

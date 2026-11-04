@@ -39,7 +39,9 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    // An icon-only button is announced by its tooltip text when it has no label of its own.
+    const ariaLabel = props["aria-label"] ?? (size === "icon" ? props.title : undefined);
+    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} aria-label={ariaLabel} />;
   },
 );
 Button.displayName = "Button";

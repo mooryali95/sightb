@@ -57,7 +57,7 @@ export function FundsBlock({ projectId, currency, funds, settlements, expenses, 
             <div key={f.id} className="rounded border border-border/60 bg-muted/30 p-2 mb-2">
               <div className="text-xs font-semibold mb-1">
                 دفعة #{f.fundNumber} — <span dir="ltr">{formatCurrency(f.amount, currency)}</span>
-                <Badge variant="outline" className="mr-2 text-[10px]">{f.status}</Badge>
+                <Badge variant="outline" className="ms-2 text-xs">{f.status}</Badge>
               </div>
               <Row label="مصروف مباشر" value={direct} sources={[{ kind: 'fn', label: 'getFundDirectSpent()' }]} currency={currency} />
               <Row label="عهد مسحوبة" value={custody} sources={[{ kind: 'fn', label: 'getFundCustodyDraw()' }]} currency={currency} />

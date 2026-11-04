@@ -79,7 +79,7 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
                 <TableHead>المبلغ</TableHead>
                 <TableHead>التاريخ</TableHead>
                 <TableHead>الحالة</TableHead>
-                <TableHead className="text-left">إجراءات</TableHead>
+                <TableHead className="text-end">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -93,10 +93,10 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
                     <TableCell>{p.expenseDate}</TableCell>
                     <TableCell>
                       {settled
-                        ? <Badge variant="secondary"><CheckCircle className="h-3 w-3 ml-1" /> مسدّدة</Badge>
+                        ? <Badge variant="secondary"><CheckCircle className="h-3 w-3 me-1" /> مسدّدة</Badge>
                         : <Badge variant="destructive">مستحقة</Badge>}
                     </TableCell>
-                    <TableCell className="text-left">
+                    <TableCell className="text-end">
                       {!settled && canEdit && (
                         <Button size="sm" variant="outline" onClick={() => setSettling(p)}>سداد</Button>
                       )}

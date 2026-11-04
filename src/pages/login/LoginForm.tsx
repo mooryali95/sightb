@@ -55,7 +55,7 @@ export function LoginForm({ email, onEmailChange, password, onPasswordChange, lo
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -72,7 +72,7 @@ export function LoginForm({ email, onEmailChange, password, onPasswordChange, lo
 
       {onPasskey && (
         <>
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="h-px flex-1 bg-border" />أو<span className="h-px flex-1 bg-border" />
           </div>
           <Button type="button" variant="outline" className="w-full h-11 gap-2" onClick={onPasskey} disabled={loading || passkeyLoading}>

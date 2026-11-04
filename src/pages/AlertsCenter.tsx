@@ -95,7 +95,7 @@ export default function AlertsCenter() {
                     <Link to={`/project/${a.projectId}`} className="text-sm font-semibold hover:underline truncate">
                       {a.projectName || 'مشروع'}
                     </Link>
-                    <Badge variant="outline" className="text-[10px]">{DIM_LABELS[a.dimension]}</Badge>
+                    <Badge variant="outline" className="text-xs">{DIM_LABELS[a.dimension]}</Badge>
                   </div>
                   {!a.resolvedAt && (
                     <Button size="sm" variant="ghost" onClick={() => { dismissConsistencyAlert(a.id); reload(); }}>
@@ -126,7 +126,7 @@ export default function AlertsCenter() {
                 {a.topGroups.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {a.topGroups.map((g) => (
-                      <Badge key={g.key} variant="outline" className="text-[10px] font-mono">
+                      <Badge key={g.key} variant="outline" className="text-xs font-mono">
                         {g.label}: {formatCurrency(g.gap)}
                       </Badge>
                     ))}
@@ -134,7 +134,7 @@ export default function AlertsCenter() {
                 )}
 
                 {a.resolvedAt && (
-                  <p className="text-[11px] text-muted-foreground">أُغلق في {fmtDate(a.resolvedAt)}</p>
+                  <p className="text-xs text-muted-foreground">أُغلق في {fmtDate(a.resolvedAt)}</p>
                 )}
               </div>
             ))}

@@ -27,7 +27,7 @@ export function AmendmentHistory({ history }: { history: BudgetAmendment[] }) {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${BUDGET_AMENDMENT_STATUS_COLORS[a.status]}`}>
+                    <span className={`px-1.5 py-0.5 rounded-full text-xs ${BUDGET_AMENDMENT_STATUS_COLORS[a.status]}`}>
                       {BUDGET_AMENDMENT_STATUS_LABELS[a.status]}
                     </span>
                     <span className="text-muted-foreground">
@@ -36,7 +36,7 @@ export function AmendmentHistory({ history }: { history: BudgetAmendment[] }) {
                       })}
                     </span>
                     {a.status === 'approved' && (
-                      <span className={`font-mono ${delta >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      <span className={`font-mono ${delta >= 0 ? 'text-success' : 'text-destructive'}`}>
                         {delta >= 0 ? '+' : ''}{formatCurrency(delta)}
                       </span>
                     )}

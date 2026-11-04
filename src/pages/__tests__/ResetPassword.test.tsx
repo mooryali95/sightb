@@ -193,18 +193,19 @@ describe('saving the new password', () => {
     renderPage();
     await form();
   };
-  // By placeholder: the label is not wired to the input (no `htmlFor`), recorded below, not changed.
+  // By placeholder: the page's label has no `htmlFor`; the shared Input links it (see below).
   const field = () => screen.getByPlaceholderText('••••••••');
   const submit = (password: string) => {
     fireEvent.change(field(), { target: { value: password } });
     fireEvent.submit(field().closest('form') as HTMLFormElement);
   };
 
-  it('labels the field only visually, so a screen reader hears no name for it', async () => {
+  it('names the field by its visible label although the page never wires it', async () => {
     await ready();
-    // Recorded, not changed (the page is Lovable-authored): the label has no `htmlFor` and the input no id.
+    // The page (Lovable-authored) still writes the label with no `htmlFor`;
+    // the shared Input links the nearest label before it, so the name is heard.
     expect(screen.getByText('كلمة المرور الجديدة').getAttribute('for')).toBeNull();
-    expect(field()).not.toHaveAccessibleName();
+    expect(field()).toHaveAccessibleName('كلمة المرور الجديدة');
   });
 
   it('refuses a short password before reaching the server', async () => {

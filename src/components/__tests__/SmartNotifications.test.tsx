@@ -108,7 +108,7 @@ describe('what becomes a notification', () => {
     expect(advances.map((el) => el.textContent)).toEqual(['سلفة قائمة عمرها 70 يوم', 'سلفة قائمة عمرها 40 يوم']);
     // Past 60 days is critical; between 30 and 60 a warning.
     expect(advances[0].closest('.rounded-md')).toHaveClass('text-destructive');
-    expect(advances[1].closest('.rounded-md')).toHaveClass('text-amber-600');
+    expect(advances[1].closest('.rounded-md')).toHaveClass('text-warning');
     fireEvent.click(groupHeader(/مخاطر مفتوحة/));
     expect(within(panel).getByText('1 خطر عالي')).toBeInTheDocument();
     fireEvent.click(groupHeader(/بانتظار الاعتماد/));

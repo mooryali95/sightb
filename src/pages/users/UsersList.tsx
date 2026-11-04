@@ -49,12 +49,12 @@ export function UsersList({
 
       {/* User search */}
       <div className="relative mb-4">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder="بحث بالإيميل أو الاسم..."
           value={userSearchQuery}
           onChange={(e) => setUserSearchQuery(e.target.value)}
-          className="pr-9 h-9 text-sm"
+          className="ps-9 h-9 text-sm"
         />
       </div>
 
@@ -75,7 +75,7 @@ export function UsersList({
                   <div>
                     <span className="font-medium text-sm" dir="ltr">{profile.email}</span>
                     {profile.fullName && (
-                      <span className="text-xs text-muted-foreground mr-2">({profile.fullName})</span>
+                      <span className="text-xs text-muted-foreground ms-2">({profile.fullName})</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

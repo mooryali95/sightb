@@ -83,7 +83,7 @@ test('a row opens the comparison of its lines before and after the repair', asyn
   await row(card, 'سارة').click();
   const panel = page.getByRole('dialog');
   await expect(panel.getByRole('heading', { name: 'مقارنة تفصيلية — سارة' })).toBeVisible();
-  await expect(panel).toContainText('1 عنصر تغيّر من أصل 1');
+  await expect(panel).toContainText('تغيّر عنصر واحد من أصل 1');
   await expect(panel).toContainText('مصروف ex-sara');
   await expect(panel).toContainText('قبل: 4,500.00 ر.س');
   await expect(panel).toContainText('بعد: 3,000.00 ر.س');

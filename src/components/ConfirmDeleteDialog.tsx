@@ -31,16 +31,16 @@ export function ConfirmDeleteDialog({
 }: ConfirmDeleteDialogProps) {
   const defaultTrigger =
     variant === 'icon' ? (
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" aria-label={confirmLabel}>
         <Trash2 className="w-3.5 h-3.5 text-destructive" />
       </Button>
     ) : variant === 'inline' ? (
-      <button className="text-destructive hover:text-destructive/80 mr-1">
+      <button aria-label={confirmLabel} className="hit text-destructive hover:text-destructive/80 me-1">
         <Trash2 className="w-3 h-3" />
       </button>
     ) : (
       <Button variant="destructive" size="sm">
-        <Trash2 className="w-4 h-4 ml-1" /> حذف
+        <Trash2 className="w-4 h-4 me-1" /> حذف
       </Button>
     );
 

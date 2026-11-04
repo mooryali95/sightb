@@ -41,7 +41,7 @@ export function InvitesLog({
       <Collapsible open={invitesOpen} onOpenChange={setInvitesOpen}>
         <div className="flex items-start gap-3">
           <CollapsibleTrigger asChild>
-            <button className="flex-1 flex items-center justify-between text-right">
+            <button className="flex-1 flex items-center justify-between text-start">
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5 text-primary" />
                 <h2 className="text-lg font-semibold">سجل الدعوات</h2>
@@ -74,12 +74,12 @@ export function InvitesLog({
           </p>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4 mb-3">
             <div className="relative flex-1 min-w-0">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="بحث بالإيميل..."
                 value={filter.query}
                 onChange={(e) => setFilter({ ...filter, query: e.target.value })}
-                className="pr-9 h-8 text-sm"
+                className="ps-9 h-8 text-sm"
                 dir="ltr"
               />
             </div>

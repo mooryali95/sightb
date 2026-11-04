@@ -70,7 +70,7 @@ export function AuditLogSection({ projectId }: AuditLogSectionProps) {
                     {ACTION_LABELS[entry.action] || entry.action || 'تعديل'} {TABLE_NAME_LABELS[entry.tableName] || entry.tableName}
                   </span>
                   {entry.recordData && (entry.recordData.name || entry.recordData.title || entry.recordData.description) && (
-                    <span className="text-muted-foreground text-xs mr-2">
+                    <span className="text-muted-foreground text-xs ms-2">
                       {entry.recordData.name || entry.recordData.title || (typeof entry.recordData.description === 'string' ? entry.recordData.description.substring(0, 40) : '')}
                     </span>
                   )}

@@ -37,7 +37,7 @@ export function RisksCard({ risks, managementReserve }: { risks: Risk[]; managem
       {managementReserve > 0 && (
         <div className="mt-2 p-2 rounded-lg bg-muted/40 text-xs flex items-center justify-between">
           <span>الاحتياطي: {formatCurrency(managementReserve)}</span>
-          <span className={riskExposure > managementReserve ? 'text-destructive' : 'text-emerald-600'}>
+          <span className={riskExposure > managementReserve ? 'text-destructive' : 'text-success'}>
             {riskExposure > managementReserve ? '⚠️ التعرض يتجاوز الاحتياطي' : '✓ كافٍ'}
           </span>
         </div>

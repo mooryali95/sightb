@@ -133,7 +133,7 @@ export function BudgetAmendmentManager({
                     <AlertDialogTitle>إلغاء تعديل الموازنة؟</AlertDialogTitle>
                     <AlertDialogDescription>
                       سيتم إغلاق الموازنة دون اعتماد أي تغييرات. <br />
-                      <span className="text-amber-600 dark:text-amber-400 font-medium">
+                      <span className="text-warning dark:text-amber-400 font-medium">
                         ملاحظة: التغييرات التي أجريتها على بنود الموازنة في قاعدة البيانات لن تُسترجع تلقائياً، 
                         لكن لقطة "قبل التعديل" محفوظة ويمكنك الرجوع لها يدوياً.
                       </span>

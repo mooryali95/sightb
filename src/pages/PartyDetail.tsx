@@ -30,7 +30,7 @@ function Figure({ icon, label, value, tone, hint }: { icon: React.ReactNode; lab
     <div className="rounded-xl border border-border bg-card p-4" title={hint}>
       <p className="text-xs text-muted-foreground flex items-center gap-1.5">{icon}{label}</p>
       <p className={`mt-1 text-xl font-semibold font-mono ${tone === 'warn' ? 'text-warning' : tone === 'good' ? 'text-success' : ''}`}>{value}</p>
-      {hint && <p className="text-[11px] text-muted-foreground mt-0.5">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
     </div>
   );
 }
@@ -178,9 +178,9 @@ export default function PartyDetail() {
                     </td>
                     <td className="text-sm">
                       {r.description || '—'}
-                      {r.paidByThem && <span className="block text-[11px] text-warning">دفعه من جيبه عن المنظومة</span>}
+                      {r.paidByThem && <span className="block text-xs text-warning">دفعه من جيبه عن المنظومة</span>}
                     </td>
-                    <td><Badge variant="outline" className="text-[11px]">{kindLabel(r.category)}</Badge></td>
+                    <td><Badge variant="outline" className="text-xs">{kindLabel(r.category)}</Badge></td>
                     <td className="font-mono text-sm font-semibold whitespace-nowrap">{formatCurrency(r.amount)}</td>
                   </tr>
                 ))}

@@ -16,7 +16,7 @@ export function PlanCards({ rows, currency }: { rows: MonthlyBudgetPlanRow[]; cu
               <TooltipTrigger asChild>
                 <div
                   className={cn(
-                    'p-3 rounded-lg border ring-1 transition-all cursor-default text-right',
+                    'p-3 rounded-lg border ring-1 transition cursor-default text-start',
                     meta.bg, meta.ring,
                     row.isCurrent && 'ring-2 ring-primary/40 border-primary/40',
                   )}
@@ -25,7 +25,7 @@ export function PlanCards({ rows, currency }: { rows: MonthlyBudgetPlanRow[]; cu
                     <span className={cn('w-2 h-2 rounded-full', meta.dot)} />
                     <span className="text-xs font-medium">
                       شهر {row.month}
-                      {row.isCurrent && <span className="text-primary mr-1">●</span>}
+                      {row.isCurrent && <span className="text-primary ms-1">●</span>}
                     </span>
                   </div>
                   <div className="space-y-0.5">
@@ -38,7 +38,7 @@ export function PlanCards({ rows, currency }: { rows: MonthlyBudgetPlanRow[]; cu
                       <span className="text-muted-foreground">فعلي</span>
                     </div>
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-border/60">
-                      <span className={cn('font-mono font-bold', row.variance >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                      <span className={cn('font-mono font-bold', row.variance >= 0 ? 'text-success' : 'text-red-600')}>
                         {row.variance >= 0 ? '+' : ''}{formatCurrency(row.variance, currency)}
                       </span>
                       <span className={cn('text-xs font-bold', meta.text)}>
@@ -48,12 +48,12 @@ export function PlanCards({ rows, currency }: { rows: MonthlyBudgetPlanRow[]; cu
                   </div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-right">
+              <TooltipContent side="top" className="max-w-xs text-start">
                 <div className="space-y-1.5">
                   <p className="font-bold text-xs">شهر {row.month} — {meta.label}</p>
                   <div className="text-xs space-y-0.5 border-b border-border pb-1.5">
                     <div className="flex justify-between gap-4"><span className="text-muted-foreground">إيراد محصّل:</span><span className="font-mono">{formatCurrency(row.actualRevenue, currency)}</span></div>
-                    <div className="flex justify-between gap-4"><span className="text-muted-foreground">صافي تدفق:</span><span className={cn('font-mono', row.netCashFlow >= 0 ? 'text-emerald-600' : 'text-red-600')}>{formatCurrency(row.netCashFlow, currency)}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-muted-foreground">صافي تدفق:</span><span className={cn('font-mono', row.netCashFlow >= 0 ? 'text-success' : 'text-red-600')}>{formatCurrency(row.netCashFlow, currency)}</span></div>
                     <div className="flex justify-between gap-4"><span className="text-muted-foreground">تراكمي مخطط:</span><span className="font-mono">{formatCurrency(row.cumulativePlanned, currency)}</span></div>
                   </div>
                   {row.items.length > 0 ? (

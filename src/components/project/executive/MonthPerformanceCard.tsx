@@ -71,13 +71,13 @@ export function MonthPerformanceCard({ currentMonth, durationMonths, plannedMont
         </div>
         <div className="text-center p-3 rounded-lg bg-muted/40">
           <p className="text-xs text-muted-foreground">{performance.diff >= 0 ? 'وفر' : 'تجاوز'}</p>
-          <p className={`text-sm font-mono font-bold mt-1 ${performance.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+          <p className={`text-sm font-mono font-bold mt-1 ${performance.diff >= 0 ? 'text-success' : 'text-destructive'}`}>
             {formatCurrency(Math.abs(performance.diff))}
           </p>
         </div>
         <div className="text-center p-3 rounded-lg bg-muted/40">
           <p className="text-xs text-muted-foreground">الحكم</p>
-          <p className={`text-sm font-bold mt-1 ${performance.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+          <p className={`text-sm font-bold mt-1 ${performance.diff >= 0 ? 'text-success' : 'text-destructive'}`}>
             {performance.actual === 0 ? 'لا صرف بعد' : performance.diff > 0 ? 'وفر 👍' : performance.diff < 0 ? 'تجاوز ⚠️' : 'مطابق ✓'}
           </p>
         </div>
@@ -89,7 +89,7 @@ export function MonthPerformanceCard({ currentMonth, durationMonths, plannedMont
             <span>نسبة الصرف</span>
             <span>{((performance.actual / performance.planned) * 100).toFixed(0)}%</span>
           </div>
-          <Progress value={Math.min(150, (performance.actual / performance.planned) * 100)} className="h-1.5" />
+          <Progress value={Math.min(150, (performance.actual / performance.planned) * 100)} aria-label="أداء الشهر مقابل المخطط" className="h-1.5" />
         </div>
       )}
     </SectionCard>

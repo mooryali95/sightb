@@ -68,12 +68,12 @@ export function RegistryNamePicker({ companyId, value, onChange, id, ariaLabel, 
             {value.text ? (
               <span className="flex items-center gap-2 min-w-0">
                 {linked
-                  ? <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-semibold">{initialsOf(linked.name)}</span>
+                  ? <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">{initialsOf(linked.name)}</span>
                   : <Type aria-hidden className="w-4 h-4 text-muted-foreground shrink-0" />}
                 <span className="truncate">{value.text}</span>
                 {linked
-                  ? <span className="text-[10px] text-success flex items-center gap-0.5 shrink-0"><UserCheck className="w-3 h-3" />من السجل</span>
-                  : <span className="text-[10px] text-muted-foreground shrink-0">نص فقط</span>}
+                  ? <span className="text-xs text-success flex items-center gap-0.5 shrink-0"><UserCheck className="w-3 h-3" />من السجل</span>
+                  : <span className="text-xs text-muted-foreground shrink-0">نص فقط</span>}
               </span>
             ) : <span className="text-muted-foreground">{placeholder}</span>}
             <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
@@ -88,10 +88,10 @@ export function RegistryNamePicker({ companyId, value, onChange, id, ariaLabel, 
                 <CommandGroup heading="من سجل الموارد">
                   {results.map((p) => (
                     <CommandItem key={p.id} value={p.id} onSelect={() => pick(p)} className="gap-2">
-                      <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-semibold">{initialsOf(p.name)}</span>
+                      <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">{initialsOf(p.name)}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate">{p.name}</span>
-                        <span className="block text-[11px] text-muted-foreground truncate">{PARTY_KIND_LABELS[p.kind]}{p.role ? ` · ${p.role}` : ''}</span>
+                        <span className="block text-xs text-muted-foreground truncate">{PARTY_KIND_LABELS[p.kind]}{p.role ? ` · ${p.role}` : ''}</span>
                       </span>
                       {p.id === value.partyId && <Check className="w-4 h-4 text-primary" />}
                     </CommandItem>

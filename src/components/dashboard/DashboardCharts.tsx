@@ -1,9 +1,10 @@
 import { formatCurrency } from '@/lib/finance';
 import { motion } from 'framer-motion';
-import {
+import { Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
+import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
 
 const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)'];
 
@@ -25,18 +26,22 @@ export function DashboardCharts({ companyData, statusData }: DashboardChartsProp
       {companyData.length > 0 && (
         <div className="stat-card">
           <h3 className="text-sm font-semibold mb-4">المصروفات حسب الشركة</h3>
+          {/* SVG text anchors flip under rtl and pushed names off the edge; the axes do the mirroring instead. */}
+          <div dir="ltr">
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={companyData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
+              {/* Read from the right: names on the right edge, bars grow leftward. */}
+              <XAxis type="number" reversed tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} />
+              <YAxis type="category" dataKey="name" orientation="right" width={128} tick={{ fontSize: 12 }} tickFormatter={(n: string) => (n.length > 18 ? `${n.slice(0, 17)}…` : n)} />
               <Tooltip
                 formatter={(value: number) => formatCurrency(value)}
                 contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
               />
-              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 0, 0, 4]} />
             </BarChart>
           </ResponsiveContainer>
+          </div>
         </div>
       )}
 
@@ -45,7 +50,7 @@ export function DashboardCharts({ companyData, statusData }: DashboardChartsProp
           <h3 className="text-sm font-semibold mb-4">حالة المشاريع</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <Pie
+              <Pie {...labelledSlices}
                 data={statusData}
                 cx="50%"
                 cy="50%"
@@ -53,13 +58,15 @@ export function DashboardCharts({ companyData, statusData }: DashboardChartsProp
                 outerRadius={90}
                 paddingAngle={5}
                 dataKey="value"
-                label={({ name, value }) => `${name}: ${value}`}
+                nameKey="name"
               >
                 {statusData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip />
+              {/* Names sit in the legend, not on the ring, where they clipped and overlapped. */}
+              <Legend formatter={pieLegendText('count')} />
             </PieChart>
           </ResponsiveContainer>
         </div>

@@ -5,6 +5,7 @@ import type { RowComparison } from '@/lib/spend-consistency';
 import { Badge } from '@/components/ui/badge';
 import { InspectorPanel, InspectorSection, InspectorKpiStrip } from '@/components/ui/inspector-panel';
 import { BellRing } from 'lucide-react';
+import { countAr } from '@/lib/plural';
 
 export function RowComparisonPanel({ comparison, onClose }: { comparison: RowComparison; onClose: () => void }) {
   return (
@@ -12,7 +13,7 @@ export function RowComparisonPanel({ comparison, onClose }: { comparison: RowCom
       open
       onOpenChange={(v) => !v && onClose()}
       title={`مقارنة تفصيلية — ${comparison.label}`}
-      description={`${comparison.changedCount} عنصر تغيّر من أصل ${comparison.lines.length}`}
+      description={`تغيّر ${countAr(comparison.changedCount, 'item')} من أصل ${comparison.lines.length}`}
       width="lg"
     >
       <InspectorKpiStrip
@@ -33,9 +34,9 @@ export function RowComparisonPanel({ comparison, onClose }: { comparison: RowCom
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-medium truncate">{l.description}</span>
-                  {changed && <Badge variant="destructive" className="text-[10px] shrink-0">تغيّر</Badge>}
+                  {changed && <Badge variant="destructive" className="text-xs shrink-0">تغيّر</Badge>}
                 </div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] font-mono">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs font-mono">
                   {l.date && <span className="text-muted-foreground">{l.date}</span>}
                   <span className="text-muted-foreground">{l.categoryLabel}</span>
                   <span className="text-muted-foreground">قبل: {formatCurrency(l.before)}</span>

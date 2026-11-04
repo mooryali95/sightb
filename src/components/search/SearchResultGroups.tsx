@@ -22,10 +22,10 @@ export function SearchResultGroups({ companies, portfolios, projects, allCompani
         <CommandGroup heading="الشركات">
           {companies.map((c) => (
             <CommandItem key={c.id} onSelect={() => onGo(`/company/${c.id}`)}>
-              <Building2 className="ml-2 h-4 w-4 text-primary" />
+              <Building2 className="me-2 h-4 w-4 text-primary" />
               <span>{c.name}</span>
               {withDescriptions && c.description && (
-                <span className="text-xs text-muted-foreground mr-2 truncate max-w-[200px]">
+                <span className="text-xs text-muted-foreground ms-2 truncate max-w-[200px]">
                   — {c.description}
                 </span>
               )}
@@ -42,9 +42,9 @@ export function SearchResultGroups({ companies, portfolios, projects, allCompani
               const comp = companyOf(p.companyId);
               return (
                 <CommandItem key={p.id} onSelect={() => onGo(`/portfolio/${p.id}`)}>
-                  <FolderKanban className="ml-2 h-4 w-4 text-primary/70" />
+                  <FolderKanban className="me-2 h-4 w-4 text-primary/70" />
                   <span>{p.name}</span>
-                  {comp && <span className="text-xs text-muted-foreground mr-2">{comp.name}</span>}
+                  {comp && <span className="text-xs text-muted-foreground ms-2">{comp.name}</span>}
                 </CommandItem>
               );
             })}
@@ -60,9 +60,9 @@ export function SearchResultGroups({ companies, portfolios, projects, allCompani
               const comp = companyOf(p.companyId);
               return (
                 <CommandItem key={p.id} onSelect={() => onGo(`/project/${p.id}`)}>
-                  <Briefcase className="ml-2 h-4 w-4 text-muted-foreground" />
+                  <Briefcase className="me-2 h-4 w-4 text-muted-foreground" />
                   <span>{p.name}</span>
-                  {comp && <span className="text-xs text-muted-foreground mr-2">{comp.name}</span>}
+                  {comp && <span className="text-xs text-muted-foreground ms-2">{comp.name}</span>}
                 </CommandItem>
               );
             })}

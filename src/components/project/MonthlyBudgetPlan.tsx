@@ -77,7 +77,7 @@ export function MonthlyBudgetPlan({ budgetItems, expenses, revenues, durationMon
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         <SummaryTile label="إجمالي مخطط" value={formatCurrency(totalPlanned, currency)} />
         <SummaryTile label="إجمالي فعلي" value={formatCurrency(totalActual, currency)} />
-        <SummaryTile label="ضمن الخطة" value={`${onTrackCount} شهر`} accent="text-emerald-600" />
+        <SummaryTile label="ضمن الخطة" value={`${onTrackCount} شهر`} accent="text-success" />
         <SummaryTile label="تجاوزت" value={`${overCount} شهر`} accent={overCount > 0 ? 'text-red-600' : 'text-muted-foreground'} />
       </div>
 

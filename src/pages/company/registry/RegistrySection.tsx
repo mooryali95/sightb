@@ -134,14 +134,14 @@ export function RegistrySection({ companyId, projects, expenses, canEdit }: Prop
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <span className="font-medium truncate group-hover:text-primary">{p.name}</span>
-                      <Badge variant="outline" className="text-[10px] shrink-0">{PARTY_KIND_LABELS[p.kind]}</Badge>
+                      <Badge variant="outline" className="text-xs shrink-0">{PARTY_KIND_LABELS[p.kind]}</Badge>
                     </span>
                     {p.role && <span className="block text-xs text-muted-foreground truncate">{p.role}</span>}
                     <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                       <span><span className="text-muted-foreground">صُرف له </span><span className="font-mono font-semibold">{formatCurrency(paid)}</span></span>
                       {s.byProject.length > 0 && <span className="text-muted-foreground">{s.byProject.length === 1 ? s.byProject[0].name : `${s.byProject.length} مشاريع`}</span>}
-                      {s.companyOwesThem > 0 && <Badge className="bg-warning/15 text-warning hover:bg-warning/15 text-[10px]">له {formatCurrency(s.companyOwesThem)}</Badge>}
-                      {s.companyOwesThem < 0 && <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[10px]">عليه {formatCurrency(-s.companyOwesThem)}</Badge>}
+                      {s.companyOwesThem > 0 && <Badge className="bg-warning/15 text-warning hover:bg-warning/15 text-xs">له {formatCurrency(s.companyOwesThem)}</Badge>}
+                      {s.companyOwesThem < 0 && <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-xs">عليه {formatCurrency(-s.companyOwesThem)}</Badge>}
                     </span>
                   </span>
                 </Link>

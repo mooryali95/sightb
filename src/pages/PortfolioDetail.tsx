@@ -26,6 +26,7 @@ import { ProjectComparisonTable } from './portfolio/ProjectComparisonTable';
 import { PortfolioCharts } from './portfolio/PortfolioCharts';
 import { buildPortfolioExport } from './portfolio/buildPortfolioExport';
 import { rankProjects, aggregateCashFlow } from './portfolio/portfolioFigures';
+import { countAr } from '@/lib/plural';
 
 
 export default function PortfolioDetail() {
@@ -139,7 +140,7 @@ export default function PortfolioDetail() {
           }
           subtitle={
             <span>
-              {summary.projectCount} مشروع
+              {countAr(summary.projectCount, 'project')}
               {portfolio.fiscalYear && <> · السنة المالية {portfolio.fiscalYear}</>}
             </span>
           }
@@ -175,7 +176,7 @@ export default function PortfolioDetail() {
                     try { await deletePortfolio(id!); toast.success('تم الحذف'); navigate('/'); } catch { toast.error('فشل الحذف'); }
                   }}
                   trigger={
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                    <Button variant="ghost" size="icon" title="حذف المحفظة" className="text-muted-foreground hover:text-destructive">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   }
@@ -204,7 +205,7 @@ export default function PortfolioDetail() {
               <span className="text-sm font-semibold">هدف الإيراد المحصّل</span>
               <span className="text-sm font-mono">{formatCurrency(summary.totalCollectedRevenue)} / {formatCurrency(portfolio.targetRevenue)}</span>
             </div>
-            <Progress value={Math.min(summary.revenueAchievement, 100)} className="h-3" />
+            <Progress value={Math.min(summary.revenueAchievement, 100)} aria-label="تحقيق الإيراد المستهدف" className="h-3" />
             <p className="text-xs text-muted-foreground mt-1">{summary.revenueAchievement.toFixed(1)}% من المستهدف</p>
           </div>
         )}

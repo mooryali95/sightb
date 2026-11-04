@@ -126,7 +126,7 @@ describe('the figures at the top', () => {
     expect(statFigure('الربح المخطط الإجمالي')).toBe('150,000.00 ر.س');
     // (40 × 100,000 + 20 × 50,000) / 150,000
     expect(statFigure('الإنجاز المرجّح')).toBe('33.3%');
-    expect(screen.getByText(/2 مشروع · السنة المالية 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/مشروعان · السنة المالية 2026/)).toBeInTheDocument();
   });
 
   it('measures collected revenue against the target', () => {

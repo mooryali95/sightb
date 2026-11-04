@@ -12,7 +12,9 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "next-themes";
-import { LazyMotion } from "framer-motion";
+import { DirectionProvider } from "@radix-ui/react-direction";
+import { useScrollRegions } from "@/lib/a11y/scroll-regions";
+import { LazyMotion, MotionConfig } from "framer-motion";
 import { SessionTimeoutWarning } from "@/components/SessionTimeoutWarning";
 import { useCoreData } from "@/hooks/useAppData";
 
@@ -48,7 +50,7 @@ function AppBootstrap({ children }: { children: ReactNode }) {
 }
 
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
+  <div className="min-h-dvh flex items-center justify-center bg-background">
     <div className="text-center space-y-3">
       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
       <p className="text-sm text-muted-foreground">جاري التحميل...</p>
@@ -61,8 +63,16 @@ const PageLoader = () => (
 // download carries none of it. Pages still using `motion` bring their own.
 const loadMotionFeatures = () => import("@/lib/motion-features").then((mod) => mod.default);
 
+// Scrolled tables become reachable by keyboard on every page.
+const A11yRuntime = () => {
+  useScrollRegions();
+  return null;
+};
+
 const App = () => (
   <LazyMotion features={loadMotionFeatures}>
+    <MotionConfig reducedMotion="user">
+    <DirectionProvider dir="rtl">
     <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, maxAge: CACHE_MAX_AGE, buster: CACHE_BUSTER, dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery, shouldDehydrateMutation: () => false } }}>
       <AuthProvider>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -73,6 +83,7 @@ const App = () => (
             <BrowserRouter>
               <Seo />
               <HoverPreload />
+              <A11yRuntime />
               <AppBootstrap>
                 <ErrorBoundary fallbackMessage="حدث خطأ في التطبيق. يرجى إعادة تحميل الصفحة.">
 
@@ -108,6 +119,8 @@ const App = () => (
         </ThemeProvider>
       </AuthProvider>
     </PersistQueryClientProvider>
+    </DirectionProvider>
+    </MotionConfig>
   </LazyMotion>
 );
 

@@ -32,7 +32,7 @@ export function FinancialPositionStrip({
           <Landmark className="w-4 h-4 text-primary" />
           <div>
             <p className="text-xs font-semibold">وضع الموازنة والسيولة</p>
-            <p className="text-[11px] text-muted-foreground">رقمان مختلفان يجيبان عن سؤالين مختلفين</p>
+            <p className="text-xs text-muted-foreground">رقمان مختلفان يجيبان عن سؤالين مختلفين</p>
           </div>
         </div>
         <Metric label="الموازنة" value={summary.totalPlanned} currency={project.currency} />
@@ -60,7 +60,7 @@ export function FinancialPositionStrip({
 function Metric({ label, value, currency, emphasis = false }: { label: string; value: number; currency: string; emphasis?: boolean }) {
   return (
     <div className="min-w-[118px] border-s border-border ps-3">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p className={`text-sm font-mono font-semibold ${emphasis ? (value >= 0 ? 'health-good' : 'text-destructive') : ''}`}>
         {formatCurrency(value, currency)}
       </p>

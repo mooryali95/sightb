@@ -31,7 +31,7 @@ export function StandaloneProjectCards({ projects, countedExpenses, changeOrders
             return (
               <div
                 key={project.id}
-                className="rounded-xl border border-border bg-card p-4 cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all"
+                className="rounded-xl border border-border bg-card p-4 cursor-pointer hover:border-primary/40 hover:shadow-sm transition"
                 onClick={() => navigate(`/project/${project.id}`)}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -55,13 +55,13 @@ export function StandaloneProjectCards({ projects, countedExpenses, changeOrders
                     <p className="text-xs font-mono font-bold">{formatCurrency(totalSpent)}</p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                   <span>الإنجاز: {project.percentComplete}%</span>
                   <span>الصرف: {spentPercent.toFixed(0)}%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${spendBarClass(spentPercent)}`}
+                    className={`h-full rounded-full transition-[width] ${spendBarClass(spentPercent)}`}
                     style={{ width: `${spentPercent}%` }}
                   />
                 </div>

@@ -107,10 +107,10 @@ export function LoanDialog({ open, onOpenChange, companyId, projects }: Props) {
               ['project', FolderKanban, 'تمويل مشروع', 'يُسترد من المشروع حين يحصّل دفعاته'],
             ] as const).map(([key, Icon, title, hint]) => (
               <button key={key} type="button" role="radio" aria-checked={purpose === key} onClick={() => setPurpose(key)}
-                className={`rounded-lg border p-3 text-right transition-colors ${purpose === key ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}>
+                className={`rounded-lg border p-3 text-start transition-colors ${purpose === key ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}>
                 <Icon className={`w-5 h-5 mb-1 ${purpose === key ? 'text-primary' : 'text-muted-foreground'}`} />
                 <span className="block text-sm font-semibold">{title}</span>
-                <span className="block text-[11px] text-muted-foreground leading-snug">{hint}</span>
+                <span className="block text-xs text-muted-foreground leading-snug">{hint}</span>
               </button>
             ))}
           </div>

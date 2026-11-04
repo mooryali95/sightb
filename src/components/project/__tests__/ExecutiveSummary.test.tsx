@@ -26,7 +26,7 @@ vi.mock('recharts', () => ({
   Pie: ({ data }: { data: { name: string; value: number }[] }) => (
     <ul data-testid="pie">{data.map((d) => <li key={d.name}>{`${d.name}: ${d.value}`}</li>)}</ul>
   ),
-  Cell: () => null, Tooltip: () => null,
+  Cell: () => null, Tooltip: () => null, Legend: () => null,
 }));
 
 const PROJECT_ID = 'p-1';

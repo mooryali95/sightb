@@ -38,12 +38,12 @@ export function PageHeader({
     >
       <div className="min-w-0 flex-1 space-y-1.5">
         {eyebrow && (
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
+          <div className="text-xs font-semibold text-accent-text">
             {eyebrow}
           </div>
         )}
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl md:text-[28px] font-bold leading-tight text-foreground tracking-tight">
+          <h1 className="text-2xl md:text-[28px] font-bold leading-tight text-foreground">
             {title}
           </h1>
           {meta && <div className="flex items-center gap-1.5">{meta}</div>}

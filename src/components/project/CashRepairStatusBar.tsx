@@ -16,13 +16,13 @@ export function CashRepairStatusBar({ projectId }: { projectId: string }) {
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2">
       <Wrench className="w-4 h-4 text-success shrink-0" />
       <span className="text-xs font-medium">تم إصلاح التحويلات بلا مصدر</span>
-      <Badge className="bg-success/10 text-success border-success/20 text-[11px]">
+      <Badge className="bg-success/10 text-success border-success/20 text-xs">
         {repairedCount} تحويل معالج
       </Badge>
-      <span className="flex items-center gap-1 text-[11px] text-muted-foreground font-mono">
+      <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
         <Clock className="w-3 h-3" />{time}
       </span>
-      <span className="text-[11px] text-muted-foreground">
+      <span className="text-xs text-muted-foreground">
         آخر إصلاح: {last.custodyName}
       </span>
     </div>

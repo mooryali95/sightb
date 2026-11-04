@@ -22,7 +22,7 @@ const ICONS: Record<string, typeof Bell> = {
 
 const COLORS: Record<Notification['severity'], string> = {
   critical: 'text-destructive bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
-  warning: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
+  warning: 'text-warning bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
   info: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
 };
 
@@ -69,7 +69,7 @@ export function SmartNotifications() {
           <Bell className="w-4 h-4" />
           {active.length > 0 && (
             <span className={cn(
-              'absolute -top-0.5 -left-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-xs font-bold text-white',
+              'absolute -top-0.5 -end-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-xs font-bold text-white',
               critCount > 0 ? 'bg-destructive' : 'bg-amber-500'
             )}>{active.length}</span>
           )}
@@ -101,11 +101,11 @@ export function SmartNotifications() {
                 return (
                   <AccordionItem key={type} value={type} className="border-none">
                     <AccordionTrigger className="px-2 py-2 hover:no-underline rounded-md hover:bg-muted/60">
-                      <div className="flex items-center gap-2 flex-1 text-right">
+                      <div className="flex items-center gap-2 flex-1 text-start">
                         <Icon className={cn(
                           'w-3.5 h-3.5 shrink-0',
                           topSeverity === 'critical' ? 'text-destructive'
-                            : topSeverity === 'warning' ? 'text-amber-600' : 'text-blue-600'
+                            : topSeverity === 'warning' ? 'text-warning' : 'text-blue-600'
                         )} />
                         <span className="text-xs font-medium">
                           {TYPE_LABELS[type] || type} ({items.length})
@@ -116,7 +116,7 @@ export function SmartNotifications() {
                       <div className="space-y-1">
                         {items.map(n => (
                           <div key={n.id} className={cn('flex items-start gap-2 p-2 rounded-md border', COLORS[n.severity])}>
-                            <button onClick={() => { setOpen(false); navigate(n.link); }} className="flex-1 text-right">
+                            <button onClick={() => { setOpen(false); navigate(n.link); }} className="flex-1 text-start">
                               <p className="text-xs font-medium">{n.title}</p>
                               <p className="text-xs opacity-70">{n.description}</p>
                             </button>

@@ -32,12 +32,12 @@ export function RepairLogCard({ repairs, loading, onOpen }: RepairLogCardProps) 
                 <span className="text-xs font-medium truncate">
                   {r.custodyName || r.custodyId || '—'} · {formatCurrency(r.amount)}
                 </span>
-                <span className="text-[11px] text-muted-foreground font-mono shrink-0">
+                <span className="text-xs text-muted-foreground font-mono shrink-0">
                   {r.createdAt.split('T')[0]}
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">{r.reason}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{r.performedByEmail ?? r.performedBy}</p>
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{r.reason}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{r.performedByEmail ?? r.performedBy}</p>
             </button>
           ))}
         </div>

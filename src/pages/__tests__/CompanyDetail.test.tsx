@@ -154,14 +154,14 @@ describe('the figures at the top', () => {
 
   it('hides finished projects until asked, and counts them in the subtitle', () => {
     renderPage();
-    expect(screen.getByText(/1 محفظة · 2 مشروع/)).toBeInTheDocument();
+    expect(screen.getByText(/محفظة واحدة · مشروعان/)).toBeInTheDocument();
     expect(screen.getByText('(1 منتهي)')).toBeInTheDocument();
     expect(screen.queryByText('مشروع منتهي')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /عرض المنتهية/ }));
 
     expect(screen.getByText('مشروع منتهي')).toBeInTheDocument();
-    expect(screen.getByText(/1 محفظة · 3 مشروع/)).toBeInTheDocument();
+    expect(screen.getByText(/محفظة واحدة · 3 مشاريع/)).toBeInTheDocument();
   });
 
   it('says so when the company does not exist', () => {

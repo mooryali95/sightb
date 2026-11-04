@@ -26,7 +26,7 @@ export function GuardsBlock() {
           <div key={name} className="flex items-start gap-2 border-b border-border/40 last:border-b-0 pb-2 last:pb-0">
             <Database className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
             <div>
-              <code className="text-[11px] font-mono text-warning">{name}</code>
+              <code className="text-xs font-mono text-warning">{name}</code>
               <div className="text-muted-foreground mt-0.5">{desc}</div>
             </div>
           </div>

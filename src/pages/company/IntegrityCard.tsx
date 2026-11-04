@@ -52,7 +52,7 @@ export function IntegrityCard({ projects }: { projects: Project[] }) {
     <section className="stat-card mb-6" aria-label="سلامة البيانات">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" />سلامة البيانات</h3>
-        <span className="text-[11px] text-muted-foreground">كل مبلغ له مصدر · لا تكرار · كل عهدة ودفعة متوازنة · كل فرق له سبب</span>
+        <span className="text-xs text-muted-foreground">كل مبلغ له مصدر · لا تكرار · كل عهدة ودفعة متوازنة · كل فرق له سبب</span>
       </div>
       {loaded === 'loading' ? (
         <p className="mt-2 text-sm flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />جارٍ فحص الحسابات…</p>

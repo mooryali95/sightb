@@ -94,7 +94,7 @@ export function PartyFormDialog({ companyId, open, onOpenChange, party, initial,
                 <button key={k.kind} type="button" role="radio" aria-checked={kind === k.kind} onClick={() => setKind(k.kind)}
                   className={`rounded-lg border p-2.5 text-start transition-colors ${kind === k.kind ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:bg-muted/40'}`}>
                   <span className="block text-sm font-medium">{PARTY_KIND_LABELS[k.kind]}</span>
-                  <span className="block text-[11px] text-muted-foreground">{k.hint}</span>
+                  <span className="block text-xs text-muted-foreground">{k.hint}</span>
                 </button>
               ))}
             </div>
@@ -112,7 +112,7 @@ export function PartyFormDialog({ companyId, open, onOpenChange, party, initial,
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAlias(); } }} />
               <Button type="button" variant="outline" onClick={addAlias} disabled={!alias.trim()}>إضافة</Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">يتعرّف بها النظام على المصروفات التي كُتب فيها الاسم بطريقة أخرى.</p>
+            <p className="text-xs text-muted-foreground">يتعرّف بها النظام على المصروفات التي كُتب فيها الاسم بطريقة أخرى.</p>
             {aliases.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {aliases.map((a) => (

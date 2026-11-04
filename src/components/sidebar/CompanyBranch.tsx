@@ -27,10 +27,10 @@ function PortfolioBranch({ node, companyId, searching, canEdit, showFinished, on
     <div>
       <div className={cn(
         'relative w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium motion-fast transition-colors',
-        active ? 'bg-primary/15 text-primary border-r-2 border-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent',
+        active ? 'bg-primary/15 text-primary border-s-2 border-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent',
       )}>
         <FolderKanban className="w-3.5 h-3.5 shrink-0 text-primary/70" />
-        <button onClick={() => navigate(`/portfolio/${portfolio.id}`)} className="flex-1 text-right truncate hover:text-primary transition-colors">
+        <button onClick={() => navigate(`/portfolio/${portfolio.id}`)} className="flex-1 text-start truncate hover:text-primary transition-colors">
           {portfolio.name}
         </button>
         <button
@@ -43,7 +43,7 @@ function PortfolioBranch({ node, companyId, searching, canEdit, showFinished, on
       </div>
 
       {node.open && (
-        <div className="mr-3 border-r border-primary/15 pr-2 space-y-0.5 mt-0.5">
+        <div className="ms-3 border-s border-primary/15 ps-2 space-y-0.5 mt-0.5">
           {node.active.map((project) => <ProjectButton key={project.id} project={project} />)}
           {showFinished && node.inactive.map((project) => <ProjectButton key={project.id} project={project} />)}
           {!searching && canEdit && (
@@ -67,10 +67,10 @@ export function CompanyBranch({ node, searching, canEdit, onToggleCompany, onTog
     <div>
       <div className={cn(
         'relative w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold motion-fast transition-colors',
-        active ? 'bg-primary/15 text-primary border-r-2 border-primary' : 'text-sidebar-foreground hover:bg-sidebar-accent',
+        active ? 'bg-primary/15 text-primary border-s-2 border-primary' : 'text-sidebar-foreground hover:bg-sidebar-accent',
       )}>
         <Building2 className="w-4 h-4 shrink-0 text-primary" />
-        <button onClick={() => navigate(`/company/${company.id}`)} className="flex-1 text-right truncate hover:text-primary transition-colors">
+        <button onClick={() => navigate(`/company/${company.id}`)} className="flex-1 text-start truncate hover:text-primary transition-colors">
           {company.name}
         </button>
         <button
@@ -83,7 +83,7 @@ export function CompanyBranch({ node, searching, canEdit, onToggleCompany, onTog
       </div>
 
       {node.open && (
-        <div className="mr-3 border-r border-primary/30 pr-2 space-y-0.5 mt-1">
+        <div className="ms-3 border-s border-primary/30 ps-2 space-y-0.5 mt-1">
           {node.directActive.map((project) => <ProjectButton key={project.id} project={project} />)}
 
           {node.portfolios.map((p) => (

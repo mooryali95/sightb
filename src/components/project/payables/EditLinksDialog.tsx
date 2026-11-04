@@ -80,7 +80,7 @@ export function EditLinksDialog({ request, projReimbs, onClose }: Props) {
               <p>طلب الصرف: <strong>{request.description}</strong></p>
               <p>الحالة: <Badge variant="outline" className="text-xs">{PAYMENT_REQUEST_STATUS_LABELS[request.status]}</Badge></p>
               {request.status === 'paid' && (
-                <p className="text-amber-600 mt-1">⚠ المبلغ ثابت لأن الطلب مدفوع — فقط الربط والوصف قابلان للتعديل.</p>
+                <p className="text-warning mt-1">⚠ المبلغ ثابت لأن الطلب مدفوع — فقط الربط والوصف قابلان للتعديل.</p>
               )}
             </div>
             <div>
@@ -117,7 +117,7 @@ export function EditLinksDialog({ request, projReimbs, onClose }: Props) {
                             <div className="text-muted-foreground flex gap-2">
                               <span>{formatCurrency(r.amount)}</span>
                               <span>· {r.expenseDate}</span>
-                              {linkedElsewhere && <span className="text-amber-600">· مربوط بطلب آخر</span>}
+                              {linkedElsewhere && <span className="text-warning">· مربوط بطلب آخر</span>}
                             </div>
                           </div>
                         </label>
