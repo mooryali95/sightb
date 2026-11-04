@@ -32,6 +32,11 @@ psql "$SUPABASE_DB_URL" \
   -v ON_ERROR_STOP=1 \
   -f supabase/tests/security.pgtap.sql
 
+echo "▶ Running role-write tests (who may grant or change a role)…"
+psql "$SUPABASE_DB_URL" \
+  -v ON_ERROR_STOP=1 \
+  -f supabase/tests/roles.sql
+
 echo "▶ Running Vitest suite (finance / funds / budget-comparison / advance-settlement)…"
 bunx vitest run
 
