@@ -94,7 +94,7 @@ export function FundInspector({
                 <span>نسبة الصرف</span>
                 <span className="tabular-nums">{ratio.toFixed(1)}%</span>
               </div>
-              <Progress value={ratio} className="h-2" />
+              <Progress value={ratio} aria-label="نسبة صرف الدفعة" className="h-2" />
             </div>
 
             <InspectorSection title="تفصيل المصروف">

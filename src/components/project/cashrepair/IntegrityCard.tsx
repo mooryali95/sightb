@@ -49,7 +49,7 @@ export function IntegrityCard({ integrity, custodyName, readOnly, saving, repair
                 <p className="text-xs font-medium truncate">
                   {custodyName(o.custodyId)} · {formatCurrency(o.amount)}
                 </p>
-                <p className="text-[11px] text-muted-foreground font-mono">{o.transferDate}</p>
+                <p className="text-xs text-muted-foreground font-mono">{o.transferDate}</p>
               </div>
               {!readOnly && (
                 <Button size="sm" variant="outline" disabled={saving} onClick={() => { if (!saving) onRepair(o); }}>

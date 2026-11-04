@@ -25,7 +25,7 @@ export function ConsistencyRows({ report, dimension, onOpen }: Props) {
             className="w-full flex items-center justify-between gap-3 p-2 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors text-start"
           >
             <span className="text-xs font-medium truncate">{r.label}</span>
-            <span className="flex items-center gap-3 shrink-0 font-mono text-[11px]">
+            <span className="flex items-center gap-3 shrink-0 font-mono text-xs">
               <span className="text-muted-foreground">قبل: {formatCurrency(r.before)}</span>
               <span>بعد: {formatCurrency(r.after)}</span>
               <span className={changed ? 'text-destructive font-semibold' : 'text-muted-foreground'}>

@@ -48,13 +48,13 @@ export function PayablesSummaryCards({
         <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
           <CheckCircle2 className="h-4 w-4" /> إجمالي المدفوع
         </div>
-        <div className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaidAmount)}</div>
+        <div className="text-2xl font-bold text-success">{formatCurrency(totalPaidAmount)}</div>
       </Card>
       <Card className="p-4">
         <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
           <Wallet className="h-4 w-4" /> المستحق غير المدفوع
         </div>
-        <div className="text-2xl font-bold text-amber-600">{formatCurrency(totalOutstandingAmount)}</div>
+        <div className="text-2xl font-bold text-warning">{formatCurrency(totalOutstandingAmount)}</div>
       </Card>
       <Card className="p-4">
         <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">

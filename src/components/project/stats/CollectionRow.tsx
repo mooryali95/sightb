@@ -58,7 +58,7 @@ export function CollectionRow({ summary, evm, invoicedCount }: Props) {
         <div className="stat-card flex flex-col items-center justify-center text-center bg-muted/30 border-dashed">
           <Shield className="w-5 h-5 text-muted-foreground mb-1.5" />
           <p className="text-xs font-medium text-muted-foreground">CPI / SPI / TCPI</p>
-          <p className="text-[10px] text-muted-foreground mt-1">اعتمد خط الأساس لعرض مؤشرات الأداء (EVM)</p>
+          <p className="text-xs text-muted-foreground mt-1">اعتمد خط الأساس لعرض مؤشرات الأداء (EVM)</p>
         </div>
       )}
     </div>
@@ -67,7 +67,7 @@ export function CollectionRow({ summary, evm, invoicedCount }: Props) {
   {/* تنبيه EVM عند غياب خط الأساس */}
   {!evm && summary.totalActual === 0 && summary.collectedRevenue === 0 && (
     <div className="mb-4 p-3 rounded-lg border border-dashed bg-muted/20 text-center text-xs text-muted-foreground">
-      <Shield className="w-4 h-4 inline-block ml-1" />
+      <Shield className="w-4 h-4 inline-block me-1" />
       اعتمد خط الأساس من تبويب «خط الأساس» لتفعيل مؤشرات الأداء (CPI / SPI / EAC / TCPI).
     </div>
   )}

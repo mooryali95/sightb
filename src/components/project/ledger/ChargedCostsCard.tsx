@@ -50,10 +50,10 @@ export function ChargedCostsCard({ projectId, directActual }: Props) {
             {charged.data.map((r) => (
               <tr key={r.allocationId}>
                 <td className="text-xs font-mono">{r.date}</td>
-                <td><Badge variant="outline" className="text-[11px]">{COMPANY_EXPENSE_KIND_LABELS[r.kind] ?? r.kind}</Badge></td>
+                <td><Badge variant="outline" className="text-xs">{COMPANY_EXPENSE_KIND_LABELS[r.kind] ?? r.kind}</Badge></td>
                 <td className="text-sm">
                   {r.description || '—'}
-                  {r.settledInProject && <Badge variant="secondary" className="ms-2 text-[10px]">مسدَّد ضمن مصروف المشروع</Badge>}
+                  {r.settledInProject && <Badge variant="secondary" className="ms-2 text-xs">مسدَّد ضمن مصروف المشروع</Badge>}
                 </td>
                 <td className="font-mono text-sm font-semibold">{formatCurrency(r.amount)}</td>
                 <td className="font-mono text-xs text-muted-foreground">{formatCurrency(r.expenseAmount)} · {((r.amount / r.expenseAmount) * 100).toFixed(0)}%</td>
@@ -69,7 +69,7 @@ export function ChargedCostsCard({ projectId, directActual }: Props) {
 function Figure({ label, value, accent, strong }: { label: string; value: number; accent?: boolean; strong?: boolean }) {
   return (
     <div className={`rounded-md px-3 py-1.5 ${strong ? 'bg-primary/10' : accent ? 'bg-muted/50' : 'bg-muted/30'}`}>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p className={`font-mono text-sm ${strong ? 'font-bold text-primary' : 'font-semibold'}`}>{formatCurrency(value)}</p>
     </div>
   );

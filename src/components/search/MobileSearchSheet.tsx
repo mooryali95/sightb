@@ -32,18 +32,18 @@ export function MobileSearchSheet({ open, onOpenChange, source, onGo }: MobileSe
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[85vh] p-0 flex flex-col">
         <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
-          <SheetTitle className="text-right text-base">بحث سريع</SheetTitle>
+          <SheetTitle className="text-start text-base">بحث سريع</SheetTitle>
         </SheetHeader>
 
         <div className="p-3 border-b border-border">
           <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="ابحث عن شركة، محفظة أو مشروع..."
-              className="w-full h-10 pr-9 pl-9 rounded-md bg-muted/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full h-10 ps-9 pe-9 rounded-md bg-muted/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               autoComplete="off"
               inputMode="search"
             />
@@ -52,7 +52,7 @@ export function MobileSearchSheet({ open, onOpenChange, source, onGo }: MobileSe
                 type="button"
                 aria-label="مسح"
                 onClick={() => setQuery('')}
-                className="absolute left-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                className="absolute end-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-4 h-4" />
               </button>

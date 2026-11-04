@@ -42,14 +42,14 @@ export function GanttChart({ milestones, onMilestoneClick }: GanttChartProps) {
 
       <div className="border border-border rounded-lg overflow-hidden bg-card">
         <div className="flex border-b border-border bg-muted/30">
-          <div className="w-36 shrink-0 px-3 py-2 text-xs font-medium text-muted-foreground border-l border-border">
+          <div className="w-36 shrink-0 px-3 py-2 text-xs font-medium text-muted-foreground border-e border-border">
             المرحلة
           </div>
           <div className="flex-1 flex min-w-0">
             {timeline.columns.map((col, i) => (
               <div
                 key={i}
-                className="text-xs text-center text-muted-foreground py-2 border-l border-border/50 truncate"
+                className="text-xs text-center text-muted-foreground py-2 border-e border-border/50 truncate"
                 style={{ flex: col.days }}
               >
                 {col.label}
@@ -64,7 +64,7 @@ export function GanttChart({ milestones, onMilestoneClick }: GanttChartProps) {
               className="absolute top-0 bottom-0 w-px bg-destructive/60 z-10 pointer-events-none"
               style={{ right: todayPos }}
             >
-              <div className="absolute -top-0 right-[-10px] text-[8px] text-destructive bg-destructive/10 px-1 rounded">
+              <div className="absolute -top-0 start-[-10px] text-[8px] text-destructive bg-destructive/10 px-1 rounded">
                 اليوم
               </div>
             </div>
@@ -89,7 +89,7 @@ export function GanttChart({ milestones, onMilestoneClick }: GanttChartProps) {
               <span className="text-muted-foreground">{label}</span>
             </div>
           ))}
-          <div className="flex items-center gap-1 mr-2">
+          <div className="flex items-center gap-1 ms-2">
             <span className="w-4 h-1 rounded-full bg-destructive/60" />
             <span className="text-muted-foreground">اليوم</span>
           </div>

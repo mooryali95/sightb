@@ -54,7 +54,7 @@ export function LedgerCustodiesColumn({ funds, custodies, expenses, payReqs, tra
           <div key={c.id} className="border border-border rounded-lg overflow-hidden">
             <button
               onClick={() => open.toggle(c.id)}
-              className="w-full p-3 flex items-center gap-2 text-right hover:bg-muted/50 transition-colors"
+              className="w-full p-3 flex items-center gap-2 text-start hover:bg-muted/50 transition-colors"
             >
               {isOpen ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
               <div className="flex-1 min-w-0">
@@ -110,14 +110,14 @@ export function LedgerCustodiesColumn({ funds, custodies, expenses, payReqs, tra
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span>{e.description}</span>
                                 {pr && (
-                                  <Badge variant="outline" className="text-[10px] border-violet-400/50 text-violet-700 dark:text-violet-400">
+                                  <Badge variant="outline" className="text-xs border-violet-400/50 text-violet-700 dark:text-violet-400">
                                     {PAYMENT_REQUEST_TYPE_LABELS[pr.requestType]}
                                   </Badge>
                                 )}
                               </div>
                             </td>
                             <td className="py-1.5 text-muted-foreground">{e.date}</td>
-                            <td className="py-1.5 font-mono text-left">{formatCurrency(e.amount)}</td>
+                            <td className="py-1.5 font-mono text-end">{formatCurrency(e.amount)}</td>
                           </tr>
                         );
                       })}

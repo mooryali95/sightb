@@ -6,8 +6,8 @@ function SnapshotTable({ title, snap }: { title: string; snap?: CustodySnapshot 
   if (!snap) return null;
   return (
     <div className="p-2 rounded border border-border bg-muted/20">
-      <p className="text-[11px] font-semibold mb-1">{title}</p>
-      <div className="space-y-0.5 text-[11px]">
+      <p className="text-xs font-semibold mb-1">{title}</p>
+      <div className="space-y-0.5 text-xs">
         <div className="flex justify-between"><span className="text-muted-foreground">المبلغ الأساسي</span><span className="font-mono">{formatCurrency(Number(snap.base_amount))}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">تحويلات واردة</span><span className="font-mono">{formatCurrency(Number(snap.transfers_in))}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">المتاح</span><span className="font-mono">{formatCurrency(Number(snap.available))}</span></div>

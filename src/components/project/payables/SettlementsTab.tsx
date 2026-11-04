@@ -54,8 +54,8 @@ export function SettlementsTab({ projSettles, projResources, isAdmin }: Props) {
               </div>
               <div className="grid grid-cols-3 gap-3 text-sm my-3">
                 <div><span className="text-muted-foreground">المستحق:</span> <strong>{formatCurrency(s.totalOwed)}</strong></div>
-                <div><span className="text-muted-foreground">المدفوع:</span> <strong className="text-emerald-600">{formatCurrency(s.totalPaid)}</strong></div>
-                <div><span className="text-muted-foreground">الفرق:</span> <strong className={s.balance > 0 ? 'text-amber-600' : ''}>{formatCurrency(s.balance)}</strong></div>
+                <div><span className="text-muted-foreground">المدفوع:</span> <strong className="text-success">{formatCurrency(s.totalPaid)}</strong></div>
+                <div><span className="text-muted-foreground">الفرق:</span> <strong className={s.balance > 0 ? 'text-warning' : ''}>{formatCurrency(s.balance)}</strong></div>
               </div>
               {s.settlementTextAr && (
                 <details className="text-xs">

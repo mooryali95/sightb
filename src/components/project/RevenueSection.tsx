@@ -192,7 +192,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                   {!readOnly && (
                   <td>
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" onClick={() => form.open({ revenue: r })}>
+                      <Button variant="ghost" size="icon" title="تعديل الإيراد" onClick={() => form.open({ revenue: r })}>
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
                       <ConfirmDeleteDialog title="حذف الإيراد" description="هل أنت متأكد من حذف هذا الإيراد؟" onConfirm={() => deleteRevenue(r.id)} />

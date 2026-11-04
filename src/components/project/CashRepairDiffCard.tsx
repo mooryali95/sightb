@@ -26,7 +26,7 @@ export function CashRepairDiffCard({ projectId }: { projectId: string }) {
         <h3 className="text-sm font-semibold flex items-center gap-1.5">
           <ArrowLeftRight className="w-4 h-4" />أثر آخر إصلاح على الأرصدة
         </h3>
-        <Badge variant="outline" className="text-[11px] font-mono">
+        <Badge variant="outline" className="text-xs font-mono">
           {last.custodyName} · {formatCurrency(last.amount)}
         </Badge>
       </div>
@@ -48,7 +48,7 @@ export function CashRepairDiffCard({ projectId }: { projectId: string }) {
                 <tr key={r.key} className="border-b border-border/50 last:border-0">
                   <td className="py-1.5">
                     <span className="font-medium">{r.label}</span>
-                    <span className="block text-[11px] text-muted-foreground">{r.hint}</span>
+                    <span className="block text-xs text-muted-foreground">{r.hint}</span>
                   </td>
                   <td className="py-1.5 text-end font-mono">{formatCurrency(last.before[r.key])}</td>
                   <td className="py-1.5 text-end font-mono">{formatCurrency(last.after[r.key])}</td>
@@ -65,7 +65,7 @@ export function CashRepairDiffCard({ projectId }: { projectId: string }) {
         </table>
       </div>
 
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         حذف التحويل بلا دفعة أصل يخفض متاح العهدة ومتبقيها بمقدار المبلغ المحذوف، بينما يبقى متبقي الدفعة النشطة والمتبقي بيد المدير كما هما ما لم يكن التحويل مخصوماً من دفعة قائمة.
       </p>
     </div>

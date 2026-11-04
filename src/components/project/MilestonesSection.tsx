@@ -159,7 +159,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
             <span>الإنجاز الكلي للمشروع</span>
             <span>{weightedComplete}%</span>
           </div>
-          <Progress value={weightedComplete} className="h-3" />
+          <Progress value={weightedComplete} aria-label="الإنجاز الموزون للمراحل" className="h-3" />
 
           {totalWeight > 0 && (totalWeight < 0.99 || totalWeight > 1.01) && (
             <div className="p-2 rounded-lg border bg-health-warning health-warning text-xs flex items-center gap-1.5">

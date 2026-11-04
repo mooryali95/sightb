@@ -69,7 +69,7 @@ export function RecordVendorPayableDialog({ open, onOpenChange, onRequestOpen, p
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" onClick={onRequestOpen}><Plus className="h-4 w-4 ml-1" /> تسجيل ذمة مورد</Button>
+        <Button size="sm" onClick={onRequestOpen}><Plus className="h-4 w-4 me-1" /> تسجيل ذمة مورد</Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>

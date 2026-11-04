@@ -59,7 +59,7 @@ function statCard(title: string): HTMLElement {
 
 /** The group rows, in display order, by their label. */
 function groupLabels(): string[] {
-  return screen.getAllByText(/بند$/, { selector: '.text-\\[10px\\]' }).map((b) => b.previousElementSibling?.textContent ?? '');
+  return screen.getAllByText(/بند$/, { selector: '.text-xs' }).map((b) => b.previousElementSibling?.textContent ?? '');
 }
 
 function groupRow(label: string): HTMLElement {

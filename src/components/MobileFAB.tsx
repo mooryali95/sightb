@@ -23,7 +23,7 @@ export function MobileFAB({ onClick, label, icon: Icon = Plus, hidden }: MobileF
       onClick={onClick}
       aria-label={label}
       className={cn(
-        'fixed z-40 left-4 bottom-[max(env(safe-area-inset-bottom),1rem)]',
+        'fixed z-40 end-4 bottom-[max(env(safe-area-inset-bottom),1rem)]',
         'h-14 px-5 rounded-full',
         'bg-primary text-primary-foreground shadow-elevated',
         'flex items-center gap-2 font-semibold text-sm',

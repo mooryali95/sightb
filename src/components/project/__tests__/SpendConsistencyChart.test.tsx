@@ -105,7 +105,7 @@ describe('with repairs and an unlinked expense', () => {
     fireEvent.click(rowButton('أيمن'));
     const panel = screen.getByRole('dialog');
     expect(within(panel).getByText('مقارنة تفصيلية — أيمن')).toBeInTheDocument();
-    expect(within(panel).getByText('1 عنصر تغيّر من أصل 2')).toBeInTheDocument();
+    expect(within(panel).getByText('تغيّر عنصر واحد من أصل 2')).toBeInTheDocument();
     expect(within(panel).getByText('قبل الإصلاح').nextElementSibling).toHaveTextContent('8,600.00 ر.س');
     const changed = within(panel).getByText('رواتب من العهدة').closest('.rounded') as HTMLElement;
     expect(changed).toHaveTextContent('قبل: 6,600.00 ر.س');

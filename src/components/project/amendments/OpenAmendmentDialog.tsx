@@ -51,7 +51,7 @@ export function OpenAmendmentDialog({ projectId }: { projectId: string }) {
             <p className="text-xs text-amber-800 dark:text-amber-200">
               🔒 الموازنة حالياً مقفلة بخط الأساس.
             </p>
-            <ul className="text-xs text-amber-700 dark:text-amber-300 mt-2 space-y-1 list-disc pr-4">
+            <ul className="text-xs text-amber-700 dark:text-amber-300 mt-2 space-y-1 list-disc ps-4">
               <li>سيتم أخذ لقطة (snapshot) للوضع الحالي قبل التعديل</li>
               <li>ستتمكن من إضافة/تعديل/حذف البنود مؤقتاً</li>
               <li>عند الاعتماد، تُحفظ لقطة بعد التعديل للمقارنة المستقبلية</li>

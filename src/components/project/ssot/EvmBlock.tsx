@@ -47,24 +47,24 @@ export function EvmBlock({ evm, currency }: { evm: EVMMetrics | null; currency: 
             />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
               <div className="rounded border border-border/60 bg-muted/30 p-2 text-center">
-                <div className="text-[10px] text-muted-foreground">CPI</div>
+                <div className="text-xs text-muted-foreground">CPI</div>
                 <div className="font-mono font-bold">{evm.cpi.toFixed(2)}</div>
-                <div className="text-[10px] text-muted-foreground">EV / AC</div>
+                <div className="text-xs text-muted-foreground">EV / AC</div>
               </div>
               <div className="rounded border border-border/60 bg-muted/30 p-2 text-center">
-                <div className="text-[10px] text-muted-foreground">SPI</div>
+                <div className="text-xs text-muted-foreground">SPI</div>
                 <div className="font-mono font-bold">{evm.spi.toFixed(2)}</div>
-                <div className="text-[10px] text-muted-foreground">EV / PV</div>
+                <div className="text-xs text-muted-foreground">EV / PV</div>
               </div>
               <div className="rounded border border-border/60 bg-muted/30 p-2 text-center">
-                <div className="text-[10px] text-muted-foreground">EAC</div>
+                <div className="text-xs text-muted-foreground">EAC</div>
                 <div className="font-mono font-bold" dir="ltr">{formatCurrency(evm.eac, currency)}</div>
-                <div className="text-[10px] text-muted-foreground">BAC / CPI</div>
+                <div className="text-xs text-muted-foreground">BAC / CPI</div>
               </div>
               <div className="rounded border border-border/60 bg-muted/30 p-2 text-center">
-                <div className="text-[10px] text-muted-foreground">VAC</div>
+                <div className="text-xs text-muted-foreground">VAC</div>
                 <div className="font-mono font-bold" dir="ltr">{formatCurrency(evm.vac, currency)}</div>
-                <div className="text-[10px] text-muted-foreground">BAC − EAC</div>
+                <div className="text-xs text-muted-foreground">BAC − EAC</div>
               </div>
             </div>
           </>

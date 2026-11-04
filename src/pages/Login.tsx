@@ -284,7 +284,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-dvh flex items-center justify-center bg-background p-4">
       <m.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-sm">
         <div className="text-center mb-8">
           <img src={basserhLogo} alt="بصيرة" className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4 shadow-lg" />

@@ -68,7 +68,7 @@ export function SpendTreeList({ tree, viewKey, onInspect }: Props) {
               <div className="text-end">
                 <p className="text-sm font-mono font-semibold">{formatCurrency(n.total)}</p>
                 {n.pending > 0 && (
-                  <p className="text-[11px] text-warning">قيد الاعتماد: {formatCurrency(n.pending)}</p>
+                  <p className="text-xs text-warning">قيد الاعتماد: {formatCurrency(n.pending)}</p>
                 )}
               </div>
               <Button size="sm" variant="ghost" onClick={() => onInspect(n)}>تفاصيل</Button>

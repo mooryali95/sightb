@@ -115,11 +115,11 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                     </td>
                     <td className="text-xs">
                       {plannedForResource > 0 ? (
-                        <span className={spentPct > 100 ? 'text-destructive font-bold' : spentPct > 90 ? 'text-amber-600' : 'text-muted-foreground'}>
+                        <span className={spentPct > 100 ? 'text-destructive font-bold' : spentPct > 90 ? 'text-warning' : 'text-muted-foreground'}>
                           {spentPct.toFixed(0)}%
                         </span>
                       ) : totalSpent > 0 ? (
-                        <span className="text-amber-600">صرف بدون خطة</span>
+                        <span className="text-warning">صرف بدون خطة</span>
                       ) : '—'}
                     </td>
                     <td>
@@ -129,7 +129,7 @@ export function ResourcesSection({ projectId, resources, budgetItems = [], expen
                         </Button>
                         {!readOnly && (
                           <>
-                            <Button variant="ghost" size="icon" onClick={() => form.open({ resource: r })}>
+                            <Button variant="ghost" size="icon" title="تعديل المورد" onClick={() => form.open({ resource: r })}>
                               <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                             </Button>
                             <ConfirmDeleteDialog title="حذف المورد" description="هل أنت متأكد من حذف هذا المورد؟" onConfirm={() => deleteResource(r.id)} />

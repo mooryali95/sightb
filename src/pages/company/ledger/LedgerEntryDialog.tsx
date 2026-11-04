@@ -175,7 +175,7 @@ export function LedgerEntryDialog({ open, onOpenChange, companyId, parties, proj
                 <SelectItem value={NO_FUND}>ليس من دفعة (من حساب المشروع مباشرة)</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-[11px] text-muted-foreground">يُخصم الرد من رصيد الدفعة، ولا يُحسب مصروفاً.</p>
+            <p className="text-xs text-muted-foreground">يُخصم الرد من رصيد الدفعة، ولا يُحسب مصروفاً.</p>
           </div>
         )}
         {preview && <p className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-sm" role="status">{preview}</p>}

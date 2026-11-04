@@ -117,7 +117,7 @@ export function LinkNamesSheet({ companyId, open, onOpenChange, parties, unlinke
                   </div>
                   {g.spellings.length > 1 && (
                     <div className="flex flex-wrap gap-1">
-                      {g.spellings.map((s) => <Badge key={s} variant="outline" className="text-[11px] font-normal">{s}</Badge>)}
+                      {g.spellings.map((s) => <Badge key={s} variant="outline" className="text-xs font-normal">{s}</Badge>)}
                     </div>
                   )}
 

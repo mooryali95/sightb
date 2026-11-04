@@ -42,7 +42,7 @@ export function InviteRow({ invite, delivery, resending, onResend, onDelete, sco
           <span className="text-xs text-muted-foreground">{formatDate(invite.createdAt)}</span>
         </div>
         {delivery?.errorMessage && (
-          <p className="text-[11px] text-destructive mt-1 truncate">سبب الفشل: {delivery.errorMessage}</p>
+          <p className="text-xs text-destructive mt-1 truncate">سبب الفشل: {delivery.errorMessage}</p>
         )}
       </div>
       {open && (

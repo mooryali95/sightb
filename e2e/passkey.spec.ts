@@ -172,7 +172,8 @@ test('at the second factor, the passkey signs the challenge and the person lands
   expect(response.response.authenticatorData.length).toBeGreaterThan(0);
   expect(wire.writes.some((w) => w.method === 'INVOKE' && w.table === 'accept-invite')).toBe(true);
   // The code was never used: one check, no verify. The home page then asks where the session stands.
-  expect(wire.writes.filter((w) => w.table === 'second-factor').map((w) => (w.body as { action: string }).action)).toEqual(['check', 'status']);
+  // The home page asks after it renders, so wait for that call rather than read the wire at once (it raced 1 in 40).
+  await expect.poll(() => wire.writes.filter((w) => w.table === 'second-factor').map((w) => (w.body as { action: string }).action)).toEqual(['check', 'status']);
   expect(wire.writes.some((w) => w.table === 'admin-otp')).toBe(false);
 });
 

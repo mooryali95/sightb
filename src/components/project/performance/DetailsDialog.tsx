@@ -66,7 +66,7 @@ export function DetailsDialog({
         {/* Sub-items table (for groups) */}
         {isGroup && (
           <div className="rounded-md border border-border overflow-hidden">
-            <div className="px-3 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground">البنود المكوِّنة</div>
+            <div className="px-3 py-2 bg-muted/40 text-xs font-semibold text-muted-foreground">البنود المكوِّنة</div>
             <div className="divide-y divide-border">
               {context.group.items.map(it => (
                 <div key={it.id} className="px-3 py-2 grid grid-cols-12 gap-2 items-center text-xs">
@@ -83,7 +83,7 @@ export function DetailsDialog({
 
         {/* Expense list */}
         <div className="rounded-md border border-border overflow-hidden">
-          <div className="px-3 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground flex items-center justify-between">
+          <div className="px-3 py-2 bg-muted/40 text-xs font-semibold text-muted-foreground flex items-center justify-between">
             <span>المصروفات الفعلية المربوطة ({rows.length})</span>
             <span className="tabular-nums">إجمالي: {formatCurrency(totalActual, currency)}</span>
           </div>
@@ -98,7 +98,7 @@ export function DetailsDialog({
                   {isGroup
                     ? <span className="col-span-3 truncate text-muted-foreground">{itemDesc}</span>
                     : <span className="col-span-3 truncate text-muted-foreground">{expense.vendor || expense.responsible || '—'}</span>}
-                  <span className="col-span-2 text-left tabular-nums font-semibold">{formatCurrency(Number(expense.amount) || 0, currency)}</span>
+                  <span className="col-span-2 text-end tabular-nums font-semibold">{formatCurrency(Number(expense.amount) || 0, currency)}</span>
                 </div>
               ))}
             </div>

@@ -90,15 +90,15 @@ export function BudgetPlanningSummary({ budgetItems, countedExpenses, contractVa
         <div className="mb-4 p-3 rounded-lg border border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20 flex items-center justify-between gap-3 flex-wrap">
           <div>
             <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold">سلف قائمة (لم تُسوَّ بعد)</p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               أصول قابلة للاسترداد — لا تدخل في التكلفة الفعلية (AC) ولا في حساب CPI حتى تتم تسويتها.
             </p>
           </div>
-          <div className="text-left">
+          <div className="text-end">
             <p className="text-sm font-mono font-bold text-amber-700 dark:text-amber-400">
               {formatCurrency(outstandingAdvances.total)}
             </p>
-            <p className="text-[11px] text-muted-foreground">{outstandingAdvances.count} سلفة</p>
+            <p className="text-xs text-muted-foreground">{outstandingAdvances.count} سلفة</p>
           </div>
         </div>
       )}
@@ -109,7 +109,7 @@ export function BudgetPlanningSummary({ budgetItems, countedExpenses, contractVa
           <span>{formatCurrency(totalPlanned)} / {formatCurrency(contractValue)}</span>
         </div>
         <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all bg-primary" style={{ width: `${Math.min(budgetUtilization, 100)}%` }} />
+          <div className="h-full rounded-full transition-[width] bg-primary" style={{ width: `${Math.min(budgetUtilization, 100)}%` }} />
         </div>
       </div>
 
@@ -120,7 +120,7 @@ export function BudgetPlanningSummary({ budgetItems, countedExpenses, contractVa
             <span>{formatCurrency(totalActual)} / {formatCurrency(totalPlanned)}</span>
           </div>
           <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(spendRate, 100)}%`, backgroundColor: spendRate > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
+            <div className="h-full rounded-full transition-[width]" style={{ width: `${Math.min(spendRate, 100)}%`, backgroundColor: spendRate > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
           </div>
         </div>
       )}

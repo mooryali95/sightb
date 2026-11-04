@@ -171,7 +171,7 @@ export function BaselineSection({ projectId, durationMonths, expenses, budgetIte
             <div className="p-3 rounded-lg border border-border bg-muted/30 text-center">
               <p className="text-xs text-muted-foreground">الحالة</p>
               <p className="text-sm font-semibold mt-1">محجوز خارج خط الأساس</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">يُستخدم بأمر تغيير معتمد</p>
+              <p className="text-xs text-muted-foreground mt-0.5">يُستخدم بأمر تغيير معتمد</p>
             </div>
           </div>
         </div>

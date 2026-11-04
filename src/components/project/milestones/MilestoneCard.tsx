@@ -33,7 +33,7 @@ export function MilestoneCard({ milestone: m, readOnly, onEdit, onDelete, onPerc
         </div>
         {!readOnly && (
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={onEdit}>
+          <Button variant="ghost" size="icon" title="تعديل المرحلة" onClick={onEdit}>
             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
           </Button>
           <ConfirmDeleteDialog title="حذف المرحلة" description="هل أنت متأكد من حذف هذه المرحلة؟" onConfirm={onDelete} />
@@ -43,7 +43,7 @@ export function MilestoneCard({ milestone: m, readOnly, onEdit, onDelete, onPerc
       {m.description && <p className="text-xs text-muted-foreground mb-2">{m.description}</p>}
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <Progress value={m.percentComplete} className="h-2" />
+          <Progress value={m.percentComplete} aria-label={`إنجاز ${m.name}`} className="h-2" />
         </div>
         <div className="flex items-center gap-1">
           <Input

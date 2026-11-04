@@ -63,12 +63,12 @@ export function AIExecutiveInsights({ context }: Props) {
       {summary && !summary.error && (
         <div className="space-y-3 text-sm">
           {summary.headline && (
-            <p className="font-medium text-foreground border-r-2 border-primary pr-3">{summary.headline}</p>
+            <p className="font-medium text-foreground border-s-2 border-primary ps-3">{summary.headline}</p>
           )}
           {summary.highlights && summary.highlights.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">✓ نقاط قوة</p>
-              <ul className="space-y-1 text-xs text-muted-foreground pr-4">
+              <ul className="space-y-1 text-xs text-muted-foreground ps-4">
                 {summary.highlights.map((h, i) => <li key={i} className="list-disc">{h}</li>)}
               </ul>
             </div>
@@ -76,7 +76,7 @@ export function AIExecutiveInsights({ context }: Props) {
           {summary.concerns && summary.concerns.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">⚠ مخاوف</p>
-              <ul className="space-y-1 text-xs text-muted-foreground pr-4">
+              <ul className="space-y-1 text-xs text-muted-foreground ps-4">
                 {summary.concerns.map((c, i) => <li key={i} className="list-disc">{c}</li>)}
               </ul>
             </div>
@@ -84,7 +84,7 @@ export function AIExecutiveInsights({ context }: Props) {
           {summary.recommendations && summary.recommendations.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-primary mb-1">→ توصيات</p>
-              <ul className="space-y-1 text-xs text-muted-foreground pr-4">
+              <ul className="space-y-1 text-xs text-muted-foreground ps-4">
                 {summary.recommendations.map((r, i) => <li key={i} className="list-disc">{r}</li>)}
               </ul>
             </div>

@@ -12,7 +12,7 @@ export function SourceBadge({ kind, label }: { kind: SourceKind; label: string }
     : kind === 'db' ? 'bg-warning/10 text-warning border-warning/25'
     : 'bg-success/10 text-success border-success/25';
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border ${color}`}>
+    <span className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border ${color}`}>
       <Icon className="w-3 h-3" />{label}
     </span>
   );
@@ -44,7 +44,7 @@ export function Row({
         {sources.map((s, i) => <SourceBadge key={i} {...s} />)}
       </div>
       {formula && (
-        <div className="col-span-12 text-[11px] font-mono text-muted-foreground bg-muted/40 rounded px-2 py-1 mt-1" dir="ltr">
+        <div className="col-span-12 text-xs font-mono text-muted-foreground bg-muted/40 rounded px-2 py-1 mt-1" dir="ltr">
           {formula}
         </div>
       )}

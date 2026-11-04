@@ -51,13 +51,13 @@ test('over all time: the contract with its change orders, every counted expense,
   await expect(stat(page, 'الربح المخطط')).toContainText('1,120,000.00 ر.س');
   await expect(stat(page, 'الربح المخطط')).toContainText('هامش: 73.7%');
   await expect(stat(page, 'إجمالي المشاريع')).toContainText('2');
-  await expect(stat(page, 'إجمالي المشاريع')).toContainText('1 شركة · 0 محفظة');
+  await expect(stat(page, 'إجمالي المشاريع')).toContainText('شركة واحدة · لا محافظ');
   // Shown over all time too since 11 October, as the cash actually received.
   await expect(stat(page, 'الإيرادات المحصّلة')).toContainText('نقد مستلم فعلياً');
 
   const pie = page.locator('div.stat-card', { has: page.getByRole('heading', { name: 'حالة المشاريع' }) });
-  await expect(pie.getByText('تشغيل: 1')).toBeVisible();
-  await expect(pie.getByText('تخطيط: 1')).toBeVisible();
+  await expect(pie.getByText('تشغيل (1)')).toBeVisible();
+  await expect(pie.getByText('تخطيط (1)')).toBeVisible();
   await expect(pie.getByText(/مكتمل/)).toHaveCount(0);
   await expect(page.locator('div.stat-card', { has: page.getByRole('heading', { name: 'المصروفات حسب الشركة' }) }).getByText('شركة الاختبار')).toBeVisible();
 });

@@ -14,6 +14,7 @@ import {
 } from '@/types/project';
 import { FolderKanban, ArrowLeft, Briefcase, ChevronDown } from 'lucide-react';
 import { projectSpend, spendBarClass } from './projectSpend';
+import { countAr } from '@/lib/plural';
 
 interface Props {
   summaries: PortfolioSummary[];
@@ -52,7 +53,7 @@ export function PortfolioCards({ summaries, projects, countedExpenses, changeOrd
                     </div>
                     <div>
                       <h4 className="text-sm font-bold">{ps.portfolioName}</h4>
-                      <p className="text-[11px] text-muted-foreground">{ps.projectCount} مشروع</p>
+                      <p className="text-xs text-muted-foreground">{countAr(ps.projectCount, 'project')}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -118,7 +119,7 @@ export function PortfolioCards({ summaries, projects, countedExpenses, changeOrd
                               {PROJECT_STATUS_LABELS[project.status]}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span>العقد الفعّال: {formatCurrency(effectiveContract)}</span>
                             <span>·</span>
                             <span>المصروف: {formatCurrency(totalSpent)}</span>
@@ -127,7 +128,7 @@ export function PortfolioCards({ summaries, projects, countedExpenses, changeOrd
                           </div>
                           <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all ${spendBarClass(spentPercent)}`}
+                              className={`h-full rounded-full transition-[width] ${spendBarClass(spentPercent)}`}
                               style={{ width: `${spentPercent}%` }}
                             />
                           </div>

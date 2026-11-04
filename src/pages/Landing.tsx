@@ -34,7 +34,7 @@ export default function Landing() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm text-muted-foreground">جاري التحميل...</p>
@@ -46,7 +46,7 @@ export default function Landing() {
   if (user) return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       {/* Hero */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--navy))] to-[hsl(var(--navy-light))]" />

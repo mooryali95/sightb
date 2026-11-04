@@ -56,7 +56,7 @@ export function ResultCard({ title, value, subtitle, trend, diff, currency }: {
         </div>
         <p className="text-xs text-muted-foreground">{subtitle}</p>
         {diff !== undefined && diff !== 0 && (
-          <p className={`text-xs font-medium ${diff > 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+          <p className={`text-xs font-medium ${diff > 0 ? 'text-success' : 'text-destructive'}`}>
             {diff > 0 ? '+' : ''}{formatCurrency(diff, currency)} عن الأصلي
           </p>
         )}

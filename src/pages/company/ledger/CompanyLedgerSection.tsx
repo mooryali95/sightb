@@ -120,14 +120,14 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
               ? <p className="text-sm text-muted-foreground mt-1">لا أحد مدين لأحد الآن.</p>
               : <ul className="mt-1 space-y-0.5 text-sm">{plain.lines.map((l) => <li key={l}>• {l}</li>)}
                   {plain.more > 0 && <li className="text-muted-foreground">• و{plain.more} غيرهم في «من له ومن عليه»</li>}</ul>}
-            <p className="text-[11px] text-muted-foreground mt-1.5">السلفة والقرض ليسا مصروفاً: مال يعود. المصروف وحده يُنقص الربح.</p>
+            <p className="text-xs text-muted-foreground mt-1.5">السلفة والقرض ليسا مصروفاً: مال يعود. المصروف وحده يُنقص الربح.</p>
           </div>
         );
       })()}
 
       {alertCount > 0 && tab !== 'loans' && (
         <button type="button" onClick={() => setTab('loans')}
-          className="w-full flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-right hover:bg-warning/15 transition-colors">
+          className="w-full flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-start hover:bg-warning/15 transition-colors">
           <BellRing className="w-4 h-4 text-warning shrink-0" />
           <span className="flex-1">{alertCount === 1 ? 'تنبيه قرض واحد ينتظرك' : `${alertCount} تنبيهات قروض تنتظرك`}: استرداد أو سداد مستحق.</span>
           <span className="text-xs text-primary font-medium">عرض</span>
@@ -137,8 +137,8 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
       <Tabs value={tab} onValueChange={setTab} dir="rtl">
         <TabsList>
           <TabsTrigger value="expenses">المصاريف والتحميل</TabsTrigger>
-          <TabsTrigger value="balances">من له ومن عليه {balances.length > 0 && <Badge variant="secondary" className="mr-1">{balances.length}</Badge>}</TabsTrigger>
-          <TabsTrigger value="loans">القروض {alertCount > 0 && <Badge variant="destructive" className="mr-1">{alertCount}</Badge>}</TabsTrigger>
+          <TabsTrigger value="balances">من له ومن عليه {balances.length > 0 && <Badge variant="secondary" className="ms-1">{balances.length}</Badge>}</TabsTrigger>
+          <TabsTrigger value="loans">القروض {alertCount > 0 && <Badge variant="destructive" className="ms-1">{alertCount}</Badge>}</TabsTrigger>
           <TabsTrigger value="kinds">حسب النوع</TabsTrigger>
         </TabsList>
 
@@ -155,16 +155,16 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
                     return (
                       <tr key={e.id}>
                         <td className="text-xs font-mono">{e.date}</td>
-                        <td><Badge variant="outline" className="text-[11px]">{COMPANY_EXPENSE_KIND_LABELS[e.kind]}</Badge></td>
+                        <td><Badge variant="outline" className="text-xs">{COMPANY_EXPENSE_KIND_LABELS[e.kind]}</Badge></td>
                         <td className="text-sm">
                           {e.description || '—'}
-                          {e.paidByPartyId && <span className="block text-[11px] text-warning">دفعه {partyName(e.paidByPartyId)} من جيبه — ذمة له</span>}
+                          {e.paidByPartyId && <span className="block text-xs text-warning">دفعه {partyName(e.paidByPartyId)} من جيبه — ذمة له</span>}
                         </td>
                         <td className="text-sm">{partyName(e.partyId)}</td>
                         <td className="font-mono text-sm font-semibold">{formatCurrency(e.amount)}</td>
                         <td>
                           <AllocationBar total={e.amount} allocated={split.allocated} />
-                          <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                             {split.rows.length === 0
                               ? 'يتبع المنظومة بالكامل'
                               : <>يتبع المنظومة · حُمِّل {split.rows.map((r) => `${formatCurrency(r.amount)} على ${projectName(r.projectId)}${r.settledInProject ? ' (سدّده المشروع من مصروفه)' : ''}`).join('، ')}
@@ -199,7 +199,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="font-semibold truncate">{name(b.node)}</p>
-                        <p className="text-[11px] text-muted-foreground">{nodeTag(b.node, data.parties)}</p>
+                        <p className="text-xs text-muted-foreground">{nodeTag(b.node, data.parties)}</p>
                       </div>
                       <Badge variant={settled ? 'secondary' : ours ? 'default' : 'destructive'}>{settled ? 'متساوٍ' : ours ? 'لنا عنده' : 'علينا له'}</Badge>
                     </div>
@@ -288,7 +288,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="font-semibold truncate">{partyName(l.partyId)}</p>
-                        <p className="text-[11px] text-muted-foreground">أقرض المنظومة {formatCurrency(l.lent)} · منذ {l.firstDate}</p>
+                        <p className="text-xs text-muted-foreground">أقرض المنظومة {formatCurrency(l.lent)} · منذ {l.firstDate}</p>
                       </div>
                       {l.outstanding <= 0 ? <Badge variant="secondary">مسدَّد</Badge>
                         : l.overdue ? <Badge variant="destructive">متأخر</Badge>

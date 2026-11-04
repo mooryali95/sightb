@@ -57,7 +57,7 @@ export function ServerTruthCard({ projectId, currency, audit }: Props) {
         )}
         {rows.length > 0 && (
           <div className="space-y-1">
-            <div className="grid grid-cols-12 gap-2 text-[11px] text-muted-foreground pb-1 border-b border-border/50">
+            <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground pb-1 border-b border-border/50">
               <div className="col-span-6 md:col-span-5">البند</div>
               <div className="col-span-3 text-left" dir="ltr">الخادم</div>
               <div className="col-span-3 md:col-span-4 text-left" dir="ltr">الواجهة</div>
@@ -81,26 +81,26 @@ export function ServerTruthCard({ projectId, currency, audit }: Props) {
                     dir="ltr"
                   >
                     {formatCurrency(r.clientValue, currency)}
-                    {r.mismatch && <span className="ms-1 text-[10px]">(Δ {formatCurrency(r.diff, currency)})</span>}
+                    {r.mismatch && <span className="ms-1 text-xs">(Δ {formatCurrency(r.diff, currency)})</span>}
                   </div>
                 </button>
 
                 {open === r.key && (
                   <div className="pb-3 px-1 space-y-2">
-                    <div className="text-[11px] font-mono text-muted-foreground bg-muted/40 rounded px-2 py-1" dir="ltr">
+                    <div className="text-xs font-mono text-muted-foreground bg-muted/40 rounded px-2 py-1" dir="ltr">
                       {r.formula}
                     </div>
                     <div className="rounded-md border border-border/60 overflow-hidden">
-                      <div className="grid grid-cols-12 gap-1 text-[10px] text-muted-foreground bg-muted/50 px-2 py-1">
+                      <div className="grid grid-cols-12 gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1">
                         <div className="col-span-6">المكوّن</div>
                         <div className="col-span-3 text-left" dir="ltr">القيمة</div>
                         <div className="col-span-3 text-left" dir="ltr">المصدر</div>
                       </div>
                       {r.components.length === 0 && (
-                        <div className="px-2 py-1.5 text-[11px] text-muted-foreground">لا توجد مكوّنات مسجّلة.</div>
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">لا توجد مكوّنات مسجّلة.</div>
                       )}
                       {r.components.map((c, i) => (
-                        <div key={i} className="grid grid-cols-12 gap-1 px-2 py-1 text-[11px] border-t border-border/40">
+                        <div key={i} className="grid grid-cols-12 gap-1 px-2 py-1 text-xs border-t border-border/40">
                           <div className="col-span-6">
                             <span className="font-mono me-1 text-muted-foreground">{c.sign}</span>{c.label}
                           </div>
@@ -110,7 +110,7 @@ export function ServerTruthCard({ projectId, currency, audit }: Props) {
                       ))}
                     </div>
                     {r.reason && (
-                      <p className="text-[11px] text-destructive bg-destructive/5 border border-destructive/20 rounded px-2 py-1">
+                      <p className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded px-2 py-1">
                         سبب الفرق المحتمل: {r.reason}
                       </p>
                     )}
@@ -118,7 +118,7 @@ export function ServerTruthCard({ projectId, currency, audit }: Props) {
                 )}
               </div>
             ))}
-            <p className="text-[11px] text-muted-foreground pt-2">
+            <p className="text-xs text-muted-foreground pt-2">
               محسوب على الخادم عبر <span className="font-mono">project_financial_summary()</span> —{' '}
               {computedAt ? new Date(computedAt).toLocaleString('en-GB') : '—'}
             </p>

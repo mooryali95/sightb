@@ -93,12 +93,12 @@ export function DashboardFilters({
           {/* Row 1: Search + Show inactive + Clear */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
             <div className="relative flex-1 min-w-0">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="بحث بالاسم..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pr-9 h-9 text-sm"
+                className="ps-9 h-9 text-sm"
                 aria-label="بحث عن المشاريع"
               />
             </div>

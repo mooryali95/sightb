@@ -168,13 +168,13 @@ export function CompanyExpenseDialog({ open, onOpenChange, companyId, parties, p
               </Select>
               <Input type="number" className="w-36" aria-label={`مبلغ السطر ${i + 1}`} value={l.amount}
                 onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))} />
-              <label className="flex items-center gap-1 text-[11px] text-muted-foreground whitespace-nowrap"
+              <label className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap"
                 title="المشروع دفع هذه الحصة من مصروفه (مثلاً سدّد لمن دفع الفاتورة)، فتظهر محمّلة عليه ولا تُضاف إلى تكلفته مرة ثانية.">
                 <Checkbox checked={l.settled === true} aria-label={`سدّده المشروع، السطر ${i + 1}`}
                   onCheckedChange={(v) => setLines(lines.map((x, j) => (j === i ? { ...x, settled: v === true } : x)))} />
                 سدّده المشروع
               </label>
-              <span className="w-12 text-xs text-muted-foreground text-left">{total > 0 ? `${(((parseFloat(l.amount) || 0) / total) * 100).toFixed(0)}%` : ''}</span>
+              <span className="w-12 text-xs text-muted-foreground text-end">{total > 0 ? `${(((parseFloat(l.amount) || 0) / total) * 100).toFixed(0)}%` : ''}</span>
               <Button type="button" size="icon" variant="ghost" aria-label="حذف السطر" onClick={() => setLines(lines.filter((_, j) => j !== i))}><Trash2 className="w-4 h-4" /></Button>
             </div>
           ))}
@@ -198,7 +198,7 @@ export function AllocationBar({ total, allocated }: { total: number; allocated: 
   const pct = total > 0 ? Math.min(100, (allocated / total) * 100) : 0;
   return (
     <div className="h-2 w-full rounded-full bg-muted overflow-hidden" role="img" aria-label={`محمَّل ${pct.toFixed(0)}%`}>
-      <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+      <div className="h-full bg-primary transition-[width]" style={{ width: `${pct}%` }} />
     </div>
   );
 }

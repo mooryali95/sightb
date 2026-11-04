@@ -36,9 +36,9 @@ export function CompanyFundingCard({ projectId, companyId, revenues }: Props) {
         </Button>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center mt-3">
-        <div><p className="text-[11px] text-muted-foreground">موَّلت</p><p className="font-mono text-sm font-semibold">{formatCurrency(funding.funded)}</p></div>
-        <div><p className="text-[11px] text-muted-foreground">رُدّ</p><p className="font-mono text-sm font-semibold text-success">{formatCurrency(funding.returned)}</p></div>
-        <div><p className="text-[11px] text-muted-foreground">باقٍ على المشروع</p><p className="font-mono text-sm font-semibold text-primary">{formatCurrency(funding.outstanding)}</p></div>
+        <div><p className="text-xs text-muted-foreground">موَّلت</p><p className="font-mono text-sm font-semibold">{formatCurrency(funding.funded)}</p></div>
+        <div><p className="text-xs text-muted-foreground">رُدّ</p><p className="font-mono text-sm font-semibold text-success">{formatCurrency(funding.returned)}</p></div>
+        <div><p className="text-xs text-muted-foreground">باقٍ على المشروع</p><p className="font-mono text-sm font-semibold text-primary">{formatCurrency(funding.outstanding)}</p></div>
       </div>
       <div className="h-1.5 rounded-full bg-muted mt-3 overflow-hidden" aria-hidden><div className="h-full bg-success" style={{ width: `${pct}%` }} /></div>
       {recovery && (

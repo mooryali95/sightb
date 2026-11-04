@@ -113,7 +113,7 @@ export function SpendConsistencyChart({ projectId, projectName = '', expenses, r
       {report.unlinked.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {report.unlinked.map((u) => (
-            <Badge key={u.key} variant="destructive" className="text-[10px]">
+            <Badge key={u.key} variant="destructive" className="text-xs">
               {u.label}: {formatCurrency(u.amount)} ({u.count})
             </Badge>
           ))}

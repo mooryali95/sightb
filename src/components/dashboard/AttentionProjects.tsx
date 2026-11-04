@@ -68,7 +68,7 @@ export function AttentionProjects({
                 <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/project/${p.id}`)}>
                   <div>
                     <span className="text-sm font-medium">{p.name}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full mr-2 ${PROJECT_STATUS_COLORS[p.status]}`}>{PROJECT_STATUS_LABELS[p.status]}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ms-2 ${PROJECT_STATUS_COLORS[p.status]}`}>{PROJECT_STATUS_LABELS[p.status]}</span>
                   </div>
                   <span className="text-xs font-mono text-destructive">{s.spendRate.toFixed(0)}% صرف</span>
                 </div>

@@ -36,7 +36,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        'stat-card',
+        'stat-card stat-tile',
         isHero && 'stat-card-hero',
         isCompact && 'p-3',
         className,
@@ -46,7 +46,7 @@ export function StatCard({
         <div className="flex items-center gap-1.5 min-w-0">
           <span
             className={cn(
-              'font-medium text-muted-foreground truncate',
+              'font-medium text-muted-foreground line-clamp-2 leading-snug',
               isHero ? 'text-sm' : 'text-xs',
             )}
           >
@@ -58,7 +58,7 @@ export function StatCard({
                 <button
                   type="button"
                   aria-label="مزيد من المعلومات"
-                  className="text-muted-foreground/50 hover:text-muted-foreground transition-colors shrink-0"
+                  className="hit text-muted-foreground/80 hover:text-muted-foreground transition-colors shrink-0"
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
                 </button>
@@ -80,7 +80,7 @@ export function StatCard({
       <div className={cn(isHero ? 'stat-value-hero' : 'stat-value', !isHero && trendColor)}>
         {value}
         {showNeutralArrow && (
-          <ArrowRight className="inline-block w-4 h-4 mr-1 text-muted-foreground/60" aria-hidden />
+          <ArrowRight className="inline-block w-4 h-4 ms-1 text-muted-foreground/60" aria-hidden />
         )}
       </div>
 

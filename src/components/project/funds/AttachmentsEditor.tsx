@@ -32,7 +32,7 @@ export function AttachmentsEditor({ attachments, onChange }: AttachmentsEditorPr
             {a.url && (
               <a href={a.url} target="_blank" rel="noopener" className="text-xs text-primary underline">فتح</a>
             )}
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onChange(attachments.filter((_, j) => j !== i))}>
+            <Button size="icon" variant="ghost" title="إزالة المرفق" className="h-6 w-6" onClick={() => onChange(attachments.filter((_, j) => j !== i))}>
               <X className="w-3 h-3" />
             </Button>
           </div>

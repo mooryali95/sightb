@@ -57,15 +57,15 @@ export function SpendNodeInspector({ node: active, onClose }: Props) {
                   <span className="text-xs font-mono shrink-0">{formatCurrency(e.amount)}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  <span className="text-[11px] text-muted-foreground font-mono">{e.date}</span>
-                  <Badge variant="outline" className="text-[10px]">
+                  <span className="text-xs text-muted-foreground font-mono">{e.date}</span>
+                  <Badge variant="outline" className="text-xs">
                     {EXPENSE_CATEGORY_LABELS[e.category as ExpenseCategory]}
                   </Badge>
-                  <Badge className={`text-[10px] ${APPROVAL_STATUS_COLORS[st] || ''}`}>
+                  <Badge className={`text-xs ${APPROVAL_STATUS_COLORS[st] || ''}`}>
                     {APPROVAL_STATUS_LABELS[st] || st}
                   </Badge>
-                  {e.vendor && <span className="text-[11px] text-muted-foreground">{e.vendor}</span>}
-                  {e.invoiceRef && <span className="text-[11px] text-muted-foreground">#{e.invoiceRef}</span>}
+                  {e.vendor && <span className="text-xs text-muted-foreground">{e.vendor}</span>}
+                  {e.invoiceRef && <span className="text-xs text-muted-foreground">#{e.invoiceRef}</span>}
                 </div>
               </div>
             );

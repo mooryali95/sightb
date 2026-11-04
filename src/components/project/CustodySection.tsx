@@ -171,12 +171,12 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                         {c.sourceFundId ? (() => {
                           const sf = projectFunds.find(f => f.id === c.sourceFundId);
                           return sf ? (
-                            <Badge variant="outline" className="text-[10px] border-warning/40 text-warning w-fit">
+                            <Badge variant="outline" className="text-xs border-warning/40 text-warning w-fit">
                               من دفعة #{sf.fundNumber}
                             </Badge>
                           ) : null;
                         })() : (
-                          <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive w-fit">
+                          <Badge variant="outline" className="text-xs border-destructive/40 text-destructive w-fit">
                             غير مرتبطة بدفعة
                           </Badge>
                         )}
@@ -192,7 +192,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                               <Badge
                                 key={t.transferId}
                                 variant="outline"
-                                className={`text-[10px] w-fit ${t.orphan
+                                className={`text-xs w-fit ${t.orphan
                                   ? 'border-destructive/50 text-destructive'
                                   : 'border-primary/40 text-primary'}`}
                                 title={`${formatCurrency(t.amount)} · ${t.transferDate}`}
@@ -210,23 +210,23 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
                     <td className="font-mono text-sm">
                       {formatCurrency(c.spent)}
                       {c.outstandingAdvances > 0 && (
-                        <span className="block text-[10px] text-warning">+ سلف {formatCurrency(c.outstandingAdvances)}</span>
+                        <span className="block text-xs text-warning">+ سلف {formatCurrency(c.outstandingAdvances)}</span>
                       )}
                     </td>
                     <td>
                       <span className={c.remaining >= 0 ? 'badge-profit' : 'badge-loss'}>{formatCurrency(c.remaining)}</span>
                       {c.remaining <= 0 && (
-                        <span className="text-xs text-destructive mr-1">⚠️ مستنفدة</span>
+                        <span className="text-xs text-destructive ms-1">⚠️ مستنفدة</span>
                       )}
                       {c.remaining > 0 && c.remaining < c.effectiveAmount * 0.1 && (
-                        <span className="text-xs text-warning mr-1">⚠️ أقل من 10%</span>
+                        <span className="text-xs text-warning ms-1">⚠️ أقل من 10%</span>
                       )}
                     </td>
 
                     <td className="hidden sm:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: pct > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
+                          <div className="h-full rounded-full transition-[width]" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: pct > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
                         </div>
                         <span className="text-xs text-muted-foreground">{pct.toFixed(0)}%</span>
                       </div>

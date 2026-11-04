@@ -85,14 +85,14 @@ export function ExpenseInspector({
         {exp.sourcePaymentRequestId && (
           <InspectorField
             label="نوع المصروف"
-            value={<Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 dark:text-amber-400">تسوية سلفة</Badge>}
+            value={<Badge variant="outline" className="text-xs border-amber-300 text-amber-700 dark:text-amber-400">تسوية سلفة</Badge>}
           />
         )}
       </InspectorSection>
 
       <InspectorSection title="معلومات إضافية">
         <InspectorField label="التاريخ" value={exp.date} mono />
-        <InspectorField label="معرّف السجل" value={<span className="text-[10px] font-mono text-muted-foreground">{exp.id}</span>} />
+        <InspectorField label="معرّف السجل" value={<span className="text-xs font-mono text-muted-foreground">{exp.id}</span>} />
       </InspectorSection>
     </InspectorPanel>
   );

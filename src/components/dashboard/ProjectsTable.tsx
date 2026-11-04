@@ -73,7 +73,7 @@ export function ProjectsTable({
                       <div className="flex flex-col">
                         <span className="font-medium">{project.name}</span>
                         {company && (
-                          <span className="text-[11px] text-muted-foreground mt-0.5">{company.name}</span>
+                          <span className="text-xs text-muted-foreground mt-0.5">{company.name}</span>
                         )}
                       </div>
                     </td>
@@ -88,7 +88,7 @@ export function ProjectsTable({
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
-                            className="h-full rounded-full transition-all"
+                            className="h-full rounded-full transition-[width]"
                             style={{
                               width: `${Math.min(spendRate, 100)}%`,
                               backgroundColor: spendRate > 90 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',

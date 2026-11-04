@@ -13,14 +13,14 @@ export function GroupRow({
   return (
     <div className="p-3 md:p-4 rounded-lg border border-border bg-card hover:bg-muted/40 motion-fast transition-colors">
       <div className="flex items-center justify-between gap-3 mb-2">
-        <button type="button" onClick={onToggle} className="flex items-center gap-2 min-w-0 text-right">
+        <button type="button" onClick={onToggle} className="flex items-center gap-2 min-w-0 text-start">
           <ChevronDown className={cn('w-4 h-4 shrink-0 motion-fast transition-transform', !expanded && '-rotate-90')} />
           <span className="font-semibold text-foreground truncate">{group.label}</span>
-          <Badge variant="outline" className="text-[10px] font-normal">{group.items.length} بند</Badge>
+          <Badge variant="outline" className="text-xs font-normal">{group.items.length} بند</Badge>
         </button>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={onOpenDetails}>
-            <Info className="w-3.5 h-3.5 ml-1" /> تفاصيل
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onOpenDetails}>
+            <Info className="w-3.5 h-3.5 me-1" /> تفاصيل
           </Button>
           <VarianceBadge variance={group.variance} currency={currency} severity={group.severity} />
         </div>
@@ -32,7 +32,7 @@ export function GroupRow({
         <Metric label="المتبقي للفترة" value={formatCurrency(group.remaining, currency)} />
       </div>
       <ComparisonBar planned={group.planned} actual={group.actual} plannedToDate={group.plannedToDate} severity={group.severity} />
-      <div className="mt-1.5 text-[11px] text-muted-foreground text-left tabular-nums">
+      <div className="mt-1.5 text-xs text-muted-foreground text-end tabular-nums">
         نسبة الاستهلاك من BAC {formatPercent(group.consumptionPct * 100)}
       </div>
     </div>

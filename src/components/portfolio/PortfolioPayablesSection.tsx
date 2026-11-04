@@ -63,13 +63,13 @@ export function PortfolioPayablesSection({ projects }: Props) {
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
             <Users className="h-4 w-4" /> مستحقات الفريق القائمة
           </div>
-          <div className="text-2xl font-bold text-amber-600">{formatCurrency(totals.resourceOutstanding)}</div>
+          <div className="text-2xl font-bold text-warning">{formatCurrency(totals.resourceOutstanding)}</div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
             <Store className="h-4 w-4" /> مستحقات الموردين القائمة
           </div>
-          <div className="text-2xl font-bold text-amber-600">{formatCurrency(totals.vendorOutstanding)}</div>
+          <div className="text-2xl font-bold text-warning">{formatCurrency(totals.vendorOutstanding)}</div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
@@ -79,7 +79,7 @@ export function PortfolioPayablesSection({ projects }: Props) {
         </Card>
         <Card className="p-4">
           <div className="text-muted-foreground text-sm mb-1">إجمالي المسدَّد</div>
-          <div className="text-2xl font-bold text-emerald-600">{formatCurrency(totals.paid)}</div>
+          <div className="text-2xl font-bold text-success">{formatCurrency(totals.paid)}</div>
         </Card>
       </div>
 
@@ -89,24 +89,24 @@ export function PortfolioPayablesSection({ projects }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-muted-foreground">
-                <th className="text-right py-2">المشروع</th>
-                <th className="text-right py-2">فريق — قائم</th>
-                <th className="text-right py-2">فريق — مدفوع</th>
-                <th className="text-right py-2">موردون — قائم</th>
-                <th className="text-right py-2">موردون — مدفوع</th>
-                <th className="text-right py-2">مدفوعات متوقعة</th>
-                <th className="text-right py-2">مخالصات</th>
-                <th className="text-right py-2"></th>
+                <th className="text-start py-2">المشروع</th>
+                <th className="text-start py-2">فريق — قائم</th>
+                <th className="text-start py-2">فريق — مدفوع</th>
+                <th className="text-start py-2">موردون — قائم</th>
+                <th className="text-start py-2">موردون — مدفوع</th>
+                <th className="text-start py-2">مدفوعات متوقعة</th>
+                <th className="text-start py-2">مخالصات</th>
+                <th className="text-start py-2"></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.project.id} className="border-b hover:bg-muted/30">
                   <td className="py-2 font-medium">{r.project.name}</td>
-                  <td className="py-2 text-amber-600">{formatCurrency(r.resourceOutstanding)}</td>
-                  <td className="py-2 text-emerald-600">{formatCurrency(r.resourcePaid)}</td>
-                  <td className="py-2 text-amber-600">{formatCurrency(r.vendorOutstanding)}</td>
-                  <td className="py-2 text-emerald-600">{formatCurrency(r.vendorPaid)}</td>
+                  <td className="py-2 text-warning">{formatCurrency(r.resourceOutstanding)}</td>
+                  <td className="py-2 text-success">{formatCurrency(r.resourcePaid)}</td>
+                  <td className="py-2 text-warning">{formatCurrency(r.vendorOutstanding)}</td>
+                  <td className="py-2 text-success">{formatCurrency(r.vendorPaid)}</td>
                   <td className="py-2">{formatCurrency(r.expected)}</td>
                   <td className="py-2">{r.signedSettlements} موقّعة / {r.openSettlements} مسودة</td>
                   <td className="py-2">

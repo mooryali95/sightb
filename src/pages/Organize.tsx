@@ -29,6 +29,7 @@ import { formatCurrency } from '@/lib/finance';
 import { normalizeArabicName } from '@/lib/resource-spend';
 import { PROJECT_STATUS_LABELS, type Project } from '@/types/project';
 import { planMove, placementKey, placementOf, type MovePlan, type Placement } from '@/lib/project-placement';
+import { countAr } from '@/lib/plural';
 
 const FINISHED = ['completed', 'archived', 'cancelled'];
 
@@ -101,11 +102,11 @@ export default function Organize() {
       className={`group flex items-center gap-2 rounded-md border border-border bg-card px-2 py-2 shadow-sm cursor-grab active:cursor-grabbing ${dragging?.id === p.id ? 'opacity-40' : ''}`}
       aria-label={`مشروع ${p.name}`}>
       <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
-      <button type="button" className="min-w-0 flex-1 text-right" onClick={() => navigate(`/project/${p.id}`)}>
+      <button type="button" className="min-w-0 flex-1 text-start" onClick={() => navigate(`/project/${p.id}`)}>
         <p className="text-sm font-medium truncate">{p.name}</p>
-        <p className="text-[11px] text-muted-foreground font-mono">{formatCurrency(p.contractValue)}</p>
+        <p className="text-xs text-muted-foreground font-mono">{formatCurrency(p.contractValue)}</p>
       </button>
-      <Badge variant="outline" className="text-[10px] shrink-0">{PROJECT_STATUS_LABELS[p.status]}</Badge>
+      <Badge variant="outline" className="text-xs shrink-0">{PROJECT_STATUS_LABELS[p.status]}</Badge>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" aria-label={`نقل ${p.name}`}><MoveRight className="w-4 h-4" /></Button>
@@ -136,8 +137,8 @@ export default function Organize() {
       />
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input aria-label="بحث في المشاريع" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="بحث باسم المشروع" className="pr-9" />
+          <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input aria-label="بحث في المشاريع" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="بحث باسم المشروع" className="ps-9" />
         </div>
         <div className="flex items-center gap-2">
           <Switch id="show-finished" checked={showFinished} onCheckedChange={setShowFinished} />
@@ -155,11 +156,11 @@ export default function Organize() {
             return (
               <section key={c.id} className="stat-card" aria-label={`شركة ${c.name}`}>
                 <header className="flex items-start justify-between gap-2 mb-3">
-                  <button type="button" className="text-right min-w-0" onClick={() => navigate(`/company/${c.id}`)}>
+                  <button type="button" className="text-start min-w-0" onClick={() => navigate(`/company/${c.id}`)}>
                     <h2 className="font-bold flex items-center gap-2 truncate"><Building2 className="w-4 h-4 text-primary shrink-0" />{c.name}</h2>
-                    <p className="text-[11px] text-muted-foreground">{own.length} مشروع · {formatCurrency(total)}</p>
+                    <p className="text-xs text-muted-foreground">{countAr(own.length, 'project')} · {formatCurrency(total)}</p>
                   </button>
-                  {!ctx.canEditCompany(c.id) && <Badge variant="secondary" className="text-[10px]">للعرض</Badge>}
+                  {!ctx.canEditCompany(c.id) && <Badge variant="secondary" className="text-xs">للعرض</Badge>}
                 </header>
                 <div className="space-y-3">
                   {portfolios.filter((pf) => pf.companyId === c.id).map((pf) => {
@@ -169,7 +170,7 @@ export default function Organize() {
                         <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1"><FolderKanban className="w-3.5 h-3.5" />{pf.name} <span className="font-normal">({inside.length})</span></p>
                         <div {...zoneProps({ companyId: c.id, portfolioId: pf.id })}>
                           {inside.map(card)}
-                          {inside.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">أفلت مشروعاً هنا</p>}
+                          {inside.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">أفلت مشروعاً هنا</p>}
                         </div>
                       </div>
                     );
@@ -178,7 +179,7 @@ export default function Organize() {
                     <p className="text-xs font-semibold text-muted-foreground mb-1">مشاريع مستقلة</p>
                     <div {...zoneProps({ companyId: c.id, portfolioId: null })}>
                       {own.filter((p) => !p.portfolioId).map(card)}
-                      {own.filter((p) => !p.portfolioId).length === 0 && <p className="text-[11px] text-muted-foreground text-center py-3">أفلت مشروعاً هنا</p>}
+                      {own.filter((p) => !p.portfolioId).length === 0 && <p className="text-xs text-muted-foreground text-center py-3">أفلت مشروعاً هنا</p>}
                     </div>
                   </div>
                 </div>
@@ -193,9 +194,9 @@ export default function Organize() {
           <AlertDialogHeader>
             <AlertDialogTitle>نقل المشروع إلى شركة أخرى</AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-3 text-right">
+              <div className="space-y-3 text-start">
                 <p className="font-medium text-foreground">{confirm?.plan.summary}</p>
-                <ul className="list-disc pr-5 space-y-1 text-sm">{confirm?.plan.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+                <ul className="list-disc ps-5 space-y-1 text-sm">{confirm?.plan.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

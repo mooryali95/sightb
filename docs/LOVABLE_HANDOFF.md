@@ -79,6 +79,16 @@ does not happen again.
      `user_roles` itself (42P17); ask `has_role()` instead. Its WITH CHECK
      must require an admin on its own, since INSERT applies only WITH CHECK.
      A name on an expense is linked to a registry entry, never retyped.
+   - Accessibility and Arabic layout, held by `e2e/accessibility.spec.ts`
+     (axe on 13 pages, phone and desktop, light and dark): `src/lib/a11y/**`,
+     `src/components/charts/labelled-sector.tsx`, the label linking in
+     `ui/input.tsx` and `ui/select.tsx`, the Arabic date reading in
+     `ui/input.tsx`, the icon button name in `ui/button.tsx`, and in
+     `App.tsx` the `DirectionProvider`, `MotionConfig reducedMotion="user"`
+     and `useScrollRegions`. Write logical classes (`ms-`, `me-`, `ps-`,
+     `pe-`, `start-`, `end-`, `text-start`), never `ml-`/`mr-`/`left-`/
+     `right-`; give every icon button an `aria-label` or `title`; never
+     put `letter-spacing` on Arabic text.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

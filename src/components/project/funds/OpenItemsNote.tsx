@@ -17,7 +17,7 @@ export function OpenItemsNote({ open }: { open: FundOpenItems }) {
       {open.openCustodies.length > 0 && (
         <div>
           <p className="text-muted-foreground">عهد مفتوحة من هذه الدفعة:</p>
-          <ul className="list-disc pr-4 mt-0.5">
+          <ul className="list-disc ps-4 mt-0.5">
             {open.openCustodies.map((c) => (
               <li key={c.id}>{c.resourceName} — متبقي فيها: <span className="font-mono">{formatCurrency(c.remaining)}</span></li>
             ))}
@@ -27,7 +27,7 @@ export function OpenItemsNote({ open }: { open: FundOpenItems }) {
       {open.outstandingAdvances.length > 0 && (
         <div>
           <p className="text-muted-foreground">سلف قائمة على موردين:</p>
-          <ul className="list-disc pr-4 mt-0.5">
+          <ul className="list-disc ps-4 mt-0.5">
             {open.outstandingAdvances.map((a) => (
               <li key={a.id}>{a.description} — <span className="font-mono">{formatCurrency(a.remaining)}</span></li>
             ))}

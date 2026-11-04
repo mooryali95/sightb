@@ -32,7 +32,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
   return (
     <aside
       className={cn(
-        'sidebar-gradient h-screen flex flex-col border-l border-sidebar-border transition-all duration-300 sticky top-0 z-30',
+        'sidebar-gradient h-dvh flex flex-col border-e border-sidebar-border transition-[width] duration-300 sticky top-0 z-30',
         collapsed ? 'w-16' : 'w-72',
       )}
     >
@@ -46,7 +46,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
             </div>
           </div>
         )}
-        <Button variant="ghost" size="icon" onClick={onToggle} className="text-sidebar-foreground hover:bg-sidebar-accent shrink-0">
+        <Button variant="ghost" size="icon" onClick={onToggle} aria-label={collapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'} aria-expanded={!collapsed} className="text-sidebar-foreground hover:bg-sidebar-accent shrink-0">
           {collapsed ? <Menu className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </Button>
       </div>
@@ -72,9 +72,9 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
             <SidebarSearch value={search} onChange={setSearch} />
 
             <div className="flex items-center justify-between px-3 mb-2">
-              <span className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider">الشركات</span>
+              <span className="text-xs font-semibold text-sidebar-foreground/70">الشركات</span>
               {isAdmin && (
-                <button onClick={() => navigate('/companies/new')} className="text-sidebar-foreground/40 hover:text-primary motion-fast transition-colors">
+                <button onClick={() => navigate('/companies/new')} aria-label="إضافة شركة" title="إضافة شركة" className="hit text-sidebar-foreground/70 hover:text-primary motion-fast transition-colors">
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -106,8 +106,8 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           <UserInfo />
           <SignOutButton />
           <div className="flex items-center justify-center gap-1.5 py-1">
-            <span className="text-xs text-sidebar-foreground/30">Powered by</span>
-            <span className="text-[11px] font-bold text-primary tracking-wider">BASSERH</span>
+            <span lang="en" className="text-xs text-sidebar-foreground/70">Powered by</span>
+            <span lang="en" className="text-xs font-bold text-sidebar-primary tracking-wider">BASSERH</span>
           </div>
         </div>
       )}

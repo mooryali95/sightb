@@ -56,7 +56,7 @@ export function PermissionMatrixInspector() {
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">
         الصق مسار الملف داخل مخزن الإيصالات (مثال:
-        <code className="mx-1 px-1 bg-muted rounded text-[11px] direction-ltr">uid/1734….jpg</code>)
+        <code className="mx-1 px-1 bg-muted rounded text-xs direction-ltr">uid/1734….jpg</code>)
         لعرض القاعدة التي سمحت أو منعت الوصول، والسجل والمشروع المالك له.
       </p>
 
@@ -71,9 +71,9 @@ export function PermissionMatrixInspector() {
             onChange={(e) => setPath(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && run()}
           />
-          <Button onClick={run} disabled={loading || !path.trim()}>
+          <Button onClick={run} disabled={loading || !path.trim()} aria-label="فحص المسار">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            <span className="hidden sm:inline mr-1.5">فحص</span>
+            <span className="hidden sm:inline ms-1.5">فحص</span>
           </Button>
         </div>
       </div>
@@ -109,7 +109,7 @@ export function PermissionMatrixInspector() {
               <p className="text-muted-foreground">
                 الأدوار المحسوبة للمستخدم الحالي
                 {result.subject.is_system_admin && (
-                  <Badge variant="outline" className="mr-2 text-[10px]">مدير نظام</Badge>
+                  <Badge variant="outline" className="ms-2 text-xs">مدير نظام</Badge>
                 )}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -117,7 +117,7 @@ export function PermissionMatrixInspector() {
                   <span className="text-muted-foreground">لا توجد أدوار</span>
                 )}
                 {result.subject.roles.map((r, i) => (
-                  <Badge key={i} variant="secondary" className="text-[10px]">
+                  <Badge key={i} variant="secondary" className="text-xs">
                     {r.role} · {r.scope_type}
                   </Badge>
                 ))}
@@ -134,18 +134,18 @@ export function PermissionMatrixInspector() {
               {(result.matches ?? []).map((m, idx) => (
                 <div key={idx} className="border border-border rounded-lg overflow-hidden">
                   <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-muted/40 text-xs">
-                    <Badge variant="outline" className="text-[10px]">
+                    <Badge variant="outline" className="text-xs">
                       {SOURCE_LABELS[m.source] ?? m.source}
                     </Badge>
                     <span className="text-muted-foreground">
                       {m.project_name ?? 'مشروع غير مرئي لك'}
                     </span>
                     {m.is_record_owner && (
-                      <Badge variant="secondary" className="text-[10px]">أنت منشئ السجل</Badge>
+                      <Badge variant="secondary" className="text-xs">أنت منشئ السجل</Badge>
                     )}
                     <Badge
                       variant="outline"
-                      className={`text-[10px] mr-auto ${
+                      className={`text-xs ms-auto ${
                         m.decision === 'allow'
                           ? 'border-success/50 text-success'
                           : 'border-destructive/50 text-destructive'
@@ -163,7 +163,7 @@ export function PermissionMatrixInspector() {
                           <XCircle className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
                         )}
                         <div>
-                          <code className="text-[11px]" dir="ltr">{c.rule}</code>
+                          <code className="text-xs" dir="ltr">{c.rule}</code>
                           <p className="text-muted-foreground">{c.detail}</p>
                         </div>
                       </li>

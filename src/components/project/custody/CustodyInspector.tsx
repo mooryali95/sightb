@@ -33,12 +33,12 @@ export function CustodyInspector({ custody, projectFunds, expenses, readOnly, on
       title={c.resourceName}
       description="تفاصيل العهدة والمصروفات المرتبطة بها"
       meta={c.isClosed
-        ? <Badge variant="outline" className="text-[10px] bg-muted">مُغلقة</Badge>
-        : <Badge variant="outline" className="text-[10px] bg-success/10 text-success border-success/20">نشطة</Badge>}
+        ? <Badge variant="outline" className="text-xs bg-muted">مُغلقة</Badge>
+        : <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/20">نشطة</Badge>}
       width="lg"
       footer={!readOnly && (
         <Button size="sm" onClick={() => onEdit(c)}>
-          <Pencil className="w-3.5 h-3.5 ml-1" /> تعديل
+          <Pencil className="w-3.5 h-3.5 me-1" /> تعديل
         </Button>
       )}
     >
@@ -61,7 +61,7 @@ export function CustodyInspector({ custody, projectFunds, expenses, readOnly, on
           <div>− سلف قائمة من العهدة: {formatCurrency(c.outstandingAdvances)}</div>
           <div className="border-t border-border pt-0.5 font-semibold">= المتبقي: {formatCurrency(c.remaining)}</div>
         </div>
-        <p className="text-[11px] text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           محسوب عبر <span className="font-mono">getCustodyBreakdown()</span> — نفس المصدر المستخدم في كل الشاشات.
         </p>
       </InspectorSection>
@@ -79,7 +79,7 @@ export function CustodyInspector({ custody, projectFunds, expenses, readOnly, on
                 <span className="flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className={`text-[10px] ${t.orphan ? 'border-destructive/50 text-destructive' : 'border-primary/40 text-primary'}`}
+                    className={`text-xs ${t.orphan ? 'border-destructive/50 text-destructive' : 'border-primary/40 text-primary'}`}
                   >
                     {t.orphan ? 'مصدر مفقود' : `دفعة #${t.fundNumber}`}
                   </Badge>
@@ -89,7 +89,7 @@ export function CustodyInspector({ custody, projectFunds, expenses, readOnly, on
               </div>
             ))}
             {c.orphanTransfers.length > 0 && (
-              <p className="text-[11px] text-destructive bg-destructive/5 border border-destructive/20 rounded px-2 py-1">
+              <p className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded px-2 py-1">
                 تحويل بلا دفعة مصدر (الدفعة محذوفة) — يجب حذف التحويل أو إعادة ربطه بدفعة قائمة حتى يبقى كل ريال في العهدة له أصل.
               </p>
             )}
@@ -104,7 +104,7 @@ export function CustodyInspector({ custody, projectFunds, expenses, readOnly, on
         <div className="flex items-center gap-3">
           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full rounded-full transition-all"
+              className="h-full rounded-full transition-[width]"
               style={{
                 width: `${Math.min(pct, 100)}%`,
                 backgroundColor: pct > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',
@@ -139,7 +139,7 @@ export function CustodyInspector({ custody, projectFunds, expenses, readOnly, on
               <div key={e.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-md border border-border/50 bg-muted/30">
                 <div className="min-w-0">
                   <div className="text-sm truncate">{e.description || e.category || 'مصروف'}</div>
-                  <div className="text-[10px] text-muted-foreground tabular-nums">{e.date || '—'}</div>
+                  <div className="text-xs text-muted-foreground tabular-nums">{e.date || '—'}</div>
                 </div>
                 <div className="text-sm font-semibold tabular-nums shrink-0">{formatCurrency(e.amount)}</div>
               </div>

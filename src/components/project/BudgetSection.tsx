@@ -107,7 +107,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
             <h3 className="text-sm font-semibold flex items-center gap-2">
               بنود الموازنة
               {activeDraft && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 flex items-center gap-1">
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 flex items-center gap-1">
                   <Unlock className="w-3 h-3" /> وضع التعديل نشط
                 </span>
               )}
@@ -227,7 +227,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
                       <td className="hidden md:table-cell">
                         <div className="flex items-center gap-2">
                           <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(spentPct, 100)}%`, backgroundColor: spentPct > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
+                            <div className="h-full rounded-full transition-[width]" style={{ width: `${Math.min(spentPct, 100)}%`, backgroundColor: spentPct > 100 ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }} />
                           </div>
                           <span className="text-xs text-muted-foreground">{spentPct.toFixed(0)}%</span>
                         </div>
@@ -235,7 +235,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
                       {!isLocked && (
                       <td>
                         <div className="flex items-center gap-0.5">
-                          <Button variant="ghost" size="icon" onClick={() => form.open({ item })}>
+                          <Button variant="ghost" size="icon" title="تعديل البند" onClick={() => form.open({ item })}>
                             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                           </Button>
                           <ConfirmDeleteDialog title="حذف بند الموازنة" description="هل أنت متأكد من حذف هذا البند؟" onConfirm={() => deleteBudgetItem(item.id)} />

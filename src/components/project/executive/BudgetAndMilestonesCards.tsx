@@ -5,6 +5,7 @@ import { formatCurrency } from '@/lib/finance';
 import type { Milestone } from '@/types/project';
 import { SectionCard, SectionTitle } from './SectionCard';
 import type { BudgetSlice } from './executiveFigures';
+import { labelledSlices } from '@/components/charts/labelled-sector';
 
 export function BudgetSplitCard({ slices }: { slices: BudgetSlice[] }) {
   return (
@@ -13,7 +14,7 @@ export function BudgetSplitCard({ slices }: { slices: BudgetSlice[] }) {
       {slices.length > 0 ? (
         <ResponsiveContainer width="100%" height={180}>
           <PieChart>
-            <Pie data={slices} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+            <Pie {...labelledSlices} data={slices} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
               {slices.map((d, i) => <Cell key={i} fill={d.fill} />)}
             </Pie>
             <Tooltip formatter={(v: number) => formatCurrency(v)} />
@@ -40,7 +41,7 @@ export function MilestonesCard({ milestones }: { milestones: Milestone[] }) {
       {milestoneData.length > 0 ? (
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
-            <Pie data={milestoneData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={3} dataKey="value" label={({ name, value }) => `${name} (${value})`}>
+            <Pie {...labelledSlices} data={milestoneData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={3} dataKey="value" label={({ name, value }) => `${name} (${value})`}>
               {milestoneData.map((d, i) => <Cell key={i} fill={d.fill} />)}
             </Pie>
             <Tooltip />

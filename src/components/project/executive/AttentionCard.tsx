@@ -22,13 +22,13 @@ export function AttentionCard({ expenses, changeOrders, milestones, budgetRemain
       <div className="space-y-2">
         {pendingExpenses.length > 0 && (
           <div className="flex items-center gap-2 text-xs">
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
+            <Clock className="w-3.5 h-3.5 text-warning" />
             <span>{pendingExpenses.length} مصروف بانتظار الاعتماد ({formatCurrency(pendingExpenses.reduce((s, e) => s + e.amount, 0))})</span>
           </div>
         )}
         {pendingCOs.length > 0 && (
           <div className="flex items-center gap-2 text-xs">
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
+            <Clock className="w-3.5 h-3.5 text-warning" />
             <span>{pendingCOs.length} أمر تغيير مقترح</span>
           </div>
         )}

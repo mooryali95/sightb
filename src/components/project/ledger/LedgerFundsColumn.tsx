@@ -58,7 +58,7 @@ export function LedgerFundsColumn({ funds, custodies, expenses, payReqs, transfe
           <div key={f.id} className="border border-border rounded-lg overflow-hidden">
             <button
               onClick={() => open.toggle(f.id)}
-              className="w-full p-3 flex items-center gap-2 text-right hover:bg-muted/50 transition-colors"
+              className="w-full p-3 flex items-center gap-2 text-start hover:bg-muted/50 transition-colors"
             >
               {isOpen ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
               <div className="flex-1 min-w-0">
@@ -85,7 +85,7 @@ export function LedgerFundsColumn({ funds, custodies, expenses, payReqs, transfe
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3">
                   <span>مباشر: {formatCurrency(directSpent)}</span>
-                  {custodyDraw > 0 && <span className="text-amber-600">عُهد: {formatCurrency(custodyDraw)}</span>}
+                  {custodyDraw > 0 && <span className="text-warning">عُهد: {formatCurrency(custodyDraw)}</span>}
                   {outstandingAdvances > 0 && <span className="text-blue-600">سلف قائمة: {formatCurrency(outstandingAdvances)}</span>}
                   {cashTransfersOut > 0 && <span className="text-purple-600">تحويلات نقد: {formatCurrency(cashTransfersOut)}</span>}
                   <span className={cn('flex items-center gap-1', remaining <= 0 && 'text-destructive font-semibold')}>
@@ -143,14 +143,14 @@ export function LedgerFundsColumn({ funds, custodies, expenses, payReqs, transfe
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span>{e.description}</span>
                                 {pr && (
-                                  <Badge variant="outline" className="text-[10px] border-violet-400/50 text-violet-700 dark:text-violet-400">
+                                  <Badge variant="outline" className="text-xs border-violet-400/50 text-violet-700 dark:text-violet-400">
                                     {PAYMENT_REQUEST_TYPE_LABELS[pr.requestType]}
                                   </Badge>
                                 )}
                               </div>
                             </td>
                             <td className="py-1.5 text-muted-foreground">{e.date}</td>
-                            <td className="py-1.5 font-mono text-left">{formatCurrency(e.amount)}</td>
+                            <td className="py-1.5 font-mono text-end">{formatCurrency(e.amount)}</td>
                           </tr>
                         );
                       })}

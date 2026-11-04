@@ -32,7 +32,8 @@ export function ReviewForm({ form, onChange, projects: activeProjects, activeFun
           <Button
             size="icon"
             variant="ghost"
-            className="absolute top-1 left-1 h-7 w-7 bg-background/80"
+            className="absolute top-1 start-1 h-7 w-7 bg-background/80"
+            aria-label="إزالة الصورة"
             onClick={onClearImage}
           >
             <X className="w-3.5 h-3.5" />

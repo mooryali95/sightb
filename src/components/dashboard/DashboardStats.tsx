@@ -2,6 +2,7 @@ import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { DollarSign, TrendingDown, TrendingUp, Briefcase, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { countAr } from '@/lib/plural';
 
 const stagger = {
   container: { hidden: {}, show: { transition: { staggerChildren: 0.08 } } },
@@ -98,7 +99,7 @@ export function DashboardStats(props: DashboardStatsProps) {
           value={filteredProjectsCount.toString()}
           icon={<Briefcase className="w-4 h-4" />}
           trend="neutral"
-          subtitle={`${activeCompaniesCount} شركة${archivedCompaniesCount > 0 ? ` · ${archivedCompaniesCount} مؤرشفة` : ''} · ${portfoliosCount} محفظة`}
+          subtitle={`${countAr(activeCompaniesCount, 'company')}${archivedCompaniesCount > 0 ? ` · ${archivedCompaniesCount} مؤرشفة` : ''} · ${countAr(portfoliosCount, 'portfolio')}`}
           tooltip="عدد المشاريع التي تطابق فلاتر الشركة والحالة والبحث الحالية."
         />
       </motion.div>

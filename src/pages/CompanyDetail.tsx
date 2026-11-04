@@ -31,6 +31,8 @@ import { buildCompanyExport } from './company/buildCompanyExport';
 import { CompanyLedgerSection } from './company/ledger/CompanyLedgerSection';
 import { RegistrySection } from './company/registry/RegistrySection';
 import { IntegrityCard } from './company/IntegrityCard';
+import { labelledSlices } from '@/components/charts/labelled-sector';
+import { countAr } from '@/lib/plural';
 
 /** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
 const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
@@ -155,7 +157,7 @@ export default function CompanyDetail() {
             <>
               {company.description && <span className="block">{company.description}</span>}
               <span className="text-xs">
-                {compPortfolios.length} محفظة · {visibleCompanyProjects.length} مشروع
+                {countAr(compPortfolios.length, 'portfolio')} · {countAr(visibleCompanyProjects.length, 'project')}
                 {inactiveCount > 0 && !showInactive && (
                   <span className="text-muted-foreground/60"> ({inactiveCount} منتهي)</span>
                 )}
@@ -220,7 +222,7 @@ export default function CompanyDetail() {
                       try { await deleteCompany(id!); toast.success('تم الحذف'); navigate('/'); } catch { toast.error('فشل الحذف'); }
                     }}
                     trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                      <Button variant="ghost" size="icon" title="حذف الشركة" className="text-muted-foreground hover:text-destructive">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     }
@@ -257,7 +259,7 @@ export default function CompanyDetail() {
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
+                  <Pie {...labelledSlices}
                     data={expensesByPortfolio}
                     cx="50%"
                     cy="50%"
@@ -266,8 +268,6 @@ export default function CompanyDetail() {
                     paddingAngle={3}
                     dataKey="value"
                     nameKey="name"
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    labelLine={{ strokeWidth: 1 }}
                   >
                     {expensesByPortfolio.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
@@ -278,7 +278,11 @@ export default function CompanyDetail() {
                     contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}
                   />
                   <Legend
-                    formatter={(value) => <span className="text-xs">{value}</span>}
+                    formatter={(value: string, entry) => (
+                      <span className="text-xs text-foreground">
+                        {value} ({Math.round(((entry.payload as { percent?: number })?.percent ?? 0) * 100)}%)
+                      </span>
+                    )}
                   />
                 </PieChart>
               </ResponsiveContainer>

@@ -25,7 +25,7 @@ export function ProjectButton({ project }: { project: Project }) {
       className={cn(
         'relative w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-normal transition-colors',
         active
-          ? 'bg-primary/20 text-primary border-r-2 border-primary'
+          ? 'bg-primary/20 text-primary border-s-2 border-primary'
           : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground/85',
         inactive && 'opacity-60',
       )}
@@ -33,7 +33,7 @@ export function ProjectButton({ project }: { project: Project }) {
       <StatusIcon status={project.status} />
       <span className={cn('truncate', inactive && 'line-through decoration-1')}>{project.name}</span>
       {inactive && (
-        <span className="text-xs text-muted-foreground mr-auto shrink-0">
+        <span className="text-xs text-muted-foreground ms-auto shrink-0">
           {PROJECT_STATUS_LABELS[project.status as ProjectStatus]}
         </span>
       )}

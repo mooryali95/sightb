@@ -85,7 +85,7 @@ export function ReimbursementsTab({
       {canEdit && projResources.length > 0 && (
         <Dialog open={reimbOpen} onOpenChange={(o) => { setReimbOpen(o); if (!o) resetReimb(); }}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 ml-1" /> تسجيل استرداد</Button>
+            <Button size="sm"><Plus className="h-4 w-4 me-1" /> تسجيل استرداد</Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
@@ -149,13 +149,13 @@ export function ReimbursementsTab({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-muted-foreground">
-              <th className="text-right py-2">التاريخ</th>
-              <th className="text-right py-2">{scope === 'resource' ? 'المورد' : 'المورّد الخارجي'}</th>
-              <th className="text-right py-2">الفئة</th>
-              <th className="text-right py-2">الوصف</th>
-              <th className="text-right py-2">المبلغ</th>
-              <th className="text-right py-2">الحالة</th>
-              <th className="text-right py-2">إجراءات</th>
+              <th className="text-start py-2">التاريخ</th>
+              <th className="text-start py-2">{scope === 'resource' ? 'المورد' : 'المورّد الخارجي'}</th>
+              <th className="text-start py-2">الفئة</th>
+              <th className="text-start py-2">الوصف</th>
+              <th className="text-start py-2">المبلغ</th>
+              <th className="text-start py-2">الحالة</th>
+              <th className="text-start py-2">إجراءات</th>
             </tr>
           </thead>
           <tbody>

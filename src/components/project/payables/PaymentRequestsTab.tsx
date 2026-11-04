@@ -64,7 +64,7 @@ export function PaymentRequestsTab({
       <h3 className="text-base font-semibold">طلبات صرف الدفعات</h3>
       {canEdit && projResources.length > 0 && (
         <Button size="sm" variant="default" onClick={onNewRequest}>
-          <Send className="h-4 w-4 ml-1" /> طلب صرف جديد
+          <Send className="h-4 w-4 me-1" /> طلب صرف جديد
         </Button>
       )}
     </div>
@@ -115,7 +115,7 @@ export function PaymentRequestsTab({
                       !step.done && 'opacity-40',
                     )}>
                       <div className="font-medium">{step.label}</div>
-                      {step.date && <div className="text-[10px] text-muted-foreground">{step.date.split('T')[0]}</div>}
+                      {step.date && <div className="text-xs text-muted-foreground">{step.date.split('T')[0]}</div>}
                     </div>
                     {i < timeline.length - 1 && <div className="text-muted-foreground">←</div>}
                   </div>
@@ -123,7 +123,7 @@ export function PaymentRequestsTab({
               </div>
 
               {req.justification && (
-                <div className="text-xs text-muted-foreground border-r-2 border-muted pr-2 mb-2">{req.justification}</div>
+                <div className="text-xs text-muted-foreground border-s-2 border-muted ps-2 mb-2">{req.justification}</div>
               )}
               {req.rejectionReason && (
                 <div className="text-xs text-red-600 mb-2">سبب الرفض: {req.rejectionReason}</div>
@@ -167,7 +167,7 @@ export function PaymentRequestsTab({
                         try { await schedulePaymentRequest(req.id, date); toast.success('تمت الجدولة'); }
                         catch (e) { toast.error(errorMessage(e)); }
                       }}>
-                      <CalendarClock className="h-4 w-4 ml-1" /> جدولة
+                      <CalendarClock className="h-4 w-4 me-1" /> جدولة
                     </Button>
                     <Button size="sm"
                       onClick={() => onPay(req.id)}>
@@ -189,7 +189,7 @@ export function PaymentRequestsTab({
                   </Button>
                 )}
                 {req.status === 'paid' && req.requestType === 'advance' && !req.isAdvanceOutstanding && req.advanceSettledAt && (
-                  <Badge variant="outline" className="text-emerald-600 border-emerald-300">
+                  <Badge variant="outline" className="text-success border-emerald-300">
                     {req.settlementType === 'cash_refund' ? 'رد نقدي' :
                      req.settlementType === 'payroll_deduction' ? 'تحوّلت إلى حافز' :
                      req.settlementType === 'written_off' ? 'مشطوبة' :

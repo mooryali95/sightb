@@ -99,7 +99,7 @@ export function InviteForm({ companies, projects, onInvited }: Props) {
             </SelectContent>
           </Select>
           {invRole && (
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {invRole === 'admin' && 'تحكم كامل: إنشاء/تعديل/حذف كل شيء + إدارة المستخدمين + التقارير'}
               {invRole === 'editor' && 'تعديل: إضافة/تعديل/حذف البيانات ضمن النطاق المحدد (بدون إدارة المستخدمين)'}
               {invRole === 'viewer' && 'مشاهدة فقط: عرض البيانات والتقارير بدون أي تعديل'}

@@ -25,7 +25,7 @@ export function GanttRow({ milestone: m, timeline, today, striped, onClick }: Ga
       style={{ minHeight: 40 }}
     >
       <div
-        className="w-36 shrink-0 px-3 py-1.5 border-l border-border cursor-pointer hover:text-primary transition-colors"
+        className="w-36 shrink-0 px-3 py-1.5 border-e border-border cursor-pointer hover:text-primary transition-colors"
         onClick={() => onClick?.(m)}
       >
         <div className="flex items-center gap-1.5">
@@ -41,7 +41,7 @@ export function GanttRow({ milestone: m, timeline, today, striped, onClick }: Ga
             <TooltipTrigger asChild>
               <div
                 className={cn(
-                  'absolute top-2 h-5 rounded-sm cursor-pointer transition-all hover:brightness-110',
+                  'absolute top-2 h-5 rounded-sm cursor-pointer transition hover:brightness-110',
                   STATUS_BAR_COLORS[m.status],
                 )}
                 style={{ right: planned.left, width: planned.width, minWidth: 4 }}
@@ -49,7 +49,7 @@ export function GanttRow({ milestone: m, timeline, today, striped, onClick }: Ga
               >
                 {m.percentComplete > 0 && m.percentComplete < 100 && (
                   <div
-                    className="absolute inset-y-0 right-0 rounded-sm bg-white/30 dark:bg-white/20"
+                    className="absolute inset-y-0 start-0 rounded-sm bg-white/30 dark:bg-white/20"
                     style={{ width: `${m.percentComplete}%` }}
                   />
                 )}

@@ -46,7 +46,7 @@ export function ResourceInspector({ resource: r, figures, linkedExpenses, durati
 
       {plannedForResource > 0 && (
         <InspectorSection title="نسبة الصرف">
-          <Progress value={Math.min(spentPct, 100)} className="h-2" />
+          <Progress value={Math.min(spentPct, 100)} aria-label="نسبة صرف المورد" className="h-2" />
           <p className="text-xs text-muted-foreground mt-1 tabular-nums">{spentPct.toFixed(1)}% من المخطط</p>
         </InspectorSection>
       )}
@@ -55,7 +55,7 @@ export function ResourceInspector({ resource: r, figures, linkedExpenses, durati
         <InspectorField label="المدة المعتمدة" value={`${durationMonths || 0} شهر`} mono />
         <InspectorField label="بنود الموازنة المرتبطة" value={linkedBudget.length} mono />
         {isEstimated && (
-          <p className="text-[11px] text-warning mt-1">* المخطط محسوب تقديرياً — لم يُربط ببند موازنة بعد.</p>
+          <p className="text-xs text-warning mt-1">* المخطط محسوب تقديرياً — لم يُربط ببند موازنة بعد.</p>
         )}
       </InspectorSection>
 
@@ -68,7 +68,7 @@ export function ResourceInspector({ resource: r, figures, linkedExpenses, durati
               <div key={e.id} className="flex items-center justify-between px-3 py-2 text-xs">
                 <div className="flex-1 min-w-0">
                   <p className="truncate font-medium">{e.description || '—'}</p>
-                  <p className="text-muted-foreground text-[10px] tabular-nums">{e.date}</p>
+                  <p className="text-muted-foreground text-xs tabular-nums">{e.date}</p>
                 </div>
                 <span className="tabular-nums font-medium">{formatCurrency(e.amount)}</span>
               </div>

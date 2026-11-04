@@ -143,7 +143,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
             <p>⚠️ {canCreate.reason}</p>
             {isAdmin && (
               <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-200/60 dark:border-amber-700/30">
-                <span className="text-[11px] opacity-80">للحالات الاضطرارية فقط — يُسجَّل في سجل التدقيق</span>
+                <span className="text-xs opacity-80">للحالات الاضطرارية فقط — يُسجَّل في سجل التدقيق</span>
                 <EmergencyFundDialog projectId={projectId} blockingFundNumber={canCreate.blockingFundNumber} />
               </div>
             )}

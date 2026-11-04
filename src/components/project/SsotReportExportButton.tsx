@@ -89,10 +89,10 @@ export function SsotReportExportButton({ project, audit, revenues, funds, settle
         <DropdownMenuLabel>ملخص الربحية + التسويات + مطابقة الخادم</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onCsv}>
-          <FileSpreadsheet className="w-4 h-4 ml-2" />تصدير CSV
+          <FileSpreadsheet className="w-4 h-4 me-2" />تصدير CSV
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void onPdf()}>
-          <FileText className="w-4 h-4 ml-2" />تصدير PDF
+          <FileText className="w-4 h-4 me-2" />تصدير PDF
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

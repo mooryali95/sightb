@@ -55,12 +55,12 @@ export function AuditFilters({ filter, onChange, count }: AuditFiltersProps) {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="stat-card space-y-3">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="بحث بالإيميل أو الاسم أو التفاصيل..."
             value={filter.query}
             onChange={(e) => onChange({ ...filter, query: e.target.value })}
-            className="pr-9 h-9 text-sm"
+            className="ps-9 h-9 text-sm"
           />
         </div>
       </div>
@@ -73,7 +73,7 @@ export function AuditFilters({ filter, onChange, count }: AuditFiltersProps) {
           onChange={(v) => onChange({ ...filter, action: v })}
           Icon={ArrowDownUp}
           activeClass="bg-foreground text-background"
-          className="mr-4"
+          className="ms-4"
         />
       </div>
 

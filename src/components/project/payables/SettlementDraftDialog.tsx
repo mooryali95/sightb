@@ -104,8 +104,8 @@ export function SettlementDraftDialog({
           </div>
           <div className="grid grid-cols-3 gap-3 p-3 bg-muted/30 rounded text-sm">
             <div><div className="text-muted-foreground">المستحق</div><div className="font-bold">{formatCurrency(sTotals.totalOwed)}</div></div>
-            <div><div className="text-muted-foreground">المدفوع</div><div className="font-bold text-emerald-600">{formatCurrency(sTotals.totalPaid)}</div></div>
-            <div><div className="text-muted-foreground">الرصيد</div><div className="font-bold text-amber-600">{formatCurrency(sTotals.balance)}</div></div>
+            <div><div className="text-muted-foreground">المدفوع</div><div className="font-bold text-success">{formatCurrency(sTotals.totalPaid)}</div></div>
+            <div><div className="text-muted-foreground">الرصيد</div><div className="font-bold text-warning">{formatCurrency(sTotals.balance)}</div></div>
           </div>
           <div>
             <Label>نص المخالصة</Label>
