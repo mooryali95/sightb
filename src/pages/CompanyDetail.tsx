@@ -31,7 +31,7 @@ import { buildCompanyExport } from './company/buildCompanyExport';
 import { CompanyLedgerSection } from './company/ledger/CompanyLedgerSection';
 import { RegistrySection } from './company/registry/RegistrySection';
 import { IntegrityCard } from './company/IntegrityCard';
-import { labelledSlices } from '@/components/charts/labelled-sector';
+import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
 import { countAr } from '@/lib/plural';
 
 /** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
@@ -277,13 +277,7 @@ export default function CompanyDetail() {
                     formatter={(value: number) => formatCurrency(value)}
                     contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}
                   />
-                  <Legend
-                    formatter={(value: string, entry) => (
-                      <span className="text-xs text-foreground">
-                        {value} ({Math.round(((entry.payload as { percent?: number })?.percent ?? 0) * 100)}%)
-                      </span>
-                    )}
-                  />
+                  <Legend formatter={pieLegendText('share')} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

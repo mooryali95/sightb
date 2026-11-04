@@ -60,8 +60,8 @@ async function hoverMonth(page: Page, month: string) {
 test('the pie and the bars read the counted spend and the planned profit by project', async ({ page }) => {
   await openCharts(page);
   const pie = card(page, 'توزيع المصروفات حسب المشروع');
-  await expect(pie.getByText('مشروع طويل: 6k')).toBeVisible();
-  await expect(pie.getByText('مشروع قصير: 2k')).toBeVisible();
+  await expect(pie.getByText('مشروع طويل (75%)')).toBeVisible();
+  await expect(pie.getByText('مشروع قصير (25%)')).toBeVisible();
   const bars = card(page, 'الربح المخطط لكل مشروع');
   const rects = bars.locator('.recharts-bar-rectangle');
   await expect(rects).toHaveCount(2);

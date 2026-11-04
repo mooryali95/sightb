@@ -10,7 +10,7 @@ import {
   ResponsiveContainer, LineChart, Line, Legend,
 } from 'recharts';
 import type { CashFlowPoint } from './portfolioFigures';
-import { labelledSlices } from '@/components/charts/labelled-sector';
+import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
 
 const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)', 'hsl(200, 70%, 50%)'];
 
@@ -29,10 +29,11 @@ export function PortfolioCharts({ pieData, barData, cashFlowData }: Props) {
             <h3 className="text-sm font-semibold mb-4">توزيع المصروفات حسب المشروع</h3>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
-                <Pie {...labelledSlices} data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" label={({ name, value }) => `${name}: ${(value / 1000).toFixed(0)}k`}>
+                <Pie {...labelledSlices} data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
                   {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }} />
+                <Legend formatter={pieLegendText('share')} />
               </PieChart>
             </ResponsiveContainer>
           </div>

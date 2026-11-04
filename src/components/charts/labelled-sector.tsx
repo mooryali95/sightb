@@ -18,3 +18,15 @@ export function labelledSector(props: SectorShapeProps) {
  * hovering still works, since the hovered slice is drawn the same way.
  */
 export const labelledSlices = { activeIndex: -1, activeShape: labelledSector, inactiveShape: labelledSector } as const;
+
+/**
+ * Slice names go in the legend, not on the ring, where they clipped and
+ * overlapped on a phone. `share` reads «مصروف (3%)», `count` «تشغيل (1)».
+ */
+export function pieLegendText(mode: 'share' | 'count') {
+  return (name: string, entry: { payload?: { percent?: number; value?: number } }) => (
+    <span className="text-xs text-foreground">
+      {name} ({mode === 'share' ? `${Math.round((entry.payload?.percent ?? 0) * 100)}%` : entry.payload?.value ?? 0})
+    </span>
+  );
+}

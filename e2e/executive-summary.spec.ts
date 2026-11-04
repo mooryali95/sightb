@@ -93,8 +93,8 @@ test("the month's performance reads the plan's share against the spend, for the 
 test('the budget, the milestones, the collection, the risks and the attention card read the project', async ({ page }) => {
   await openOverview(page);
   const budget = block(page, 'توزيع الموازنة');
-  await expect(budget.getByText('مصروف 19%')).toBeVisible();
-  await expect(budget.getByText('متاح 81%')).toBeVisible();
+  await expect(budget.getByText('مصروف (19%)')).toBeVisible();
+  await expect(budget.getByText('متاح (81%)')).toBeVisible();
   await expect(budget.getByText(/ملتزم|تجاوز/)).toHaveCount(0);
 
   const milestones = block(page, /^المراحل/);
@@ -139,5 +139,5 @@ test('a project with nothing pending shows no attention card and judges the rese
   await expect(page.getByRole('heading', { name: 'يحتاج تدخل' })).toHaveCount(0);
   await expect(block(page, 'المخاطر')).toContainText('✓ كافٍ');
   await expect(block(page, /^المراحل/).getByText('لا توجد مراحل')).toBeVisible();
-  await expect(block(page, 'توزيع الموازنة').getByText('متاح 100%')).toBeVisible();
+  await expect(block(page, 'توزيع الموازنة').getByText('متاح (100%)')).toBeVisible();
 });

@@ -16,7 +16,7 @@ export function NavItem({ collapsed, label, icon, active, onClick }: {
       className={cn(
         'relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
         collapsed && 'justify-center px-2',
-        active ? 'bg-primary/20 text-primary font-semibold border-s-2 border-primary' : 'text-sidebar-foreground hover:bg-sidebar-accent',
+        active ? 'bg-sidebar-primary/15 text-sidebar-primary font-semibold border-s-2 border-sidebar-primary' : 'text-sidebar-foreground hover:bg-sidebar-accent',
       )}
     >
       {icon}

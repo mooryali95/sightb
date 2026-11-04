@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, ReferenceLine, Legend,
 } from 'recharts';
-import { labelledSlices } from '@/components/charts/labelled-sector';
+import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
 
 const COLORS = [
   'hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)',
@@ -58,10 +58,11 @@ export function ChartsSection({ pieData, barData, expenses = [], totalPlanned = 
             <h3 className="text-sm font-semibold mb-4">المصروفات حسب الفئة</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie {...labelledSlices} data={pieData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                <Pie {...labelledSlices} data={pieData} cx="50%" cy="50%" outerRadius={100} dataKey="value">
                   {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                <Legend formatter={pieLegendText('share')} />
               </PieChart>
             </ResponsiveContainer>
           </div>

@@ -206,8 +206,8 @@
    * on tiles (StatCard), since containment would collapse a panel that sizes
    * to its content. */
   .stat-tile { container-type: inline-size; }
-  .stat-tile .stat-value { font-size: clamp(0.95rem, 8.5cqi, 1.5rem); }
-  .stat-tile .stat-value-hero { font-size: clamp(1.05rem, 9.5cqi, 1.875rem); }
+  .stat-tile .stat-value { font-size: clamp(0.8rem, 7.5cqi, 1.5rem); }
+  .stat-tile .stat-value-hero { font-size: clamp(0.9rem, 8.5cqi, 1.875rem); }
   @media (hover: hover) {
     .stat-card:hover {
       box-shadow: var(--shadow-elevated);
