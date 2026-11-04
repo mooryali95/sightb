@@ -54,7 +54,9 @@ vi.mock('sonner', () => ({
 vi.mock('@/lib/export-lazy', () => ({
   exportCompanyToExcel: vi.fn().mockResolvedValue(undefined),
   exportCompanyToPDF: vi.fn().mockResolvedValue(undefined),
+  exportUnifiedStatement: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('@/hooks/useParties', () => ({ useParties: () => ({ data: [] }) }));
 // The chart library measures its container, which jsdom cannot do. The
 // stand-in prints the series it was given, so the figures stay testable.
 vi.mock('recharts', () => ({

@@ -4,7 +4,7 @@
  * Read-only — nothing here changes data.
  */
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowDownUp, Info, Search, AlertTriangle, Download } from 'lucide-react';
 import { buildOverviewCsv, downloadCsv } from '@/pages/financial-overview/overviewCsv';
 import { Input } from '@/components/ui/input';
@@ -228,7 +228,7 @@ function Table({ rows, parentLabel }: { rows: Row[]; parentLabel?: string }) {
             const sp = spend(r);
             return (
               <tr key={r.id} onClick={() => navigate(r.href)} className="border-t border-border cursor-pointer hover:bg-muted/30">
-                <td className="p-3 font-medium">{r.name}</td>
+                <td className="p-3 font-medium"><Link to={r.href} onClick={(e) => e.stopPropagation()} className="hover:text-accent-text focus-visible:underline">{r.name}</Link></td>
                 {parentLabel && <td className="p-3 text-muted-foreground">{r.parent}</td>}
                 <td className="p-3 font-mono">{money(r.contract)}</td>
                 <td className="p-3 font-mono">{money(r.planned)}</td>
