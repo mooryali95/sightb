@@ -74,6 +74,10 @@ does not happen again.
      company page): every amount has a source, nothing twice, every custody
      and fund balances, every gap has its reason. An expense beyond its
      source books the source's part and owes the rest to whoever paid it.
+   - Role writes (`20261104090000_user_roles_policy_without_recursion.sql`,
+     `supabase/tests/roles.sql`): a policy on `user_roles` must never query
+     `user_roles` itself (42P17); ask `has_role()` instead. Its WITH CHECK
+     must require an admin on its own, since INSERT applies only WITH CHECK.
      A name on an expense is linked to a registry entry, never retyped.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
