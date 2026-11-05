@@ -25,6 +25,7 @@ import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage, todayLocal } from '@/lib/utils';
 import type { AvailableFund } from './CashTransferDialog';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   open: boolean;
@@ -42,7 +43,7 @@ interface Props {
 export function CustodyFormDialog({
   open, onOpenChange, onRequestOpen, editing, projectId, custodies, expenses, availableFunds, isAdmin,
 }: Props) {
-  const { addCustody, updateCustody } = useStore();
+  const { addCustody, updateCustody } = useStore(useShallow((s) => ({ addCustody: s.addCustody, updateCustody: s.updateCustody })));
 
   const editingId = editing?.id ?? null;
   const [resourceName, setResourceName] = useState(editing?.resourceName ?? '');

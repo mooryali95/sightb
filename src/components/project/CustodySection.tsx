@@ -19,6 +19,7 @@ import { CustodyFormDialog } from './custody/CustodyFormDialog';
 import { CashTransferDialog } from './custody/CashTransferDialog';
 import { CustodyInspector } from './custody/CustodyInspector';
 import { enrichCustody } from './custody/enrichCustody';
+import { useShallow } from 'zustand/react/shallow';
 
 interface CustodySectionProps {
   projectId: string;
@@ -29,7 +30,7 @@ interface CustodySectionProps {
 }
 
 export function CustodySection({ projectId, companyId, custodies, expenses, readOnly = false }: CustodySectionProps) {
-  const { updateCustody, deleteCustody, projectFunds, paymentRequests, cashTransfers } = useStore();
+  const { updateCustody, deleteCustody, projectFunds, paymentRequests, cashTransfers } = useStore(useShallow((s) => ({ updateCustody: s.updateCustody, deleteCustody: s.deleteCustody, projectFunds: s.projectFunds, paymentRequests: s.paymentRequests, cashTransfers: s.cashTransfers })));
   const projPRs = useMemo(() => paymentRequests.filter((p) => p.projectId === projectId), [paymentRequests, projectId]);
   const projTransfers = useMemo(
     () => (cashTransfers || []).filter((t) => t.projectId === projectId),

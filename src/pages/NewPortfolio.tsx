@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { FolderKanban } from 'lucide-react';
 import { toast } from 'sonner';
 import { portfolioSchema } from '@/lib/validations';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function NewPortfolio() {
   const [searchParams] = useSearchParams();
@@ -19,7 +20,7 @@ export default function NewPortfolio() {
   const [description, setDescription] = useState('');
   const [companyId, setCompanyId] = useState(searchParams.get('company') || '');
   const [loading, setLoading] = useState(false);
-  const { companies, addPortfolio, loadAll } = useStore();
+  const { companies, addPortfolio, loadAll } = useStore(useShallow((s) => ({ companies: s.companies, addPortfolio: s.addPortfolio, loadAll: s.loadAll })));
   const { isAdmin, canEdit } = useRole();
   const navigate = useNavigate();
 

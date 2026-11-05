@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { RegistryNamePicker } from '@/components/registry/RegistryNamePicker';
+import { useShallow } from 'zustand/react/shallow';
 
 /** What the section needs to offer a budget item for a resource just added. */
 export interface AddedResource {
@@ -39,7 +40,7 @@ interface Props {
 }
 
 export function ResourceFormDialog({ open, onOpenChange, onRequestOpen, editing, projectId, onAdded }: Props) {
-  const { addResource, updateResource } = useStore();
+  const { addResource, updateResource } = useStore(useShallow((s) => ({ addResource: s.addResource, updateResource: s.updateResource })));
   const editingId = editing?.id ?? null;
   const [name, setName] = useState(editing?.name ?? '');
   const [role, setRole] = useState(editing?.role ?? '');

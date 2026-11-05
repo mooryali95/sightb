@@ -26,6 +26,7 @@ import { ReviewForm } from './mobile/ReviewForm';
 import { SaveBar } from './mobile/SaveBar';
 import { applyReading, blobToBase64, emptyReceiptForm, type ExtractedReceipt, type ReceiptForm } from './mobile/receiptForm';
 import { logger } from '@/lib/logger';
+import { useShallow } from 'zustand/react/shallow';
 
 type Step = 'capture' | 'analyzing' | 'review' | 'saving';
 
@@ -34,7 +35,7 @@ export default function MobileExpenseCapture() {
   const [params] = useSearchParams();
   const preselectedProject = params.get('project') || '';
   const { user } = useAuth();
-  const { projects, addExpense, expenses, projectFunds, custodies, paymentRequests, cashTransfers } = useStore();
+  const { projects, addExpense, expenses, projectFunds, custodies, paymentRequests, cashTransfers } = useStore(useShallow((s) => ({ projects: s.projects, addExpense: s.addExpense, expenses: s.expenses, projectFunds: s.projectFunds, custodies: s.custodies, paymentRequests: s.paymentRequests, cashTransfers: s.cashTransfers })));
 
   const [step, setStep] = useState<Step>('capture');
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);

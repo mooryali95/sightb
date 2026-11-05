@@ -27,9 +27,10 @@ import { useCoreData, useDetailsData } from '@/hooks/useAppData';
 import { dashboardFigures } from './dashboard/dashboardFigures';
 import { FinancialBrief } from '@/components/dashboard/FinancialBrief';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function Dashboard() {
-  const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore();
+  const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore(useShallow((s) => ({ companies: s.companies, portfolios: s.portfolios, projects: s.projects, budgetItems: s.budgetItems, expenses: s.expenses, revenues: s.revenues, changeOrders: s.changeOrders, milestones: s.milestones, risks: s.risks, indirectCosts: s.indirectCosts, loading: s.loading, loadAll: s.loadAll, saveSnapshot: s.saveSnapshot, archiveCompany: s.archiveCompany, unarchiveCompany: s.unarchiveCompany, deleteCompany: s.deleteCompany })));
   const navigate = useNavigate();
   const { isAdmin } = useRole();
   const isMobile = useIsMobile();

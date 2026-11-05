@@ -4,6 +4,7 @@ import { useRole } from '@/hooks/useRole';
 import { useCoreData, useProjectData } from '@/hooks/useAppData';
 import { getProjectSummary, getExpensesByCategory, getMonthlyBreakdown, calculateEVM, getCurrentMonth, getCountedExpenses } from '@/lib/finance';
 import { EXPENSE_CATEGORY_LABELS, type BudgetItem, type ExpenseCategory } from '@/types/project';
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * Single data entry point for the project detail page.
@@ -19,9 +20,9 @@ export function useProjectDetailData(id: string | undefined) {
     milestones, changeOrders, risks, baselines, commitments,
     projectFunds, fundSettlements, paymentRequests, cashTransfers,
     loadAll, updateProject, archiveProject, deleteProject,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ projects: s.projects, companies: s.companies, portfolios: s.portfolios, budgetItems: s.budgetItems, expenses: s.expenses, revenues: s.revenues, resources: s.resources, custodies: s.custodies, milestones: s.milestones, changeOrders: s.changeOrders, risks: s.risks, baselines: s.baselines, commitments: s.commitments, projectFunds: s.projectFunds, fundSettlements: s.fundSettlements, paymentRequests: s.paymentRequests, cashTransfers: s.cashTransfers, loadAll: s.loadAll, updateProject: s.updateProject, archiveProject: s.archiveProject, deleteProject: s.deleteProject })));
 
-  const { detailsLoaded, subscribeToProject, ensureProjectCashData, loadBaselines, loading: storeLoading } = useStore();
+  const { detailsLoaded, subscribeToProject, ensureProjectCashData, loadBaselines, loading: storeLoading } = useStore(useShallow((s) => ({ detailsLoaded: s.detailsLoaded, subscribeToProject: s.subscribeToProject, ensureProjectCashData: s.ensureProjectCashData, loadBaselines: s.loadBaselines, loading: s.loading })));
 
   useCoreData();
   useProjectData(detailsLoaded ? undefined : id);

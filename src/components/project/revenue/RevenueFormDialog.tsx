@@ -28,6 +28,7 @@ import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage, todayLocal } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   open: boolean;
@@ -45,7 +46,7 @@ interface Props {
 export function RevenueFormDialog({
   open, onOpenChange, onRequestOpen, editing, projectId, durationMonths, taxPercent, milestones,
 }: Props) {
-  const { addRevenue, updateRevenue } = useStore();
+  const { addRevenue, updateRevenue } = useStore(useShallow((s) => ({ addRevenue: s.addRevenue, updateRevenue: s.updateRevenue })));
   const editingId = editing?.id ?? null;
   const [description, setDescription] = useState(editing?.description ?? '');
   const [amount, setAmount] = useState(editing ? String(editing.amount) : '');

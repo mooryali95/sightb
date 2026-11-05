@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   /** The settlement being rejected; the dialog is closed when null. */
@@ -21,7 +22,7 @@ interface Props {
 }
 
 export function RejectSettlementDialog({ settlementId, onClose }: Props) {
-  const { rejectSettlement } = useStore();
+  const { rejectSettlement } = useStore(useShallow((s) => ({ rejectSettlement: s.rejectSettlement })));
   const [rejectReason, setRejectReason] = useState('');
 
   const handleReject = async () => {

@@ -28,6 +28,7 @@ import {
   type PaymentRequest,
   type Resource,
 } from '@/types/project';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   projReqs: PaymentRequest[];
@@ -56,7 +57,7 @@ export function PaymentRequestsTab({
   const {
     reviewPaymentRequest, approvePaymentRequest, schedulePaymentRequest,
     cancelPaymentRequest, deletePaymentRequest,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ reviewPaymentRequest: s.reviewPaymentRequest, approvePaymentRequest: s.approvePaymentRequest, schedulePaymentRequest: s.schedulePaymentRequest, cancelPaymentRequest: s.cancelPaymentRequest, deletePaymentRequest: s.deletePaymentRequest })));
 
   return (
     <div className="space-y-3">

@@ -13,11 +13,12 @@ import { InviteForm } from './users/InviteForm';
 import { InvitesLog } from './users/InvitesLog';
 import { UsersList } from './users/UsersList';
 import type { Invite, InviteDeliveryStatus, Profile, RoleEntry } from './users/labels';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function UserManagement() {
   const { user } = useAuth();
   const { isAdmin, isOwner, loading: roleLoading } = useRole();
-  const { companies, projects } = useStore();
+  const { companies, projects } = useStore(useShallow((s) => ({ companies: s.companies, projects: s.projects })));
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [allRoles, setAllRoles] = useState<RoleEntry[]>([]);

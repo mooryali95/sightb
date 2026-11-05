@@ -24,6 +24,7 @@ import {
   type PaymentRequest,
   type ResourceReimbursement,
 } from '@/types/project';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   /** The request being re-linked; the dialog is closed when absent. */
@@ -33,7 +34,7 @@ interface Props {
 }
 
 export function EditLinksDialog({ request, projReimbs, onClose }: Props) {
-  const { updatePaymentRequest } = useStore();
+  const { updatePaymentRequest } = useStore(useShallow((s) => ({ updatePaymentRequest: s.updatePaymentRequest })));
 
   const [editLinkedIds, setEditLinkedIds] = useState<string[]>([...(request?.linkedReimbursementIds || [])]);
   const [editDescription, setEditDescription] = useState(request?.description || '');

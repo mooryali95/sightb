@@ -21,6 +21,7 @@ import { Pencil, Eye } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { RevenueFormDialog } from './revenue/RevenueFormDialog';
 import { RevenueInspector } from './revenue/RevenueInspector';
+import { useShallow } from 'zustand/react/shallow';
 
 interface RevenueSectionProps {
   projectId: string;
@@ -32,7 +33,7 @@ interface RevenueSectionProps {
 }
 
 export function RevenueSection({ projectId, revenues, durationMonths, readOnly = false, taxPercent = 0, milestones }: RevenueSectionProps) {
-  const { deleteRevenue } = useStore();
+  const { deleteRevenue } = useStore(useShallow((s) => ({ deleteRevenue: s.deleteRevenue })));
   const form = useDialogSession<{ revenue?: Revenue }>();
   const inspector = useDialogSession<string>();
 

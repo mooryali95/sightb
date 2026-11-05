@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { buildNotifications, groupNotifications, TYPE_LABELS, type Notification } from './notifications/buildNotifications';
+import { useShallow } from 'zustand/react/shallow';
 
 const STORAGE_KEY = 'sightb_read_notifications';
 
@@ -36,7 +37,7 @@ function persistRead(s: Set<string>) {
 }
 
 export function SmartNotifications() {
-  const { projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, paymentRequests } = useStore();
+  const { projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, paymentRequests } = useStore(useShallow((s) => ({ projects: s.projects, budgetItems: s.budgetItems, expenses: s.expenses, revenues: s.revenues, changeOrders: s.changeOrders, milestones: s.milestones, risks: s.risks, paymentRequests: s.paymentRequests })));
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(getRead());

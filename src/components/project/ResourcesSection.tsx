@@ -18,6 +18,7 @@ import { ResourceFormDialog, type AddedResource } from './resources/ResourceForm
 import { ResourceInspector } from './resources/ResourceInspector';
 import { BudgetItemPrompt } from './resources/BudgetItemPrompt';
 import { resourceFigures } from './resources/resourceFigures';
+import { useShallow } from 'zustand/react/shallow';
 
 interface ResourcesSectionProps {
   projectId: string;
@@ -29,7 +30,7 @@ interface ResourcesSectionProps {
 }
 
 export function ResourcesSection({ projectId, resources, budgetItems = [], expenses: propExpenses, readOnly = false, durationMonths = 0 }: ResourcesSectionProps) {
-  const { deleteResource, expenses: storeExpenses } = useStore();
+  const { deleteResource, expenses: storeExpenses } = useStore(useShallow((s) => ({ deleteResource: s.deleteResource, expenses: s.expenses })));
   // Remounted on open so an edit starts from the row and an add starts blank; see useDialogSession.
   const form = useDialogSession<{ resource?: Resource }>();
   const [inspectorId, setInspectorId] = useState<string | null>(null);

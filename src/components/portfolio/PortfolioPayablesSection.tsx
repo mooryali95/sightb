@@ -10,6 +10,7 @@ import {
 } from '@/lib/resource-payables';
 import type { Project } from '@/types/project';
 import { Users, Store, Wallet, ArrowLeft } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   projects: Project[];
@@ -23,7 +24,7 @@ const PENDING_STATUSES = ['submitted', 'under_review', 'approved', 'scheduled'];
  */
 export function PortfolioPayablesSection({ projects }: Props) {
   const navigate = useNavigate();
-  const { resources, reimbursements, paymentRequests, resourceSettlements } = useStore();
+  const { resources, reimbursements, paymentRequests, resourceSettlements } = useStore(useShallow((s) => ({ resources: s.resources, reimbursements: s.reimbursements, paymentRequests: s.paymentRequests, resourceSettlements: s.resourceSettlements })));
 
   const rows = useMemo(() => projects.map((p) => {
     const projReimbs = reimbursements.filter((r) => r.projectId === p.id);

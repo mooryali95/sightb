@@ -6,6 +6,7 @@ import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
   BreadcrumbPage, BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Crumb {
   label: string;
@@ -19,7 +20,7 @@ interface Crumb {
  */
 export function AppBreadcrumb() {
   const location = useLocation();
-  const { companies, portfolios, projects } = useStore();
+  const { companies, portfolios, projects } = useStore(useShallow((s) => ({ companies: s.companies, portfolios: s.portfolios, projects: s.projects })));
 
   const crumbs = useMemo<Crumb[]>(() => {
     const path = location.pathname;

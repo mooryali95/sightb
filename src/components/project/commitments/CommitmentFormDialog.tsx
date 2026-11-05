@@ -22,6 +22,7 @@ import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { runOrToast } from '@/lib/run-or-toast';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   open: boolean;
@@ -37,7 +38,7 @@ interface Props {
 }
 
 export function CommitmentFormDialog({ open, onOpenChange, onRequestOpen, editing, projectId, commitments, totalPlanned }: Props) {
-  const { addCommitment, updateCommitment } = useStore();
+  const { addCommitment, updateCommitment } = useStore(useShallow((s) => ({ addCommitment: s.addCommitment, updateCommitment: s.updateCommitment })));
   const editingId = editing?.id ?? null;
   const [description, setDescription] = useState(editing?.description ?? '');
   const [vendorName, setVendorName] = useState(editing?.vendorName ?? '');

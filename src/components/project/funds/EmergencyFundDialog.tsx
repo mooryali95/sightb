@@ -15,6 +15,7 @@ import {
 import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage, todayLocal } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   projectId: string;
@@ -23,7 +24,7 @@ interface Props {
 }
 
 export function EmergencyFundDialog({ projectId, blockingFundNumber }: Props) {
-  const { createFund } = useStore();
+  const { createFund } = useStore(useShallow((s) => ({ createFund: s.createFund })));
 
   const [emergencyOpen, setEmergencyOpen] = useState(false);
   const [emAmount, setEmAmount] = useState('');

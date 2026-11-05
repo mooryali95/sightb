@@ -8,7 +8,15 @@ import { addVAT, calcVAT } from './vat';
  * these; scripts/ssot-guard.sh fails the build on a hand-copied version.
  */
 type RevenueLike = Pick<Revenue, 'status' | 'amount'>;
-const sum = (rows: { amount: number }[]) => rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+/**
+ * A sum of money, rounded to the halala. Adding floats leaves tails such as
+ * 310499.16000000003, which an export carries into Excel and a comparison can
+ * trip on; the books are kept to the halala, so the total is too.
+ */
+export function sumMoney(rows: { amount: number | string | null | undefined }[]): number {
+  return Math.round(rows.reduce((s, r) => s + (Number(r.amount) || 0), 0) * 100) / 100;
+}
+const sum = sumMoney;
 /** Cash received: revenues marked collected. */
 export function getCollectedRevenue(revenues: RevenueLike[]): number {
   return sum(revenues.filter((r) => r.status === 'collected'));
@@ -36,7 +44,7 @@ export function getProjectSummary(
 ): ProjectSummary {
   const totalPlanned = getTotalPlanned(budgetItems);
   // استبعاد المرفوضات + السلف غير المسوّاة (Outstanding Advances) من AC
-  const totalActual = getCountedExpenses(expenses).reduce((sum, e) => sum + e.amount, 0);
+  const totalActual = sumMoney(getCountedExpenses(expenses));
 
   const effectiveContractValue = getEffectiveContractValue(project.contractValue, changeOrders);
   const budgetRemaining = totalPlanned - totalActual;

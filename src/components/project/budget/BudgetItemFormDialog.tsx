@@ -24,6 +24,7 @@ import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { runOrToast } from '@/lib/run-or-toast';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   open: boolean;
@@ -39,7 +40,7 @@ interface Props {
 export function BudgetItemFormDialog({
   open, onOpenChange, onRequestOpen, editing, projectId, durationMonths, resources,
 }: Props) {
-  const { addBudgetItem, updateBudgetItem } = useStore();
+  const { addBudgetItem, updateBudgetItem } = useStore(useShallow((s) => ({ addBudgetItem: s.addBudgetItem, updateBudgetItem: s.updateBudgetItem })));
   const editingId = editing?.id ?? null;
   const [category, setCategory] = useState<ExpenseCategory>(editing?.category ?? 'salary');
   const [description, setDescription] = useState(editing?.description ?? '');

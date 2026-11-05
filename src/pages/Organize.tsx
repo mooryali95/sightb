@@ -30,13 +30,14 @@ import { normalizeArabicName } from '@/lib/resource-spend';
 import { PROJECT_STATUS_LABELS, type Project } from '@/types/project';
 import { planMove, placementKey, placementOf, type MovePlan, type Placement } from '@/lib/project-placement';
 import { countAr } from '@/lib/plural';
+import { useShallow } from 'zustand/react/shallow';
 
 const FINISHED = ['completed', 'archived', 'cancelled'];
 
 export default function Organize() {
   useCoreData();
   const navigate = useNavigate();
-  const { companies, portfolios, projects, loading } = useStore();
+  const { companies, portfolios, projects, loading } = useStore(useShallow((s) => ({ companies: s.companies, portfolios: s.portfolios, projects: s.projects, loading: s.loading })));
   const moveProject = useStore((s) => s.moveProject);
   const { canEdit, isAdmin } = useRole();
   const [query, setQuery] = useState('');

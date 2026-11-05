@@ -12,6 +12,7 @@ import { SourceOfTruthSection } from '@/components/project/SourceOfTruthSection'
 import { CashRepairLogSection } from '@/components/project/CashRepairLogSection';
 import { CashRepairStatusBar } from '@/components/project/CashRepairStatusBar';
 import { SpendConsistencyChart } from '@/components/project/SpendConsistencyChart';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function ControlCenter() {
   const { isOwner, loading: roleLoading } = useRole();
@@ -20,7 +21,7 @@ export default function ControlCenter() {
   const selectedId = projectId || projects[0]?.id || '';
   useCoreData();
   useProjectData(selectedId || undefined);
-  const { ensureProjectCashData, loadBaselines } = useStore();
+  const { ensureProjectCashData, loadBaselines } = useStore(useShallow((s) => ({ ensureProjectCashData: s.ensureProjectCashData, loadBaselines: s.loadBaselines })));
 
   useEffect(() => {
     if (!selectedId) return;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore, type AuditRecord } from '@/store/useStore';
 import { formatCurrency } from '@/lib/finance';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@/types/project';
+import { useShallow } from 'zustand/react/shallow';
 
 const TABLE_NAME_LABELS: Record<string, string> = {
   expenses: 'مصروف',
@@ -38,7 +39,7 @@ interface AuditLogSectionProps {
 }
 
 export function AuditLogSection({ projectId }: AuditLogSectionProps) {
-  const { auditLog, loadAuditLog } = useStore();
+  const { auditLog, loadAuditLog } = useStore(useShallow((s) => ({ auditLog: s.auditLog, loadAuditLog: s.loadAuditLog })));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

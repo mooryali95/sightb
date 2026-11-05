@@ -17,6 +17,7 @@ import { BudgetItemFormDialog } from './budget/BudgetItemFormDialog';
 import { BudgetPlanningSummary } from './budget/BudgetPlanningSummary';
 import { ReservesCard } from './budget/ReservesCard';
 import { runOrToast } from '@/lib/run-or-toast';
+import { useShallow } from 'zustand/react/shallow';
 
 interface BudgetSectionProps {
   projectId: string;
@@ -35,7 +36,7 @@ interface BudgetSectionProps {
 }
 
 export function BudgetSection({ projectId, budgetItems, expenses, revenues = [], durationMonths, resources, contractValue, currency, managementReserve = 0, readOnly = false, baselineLocked = false, taxPercent = 15, startDate }: BudgetSectionProps) {
-  const { deleteBudgetItem, updateExpense, paymentRequests } = useStore();
+  const { deleteBudgetItem, updateExpense, paymentRequests } = useStore(useShallow((s) => ({ deleteBudgetItem: s.deleteBudgetItem, updateExpense: s.updateExpense, paymentRequests: s.paymentRequests })));
   const { total: outstandingAdvancesTotal, count: outstandingAdvancesCount } = getProjectOutstandingAdvances(projectId, paymentRequests);
   const [activeDraft, setActiveDraft] = useState<BudgetAmendment | null>(null);
   // الموازنة مفتوحة للتعديل عند: عدم القفل، أو وجود مسودة تعديل نشطة

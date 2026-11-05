@@ -36,6 +36,7 @@ import { EditLinksDialog } from './payables/EditLinksDialog';
 import { RejectDialog } from './payables/RejectDialog';
 import { SettlementDraftDialog } from './payables/SettlementDraftDialog';
 import { useDialogSession } from '@/hooks/useDialogSession';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   projectId: string;
@@ -51,7 +52,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   const {
     projectFunds, custodies, expenses, settlementEvents, loadSettlementEventsForRequest,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ projectFunds: s.projectFunds, custodies: s.custodies, expenses: s.expenses, settlementEvents: s.settlementEvents, loadSettlementEventsForRequest: s.loadSettlementEventsForRequest })));
 
   const {
     scope, setScope,

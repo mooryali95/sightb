@@ -24,6 +24,7 @@ import { FormFooter } from '@/components/FormFooter';
 import { Plus, X, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { todayLocal } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   open: boolean;
@@ -36,7 +37,7 @@ interface Props {
 }
 
 export function ChangeOrderFormDialog({ open, onOpenChange, onRequestOpen, editing, projectId }: Props) {
-  const { addChangeOrder, updateChangeOrder } = useStore();
+  const { addChangeOrder, updateChangeOrder } = useStore(useShallow((s) => ({ addChangeOrder: s.addChangeOrder, updateChangeOrder: s.updateChangeOrder })));
   const editingId = editing?.id ?? null;
   const [description, setDescription] = useState(editing?.description ?? '');
   const [changeType, setChangeType] = useState<ChangeOrderType>(editing?.changeType ?? 'scope_addition');

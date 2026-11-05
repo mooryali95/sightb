@@ -23,6 +23,7 @@ import type { ExpenseCategory, ResourceReimbursement } from '@/types/project';
 import { getCustodyBreakdown, getFundRemainingBreakdown } from '@/lib/funds';
 import { getProjectMonth } from '@/lib/finance';
 import { errorMessage, todayLocal } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   payable: ResourceReimbursement;
@@ -31,7 +32,7 @@ interface Props {
 }
 
 export function SettleVendorPayableDialog({ payable, projectId, onClose }: Props) {
-  const { projectFunds, custodies, expenses, cashTransfers, paymentRequests, projects, addExpense } = useStore();
+  const { projectFunds, custodies, expenses, cashTransfers, paymentRequests, projects, addExpense } = useStore(useShallow((s) => ({ projectFunds: s.projectFunds, custodies: s.custodies, expenses: s.expenses, cashTransfers: s.cashTransfers, paymentRequests: s.paymentRequests, projects: s.projects, addExpense: s.addExpense })));
   const project = projects.find((p) => p.id === projectId);
   const projTransfers = useMemo(() => (cashTransfers || []).filter((t) => t.projectId === projectId), [cashTransfers, projectId]);
   const projRequests = useMemo(() => (paymentRequests || []).filter((q) => q.projectId === projectId), [paymentRequests, projectId]);

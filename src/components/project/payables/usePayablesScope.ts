@@ -17,11 +17,12 @@ import {
   filterResourceReimbursements,
   filterVendorReimbursements,
 } from '@/lib/resource-payables';
+import { useShallow } from 'zustand/react/shallow';
 
 export type PayablesScope = 'resource' | 'vendor';
 
 export function usePayablesScope(projectId: string) {
-  const { resources, reimbursements, paymentRequests, resourceSettlements, budgetItems } = useStore();
+  const { resources, reimbursements, paymentRequests, resourceSettlements, budgetItems } = useStore(useShallow((s) => ({ resources: s.resources, reimbursements: s.reimbursements, paymentRequests: s.paymentRequests, resourceSettlements: s.resourceSettlements, budgetItems: s.budgetItems })));
 
   const [scope, setScope] = useState<PayablesScope>('resource');
 
