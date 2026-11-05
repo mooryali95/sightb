@@ -49,6 +49,9 @@ test('plots each live project with spend or progress at its rates, coloured by h
   await hoverPoint(AMBER);
   await expect(tooltip).toContainText('مشروع كهرماني');
   await expect(tooltip).toContainText('الصرف: 100% · الإنجاز: 75%');
+  // The two points share a spend rate, so the amber tooltip can sit over the
+  // red point; leave the chart before pointing at the next one.
+  await page.mouse.move(0, 0);
   await hoverPoint(RED);
   await expect(tooltip).toContainText('مشروع أحمر');
   await expect(tooltip).toContainText('الصرف: 100% · الإنجاز: 50%');

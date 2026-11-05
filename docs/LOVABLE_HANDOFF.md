@@ -100,6 +100,11 @@ does not happen again.
      `pe-`, `start-`, `end-`, `text-start`), never `ml-`/`mr-`/`left-`/
      `right-`; give every icon button an `aria-label` or `title`; never
      put `letter-spacing` on Arabic text.
+   - Mobile responsiveness: `src/hooks/use-mobile.tsx` reads the viewport
+     with `useSyncExternalStore`, so a phone renders the phone layout from
+     the first frame; do not restore the stock hook that starts at false.
+     The dashboard's charts load through `DeferUntilVisible`
+     (`src/components/ui/defer-until-visible.tsx`); keep them lazy.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

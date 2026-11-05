@@ -6,16 +6,15 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy } from 'react';
+import { DeferUntilVisible } from '@/components/ui/defer-until-visible';
 import { useIsMobile } from '@/hooks/use-mobile';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 import { useRole } from '@/hooks/useRole';
 
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
-import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { PortfolioPerformance } from '@/components/dashboard/PortfolioPerformance';
-import { HealthMatrix } from '@/components/dashboard/HealthMatrix';
 import { AttentionProjects } from '@/components/dashboard/AttentionProjects';
 import { ProjectCards } from '@/components/dashboard/ProjectCards';
 import { ProjectsTable } from '@/components/dashboard/ProjectsTable';
@@ -28,6 +27,10 @@ import { dashboardFigures } from './dashboard/dashboardFigures';
 import { FinancialBrief } from '@/components/dashboard/FinancialBrief';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { useShallow } from 'zustand/react/shallow';
+
+// The charts library loads with these sections, not with the page.
+const DashboardCharts = lazy(() => import('@/components/dashboard/DashboardCharts').then((m) => ({ default: m.DashboardCharts })));
+const HealthMatrix = lazy(() => import('@/components/dashboard/HealthMatrix').then((m) => ({ default: m.HealthMatrix })));
 
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore(useShallow((s) => ({ companies: s.companies, portfolios: s.portfolios, projects: s.projects, budgetItems: s.budgetItems, expenses: s.expenses, revenues: s.revenues, changeOrders: s.changeOrders, milestones: s.milestones, risks: s.risks, indirectCosts: s.indirectCosts, loading: s.loading, loadAll: s.loadAll, saveSnapshot: s.saveSnapshot, archiveCompany: s.archiveCompany, unarchiveCompany: s.unarchiveCompany, deleteCompany: s.deleteCompany })));
@@ -145,7 +148,9 @@ export default function Dashboard() {
               risks={risks} projects={projects} portfolios={portfolios}
             />
 
-            <DashboardCharts companyData={companyData} statusData={statusData} />
+            {(companyData.length > 0 || statusData.length > 0) && (
+              <DeferUntilVisible minHeight={330}><DashboardCharts companyData={companyData} statusData={statusData} /></DeferUntilVisible>
+            )}
 
             <PortfolioPerformance
               portfolios={filteredPortfolios} companies={companies} projects={filteredProjects}
@@ -153,10 +158,14 @@ export default function Dashboard() {
               changeOrders={filteredChangeOrders} milestones={filteredMilestones} risks={filteredRisks}
             />
 
-            <HealthMatrix
-              filteredProjects={filteredProjects} expenses={filteredAllExpenses}
-              budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
-            />
+            {filteredProjects.length >= 2 && (
+              <DeferUntilVisible minHeight={400}>
+                <HealthMatrix
+                  filteredProjects={filteredProjects} expenses={filteredAllExpenses}
+                  budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
+                />
+              </DeferUntilVisible>
+            )}
 
             <SnapshotControls
               projects={projects} portfolios={portfolios} companies={companies}

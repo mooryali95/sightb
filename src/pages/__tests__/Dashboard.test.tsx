@@ -106,7 +106,8 @@ function renderDashboard(at = '/') {
   return render(<MemoryRouter initialEntries={[at]}><Dashboard /><Where /></MemoryRouter>);
 }
 const stats = () => JSON.parse(screen.getByTestId('stats').textContent || '{}') as Record<string, unknown>;
-const charts = () => JSON.parse(screen.getByTestId('charts').textContent || '{}') as { companyData: { name: string; value: number }[]; statusData: { name: string; value: number }[] };
+// The charts load lazily, so they arrive a tick after the page.
+const charts = async () => JSON.parse((await screen.findByTestId('charts')).textContent || '{}') as { companyData: { name: string; value: number }[]; statusData: { name: string; value: number }[] };
 
 beforeEach(() => {
   useStore.setState({
@@ -116,7 +117,7 @@ beforeEach(() => {
 });
 
 describe('the default view', () => {
-  it('shows the live projects of live companies only, and their figures', () => {
+  it('shows the live projects of live companies only, and their figures', async () => {
     renderDashboard();
     // p2 is completed and p3 belongs to an archived company; both hidden by default.
     expect(screen.getByTestId('counts')).toHaveTextContent('1/1');
@@ -130,17 +131,17 @@ describe('the default view', () => {
     expect(s.plannedProfitMargin).toBeCloseTo(72.73, 1);
     expect(s.collectedRevenue).toBe(26000);
     expect(s.expenseChange).toBeNull();
-    expect(charts().companyData).toEqual([{ name: 'شركة نشطة', value: 14000 }]);
-    expect(charts().statusData).toEqual([{ name: PROJECT_STATUS_LABELS.active, value: 1 }]);
+    expect((await charts()).companyData).toEqual([{ name: 'شركة نشطة', value: 14000 }]);
+    expect((await charts()).statusData).toEqual([{ name: PROJECT_STATUS_LABELS.active, value: 1 }]);
   });
 
-  it('brings the inactive projects in on request', () => {
+  it('brings the inactive projects in on request', async () => {
     renderDashboard();
     fireEvent.click(screen.getByRole('button', { name: 'inactive:on' }));
     expect(screen.getByTestId('counts')).toHaveTextContent('2/3');
     expect(stats().totalExpenses).toBe(19000);
     expect(stats().totalContractValue).toBe(140000);
-    expect(charts().statusData).toEqual([
+    expect((await charts()).statusData).toEqual([
       { name: PROJECT_STATUS_LABELS.active, value: 1 }, { name: PROJECT_STATUS_LABELS.completed, value: 1 },
     ]);
     fireEvent.click(screen.getByRole('button', { name: 'search:البلدية' }));
@@ -148,17 +149,17 @@ describe('the default view', () => {
     expect(stats().totalExpenses).toBe(5000);
   });
 
-  it('shows an archived company\'s projects only when that company is chosen', () => {
+  it('shows an archived company\'s projects only when that company is chosen', async () => {
     renderDashboard();
     fireEvent.click(screen.getByRole('button', { name: 'company:c2' }));
     expect(screen.getByTestId('counts')).toHaveTextContent('1/1');
     expect(stats().totalExpenses).toBe(7000);
-    expect(charts().companyData).toEqual([{ name: 'شركة مؤرشفة', value: 7000 }]);
+    expect((await charts()).companyData).toEqual([{ name: 'شركة مؤرشفة', value: 7000 }]);
   });
 });
 
 describe('a period', () => {
-  it('narrows the expenses and the collected revenue to the period, compares with the one before, and keeps the chart on the same rows', () => {
+  it('narrows the expenses and the collected revenue to the period, compares with the one before, and keeps the chart on the same rows', async () => {
     renderDashboard();
     fireEvent.click(screen.getByRole('button', { name: 'period:month' }));
     const s = stats();
@@ -171,7 +172,7 @@ describe('a period', () => {
     // The planned figures are not dated: the contract and the budget stay whole.
     expect(s.effectiveTotalContract).toBe(110000);
     expect(s.plannedProfit).toBe(80000);
-    expect(charts().companyData).toEqual([{ name: 'شركة نشطة', value: 10000 }]);
+    expect((await charts()).companyData).toEqual([{ name: 'شركة نشطة', value: 10000 }]);
   });
 });
 

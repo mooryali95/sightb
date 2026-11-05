@@ -72,7 +72,8 @@ test('once the funded project collects, the company page asks to recover, prefil
 });
 
 test('a loan for the company\'s own spend stays with it, and is flagged before it falls due', async ({ page }) => {
-  const soon = new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10);
+  // Five days from today as the app counts days: on Riyadh's calendar, not UTC's.
+  const soon = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date(Date.now() + 5 * 86_400_000));
   const wire = await stubSupabase(page, { ...ledger, parties: [owner], intercompany_entries: [] });
   await page.goto(`/company/${COMPANY_ID}`);
   const section = page.getByRole('region', { name: 'المالية العامة للمنظومة' });
