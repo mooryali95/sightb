@@ -7,6 +7,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { installGlobalErrorHandlers } from "@/lib/logger";
 import { installRemoteLogging } from "@/lib/observability";
+import { installErrorReporting } from "@/lib/error-reporting";
 import { installOfflineQueue, subscribeToQueueFailures } from "@/lib/offline-queue";
 
 const TABLE_LABELS: Record<string, string> = {
@@ -53,6 +54,9 @@ installGlobalErrorHandlers();
 // docs/production-readiness-key-points.md. Installed before anything else can
 // fail so that startup errors are captured too.
 installRemoteLogging();
+
+// Every error also reaches the owner's log in the database (سجل الأعطال).
+installErrorReporting();
 
 // A queued offline write that fails permanently (تحقق/صلاحيات) must never
 // disappear silently — the optimistic row is still on screen.

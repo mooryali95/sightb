@@ -47,6 +47,11 @@ psql "$SUPABASE_DB_URL" \
   -v ON_ERROR_STOP=1 \
   -f supabase/tests/tenant-isolation.sql
 
+echo "▶ Running client-errors test (only an owner reads the error log; repeats and loops cannot flood it)…"
+psql "$SUPABASE_DB_URL" \
+  -v ON_ERROR_STOP=1 \
+  -f supabase/tests/client-errors.sql
+
 echo "▶ Running Vitest suite (finance / funds / budget-comparison / advance-settlement)…"
 bunx vitest run
 

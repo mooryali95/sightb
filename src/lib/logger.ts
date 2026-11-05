@@ -25,6 +25,8 @@ type Sink = (event: LogEvent) => void;
 const MAX_EVENTS = 200;
 const buffer: LogEvent[] = [];
 let remoteSink: Sink | null = null;
+/** Further sinks beside the optional collector: the server's error log. */
+const sinks = new Set<Sink>();
 const listeners = new Set<(events: LogEvent[]) => void>();
 
 const isDev = typeof import.meta !== 'undefined' && Boolean(import.meta.env?.DEV);
@@ -33,11 +35,11 @@ function push(event: LogEvent) {
   buffer.unshift(event);
   if (buffer.length > MAX_EVENTS) buffer.length = MAX_EVENTS;
   listeners.forEach((l) => l([...buffer]));
-  if (remoteSink) {
+  for (const sink of remoteSink ? [remoteSink, ...sinks] : sinks) {
     try {
-      remoteSink(event);
+      sink(event);
     } catch {
-      /* never let the sink break the app */
+      /* never let a sink break the app */
     }
   }
 }
@@ -79,6 +81,11 @@ export const logger = {
   },
   setRemoteSink: (sink: Sink | null) => {
     remoteSink = sink;
+  },
+  /** Adds a sink alongside the remote one; returns its removal. */
+  addSink: (sink: Sink) => {
+    sinks.add(sink);
+    return () => { sinks.delete(sink); };
   },
   clear: () => {
     buffer.length = 0;

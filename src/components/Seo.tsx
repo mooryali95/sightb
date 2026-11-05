@@ -100,6 +100,14 @@ const ROUTE_META: Array<{ path: string; meta: Meta }> = [
     },
   },
   {
+    path: '/errors',
+    meta: {
+      title: 'سجل الأعطال — رؤية بصيرة',
+      description: 'الأخطاء التي واجهها مستخدمو منصة رؤية بصيرة، لمالك النظام.',
+      noindex: true,
+    },
+  },
+  {
     path: '/audit',
     meta: {
       title: 'سجل التدقيق — رؤية بصيرة',

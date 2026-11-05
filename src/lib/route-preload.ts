@@ -14,6 +14,7 @@ const loaders = {
   users: () => import('../pages/UserManagement'),
   security: () => import('../pages/Security'),
   audit: () => import('../pages/SystemAuditLog'),
+  errors: () => import('../pages/ErrorLog'),
   alerts: () => import('../pages/AlertsCenter'),
   notFound: () => import('../pages/NotFound'),
   mobileExpense: () => import('../pages/MobileExpenseCapture'),
@@ -44,6 +45,7 @@ export function pageForPath(path: string): PageKey | null {
   if (path === '/users') return 'users';
   if (path === '/security') return 'security';
   if (path === '/audit') return 'audit';
+  if (path === '/errors') return 'errors';
   if (path === '/alerts') return 'alerts';
   if (path === '/control-center') return 'controlCenter';
   if (path === '/organize') return 'organize';

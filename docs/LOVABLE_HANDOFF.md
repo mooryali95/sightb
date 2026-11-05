@@ -105,6 +105,11 @@ does not happen again.
      the first frame; do not restore the stock hook that starts at false.
      The dashboard's charts load through `DeferUntilVisible`
      (`src/components/ui/defer-until-visible.tsx`); keep them lazy.
+   - The error log: `src/lib/error-reporting.ts`, `src/services/errorReportService.ts`,
+     `src/pages/ErrorLog.tsx` (`/errors`, owner only), the `addSink` in
+     `src/lib/logger.ts`, the `installErrorReporting()` call in `src/main.tsx`,
+     and migration `20261106090000_client_errors.sql`. Nobody writes
+     `client_errors` directly; everything goes through `report_client_error`.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages
