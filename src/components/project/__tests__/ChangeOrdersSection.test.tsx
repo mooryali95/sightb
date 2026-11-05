@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 /**
  * Component tests for the change-orders section, written before it is
  * split. A change order moves the contract value, so what costs money is
@@ -121,7 +122,7 @@ describe('adding an order', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'إضافة أمر التغيير' }));
 
     await waitFor(() => expect(actions.addChangeOrder).toHaveBeenCalledWith(expect.objectContaining({
-      status: 'approved', approvedDate: new Date().toISOString().split('T')[0],
+      status: 'approved', approvedDate: todayLocal(),
     })));
   });
 

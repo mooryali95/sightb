@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 /**
  * Unit tests for the tracking slice: milestones, change orders, risks,
  * resources, custodies and commitments, each written to the database and
@@ -189,7 +190,7 @@ describe('custodies', () => {
     answers.push({ data: row({ resource_name: 'عمر', amount: '5000', status: 'active', received_date: '2026-03-01', company_id: null, notes: null, source_fund_id: 'f1', closed_date: null }), error: null });
     useStore.setState({ expenses: [{ id: 'e', custodyId: 'new', amount: 1200 } as never] });
     await useStore.getState().addCustody({ projectId: P, resourceName: 'عمر', amount: 5000, sourceFundId: 'f1', status: 'active' } as Omit<Custody, 'id' | 'createdAt' | 'spent' | 'remaining'>);
-    expect(argOf(0, 'insert')).toMatchObject({ user_id: 'user-1', project_id: P, resource_name: 'عمر', amount: 5000, status: 'active', source_fund_id: 'f1', received_date: new Date().toISOString().split('T')[0] });
+    expect(argOf(0, 'insert')).toMatchObject({ user_id: 'user-1', project_id: P, resource_name: 'عمر', amount: 5000, status: 'active', source_fund_id: 'f1', received_date: todayLocal() });
     expect(useStore.getState().custodies[0]).toMatchObject({ spent: 1200, remaining: 3800, sourceFundId: 'f1' });
 
     answers.push({ data: null, error: { message: 'مبلغ العهدة يتجاوز المتبقي في الدفعة' } });

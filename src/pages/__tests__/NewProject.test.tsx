@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 /**
  * Page tests for creating a project, written before the page is split.
  *
@@ -77,7 +78,7 @@ const contractInput = () => screen.getByPlaceholderText('230,000');
 /** The VAT rate field: the third number input, after the contract value and the retention. */
 const vatInput = () => screen.getAllByRole('spinbutton')[2];
 const submit = () => fireEvent.click(screen.getByRole('button', { name: 'إنشاء المشروع' }));
-const today = () => new Date().toISOString().split('T')[0];
+const today = () => todayLocal();
 
 beforeEach(() => {
   addProject.mockClear();

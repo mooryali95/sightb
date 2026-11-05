@@ -75,6 +75,8 @@ need_text src/App.tsx "useScrollRegions"
 need_text tailwind.config.ts "hoverOnlyWhenSupported"
 need_text src/index.css "prefers-reduced-motion: reduce"
 need_text src/index.css ".stat-tile { container-type: inline-size; }"
+need_text src/hooks/use-mobile.tsx "useSyncExternalStore"
+need_text src/pages/Dashboard.tsx "DeferUntilVisible"
 
 [ "$fail" = 0 ] && echo "Protected files and behaviours present."
 exit "$fail"
