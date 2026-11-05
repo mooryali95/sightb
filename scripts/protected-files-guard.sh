@@ -80,6 +80,9 @@ need_text src/pages/Dashboard.tsx "DeferUntilVisible"
 need_text src/main.tsx "installErrorReporting()"
 need_text src/lib/logger.ts "addSink"
 need_text src/App.tsx 'path="/errors"'
+need_text supabase/functions/admin-otp/index.ts "Retired on 6 November 2026"
+need_text supabase/functions/daily-digest/index.ts "digest_token_ok"
+need_text supabase/config.toml "[functions.daily-digest]"
 
 [ "$fail" = 0 ] && echo "Protected files and behaviours present."
 exit "$fail"

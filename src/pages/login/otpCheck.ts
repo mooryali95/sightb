@@ -1,4 +1,4 @@
-/** What the admin-otp edge function answers a device check with. */
+/** What the second-factor edge function answers a device check with. */
 export interface OtpCheckData {
   rateLimited?: boolean;
   error?: string;

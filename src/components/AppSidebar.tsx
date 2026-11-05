@@ -1,6 +1,6 @@
 import { useStore } from '@/store/useStore';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Plus, ChevronLeft, Menu, Users, BellRing, ScrollText, Bug, KeyRound, ScanSearch, Layers, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Plus, ChevronLeft, Menu, Users, BellRing, ScrollText, Bug, BookOpen, KeyRound, ScanSearch, Layers, BarChart3 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import basserhLogo from '@/assets/basserh-logo.jpg';
 import { buildSidebarTree, toggled } from './sidebar/sidebarTree';
 import { CompanyBranch } from './sidebar/CompanyBranch';
 import { NavItem, SidebarSearch, SignOutButton, UserInfo } from './sidebar/SidebarChrome';
+import { ConceptGuideDialog } from './guide/ConceptGuide';
 
 export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const companies = useStore((s) => s.companies);
@@ -21,6 +22,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
   const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set());
   const [showInactive, setShowInactive] = useState<Set<string>>(new Set()); // per company
   const [search, setSearch] = useState('');
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const tree = useMemo(
     () => buildSidebarTree(companies, portfolios, projects, { search, expandedCompanies, expandedPortfolios, showInactive }),
@@ -60,6 +62,8 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
         <NavItem collapsed={collapsed} label="هيكلة المشاريع" icon={<Layers className="w-4 h-4 shrink-0" />} active={isActive('/organize')} onClick={() => navigate('/organize')} />
         <NavItem collapsed={collapsed} label="مركز التنبيهات" icon={<BellRing className="w-4 h-4 shrink-0" />} active={isActive('/alerts')} onClick={() => navigate('/alerts')} />
         <NavItem collapsed={collapsed} label="الأمان" icon={<KeyRound className="w-4 h-4 shrink-0" />} active={isActive('/security')} onClick={() => navigate('/security')} />
+        <NavItem collapsed={collapsed} label="دليل المفاهيم" icon={<BookOpen className="w-4 h-4 shrink-0" />} active={false} onClick={() => setGuideOpen(true)} />
+        <ConceptGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
         {isOwner && (
           <>
             <NavItem collapsed={collapsed} label="مركز الرقابة" icon={<ScanSearch className="w-4 h-4 shrink-0" />} active={isActive('/control-center')} onClick={() => navigate('/control-center')} />

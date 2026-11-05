@@ -110,6 +110,14 @@ does not happen again.
      `src/lib/logger.ts`, the `installErrorReporting()` call in `src/main.tsx`,
      and migration `20261106090000_client_errors.sql`. Nobody writes
      `client_errors` directly; everything goes through `report_client_error`.
+   - `supabase/functions/admin-otp/index.ts` is retired and answers 410. Do not
+     restore it and do not call it: the second factor goes through
+     `second-factor` only, which records the session the database requires.
+   - The morning digest: `supabase/functions/daily-digest/`,
+     `supabase/functions/_shared/digest.ts`, its `verify_jwt = false` entry in
+     `supabase/config.toml` (it checks its own token), and migration
+     `20261106100000_daily_digest.sql` with the `daily-digest` cron job. The
+     recipients come from `auth.users`, never `profiles.email`.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

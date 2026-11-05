@@ -220,8 +220,8 @@ describe('Login', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('طُلب رابط قبل قليل. انتظر دقيقة ثم أعد الطلب.'));
   });
 
-  it('falls back to admin-otp when a browser cannot reach an undeployed second-factor at all', async () => {
-    // What a browser really gets: the CORS preflight of a missing function fails.
+  it('never lets a session through admin-otp: an unreachable second-factor signs out', async () => {
+    // What a browser gets when the function cannot be reached: the preflight fails.
     const unreachable = Object.assign(new Error('Failed to send a request to the Edge Function'), { name: 'FunctionsFetchError', context: new TypeError('Failed to fetch') });
     m.invoke.mockImplementation(async (name: string) => {
       if (name === 'second-factor') return { data: null, error: unreachable };
@@ -230,22 +230,9 @@ describe('Login', () => {
     });
     renderLogin();
     submitLogin('pm@example.com', 'secret1');
-    expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
-    expect(m.signOut).not.toHaveBeenCalled();
-  });
-
-  it('falls back to admin-otp while second-factor is not deployed yet, and asks for the code the same way', async () => {
-    const missing = Object.assign(new Error('Edge Function returned a non-2xx status code'), { name: 'FunctionsHttpError', context: { status: 404 } });
-    m.invoke.mockImplementation(async (name: string) => {
-      if (name === 'second-factor') return { data: null, error: missing };
-      if (name === 'admin-otp') return { data: { requiresOtp: true, sent: true }, error: null };
-      return { data: {}, error: null };
-    });
-    renderLogin();
-    submitLogin('pm@example.com', 'secret1');
-    expect(await screen.findByText('التحقق بخطوتين')).toBeInTheDocument();
-    const fingerprint = localStorage.getItem('rouya_device_fp');
-    expect(m.invoke).toHaveBeenCalledWith('admin-otp', { body: { action: 'check', fingerprint } });
+    await waitFor(() => expect(m.signOut).toHaveBeenCalled());
+    expect(m.invoke).not.toHaveBeenCalledWith('admin-otp', expect.anything());
+    expect(screen.queryByText('التحقق بخطوتين')).not.toBeInTheDocument();
   });
 
   it('does not fall back on a refusal: a second-factor error signs out', async () => {
