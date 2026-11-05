@@ -29,7 +29,7 @@ import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 import { translateDbError } from './translateDbError';
 import { bookedAmount, budgetItemRemaining, chosen, fundBlocksSubmit, resolveExpenseSource } from './expenseSource';
 import { SourcePicker, type SourceMode } from './SourcePicker';
@@ -67,7 +67,7 @@ export function ExpenseFormDialog({
   const [description, setDescription] = useState(editing?.description ?? '');
   const [amount, setAmount] = useState(editing ? String(editing.amount) : '');
   const [month, setMonth] = useState(editing ? String(editing.month) : '1');
-  const [date, setDate] = useState(editing?.date ?? new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(editing?.date ?? todayLocal());
   const [responsible, setResponsible] = useState(editing?.responsible || '');
   const [resourceId, setResourceId] = useState<string>(editing?.resourceId || '');
   const [custodyId, setCustodyId] = useState<string>(editing?.custodyId || '');

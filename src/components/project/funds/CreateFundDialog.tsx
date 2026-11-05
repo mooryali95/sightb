@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 
 interface Props {
   projectId: string;
@@ -28,7 +28,7 @@ export function CreateFundDialog({ projectId, disabled }: Props) {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newAmount, setNewAmount] = useState('');
-  const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newDate, setNewDate] = useState(todayLocal());
   const [newNotes, setNewNotes] = useState('');
 
   const handleCreate = async () => {

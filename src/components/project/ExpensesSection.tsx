@@ -24,6 +24,7 @@ import { ExpenseFormDialog } from './expenses/ExpenseFormDialog';
 import { ExpenseInspector } from './expenses/ExpenseInspector';
 import { translateDbError } from './expenses/translateDbError';
 import { summarizeSpendByResource, matchesResourceQuery, normalizeArabicName, indexResources, resourceKeyOf, UNLINKED_KEY } from '@/lib/resource-spend';
+import { runOrToast } from '@/lib/run-or-toast';
 
 interface ExpensesSectionProps {
   projectId: string;
@@ -107,12 +108,12 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   };
 
   const handleApprove = async (expId: string) => {
-    await updateExpense(expId, { approvalStatus: 'approved' });
+    if (!(await runOrToast(() => updateExpense(expId, { approvalStatus: 'approved' }), 'تعذّر اعتماد المصروف'))) return;
     toast.success('تم اعتماد المصروف');
   };
 
   const handleReject = async (expId: string) => {
-    await updateExpense(expId, { approvalStatus: 'rejected' });
+    if (!(await runOrToast(() => updateExpense(expId, { approvalStatus: 'rejected' }), 'تعذّر رفض المصروف'))) return;
     toast.success('تم رفض المصروف');
   };
 

@@ -22,6 +22,7 @@ import { createCompanyExpense } from '@/services/companyLedgerService';
 import { useLedgerMutation } from '@/hooks/useCompanyLedger';
 import type { LedgerProject } from './nodes';
 import { PartyPicker } from './PartyPicker';
+import { todayLocal } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -38,7 +39,7 @@ const COMPANY_PAID = '__company__';
 
 export function CompanyExpenseDialog({ open, onOpenChange, companyId, parties, projects, expenses, entries }: Props) {
   const [kind, setKind] = useState<CompanyExpenseKind>('salary');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayLocal());
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [partyId, setPartyId] = useState<string | null>(null);

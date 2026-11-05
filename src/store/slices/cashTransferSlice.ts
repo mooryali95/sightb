@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
 import type { CashTransfer } from '@/types/project';
-import { getUserId } from '../helpers';
+import { getUserId, upsertById } from '../helpers';
 import type { AppState } from '../useStore';
 
 export interface CashTransferSlice {
@@ -84,7 +84,7 @@ export const createCashTransferSlice: StateCreator<AppState, [], [], CashTransfe
       .single();
     if (error) throw error;
     const mapped = mapCashTransfer(data);
-    set((s) => ({ cashTransfers: [mapped, ...s.cashTransfers] }));
+    set((s) => ({ cashTransfers: upsertById(s.cashTransfers, mapped) }));
     return mapped.id;
   },
 

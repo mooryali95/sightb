@@ -22,6 +22,7 @@ import { SpendControls } from './spend/SpendControls';
 import { SpendTemplatesBar } from './spend/SpendTemplatesBar';
 import { SpendTreeList } from './spend/SpendTreeList';
 import { SpendNodeInspector } from './spend/SpendNodeInspector';
+import { todayLocal } from '@/lib/utils';
 
 interface Props {
   projectId?: string;
@@ -78,7 +79,7 @@ export function ExpenseSpendExplorer({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `spend-${levels.join('-')}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `spend-${levels.join('-')}-${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -22,7 +22,7 @@ import { toast } from '@/hooks/use-toast';
 import type { ExpenseCategory, ResourceReimbursement } from '@/types/project';
 import { getCustodyBreakdown, getFundRemainingBreakdown } from '@/lib/funds';
 import { getProjectMonth } from '@/lib/finance';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 
 interface Props {
   payable: ResourceReimbursement;
@@ -71,7 +71,7 @@ export function SettleVendorPayableDialog({ payable, projectId, onClose }: Props
         category: payable.category as ExpenseCategory,
         description: `سداد ذمة مورد: ${payable.vendorName} — ${payable.description}`,
         amount: payable.amount,
-        date: now.toISOString().slice(0, 10),
+        date: todayLocal(now),
         // The project's month, which every monthly figure buckets by.
         month: getProjectMonth(project.startDate, now, project.durationMonths),
         vendor: payable.vendorName,

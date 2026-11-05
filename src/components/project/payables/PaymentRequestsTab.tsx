@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { CalendarClock, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn, errorMessage } from '@/lib/utils';
+import { cn, errorMessage, todayLocal } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import { buildTimeline } from '@/lib/resource-payables';
 import {
@@ -162,7 +162,7 @@ export function PaymentRequestsTab({
                   <>
                     <Button size="sm" variant="outline"
                       onClick={async () => {
-                        const date = window.prompt('تاريخ الجدولة (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+                        const date = window.prompt('تاريخ الجدولة (YYYY-MM-DD):', todayLocal());
                         if (!date) return;
                         try { await schedulePaymentRequest(req.id, date); toast.success('تمت الجدولة'); }
                         catch (e) { toast.error(errorMessage(e)); }

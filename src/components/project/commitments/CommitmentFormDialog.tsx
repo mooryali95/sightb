@@ -21,6 +21,7 @@ import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { runOrToast } from '@/lib/run-or-toast';
 
 interface Props {
   open: boolean;
@@ -77,19 +78,17 @@ export function CommitmentFormDialog({ open, onOpenChange, onRequestOpen, editin
       description: description.trim(), totalAmount: total, spentAmount: spent, status: autoStatus,
       vendorName: vendorName.trim(), contractRef: contractRef.trim(), notes: notes.trim(),
     };
-    if (editingId) {
+    const saved = await runOrToast(() => (editingId
       // A cleared field goes as null so the store writes it; undefined would mean "unchanged".
-      await updateCommitment(editingId, {
+      ? updateCommitment(editingId, {
         ...form, vendorName: form.vendorName || null, contractRef: form.contractRef || null, notes: form.notes || null,
-      });
-      toast.success('تم تعديل الالتزام');
-    } else {
-      await addCommitment({
+      })
+      : addCommitment({
         projectId, ...form,
         vendorName: form.vendorName || undefined, contractRef: form.contractRef || undefined, notes: form.notes || undefined,
-      });
-      toast.success('تمت إضافة الالتزام');
-    }
+      })), 'تعذّر حفظ الالتزام');
+    if (!saved) return;
+    toast.success(editingId ? 'تم تعديل الالتزام' : 'تمت إضافة الالتزام');
     onOpenChange(false);
   };
 

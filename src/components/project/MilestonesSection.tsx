@@ -18,6 +18,8 @@ import { MilestoneFormDialog, type MilestoneFormValues } from './milestones/Mile
 import { MilestoneCard } from './milestones/MilestoneCard';
 import { InvoicePrompt } from './milestones/InvoicePrompt';
 import { weightedPercent, sortMilestones, statusForPercent } from './milestones/milestoneFigures';
+import { runOrToast } from '@/lib/run-or-toast';
+import { todayLocal } from '@/lib/utils';
 
 interface MilestonesSectionProps {
   projectId: string;
@@ -38,7 +40,7 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
   useEffect(() => {
     if (delayChecked.current || readOnly || milestones.length === 0) return;
     delayChecked.current = true;
-    const now = new Date().toISOString().split('T')[0];
+    const now = todayLocal();
     milestones.forEach(async (m) => {
       if (m.plannedEnd && m.plannedEnd < now && m.status !== 'completed' && m.status !== 'delayed') {
         await updateMilestone(m.id, { status: 'delayed' });
@@ -110,8 +112,8 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
   };
 
   const handleDelete = async (m: Milestone) => {
-    await deleteMilestone(m.id);
-    await syncProject(milestones.filter(x => x.id !== m.id));
+    if (!(await runOrToast(() => deleteMilestone(m.id), 'تعذّر حذف المرحلة'))) return;
+    await runOrToast(() => syncProject(milestones.filter(x => x.id !== m.id)), 'حُذفت المرحلة وتعذّر تحديث إنجاز المشروع');
   };
 
   const handlePercentChange = async (m: Milestone, newPct: number) => {
@@ -120,8 +122,8 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     if (next) updates.status = next;
     if (next === 'completed') toast.success(`✓ المرحلة "${m.name}" اكتملت تلقائياً`);
 
-    await updateMilestone(m.id, updates);
-    await syncProject(milestones.map(ms => ms.id === m.id ? { ...ms, ...updates } : ms));
+    if (!(await runOrToast(() => updateMilestone(m.id, updates), 'تعذّر تحديث إنجاز المرحلة'))) return;
+    await runOrToast(() => syncProject(milestones.map(ms => ms.id === m.id ? { ...ms, ...updates } : ms)), 'تعذّر تحديث إنجاز المشروع');
     checkRevenuePrompt(newPct, updates.status, m.linkedRevenueId);
   };
 

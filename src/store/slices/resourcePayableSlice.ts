@@ -21,7 +21,7 @@ import type {
 import { getUserId } from '../helpers';
 import type { Tables } from '@/integrations/supabase/types';
 import { getProjectMonth } from '@/lib/finance';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 import type { AppState } from '../useStore';
 
 export interface ResourcePayableSlice {
@@ -486,7 +486,7 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
         category,
         description: descPrefix + cur.description,
         amount: settledAmount,
-        date: today.toISOString().split('T')[0],
+        date: todayLocal(today),
         month: projectMonth,
         approval_status: 'approved',
         approved_by: userId,
@@ -567,7 +567,7 @@ export const createResourcePayableSlice: StateCreator<AppState, [], [], Resource
     // Delegate to the advance settlement service (SSOT for the RPC).
     const result = await advanceSettlementService.splitSettle({
       paymentRequestId: id,
-      date: today.toISOString().split('T')[0],
+      date: todayLocal(today),
       month: project ? getProjectMonth(project.startDate, today, project.durationMonths) : today.getMonth() + 1,
       settleAmount: outstanding,
       overflowAmount: overflow,

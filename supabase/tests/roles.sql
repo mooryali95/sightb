@@ -20,9 +20,15 @@ INSERT INTO public.user_roles (user_id, role, scope_type, scope_id) VALUES
   ('f0000000-0000-4000-8000-0000000000e1', 'editor', 'system', NULL),
   ('f0000000-0000-4000-8000-0000000000b1', 'viewer', 'system', NULL);
 
+-- The server checks the second factor (20261105120000): each session here has passed it,
+-- as a real sign-in does; its id is the person's own id.
+INSERT INTO public.session_second_factor (session_id, user_id, method)
+SELECT id, id, 'code' FROM auth.users WHERE email LIKE 'roles-%@test'
+ON CONFLICT DO NOTHING;
+
 CREATE FUNCTION pg_temp.as_user(_uid text, _sql text) RETURNS text LANGUAGE plpgsql AS $$
 BEGIN
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', _uid, 'role', 'authenticated')::text, true);
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', _uid, 'role', 'authenticated', 'session_id', _uid)::text, true);
   EXECUTE 'SET LOCAL ROLE authenticated';
   BEGIN
     EXECUTE _sql;

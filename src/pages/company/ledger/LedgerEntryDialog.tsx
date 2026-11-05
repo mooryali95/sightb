@@ -20,6 +20,7 @@ import { useLedgerMutation } from '@/hooks/useCompanyLedger';
 import { decodeNode, encodeNode, nodeName, nodeOptions, type LedgerProject } from './nodes';
 import { useStore } from '@/store/useStore';
 import { getFundRemaining } from '@/lib/funds';
+import { todayLocal } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -40,7 +41,7 @@ export function LedgerEntryDialog({ open, onOpenChange, companyId, parties, proj
   const [from, setFrom] = useState(initial ? encodeNode(initial.from) : 'company');
   const [to, setTo] = useState(initial ? encodeNode(initial.to) : '');
   const [amount, setAmount] = useState(initial?.amount ? String(initial.amount) : '');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayLocal());
   const [dueDate, setDueDate] = useState('');
   const [note, setNote] = useState('');
   const save = useLedgerMutation(companyId, createEntry);

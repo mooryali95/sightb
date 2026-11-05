@@ -22,7 +22,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@/types/project';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -37,7 +37,7 @@ export function RecordVendorPayableDialog({ open, onOpenChange, onRequestOpen, p
   const [category, setCategory] = useState<ExpenseCategory>('other');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [expenseDate, setExpenseDate] = useState(new Date().toISOString().slice(0, 10));
+  const [expenseDate, setExpenseDate] = useState(todayLocal());
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 

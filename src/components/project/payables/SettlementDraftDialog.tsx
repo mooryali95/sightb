@@ -17,7 +17,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import { calcSettlementTotals, defaultSettlementText } from '@/lib/resource-payables';
 import type { PaymentRequest, Resource, ResourceReimbursement } from '@/types/project';
@@ -39,7 +39,7 @@ export function SettlementDraftDialog({
   const { createResourceSettlement } = useStore();
 
   const [sFrom, setSFrom] = useState('');
-  const [sTo, setSTo] = useState(new Date().toISOString().split('T')[0]);
+  const [sTo, setSTo] = useState(todayLocal());
 
   const sReimbsForRes = useMemo(
     () => projReimbs.filter((r) => r.resourceId === resource?.id

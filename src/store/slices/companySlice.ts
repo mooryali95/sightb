@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
 import { Company } from '@/types/project';
-import { getUserId, logDeletion, mapCompany } from '../helpers';
+import { getUserId, logDeletion, mapCompany, upsertById } from '../helpers';
 import type { AppState } from '../useStore';
 
 /**
@@ -40,7 +40,7 @@ export const createCompanySlice: StateCreator<AppState, [], [], CompanySlice> = 
     }).select().single();
     if (error) throw error;
     const mapped = mapCompany(data);
-    set((s) => ({ companies: [mapped, ...s.companies] }));
+    set((s) => ({ companies: upsertById(s.companies, mapped) }));
     return mapped.id;
   },
 

@@ -4,12 +4,17 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+// The error the next insert answers with, in the shape Supabase returns it: a plain object, not an Error.
+const next = vi.hoisted(() => ({ insertError: null as null | { message: string; code?: string; details?: string } }));
+
 vi.mock('@/integrations/supabase/client', () => {
   const calls: { table: string; op: string }[] = [];
   const builder = (table: string) => ({
     insert: (payload: unknown) => {
       calls.push({ table, op: 'insert' });
-      return Promise.resolve({ data: payload, error: null });
+      const error = next.insertError;
+      next.insertError = null;
+      return Promise.resolve({ data: error ? null : payload, error });
     },
     update: (payload: unknown) => ({
       match: () => {
@@ -32,6 +37,7 @@ import {
   pendingMutations,
   flushQueue,
   isOffline,
+  subscribeToQueueFailures,
 } from '../offline-queue';
 
 const setOnline = (online: boolean) => {
@@ -82,5 +88,39 @@ describe('offline-queue', () => {
     expect(result.flushed).toBe(2);
     expect(result.remaining).toBe(0);
     expect(pendingMutations()).toHaveLength(0);
+  });
+
+  it('keeps a write when the network drops during replay, though Supabase reports it as a plain object', async () => {
+    enqueueMutation({ table: 'expenses', op: 'insert', payload: { id: 'e1' } });
+    next.insertError = { message: 'TypeError: Failed to fetch', details: 'TypeError: Failed to fetch', code: '' };
+    const failures: string[] = [];
+    const off = subscribeToQueueFailures((f) => failures.push(f.message));
+    const result = await flushQueue();
+    off();
+    expect(result.flushed).toBe(0);
+    expect(pendingMutations()).toHaveLength(1);
+    expect(failures).toEqual([]);
+  });
+
+  it('counts an insert the server already holds (a timeout that did commit) as done, not failed', async () => {
+    enqueueMutation({ table: 'expenses', op: 'insert', payload: { id: 'e1' } });
+    next.insertError = { message: 'duplicate key value violates unique constraint "expenses_pkey"', code: '23505' };
+    const failures: string[] = [];
+    const off = subscribeToQueueFailures((f) => failures.push(f.message));
+    const result = await flushQueue();
+    off();
+    expect(result).toEqual({ flushed: 1, remaining: 0 });
+    expect(failures).toEqual([]);
+  });
+
+  it('drops a write the server refuses for good, and says so with the server\'s words', async () => {
+    enqueueMutation({ table: 'expenses', op: 'insert', payload: { id: 'e1' } });
+    next.insertError = { message: 'new row violates row-level security policy', code: '42501' };
+    const failures: string[] = [];
+    const off = subscribeToQueueFailures((f) => failures.push(f.message));
+    await flushQueue();
+    off();
+    expect(pendingMutations()).toHaveLength(0);
+    expect(failures).toEqual(['new row violates row-level security policy']);
   });
 });

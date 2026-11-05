@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 
 interface Props {
   projectId: string;
@@ -27,7 +27,7 @@ export function EmergencyFundDialog({ projectId, blockingFundNumber }: Props) {
 
   const [emergencyOpen, setEmergencyOpen] = useState(false);
   const [emAmount, setEmAmount] = useState('');
-  const [emDate, setEmDate] = useState(new Date().toISOString().split('T')[0]);
+  const [emDate, setEmDate] = useState(todayLocal());
   const [emReason, setEmReason] = useState('');
   const [emNotes, setEmNotes] = useState('');
 

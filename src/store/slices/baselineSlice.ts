@@ -3,8 +3,7 @@ import { db } from '@/services/db';
 import { CostBaseline, IndirectCost, PeriodicSnapshot } from '@/types/project';
 import { getTotalPlanned } from '@/lib/finance';
 import {
-  getUserId, logDeletion, mapBaselineItem, mapIndirectCost, mapSnapshot,
-} from '../helpers';
+  getUserId, logDeletion, mapBaselineItem, mapIndirectCost, mapSnapshot, upsertById } from '../helpers';
 import type { AppState } from '../useStore';
 
 export interface BaselineSlice {
@@ -124,7 +123,7 @@ export const createBaselineSlice: StateCreator<AppState, [], [], BaselineSlice> 
     }).select().single();
     if (error) throw error;
     const mapped = mapIndirectCost(data);
-    set((s) => ({ indirectCosts: [mapped, ...s.indirectCosts] }));
+    set((s) => ({ indirectCosts: upsertById(s.indirectCosts, mapped) }));
     return mapped.id;
   },
 

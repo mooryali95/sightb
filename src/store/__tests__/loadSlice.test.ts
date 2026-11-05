@@ -193,4 +193,19 @@ describe('subscribeToProject', () => {
     unsubscribe();
     expect(channel.removeChannel).toHaveBeenCalledWith(channel);
   });
+
+  it('takes the echo of a row this session already added as that row, not a second one', () => {
+    // addExpense puts the saved row in the list; Supabase then sends the same insert back.
+    const row = { id: 'e9', project_id: P, amount: '700', category: 'salary', description: 'حافز', date: '2026-11-05', month: 4 };
+    useStore.setState({ expenses: [{ id: 'e9', projectId: P, amount: 700 } as Expense], revenues: [] });
+    useStore.getState().subscribeToProject(P);
+    const h = channel.handler as Handler;
+    h({ table: 'expenses', eventType: 'INSERT', new: row });
+    expect(useStore.getState().expenses.map((e) => e.id)).toEqual(['e9']);
+    expect(useStore.getState().expenses.reduce((s, e) => s + e.amount, 0)).toBe(700);
+    // And an echo that lands before the local add is not doubled by it either.
+    h({ table: 'revenues', eventType: 'INSERT', new: { id: 'r9', project_id: P, amount: '50', description: 'د', date: 'd', month: 1, revenue_type: 'milestone', status: 'collected' } });
+    h({ table: 'revenues', eventType: 'INSERT', new: { id: 'r9', project_id: P, amount: '50', description: 'د', date: 'd', month: 1, revenue_type: 'milestone', status: 'collected' } });
+    expect(useStore.getState().revenues.map((r) => r.id)).toEqual(['r9']);
+  });
 });

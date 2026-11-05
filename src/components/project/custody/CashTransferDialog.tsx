@@ -20,7 +20,7 @@ import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
 import { ArrowDownToLine } from 'lucide-react';
 import { toast } from 'sonner';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 
 /** A fund with a balance, as the section computes it. */
 export type AvailableFund = ProjectFund & { remaining: number };
@@ -42,7 +42,7 @@ export function CashTransferDialog({
   const [transferCustodyId, setTransferCustodyId] = useState<string>('');
   const [transferFundId, setTransferFundId] = useState<string>('');
   const [transferAmount, setTransferAmount] = useState('');
-  const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
+  const [transferDate, setTransferDate] = useState(todayLocal());
   const [transferNotes, setTransferNotes] = useState('');
 
   const handleTransfer = async () => {

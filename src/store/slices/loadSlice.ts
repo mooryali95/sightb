@@ -11,7 +11,7 @@ import {
   mapCompany, mapPortfolio, mapProject, mapBudgetItem,
   mapExpense, mapResource, mapCustody, mapRevenue, mapBaselineItem,
   mapMilestone, mapChangeOrder, mapRisk, mapIndirectCost, mapSnapshot,
-  mapCommitment,
+  mapCommitment, upsertById,
 } from '../helpers';
 import { applyCashTransferRealtimeEvent, type CashTransferRealtimePayload } from './cashTransferSlice';
 import type { AppState, AuditLogEntry, AuditRecord } from '../useStore';
@@ -337,7 +337,7 @@ export const createLoadSlice: StateCreator<AppState, [], [], LoadSlice> = (set, 
         const mapRow = (row: unknown) => (m.map as (d: unknown) => Listed)(row);
 
         if (payload.eventType === 'INSERT') {
-          set((s) => ({ [m.key]: [mapRow(payload.new), ...listOf(s, m.key)] }) as Partial<AppState>);
+          set((s) => ({ [m.key]: upsertById(listOf(s, m.key), mapRow(payload.new)) }) as Partial<AppState>);
         } else if (payload.eventType === 'UPDATE') {
           const next = mapRow(payload.new);
           set((s) => ({

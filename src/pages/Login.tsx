@@ -252,7 +252,8 @@ export default function Login() {
 
   const handleCancelOtp = async () => {
     switchingAccount.current = true;
-    await supabase.auth.signOut({ scope: 'local' });
+    // A local sign-out only clears this tab's tokens; it does not need the network, but never strand the form on a throw.
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* the form below resets regardless */ }
     setOtpRequired(false);
     setOtpCode('');
     navigate('/login', { replace: true });

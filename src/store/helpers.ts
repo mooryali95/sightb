@@ -251,3 +251,14 @@ export function mapCommitment(d: Tables<'commitments'>): Commitment {
     createdAt: d.created_at,
   };
 }
+
+/**
+ * Put a row at the head of a list, replacing any row with the same id.
+ * Supabase sends a session its own inserts back over realtime, so the row an
+ * action just added arrives a second time; whichever lands first, the list
+ * holds it once. Prepending blindly showed every new expense twice and counted
+ * its amount twice until the page reloaded.
+ */
+export function upsertById<T extends { id: string }>(list: T[], row: T): T[] {
+  return [row, ...list.filter((x) => x.id !== row.id)];
+}

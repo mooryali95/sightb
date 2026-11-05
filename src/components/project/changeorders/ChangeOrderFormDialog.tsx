@@ -23,6 +23,7 @@ import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
 import { Plus, X, Package } from 'lucide-react';
 import { toast } from 'sonner';
+import { todayLocal } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -72,7 +73,7 @@ export function ChangeOrderFormDialog({ open, onOpenChange, onRequestOpen, editi
       durationImpact: parseInt(durationImpact) || 0,
       status, requestedBy: requestedBy || undefined,
       approvedBy: status === 'approved' ? 'admin' : undefined,
-      approvedDate: status === 'approved' ? new Date().toISOString().split('T')[0] : undefined,
+      approvedDate: status === 'approved' ? todayLocal() : undefined,
       budgetItems: budgetItemsList.length > 0 ? budgetItemsList : undefined,
       autoRebaseline: true,
     };

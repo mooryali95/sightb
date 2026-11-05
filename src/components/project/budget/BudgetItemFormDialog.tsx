@@ -23,6 +23,7 @@ import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { runOrToast } from '@/lib/run-or-toast';
 
 interface Props {
   open: boolean;
@@ -63,13 +64,9 @@ export function BudgetItemFormDialog({
       costClass: 'direct' as CostClass,
       resourceId: resourceId && resourceId !== 'none' ? resourceId : undefined,
     };
-    if (editingId) {
-      await updateBudgetItem(editingId, data);
-      toast.success('تم تعديل بند الموازنة');
-    } else {
-      await addBudgetItem({ projectId, ...data });
-      toast.success('تمت إضافة بند الموازنة');
-    }
+    const saved = await runOrToast(() => (editingId ? updateBudgetItem(editingId, data) : addBudgetItem({ projectId, ...data })), 'تعذّر حفظ بند الموازنة');
+    if (!saved) return;
+    toast.success(editingId ? 'تم تعديل بند الموازنة' : 'تمت إضافة بند الموازنة');
     onOpenChange(false);
   };
 

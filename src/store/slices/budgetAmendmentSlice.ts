@@ -6,7 +6,7 @@ import {
   BudgetAmendmentStatus,
   BudgetItem,
 } from '@/types/project';
-import { getUserId } from '../helpers';
+import { getUserId, upsertById } from '../helpers';
 import type { AppState } from '../useStore';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -86,7 +86,7 @@ export const createBudgetAmendmentSlice: StateCreator<AppState, [], [], BudgetAm
     if (error) throw error;
 
     const mapped = mapAmendment(data);
-    set((s) => ({ budgetAmendments: [mapped, ...s.budgetAmendments] }));
+    set((s) => ({ budgetAmendments: upsertById(s.budgetAmendments, mapped) }));
     return mapped.id;
   },
 

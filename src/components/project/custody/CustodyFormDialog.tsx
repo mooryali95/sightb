@@ -23,7 +23,7 @@ import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 import type { AvailableFund } from './CashTransferDialog';
 
 interface Props {
@@ -48,7 +48,7 @@ export function CustodyFormDialog({
   const [resourceName, setResourceName] = useState(editing?.resourceName ?? '');
   const [amount, setAmount] = useState(editing ? String(editing.amount) : '');
   const [notes, setNotes] = useState(editing?.notes || '');
-  const [receivedDate, setReceivedDate] = useState(editing?.receivedDate || new Date().toISOString().split('T')[0]);
+  const [receivedDate, setReceivedDate] = useState(editing?.receivedDate || todayLocal());
   const [sourceFundId, setSourceFundId] = useState<string>(editing?.sourceFundId || 'none');
   const [unlinkReason, setUnlinkReason] = useState('');
 

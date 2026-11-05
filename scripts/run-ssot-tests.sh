@@ -42,6 +42,11 @@ psql "$SUPABASE_DB_URL" \
   -v ON_ERROR_STOP=1 \
   -f supabase/tests/fund-advance.sql
 
+echo "▶ Running tenant-isolation test (access follows the current role; only an owner makes owners)…"
+psql "$SUPABASE_DB_URL" \
+  -v ON_ERROR_STOP=1 \
+  -f supabase/tests/tenant-isolation.sql
+
 echo "▶ Running Vitest suite (finance / funds / budget-comparison / advance-settlement)…"
 bunx vitest run
 

@@ -40,7 +40,9 @@ for f in \
   e2e/resource-registry.spec.ts supabase/migrations/20261027090000_resource_registry.sql \
   e2e/accessibility.spec.ts src/lib/a11y/auto-label.ts src/lib/a11y/scroll-regions.ts src/lib/a11y/page-enter.ts \
   src/lib/a11y/__tests__/auto-label.test.ts src/components/charts/labelled-sector.tsx src/components/ui/__tests__/date-input.test.tsx \
-  src/lib/finance/unified-statement.ts src/lib/finance/__tests__/unified-statement.test.ts src/lib/export/unified-statement.ts e2e/unified-statement.spec.ts; do
+  src/lib/finance/unified-statement.ts src/lib/finance/__tests__/unified-statement.test.ts src/lib/export/unified-statement.ts e2e/unified-statement.spec.ts \
+  supabase/migrations/20261105120000_access_follows_current_role.sql supabase/tests/tenant-isolation.sql \
+  supabase/functions/_shared/workingRole.ts src/test/edge/working-role.test.ts scripts/date-guard.sh src/lib/run-or-toast.ts; do
   need_file "$f"
 done
 need_text src/components/project/ExpensesSection.tsx "summarizeSpendByResource"
@@ -63,6 +65,10 @@ need_text src/components/ui/input.tsx "DateInput"
 need_text src/components/ui/select.tsx "useAutoLabel"
 need_text src/components/ui/button.tsx 'size === "icon" ? props.title'
 need_text src/pages/CompanyDetail.tsx "exportUnifiedStatement"
+need_text supabase/functions/ai-executive-summary/index.ts "requireWorkingRole"
+need_text supabase/functions/extract-receipt-data/index.ts "requireWorkingRole"
+need_text src/store/slices/loadSlice.ts "upsertById"
+need_text .github/workflows/quality.yml "date-guard.sh"
 need_text src/App.tsx "DirectionProvider"
 need_text src/App.tsx 'MotionConfig reducedMotion="user"'
 need_text src/App.tsx "useScrollRegions"
