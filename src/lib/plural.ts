@@ -10,6 +10,8 @@ const NOUNS = {
   project: { zero: 'لا مشاريع', one: 'مشروع واحد', two: 'مشروعان', few: '{n} مشاريع', many: '{n} مشروعًا', other: '{n} مشروع' },
   portfolio: { zero: 'لا محافظ', one: 'محفظة واحدة', two: 'محفظتان', few: '{n} محافظ', many: '{n} محفظةً', other: '{n} محفظة' },
   company: { zero: 'لا شركات', one: 'شركة واحدة', two: 'شركتان', few: '{n} شركات', many: '{n} شركةً', other: '{n} شركة' },
+  person: { zero: 'لا أحد', one: 'شخص واحد', two: 'شخصان', few: '{n} أشخاص', many: '{n} شخصًا', other: '{n} شخص' },
+  time: { zero: 'لا مرات', one: 'مرة واحدة', two: 'مرتان', few: '{n} مرات', many: '{n} مرةً', other: '{n} مرة' },
   item: { zero: 'لا عناصر', one: 'عنصر واحد', two: 'عنصران', few: '{n} عناصر', many: '{n} عنصرًا', other: '{n} عنصر' },
 } satisfies Record<string, Forms>;
 

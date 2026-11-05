@@ -1,6 +1,6 @@
 import { useStore } from '@/store/useStore';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Plus, ChevronLeft, Menu, Users, BellRing, ScrollText, KeyRound, ScanSearch, Layers, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Plus, ChevronLeft, Menu, Users, BellRing, ScrollText, Bug, KeyRound, ScanSearch, Layers, BarChart3 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           <>
             <NavItem collapsed={collapsed} label="مركز الرقابة" icon={<ScanSearch className="w-4 h-4 shrink-0" />} active={isActive('/control-center')} onClick={() => navigate('/control-center')} />
             <NavItem collapsed={collapsed} label="السجل الرئيسي" icon={<ScrollText className="w-4 h-4 shrink-0" />} active={isActive('/audit')} onClick={() => navigate('/audit')} />
+            <NavItem collapsed={collapsed} label="سجل الأعطال" icon={<Bug className="w-4 h-4 shrink-0" />} active={isActive('/errors')} onClick={() => navigate('/errors')} />
           </>
         )}
 

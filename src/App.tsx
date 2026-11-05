@@ -34,6 +34,7 @@ const ResetPassword = lazy(pageLoaders.resetPassword);
 const UserManagement = lazy(pageLoaders.users);
 const Security = lazy(pageLoaders.security);
 const SystemAuditLog = lazy(pageLoaders.audit);
+const ErrorLog = lazy(pageLoaders.errors);
 const AlertsCenter = lazy(pageLoaders.alerts);
 const NotFound = lazy(pageLoaders.notFound);
 const MobileExpenseCapture = lazy(pageLoaders.mobileExpense);
@@ -105,6 +106,7 @@ const App = () => (
                       <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
                       <Route path="/alerts" element={<ProtectedRoute><ErrorBoundary><AlertsCenter /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/audit" element={<ProtectedRoute><SystemAuditLog /></ProtectedRoute>} />
+                      <Route path="/errors" element={<ProtectedRoute><ErrorLog /></ProtectedRoute>} />
                       <Route path="/finance" element={<ProtectedRoute><FinancialOverview /></ProtectedRoute>} />
                       <Route path="/control-center" element={<ProtectedRoute><ControlCenter /></ProtectedRoute>} />
                       <Route path="/organize" element={<ProtectedRoute><ErrorBoundary><Organize /></ErrorBoundary></ProtectedRoute>} />
