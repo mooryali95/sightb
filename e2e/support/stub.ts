@@ -62,6 +62,8 @@ export async function stubSupabase(
   await page.addInitScript(
     ([key, session]) => {
       window.localStorage.setItem(key as string, JSON.stringify(session));
+      // The first-run guide is its own spec (concept-guide.spec.ts); elsewhere it is seen.
+      if (window.localStorage.getItem('rouya_concept_guide_seen') === null) window.localStorage.setItem('rouya_concept_guide_seen', '1');
     },
     ['sb-e2e-auth-token', SESSION] as const,
   );

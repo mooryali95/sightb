@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useState, useMemo, useEffect, lazy } from 'react';
 import { DeferUntilVisible } from '@/components/ui/defer-until-visible';
+import { FirstRunGuide } from '@/components/guide/ConceptGuide';
 import { useIsMobile } from '@/hooks/use-mobile';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 import { useRole } from '@/hooks/useRole';
@@ -112,6 +113,7 @@ export default function Dashboard() {
           </motion.div>
         ) : (
           <>
+            <FirstRunGuide />
             <DashboardFilters
               companies={activeCompanies} filterCompany={filterCompany} setFilterCompany={setFilterCompany}
               portfolios={portfolios} filterPortfolio={filterPortfolio} setFilterPortfolio={setFilterPortfolio}

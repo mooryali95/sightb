@@ -12,6 +12,7 @@ const NOUNS = {
   company: { zero: 'لا شركات', one: 'شركة واحدة', two: 'شركتان', few: '{n} شركات', many: '{n} شركةً', other: '{n} شركة' },
   person: { zero: 'لا أحد', one: 'شخص واحد', two: 'شخصان', few: '{n} أشخاص', many: '{n} شخصًا', other: '{n} شخص' },
   time: { zero: 'لا مرات', one: 'مرة واحدة', two: 'مرتان', few: '{n} مرات', many: '{n} مرةً', other: '{n} مرة' },
+  expense: { zero: 'لا مصروفات', one: 'مصروف واحد', two: 'مصروفان', few: '{n} مصروفات', many: '{n} مصروفًا', other: '{n} مصروف' },
   item: { zero: 'لا عناصر', one: 'عنصر واحد', two: 'عنصران', few: '{n} عناصر', many: '{n} عنصرًا', other: '{n} عنصر' },
 } satisfies Record<string, Forms>;
 

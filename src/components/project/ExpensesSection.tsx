@@ -22,6 +22,7 @@ import { useTableDensity } from '@/hooks/useTableDensity';
 import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 import { ExpenseFormDialog } from './expenses/ExpenseFormDialog';
 import { ExpenseInspector } from './expenses/ExpenseInspector';
+import { BulkApproveButton } from './expenses/BulkApproveButton';
 import { translateDbError } from './expenses/translateDbError';
 import { summarizeSpendByResource, matchesResourceQuery, normalizeArabicName, indexResources, resourceKeyOf, UNLINKED_KEY } from '@/lib/resource-spend';
 import { runOrToast } from '@/lib/run-or-toast';
@@ -155,6 +156,10 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
           <p className="text-sm text-amber-700 dark:text-amber-400">
             {pendingCount} مصروف بانتظار الاعتماد
           </p>
+          <BulkApproveButton
+            pending={filteredExpenses.filter((e) => e.approvalStatus === 'pending')}
+            approve={(id) => updateExpense(id, { approvalStatus: 'approved' })}
+          />
         </div>
       )}
 
