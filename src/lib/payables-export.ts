@@ -7,6 +7,7 @@ import {
   type ProjectPayablesSummary,
 } from './resource-payables';
 import { REIMBURSEMENT_STATUS_LABELS, EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@/types/project';
+import { todayLocal } from '@/lib/utils';
 
 function esc(v: unknown): string {
   let s = v === null || v === undefined ? '' : String(v);
@@ -59,7 +60,7 @@ export function buildPayablesCSV(input: PayablesCsvInput): string {
 
   const lines: string[] = [];
   lines.push(row(['المشروع', input.projectName]));
-  lines.push(row(['تاريخ التصدير', new Date().toISOString().split('T')[0]]));
+  lines.push(row(['تاريخ التصدير', todayLocal()]));
   lines.push('');
   lines.push(row(['الدفتر', 'المؤشر', 'القيمة']));
   lines.push(...summaryRows('مستحقات الفريق (Resource)', resourceSummary));

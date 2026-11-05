@@ -3,9 +3,9 @@ import { db } from '@/services/db';
 import { Milestone, ChangeOrder, Risk, Resource, Custody, Commitment, RiskUpdate, MilestoneUpdate, CommitmentUpdate } from '@/types/project';
 import {
   getUserId, logDeletion,
-  mapMilestone, mapChangeOrder, mapRisk, mapResource, mapCustody, mapCommitment,
-} from '../helpers';
+  mapMilestone, mapChangeOrder, mapRisk, mapResource, mapCustody, mapCommitment, upsertById } from '../helpers';
 import type { AppState } from '../useStore';
+import { todayLocal } from '@/lib/utils';
 
 /**
  * What a custody edit may carry. `sourceFundId` and `notes` accept `null` so
@@ -113,7 +113,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     }).select().single();
     if (error) throw error;
     const mapped = mapMilestone(data);
-    set((s) => ({ milestones: [...s.milestones, mapped].sort((a, b) => a.sortOrder - b.sortOrder) }));
+    set((s) => ({ milestones: [...s.milestones.filter((m) => m.id !== mapped.id), mapped].sort((a, b) => a.sortOrder - b.sortOrder) }));
     return mapped.id;
   },
 
@@ -158,7 +158,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     }).select().single();
     if (error) throw error;
     const mapped = mapChangeOrder(data);
-    set((s) => ({ changeOrders: [mapped, ...s.changeOrders] }));
+    set((s) => ({ changeOrders: upsertById(s.changeOrders, mapped) }));
     if (co.status === 'approved' && (co.budgetItems || []).length > 0) {
       await get().applyApprovedChangeOrder(co.projectId, mapped);
     }
@@ -248,7 +248,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     }).select().single();
     if (error) throw error;
     const mapped = mapRisk(data);
-    set((s) => ({ risks: [mapped, ...s.risks] }));
+    set((s) => ({ risks: upsertById(s.risks, mapped) }));
     return mapped.id;
   },
 
@@ -288,7 +288,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     }).select().single();
     if (error) throw error;
     const mapped = mapResource(data);
-    set((s) => ({ resources: [mapped, ...s.resources] }));
+    set((s) => ({ resources: upsertById(s.resources, mapped) }));
     // Update resource_count on project
     const newCount = get().resources.filter(res => res.projectId === r.projectId).length;
     await db.from('projects').update({ resource_count: newCount }).eq('id', r.projectId);
@@ -327,7 +327,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
       user_id: userId, project_id: c.projectId || null,
       company_id: c.companyId || null, resource_name: c.resourceName,
       amount: c.amount, notes: c.notes || null,
-      received_date: c.receivedDate || new Date().toISOString().split('T')[0],
+      received_date: c.receivedDate || todayLocal(),
       status: 'active',
       source_fund_id: c.sourceFundId || null,
     }).select().single();
@@ -337,7 +337,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
       throw error;
     }
     const mapped = mapCustody(data, get().expenses);
-    set((s) => ({ custodies: [mapped, ...s.custodies] }));
+    set((s) => ({ custodies: upsertById(s.custodies, mapped) }));
     return mapped.id;
   },
 
@@ -385,7 +385,7 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     }).select().single();
     if (error) throw error;
     const mapped = mapCommitment(data);
-    set((s) => ({ commitments: [mapped, ...s.commitments] }));
+    set((s) => ({ commitments: upsertById(s.commitments, mapped) }));
     return mapped.id;
   },
 

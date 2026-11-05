@@ -16,6 +16,7 @@ import { projectSchema } from '@/lib/validations';
 import { PROJECT_STATUS_LABELS, CONTRACT_TYPE_LABELS, type ProjectStatus, type ContractType } from '@/types/project';
 import { VatSplitPreview } from './newproject/VatSplitPreview';
 import { contractFigures, resolveVatRate } from './newproject/contractFigures';
+import { todayLocal } from '@/lib/utils';
 
 export default function NewProject() {
   const [searchParams] = useSearchParams();
@@ -77,7 +78,7 @@ export default function NewProject() {
         portfolioId: result.data.portfolioId,
         contractValue: result.data.contractValue,
         currency,
-        startDate: result.data.startDate || new Date().toISOString().split('T')[0],
+        startDate: result.data.startDate || todayLocal(),
         endDate: result.data.endDate || '',
         durationMonths: result.data.durationMonths,
         resourceCount: result.data.resourceCount,

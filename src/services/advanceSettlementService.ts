@@ -14,6 +14,7 @@
  */
 
 import { db } from './db';
+import { todayLocal } from '@/lib/utils';
 
 export interface SplitSettleAdvanceInput {
   paymentRequestId: string;
@@ -63,7 +64,7 @@ export async function splitSettle(
   }
 
   const today = new Date();
-  const date = input.date ?? today.toISOString().split('T')[0];
+  const date = input.date ?? todayLocal(today);
   const month = input.month ?? today.getMonth() + 1;
 
   const { data, error } = await db.rpc<Record<string, unknown>>('split_settle_advance', {

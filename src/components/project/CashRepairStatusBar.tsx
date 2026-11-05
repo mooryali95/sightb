@@ -1,6 +1,7 @@
 import { useCashRepairStatus } from '@/lib/cash-repair-events';
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Clock } from 'lucide-react';
+import { todayLocal } from '@/lib/utils';
 
 /**
  * شريط حالة يعرض آخر عملية إصلاح لتحويل يتيم وعدد التحويلات المعالجة في الجلسة.
@@ -10,7 +11,7 @@ export function CashRepairStatusBar({ projectId }: { projectId: string }) {
   if (!last) return null;
 
   const at = new Date(last.at);
-  const time = `${at.toISOString().split('T')[0]} ${at.toTimeString().slice(0, 5)}`;
+  const time = `${todayLocal(at)} ${at.toTimeString().slice(0, 5)}`;
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2">

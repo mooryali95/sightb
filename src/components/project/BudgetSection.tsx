@@ -16,6 +16,7 @@ import { BudgetAmendmentManager } from './BudgetAmendmentManager';
 import { BudgetItemFormDialog } from './budget/BudgetItemFormDialog';
 import { BudgetPlanningSummary } from './budget/BudgetPlanningSummary';
 import { ReservesCard } from './budget/ReservesCard';
+import { runOrToast } from '@/lib/run-or-toast';
 
 interface BudgetSectionProps {
   projectId: string;
@@ -156,7 +157,8 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
                 for (const exp of unlinkedExpenses) {
                   const match = budgetItems.find((b) => b.category === exp.category && b.projectId === exp.projectId);
                   if (match) {
-                    await updateExpense(exp.id, { budgetItemId: match.id });
+                    // Stop at the first refusal and say how many went through before it.
+                    if (!(await runOrToast(() => updateExpense(exp.id, { budgetItemId: match.id }), `تعذّر ربط مصروف بعد ربط ${linked}`))) return;
                     linked++;
                   }
                 }

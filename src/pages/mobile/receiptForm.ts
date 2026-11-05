@@ -4,6 +4,7 @@
  * reading. Kept out of the page so both can be tested without a browser.
  */
 import type { ExpenseCategory } from '@/types/project';
+import { todayLocal } from '@/lib/utils';
 
 export interface ExtractedReceipt {
   vendor_name?: string | null;
@@ -33,7 +34,7 @@ export interface ReceiptForm {
 
 export function emptyReceiptForm(projectId: string): ReceiptForm {
   return {
-    projectId, vendor: '', invoiceRef: '', date: new Date().toISOString().split('T')[0], amount: '',
+    projectId, vendor: '', invoiceRef: '', date: todayLocal(), amount: '',
     category: 'other', description: '', isVatInclusive: false, isVatExempt: false,
   };
 }

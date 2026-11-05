@@ -7,6 +7,7 @@
  */
 import type { Expense, Resource, Custody, BudgetItem, ExpenseCategory } from '@/types/project';
 import { EXPENSE_CATEGORY_LABELS } from '@/types/project';
+import { todayLocal } from '@/lib/utils';
 
 export type SpendDimension =
   | 'resource'
@@ -291,7 +292,7 @@ function filterLines(meta: SpendCsvMeta): string[] {
 /** تصدير التقرير: يعكس نفس الفلاتر والفرز والنطاق الزمني المعروض على الشاشة. */
 export function buildSpendReportCSV(report: SpendReport, projectName: string, meta: SpendCsvMeta = {}): string {
   const lines: string[] = [];
-  lines.push([projectName, SPEND_DIMENSION_LABELS[report.dimension], new Date().toISOString().split('T')[0]].map(esc).join(','));
+  lines.push([projectName, SPEND_DIMENSION_LABELS[report.dimension], todayLocal()].map(esc).join(','));
   lines.push('');
   lines.push(...filterLines(meta));
   lines.push('');
@@ -442,7 +443,7 @@ export function buildSpendTree(
 /** تصدير الشجرة كاملة: مستوى لكل صف مع مسار التجميع، ثم بنود الصرف. */
 export function buildSpendTreeCSV(tree: SpendTree, projectName: string, meta: SpendCsvMeta = {}): string {
   const lines: string[] = [];
-  lines.push([projectName, tree.dimensions.map((d) => SPEND_DIMENSION_LABELS[d]).join(' ← '), new Date().toISOString().split('T')[0]].map(esc).join(','));
+  lines.push([projectName, tree.dimensions.map((d) => SPEND_DIMENSION_LABELS[d]).join(' ← '), todayLocal()].map(esc).join(','));
   lines.push('');
   lines.push(...filterLines({ ...meta, dimensionPath: tree.dimensions }));
   lines.push('');

@@ -19,7 +19,7 @@ import { useCoreData, useDetailsData } from '@/hooks/useAppData';
 import { formatCurrency, getProjectSummary } from '@/lib/finance';
 import { getCompanySummary, getPortfolioSummary } from '@/lib/portfolio';
 import { actualProfit } from '@/lib/finance/actual-profit';
-import { cn } from '@/lib/utils';
+import { cn, todayLocal } from '@/lib/utils';
 import { normalizeArabicName } from '@/lib/resource-spend';
 import { INACTIVE_STATUSES, needsAttention } from '@/pages/dashboard/dashboardFigures';
 import type { ProjectStatus } from '@/types/project';
@@ -146,7 +146,7 @@ export default function FinancialOverview() {
   const exportCurrent = () => {
     const map = { companies: [companyRows, 'الشركة الأم'], portfolios: [portfolioRows, 'الشركة'], projects: [projectRows, 'المحفظة / الشركة'] } as const;
     const [rows, label] = map[tab];
-    const date = new Date().toISOString().slice(0, 10);
+    const date = todayLocal();
     downloadCsv(buildOverviewCsv(order(rows), label), `financial-${tab}-${date}.csv`);
   };
 

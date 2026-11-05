@@ -7,6 +7,7 @@
  */
 import { bookNew, appendGrid, sheetName, writeWorkbook, type GridCell, type Workbook } from '../xlsx-writer';
 import type { Figures, Share, UnifiedStatement, StatementLine } from '../finance/unified-statement';
+import { todayLocal } from '@/lib/utils';
 
 const MONEY = '#,##0.00';
 const PCT = '0.0%';
@@ -38,7 +39,7 @@ const lineRow = (l: StatementLine, i: number): GridCell[] =>
 
 const WIDTHS = [6, 18, 24, 18, 16, 40, 16, 10, 12, 10];
 const blank: GridCell[] = [];
-const stamp = (d: Date) => d.toISOString().slice(0, 10);
+const stamp = (d: Date) => todayLocal(d);
 
 const RULE = 'المصروف الفعلي: كل مصروف غير مرفوض، عدا السلف التي لم تُسوَّ بعد (تظهر في «سلف قائمة»). صافي المتبقي = المحصّل − المصروف الفعلي.';
 

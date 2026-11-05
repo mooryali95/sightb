@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import { db } from '@/services/db';
 import { Portfolio, Project } from '@/types/project';
-import { getUserId, logDeletion, mapPortfolio, mapProject } from '../helpers';
+import { getUserId, logDeletion, mapPortfolio, mapProject, upsertById } from '../helpers';
 import type { AppState } from '../useStore';
 
 /**
@@ -54,7 +54,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     }).select().single();
     if (error) throw error;
     const mapped = mapPortfolio(data);
-    set((s) => ({ portfolios: [mapped, ...s.portfolios] }));
+    set((s) => ({ portfolios: upsertById(s.portfolios, mapped) }));
     return mapped.id;
   },
 
@@ -99,7 +99,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     }).select().single();
     if (error) throw error;
     const mapped = mapProject(data);
-    set((s) => ({ projects: [mapped, ...s.projects] }));
+    set((s) => ({ projects: upsertById(s.projects, mapped) }));
     return mapped.id;
   },
 

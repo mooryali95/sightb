@@ -3,7 +3,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import { db } from '@/services/db';
 import { logger } from '@/lib/logger';
 import { BudgetItem, Expense, Revenue } from '@/types/project';
-import { getUserId, mapBudgetItem, mapExpense, mapRevenue } from '../helpers';
+import { getUserId, mapBudgetItem, mapExpense, mapRevenue, upsertById } from '../helpers';
 import type { AppState } from '../useStore';
 
 /**
@@ -69,7 +69,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     }).select().single();
     if (error) throw error;
     const mapped = mapBudgetItem(data);
-    set((s) => ({ budgetItems: [mapped, ...s.budgetItems] }));
+    set((s) => ({ budgetItems: upsertById(s.budgetItems, mapped) }));
     return mapped.id;
   },
 
@@ -124,7 +124,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     // it lacks the server-filled columns, which mapExpense tolerates.
     const optimistic = row as unknown as Tables<'expenses'>;
     const mapped = mapExpense(res.queuedOffline ? optimistic : (res.data?.[0] ?? optimistic));
-    set((s) => ({ expenses: [mapped, ...s.expenses] }));
+    set((s) => ({ expenses: upsertById(s.expenses, mapped) }));
     if (res.queuedOffline) return mapped.id;
     // Reload fund settlements + payables so DB-trigger-updated totals reflect in UI
     if (mapped.fundId) {
@@ -194,7 +194,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     }).select().single();
     if (error) throw error;
     const mapped = mapRevenue(data);
-    set((s) => ({ revenues: [mapped, ...s.revenues] }));
+    set((s) => ({ revenues: upsertById(s.revenues, mapped) }));
     return mapped.id;
   },
 

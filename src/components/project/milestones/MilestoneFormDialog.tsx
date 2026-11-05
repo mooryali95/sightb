@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
+import { runOrToast } from '@/lib/run-or-toast';
 
 /** What a saved form carries. Empty strings mean a cleared optional field. */
 export interface MilestoneFormValues {
@@ -63,11 +64,12 @@ export function MilestoneFormDialog({ open, onOpenChange, onRequestOpen, editing
     if (pct === 100 && st !== 'completed') st = 'completed';
     if (pct > 0 && pct < 100 && st === 'planned') st = 'in_progress';
 
-    await onSave({
+    const saved = await runOrToast(() => onSave({
       name: name.trim(), weight: parseFloat(weight) || 0, status: st, percentComplete: pct,
       description: description.trim(), plannedStart, plannedEnd,
       linkedRevenueId: linkedRevenueId && linkedRevenueId !== 'none' ? linkedRevenueId : '',
-    });
+    }), 'تعذّر حفظ المرحلة');
+    if (!saved) return;
     onOpenChange(false);
   };
 

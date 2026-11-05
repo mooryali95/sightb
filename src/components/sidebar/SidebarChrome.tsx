@@ -85,8 +85,9 @@ export function SignOutButton({ collapsed }: { collapsed?: boolean }) {
   // be overtaken, and it drops the last user's data held in the store, which
   // an in-app navigation left in memory. The idle timeout leaves the same way.
   const handleSignOut = async () => {
-    await signOut();
-    reloadAt('/login');
+    // Leave even when the sign-out call fails (offline, expired session): the
+    // full load drops the session held in this tab either way.
+    try { await signOut(); } finally { reloadAt('/login'); }
   };
 
   const btn = (

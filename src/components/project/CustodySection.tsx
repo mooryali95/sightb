@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { getFundRemaining } from '@/lib/funds';
 import { useRole } from '@/hooks/useRole';
@@ -78,7 +78,7 @@ export function CustodySection({ projectId, companyId, custodies, expenses, read
         try {
           await updateCustody(c.id, {
             status: 'closed',
-            closedDate: new Date().toISOString().split('T')[0],
+            closedDate: todayLocal(),
           });
         } catch { /* silent — background close */ }
       }

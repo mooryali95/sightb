@@ -114,6 +114,15 @@ async function apply(item: QueuedMutation): Promise<void> {
   if (error) throw error;
 }
 
+function describeError(err: unknown): { message: string; code?: string } {
+  if (err instanceof Error) return { message: err.message };
+  if (err && typeof err === 'object') {
+    const e = err as { message?: unknown; code?: unknown };
+    return { message: typeof e.message === 'string' ? e.message : JSON.stringify(err), code: typeof e.code === 'string' ? e.code : undefined };
+  }
+  return { message: String(err) };
+}
+
 /** Replays every queued mutation in order. Stops at the first network failure. */
 export async function flushQueue(): Promise<{ flushed: number; remaining: number }> {
   if (flushing || isOffline()) return { flushed: 0, remaining: read().length };
@@ -129,8 +138,19 @@ export async function flushQueue(): Promise<{ flushed: number; remaining: number
         items = rest;
         write(items);
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        const isNetwork = /fetch|network|Failed to fetch/i.test(message);
+        // Supabase reports errors as plain objects ({ message, code }), not Error
+        // instances; reading only Error.message turned a dropped connection into
+        // "[object Object]", which looked permanent, and the write was deleted.
+        const { message, code } = describeError(err);
+        if (head.op === 'insert' && code === '23505') {
+          // The server already holds this row: an earlier attempt committed
+          // before its answer was lost. The write is done, not failed.
+          flushed += 1;
+          items = rest;
+          write(items);
+          continue;
+        }
+        const isNetwork = /fetch|network|timeout|load failed/i.test(message);
         if (isNetwork) {
           logger.warn('offline-queue', 'ما زال الاتصال منقطعاً — سيُعاد المحاولة لاحقاً');
           break;

@@ -19,6 +19,7 @@ import { useLedgerMutation } from '@/hooks/useCompanyLedger';
 import { RegistryNamePicker, type RegistryName } from '@/components/registry/RegistryNamePicker';
 import { COMPANY_LABEL, type LedgerProject } from './nodes';
 import { useStore } from '@/store/useStore';
+import { todayLocal } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -32,7 +33,7 @@ const NONE = '__none';
 export function LoanDialog({ open, onOpenChange, companyId, projects }: Props) {
   const [lender, setLender] = useState<RegistryName>({ text: '' });
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayLocal());
   const [dueDate, setDueDate] = useState('');
   // What the loan is for: the company's own spend, or funding a project.
   const [purpose, setPurpose] = useState<'company' | 'project'>('company');

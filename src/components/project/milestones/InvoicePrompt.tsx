@@ -8,6 +8,7 @@ import { REVENUE_STATUS_LABELS, type Revenue } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { runOrToast } from '@/lib/run-or-toast';
 
 interface Props {
   revenue: Revenue | null;
@@ -35,7 +36,7 @@ export function InvoicePrompt({ revenue, onClose }: Props) {
             </div>
             <div className="flex gap-2">
               <Button className="flex-1" onClick={async () => {
-                await updateRevenue(revenue.id, { status: 'invoiced' });
+                if (!(await runOrToast(() => updateRevenue(revenue.id, { status: 'invoiced' }), 'تعذّر تحويل الدفعة إلى مُفوتر'))) return;
                 toast.success('تم تحويل الدفعة إلى مُفوتر');
                 onClose();
               }}>

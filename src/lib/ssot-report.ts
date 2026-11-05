@@ -16,6 +16,7 @@ import type {
   Expense, Custody, PaymentRequest, CashTransfer, ProjectFund, FundSettlement,
   ChangeOrder, Revenue,
 } from '@/types/project';
+import { todayLocal } from '@/lib/utils';
 
 /** فرق أقل من هللة واحدة ليس اختلافاً حقيقياً. */
 export const SSOT_TOLERANCE = 0.01;
@@ -287,7 +288,7 @@ export function buildSsotReportCSV(input: SsotReportInput): string {
   const rows: string[] = [];
   rows.push(line(['المشروع', p.projectName]));
   rows.push(line(['العملة', p.currency]));
-  rows.push(line(['تاريخ التصدير', new Date().toISOString().split('T')[0]]));
+  rows.push(line(['تاريخ التصدير', todayLocal()]));
   rows.push(line(['آخر حساب على الخادم', input.computedAt ? new Date(input.computedAt).toISOString() : 'غير متاح']));
   rows.push('');
 

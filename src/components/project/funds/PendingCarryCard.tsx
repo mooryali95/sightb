@@ -12,6 +12,7 @@ import { COMPANY } from '@/lib/finance/company-ledger';
 import { createEntry } from '@/services/companyLedgerService';
 import { useStore } from '@/store/useStore';
 import type { FundSettlement, ProjectFund, ProjectStatus } from '@/types/project';
+import { todayLocal } from '@/lib/utils';
 
 const FINISHED: ProjectStatus[] = ['completed', 'archived', 'cancelled'];
 
@@ -35,7 +36,7 @@ export function PendingCarryCard({ projectId, companyId, status, funds, settleme
     setBusy(st.id);
     try {
       await createEntry({
-        companyId, date: new Date().toISOString().slice(0, 10), amount: st.remainingCash, type: 'repayment',
+        companyId, date: todayLocal(), amount: st.remainingCash, type: 'repayment',
         from: { kind: 'project', id: projectId }, to: COMPANY, note: `متبقي تسوية الدفعة رقم ${fundNo(st.fundId)} بعد انتهاء المشروع`,
         dueDate: null, sourceFundId: st.fundId,
       });

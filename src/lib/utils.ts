@@ -31,3 +31,13 @@ export function errorMessage(e: unknown, fallback = 'فشلت العملية'): 
   }
   return fallback;
 }
+
+/**
+ * Today's date as YYYY-MM-DD in Riyadh, where the books are kept.
+ * `new Date().toISOString()` is UTC: anything entered between midnight and
+ * 03:00 took yesterday's date, and on the first of a month it fell into the
+ * previous month's figures.
+ */
+export function todayLocal(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}

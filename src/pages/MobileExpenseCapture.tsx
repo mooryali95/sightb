@@ -25,6 +25,7 @@ import { CaptureStep } from './mobile/CaptureStep';
 import { ReviewForm } from './mobile/ReviewForm';
 import { SaveBar } from './mobile/SaveBar';
 import { applyReading, blobToBase64, emptyReceiptForm, type ExtractedReceipt, type ReceiptForm } from './mobile/receiptForm';
+import { logger } from '@/lib/logger';
 
 type Step = 'capture' | 'analyzing' | 'review' | 'saving';
 
@@ -148,19 +149,28 @@ export default function MobileExpenseCapture() {
 
       const newId = await addExpense(expenseData);
 
-      // 3) Persist receipt + ocr metadata via direct update (slice doesn't expose these yet)
+      // 3) Persist receipt + ocr metadata via direct update (slice doesn't expose these yet).
+      // The expense is saved by now (or queued offline): a failure here must not
+      // read as «تعذّر الحفظ», which invited saving it a second time.
+      let receiptKept = true;
       if (newId && (receipt || extracted)) {
-        await attachReceiptMetadata(newId, receipt, extracted);
+        try {
+          await attachReceiptMetadata(newId, receipt, extracted);
+        } catch (err) {
+          receiptKept = false;
+          logger.warn('mobile-expense', 'حُفظ المصروف وتعذّر إرفاق الإيصال', { expenseId: newId, err: String(err) });
+        }
       }
 
-      toast.success('تم حفظ المصروف');
+      if (receiptKept) toast.success('تم حفظ المصروف');
+      else toast.warning('حُفظ المصروف، وتعذّر إرفاق الإيصال؛ أرفقه من صفحة المشروع. لا تحفظه مرة ثانية.');
       if (then === 'next') {
         resetAll();
       } else {
         navigate(`/project/${projectId}`);
       }
     } catch (e) {
-      console.error(e);
+      logger.error('mobile-expense', 'تعذّر حفظ المصروف', { err: String(e) });
       toast.error(errorMessage(e, 'تعذّر الحفظ'));
       setStep('review');
     }

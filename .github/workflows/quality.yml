@@ -202,6 +202,10 @@ jobs:
         # src/lib/finance/summary.ts; a hand-copied version fails here.
         run: bash scripts/ssot-guard.sh
 
+      - name: Guard calendar dates against UTC
+        # A date cut from toISOString() is UTC: before 03:00 in Riyadh it is yesterday.
+        run: bash scripts/date-guard.sh
+
       - name: Guard the protected files
         # docs/LOVABLE_HANDOFF.md lists work Lovable must not delete; a
         # deletion that takes its tests with it leaves the suite green.

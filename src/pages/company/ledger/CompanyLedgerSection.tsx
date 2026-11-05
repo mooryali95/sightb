@@ -25,6 +25,7 @@ import { CompanyExpenseDialog, AllocationBar } from './CompanyExpenseDialog';
 import { LedgerEntryDialog } from './LedgerEntryDialog';
 import { LoanDialog } from './LoanDialog';
 import { nodeName, nodeTag, type LedgerProject } from './nodes';
+import { todayLocal } from '@/lib/utils';
 
 interface Props {
   companyId: string; projects: LedgerProject[]; canEdit: boolean;
@@ -47,7 +48,7 @@ export function CompanyLedgerSection({ companyId, projects, canEdit, collected =
   const balances = useMemo(() => (data ? balancesWithCompany(data.entries, data.expenses) : []), [data]);
   const receivable = balances.filter((b) => b.owesCompany > 0).reduce((s, b) => s + b.owesCompany, 0);
   const payable = balances.filter((b) => b.owesCompany < 0).reduce((s, b) => s - b.owesCompany, 0);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   const loans = useMemo(() => (data ? loansByLender(data.entries, today) : []), [data, today]);
   const funding = useMemo(() => (data ? fundingByProject(data.entries) : []), [data]);
   const recoveries = useMemo(() => recoveryAlerts(funding, collected), [funding, collected]);

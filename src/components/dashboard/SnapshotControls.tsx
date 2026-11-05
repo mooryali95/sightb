@@ -2,6 +2,7 @@ import { Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { runOrToast } from '@/lib/run-or-toast';
 import { getProjectSummary } from '@/lib/finance';
 import { getPortfolioSummary, getCompanySummary } from '@/lib/portfolio';
 import type {
@@ -37,7 +38,7 @@ export function SnapshotControls({
         variant="outline"
         size="sm"
         className="gap-1.5 text-xs"
-        onClick={async () => {
+        onClick={() => runOrToast(async () => {
           const now = new Date();
           const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
           let count = 0;
@@ -61,7 +62,7 @@ export function SnapshotControls({
             count++;
           }
           toast.success(`تم حفظ ${count} لقطة للفترة ${period}`);
-        }}
+        }, 'تعذّر حفظ لقطة الشهر')}
       >
         <Camera className="w-3.5 h-3.5" />
         حفظ لقطة الشهر الحالي

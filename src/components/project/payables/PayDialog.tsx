@@ -22,7 +22,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { cn, errorMessage } from '@/lib/utils';
+import { cn, errorMessage, todayLocal } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import { PAYMENT_METHOD_LABELS, type PaymentMethod, type PaymentRequest } from '@/types/project';
 import type { AvailableCustody, AvailableFund } from './SettleAdvanceDialog';
@@ -40,7 +40,7 @@ interface Props {
 export function PayDialog({ request, initialDate, onClose, availableFunds, availableCustodies }: Props) {
   const { payPaymentRequest } = useStore();
 
-  const [payDate, setPayDate] = useState(initialDate || new Date().toISOString().split('T')[0]);
+  const [payDate, setPayDate] = useState(initialDate || todayLocal());
   const [payMethod, setPayMethod] = useState<PaymentMethod>('bank_transfer');
   const [payRef, setPayRef] = useState('');
   // Pre-pick the first fund with a balance; failing that, the first custody.

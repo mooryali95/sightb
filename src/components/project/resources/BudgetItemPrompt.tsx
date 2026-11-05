@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import type { AddedResource } from './ResourceFormDialog';
+import { runOrToast } from '@/lib/run-or-toast';
 
 interface Props {
   prompt: AddedResource | null;
@@ -38,7 +39,7 @@ export function BudgetItemPrompt({ prompt, projectId, durationMonths, onClose }:
             </div>
             <div className="flex gap-2">
               <Button className="flex-1" onClick={async () => {
-                await addBudgetItem({
+                const saved = await runOrToast(() => addBudgetItem({
                   projectId,
                   category: 'salary',
                   description: `${prompt.name}${prompt.role ? ` — ${prompt.role}` : ''}`,
@@ -48,7 +49,8 @@ export function BudgetItemPrompt({ prompt, projectId, durationMonths, onClose }:
                   startMonth: 1,
                   endMonth: durationMonths || 1,
                   resourceId: prompt.resourceId,
-                });
+                }), 'تعذّر إنشاء بند الموازنة');
+                if (!saved) return;
                 toast.success('تم إنشاء بند الموازنة');
                 onClose();
               }}>

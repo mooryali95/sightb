@@ -27,7 +27,7 @@ import { ResponsiveFormDialog } from '@/components/ResponsiveFormDialog';
 import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -50,7 +50,7 @@ export function RevenueFormDialog({
   const [description, setDescription] = useState(editing?.description ?? '');
   const [amount, setAmount] = useState(editing ? String(editing.amount) : '');
   const [month, setMonth] = useState(editing ? String(editing.month) : '1');
-  const [date, setDate] = useState(editing?.date ?? new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(editing?.date ?? todayLocal());
   const [revenueType, setRevenueType] = useState<RevenueType>(editing?.revenueType || 'milestone');
   const [status, setStatus] = useState<RevenueStatus>(editing?.status || 'collected');
   const [invoiceNumber, setInvoiceNumber] = useState(editing?.invoiceNumber || '');
@@ -58,7 +58,7 @@ export function RevenueFormDialog({
   // A collected revenue always carries the day the cash arrived: prefilled
   // (the revenue's own date, or today when it is marked collected now) and
   // required on save, so the dashboard can place the cash in its period.
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayLocal();
   const [collectionDate, setCollectionDate] = useState(
     editing?.collectionDate || ((editing?.status || 'collected') === 'collected' ? (editing?.date ?? today) : ''),
   );

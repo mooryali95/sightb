@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { CheckCircle2, Plus, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { errorMessage } from '@/lib/utils';
+import { errorMessage, todayLocal } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS,
@@ -55,12 +55,12 @@ export function ReimbursementsTab({
   const [rCategory, setRCategory] = useState<ExpenseCategory>('equipment');
   const [rDescription, setRDescription] = useState('');
   const [rAmount, setRAmount] = useState('');
-  const [rDate, setRDate] = useState(new Date().toISOString().split('T')[0]);
+  const [rDate, setRDate] = useState(todayLocal());
   const [rNotes, setRNotes] = useState('');
 
   const resetReimb = () => {
     setRResourceId(''); setRCategory('equipment'); setRDescription('');
-    setRAmount(''); setRDate(new Date().toISOString().split('T')[0]); setRNotes('');
+    setRAmount(''); setRDate(todayLocal()); setRNotes('');
   };
 
   const handleCreateReimb = async () => {
