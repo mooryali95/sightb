@@ -34,6 +34,7 @@ import {
   type ResourceReimbursement,
 } from '@/types/project';
 import type { PayablesScope } from './usePayablesScope';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   projectId: string;
@@ -48,7 +49,7 @@ interface Props {
 export function ReimbursementsTab({
   projectId, scope, scopedReimbs, projResources, canEdit, isAdmin, onReject,
 }: Props) {
-  const { createReimbursement, approveReimbursement, deleteReimbursement } = useStore();
+  const { createReimbursement, approveReimbursement, deleteReimbursement } = useStore(useShallow((s) => ({ createReimbursement: s.createReimbursement, approveReimbursement: s.approveReimbursement, deleteReimbursement: s.deleteReimbursement })));
 
   const [reimbOpen, setReimbOpen] = useState(false);
   const [rResourceId, setRResourceId] = useState('');

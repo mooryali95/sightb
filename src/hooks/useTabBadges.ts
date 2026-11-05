@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { getCountedExpenses } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 
 export interface TabBadgeInfo {
   count: number;
@@ -27,7 +28,7 @@ const empty = (): TabBadgeInfo => ({ count: 0, level: 'info' });
 export function useTabBadges(projectId?: string): TabBadges {
   const {
     expenses, budgetItems, baselines, milestones, risks, changeOrders,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ expenses: s.expenses, budgetItems: s.budgetItems, baselines: s.baselines, milestones: s.milestones, risks: s.risks, changeOrders: s.changeOrders })));
 
   return useMemo(() => {
     if (!projectId) {

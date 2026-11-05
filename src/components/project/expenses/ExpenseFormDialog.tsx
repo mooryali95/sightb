@@ -34,6 +34,7 @@ import { translateDbError } from './translateDbError';
 import { bookedAmount, budgetItemRemaining, chosen, fundBlocksSubmit, resolveExpenseSource } from './expenseSource';
 import { SourcePicker, type SourceMode } from './SourcePicker';
 import { VatControls } from './VatControls';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   open: boolean;
@@ -59,7 +60,7 @@ export function ExpenseFormDialog({
   open, onOpenChange, onRequestOpen, editing, projectId, durationMonths, expenses, resources, custodies,
   budgetItems, taxPercent, projectStatus, isAdmin,
 }: Props) {
-  const { addExpense, updateExpense, projectFunds, acknowledgeFund, updateProject, createReimbursement } = useStore();
+  const { addExpense, updateExpense, projectFunds, acknowledgeFund, updateProject, createReimbursement } = useStore(useShallow((s) => ({ addExpense: s.addExpense, updateExpense: s.updateExpense, projectFunds: s.projectFunds, acknowledgeFund: s.acknowledgeFund, updateProject: s.updateProject, createReimbursement: s.createReimbursement })));
   const activeFund = useMemo(() => getActiveFund(projectId, projectFunds), [projectId, projectFunds]);
 
   const editingId = editing?.id ?? null;

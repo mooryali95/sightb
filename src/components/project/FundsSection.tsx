@@ -35,6 +35,7 @@ import { FundInspector } from './funds/FundInspector';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
 import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
+import { useShallow } from 'zustand/react/shallow';
 
 interface FundsSectionProps {
   projectId: string;
@@ -48,7 +49,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
   const {
     projectFunds, fundSettlements, custodies, paymentRequests, cashTransfers,
     acknowledgeFund, approveSettlement, deleteFund,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ projectFunds: s.projectFunds, fundSettlements: s.fundSettlements, custodies: s.custodies, paymentRequests: s.paymentRequests, cashTransfers: s.cashTransfers, acknowledgeFund: s.acknowledgeFund, approveSettlement: s.approveSettlement, deleteFund: s.deleteFund })));
   const projPRs = useMemo(
     () => paymentRequests.filter((p) => p.projectId === projectId),
     [paymentRequests, projectId],

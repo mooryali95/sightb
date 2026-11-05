@@ -17,6 +17,7 @@ import {
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage, todayLocal } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   projectId: string;
@@ -24,7 +25,7 @@ interface Props {
 }
 
 export function CreateFundDialog({ projectId, disabled }: Props) {
-  const { createFund } = useStore();
+  const { createFund } = useStore(useShallow((s) => ({ createFund: s.createFund })));
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newAmount, setNewAmount] = useState('');

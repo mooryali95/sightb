@@ -21,6 +21,7 @@ import { errorMessage, todayLocal } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import { calcSettlementTotals, defaultSettlementText } from '@/lib/resource-payables';
 import type { PaymentRequest, Resource, ResourceReimbursement } from '@/types/project';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   /** The resource being settled; the dialog is closed when absent. */
@@ -36,7 +37,7 @@ interface Props {
 export function SettlementDraftDialog({
   resource, projectId, companyName, projectName, projReimbs, projReqs, onClose,
 }: Props) {
-  const { createResourceSettlement } = useStore();
+  const { createResourceSettlement } = useStore(useShallow((s) => ({ createResourceSettlement: s.createResourceSettlement })));
 
   const [sFrom, setSFrom] = useState('');
   const [sTo, setSTo] = useState(todayLocal());

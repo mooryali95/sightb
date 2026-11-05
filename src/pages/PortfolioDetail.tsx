@@ -27,6 +27,7 @@ import { PortfolioCharts } from './portfolio/PortfolioCharts';
 import { buildPortfolioExport } from './portfolio/buildPortfolioExport';
 import { rankProjects, aggregateCashFlow } from './portfolio/portfolioFigures';
 import { countAr } from '@/lib/plural';
+import { useShallow } from 'zustand/react/shallow';
 
 
 export default function PortfolioDetail() {
@@ -36,9 +37,9 @@ export default function PortfolioDetail() {
   const {
     portfolios, companies, projects, budgetItems, expenses, revenues,
     changeOrders, milestones, risks, loading, deletePortfolio,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ portfolios: s.portfolios, companies: s.companies, projects: s.projects, budgetItems: s.budgetItems, expenses: s.expenses, revenues: s.revenues, changeOrders: s.changeOrders, milestones: s.milestones, risks: s.risks, loading: s.loading, deletePortfolio: s.deletePortfolio })));
 
-  const { loadProjectData } = useStore();
+  const { loadProjectData } = useStore(useShallow((s) => ({ loadProjectData: s.loadProjectData })));
 
   useCoreData();
 

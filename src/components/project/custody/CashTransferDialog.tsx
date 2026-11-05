@@ -21,6 +21,7 @@ import { FormFooter } from '@/components/FormFooter';
 import { ArrowDownToLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage, todayLocal } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 /** A fund with a balance, as the section computes it. */
 export type AvailableFund = ProjectFund & { remaining: number };
@@ -37,7 +38,7 @@ interface Props {
 export function CashTransferDialog({
   open, onOpenChange, onRequestOpen, projectId, availableFunds, activeCustodies,
 }: Props) {
-  const { createCashTransfer, refreshCashDerivations } = useStore();
+  const { createCashTransfer, refreshCashDerivations } = useStore(useShallow((s) => ({ createCashTransfer: s.createCashTransfer, refreshCashDerivations: s.refreshCashDerivations })));
 
   const [transferCustodyId, setTransferCustodyId] = useState<string>('');
   const [transferFundId, setTransferFundId] = useState<string>('');

@@ -25,6 +25,7 @@ import { ExpenseInspector } from './expenses/ExpenseInspector';
 import { translateDbError } from './expenses/translateDbError';
 import { summarizeSpendByResource, matchesResourceQuery, normalizeArabicName, indexResources, resourceKeyOf, UNLINKED_KEY } from '@/lib/resource-spend';
 import { runOrToast } from '@/lib/run-or-toast';
+import { useShallow } from 'zustand/react/shallow';
 
 interface ExpensesSectionProps {
   projectId: string;
@@ -41,7 +42,7 @@ interface ExpensesSectionProps {
 }
 
 export function ExpensesSection({ projectId, durationMonths, expenses, resources, custodies, budgetItems, revenues, contractValue, readOnly = false, taxPercent = 15, projectStatus }: ExpensesSectionProps) {
-  const { deleteExpense, updateExpense, projectFunds } = useStore();
+  const { deleteExpense, updateExpense, projectFunds } = useStore(useShallow((s) => ({ deleteExpense: s.deleteExpense, updateExpense: s.updateExpense, projectFunds: s.projectFunds })));
   const { isAdminFor } = useRole();
   const isAdmin = isAdminFor('project', projectId);
   const inspector = useDialogSession<string>();

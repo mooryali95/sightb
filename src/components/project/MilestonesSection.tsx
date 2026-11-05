@@ -20,6 +20,7 @@ import { InvoicePrompt } from './milestones/InvoicePrompt';
 import { weightedPercent, sortMilestones, statusForPercent } from './milestones/milestoneFigures';
 import { runOrToast } from '@/lib/run-or-toast';
 import { todayLocal } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 interface MilestonesSectionProps {
   projectId: string;
@@ -30,7 +31,7 @@ interface MilestonesSectionProps {
 }
 
 export function MilestonesSection({ projectId, milestones, project, readOnly = false, revenues = [] }: MilestonesSectionProps) {
-  const { addMilestone, updateMilestone, deleteMilestone, updateProject } = useStore();
+  const { addMilestone, updateMilestone, deleteMilestone, updateProject } = useStore(useShallow((s) => ({ addMilestone: s.addMilestone, updateMilestone: s.updateMilestone, deleteMilestone: s.deleteMilestone, updateProject: s.updateProject })));
   // Remounted on open so an edit starts from the row and an add starts blank; see useDialogSession.
   const form = useDialogSession<{ milestone?: Milestone }>();
   const [invoiceFor, setInvoiceFor] = useState<Revenue | null>(null);

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 export interface RejectTarget { id: string; kind: 'reimb' | 'req' }
 
@@ -25,7 +26,7 @@ interface Props {
 }
 
 export function RejectDialog({ target, onClose }: Props) {
-  const { rejectReimbursement, rejectPaymentRequest } = useStore();
+  const { rejectReimbursement, rejectPaymentRequest } = useStore(useShallow((s) => ({ rejectReimbursement: s.rejectReimbursement, rejectPaymentRequest: s.rejectPaymentRequest })));
 
   const [rejectReason, setRejectReason] = useState('');
 

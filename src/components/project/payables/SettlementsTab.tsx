@@ -18,6 +18,7 @@ import {
   type Resource,
   type ResourceSettlement,
 } from '@/types/project';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   projSettles: ResourceSettlement[];
@@ -26,7 +27,7 @@ interface Props {
 }
 
 export function SettlementsTab({ projSettles, projResources, isAdmin }: Props) {
-  const { signResourceSettlement } = useStore();
+  const { signResourceSettlement } = useStore(useShallow((s) => ({ signResourceSettlement: s.signResourceSettlement })));
 
   return (
     <div className="space-y-3">

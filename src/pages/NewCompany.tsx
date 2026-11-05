@@ -11,13 +11,14 @@ import { toast } from 'sonner';
 import { companySchema } from '@/lib/validations';
 import { useRole } from '@/hooks/useRole';
 import { Navigate } from 'react-router-dom';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function NewCompany() {
   const { isAdmin, loading: roleLoading } = useRole();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
-  const { addCompany } = useStore();
+  const { addCompany } = useStore(useShallow((s) => ({ addCompany: s.addCompany })));
   const navigate = useNavigate();
 
   if (roleLoading) return null;

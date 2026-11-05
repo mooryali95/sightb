@@ -14,6 +14,7 @@ import { Plus, Target, TrendingUp, TrendingDown, DollarSign, BarChart3, CheckCir
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { useShallow } from 'zustand/react/shallow';
 
 interface BaselineSectionProps {
   projectId: string;
@@ -37,7 +38,7 @@ function buildSCurveData(baseline: CostBaseline, expenses: Expense[], durationMo
 }
 
 export function BaselineSection({ projectId, durationMonths, expenses, budgetItems, project, readOnly = false }: BaselineSectionProps) {
-  const { baselines, createBaseline, deleteBaseline, setActiveBaseline, loadBaselines } = useStore();
+  const { baselines, createBaseline, deleteBaseline, setActiveBaseline, loadBaselines } = useStore(useShallow((s) => ({ baselines: s.baselines, createBaseline: s.createBaseline, deleteBaseline: s.deleteBaseline, setActiveBaseline: s.setActiveBaseline, loadBaselines: s.loadBaselines })));
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [baselineName, setBaselineName] = useState('');

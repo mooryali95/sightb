@@ -22,6 +22,7 @@ import { FormFooter } from '@/components/FormFooter';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   open: boolean;
@@ -36,7 +37,7 @@ interface Props {
 }
 
 export function RiskFormDialog({ open, onOpenChange, onRequestOpen, editing, projectId, portfolioId }: Props) {
-  const { addRisk, updateRisk } = useStore();
+  const { addRisk, updateRisk } = useStore(useShallow((s) => ({ addRisk: s.addRisk, updateRisk: s.updateRisk })));
   const [title, setTitle] = useState(editing?.title ?? '');
   const [description, setDescription] = useState(editing?.description ?? '');
   const [probability, setProbability] = useState<RiskProbability>(editing?.probability ?? 'medium');

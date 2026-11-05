@@ -18,6 +18,7 @@ import { formatCurrency } from '@/lib/finance';
 import type { BudgetAmendment } from '@/types/project';
 import { OpenAmendmentDialog } from './amendments/OpenAmendmentDialog';
 import { AmendmentHistory } from './amendments/AmendmentHistory';
+import { useShallow } from 'zustand/react/shallow';
 
 interface BudgetAmendmentManagerProps {
   projectId: string;
@@ -32,7 +33,7 @@ export function BudgetAmendmentManager({
 }: BudgetAmendmentManagerProps) {
   const {
     budgetAmendments, cancelBudgetAmendment, approveBudgetAmendment, loadBudgetAmendments,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ budgetAmendments: s.budgetAmendments, cancelBudgetAmendment: s.cancelBudgetAmendment, approveBudgetAmendment: s.approveBudgetAmendment, loadBudgetAmendments: s.loadBudgetAmendments })));
 
   const [submitting, setSubmitting] = useState(false);
 

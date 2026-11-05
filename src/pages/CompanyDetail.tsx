@@ -35,6 +35,7 @@ import { RegistrySection } from './company/registry/RegistrySection';
 import { IntegrityCard } from './company/IntegrityCard';
 import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
 import { countAr } from '@/lib/plural';
+import { useShallow } from 'zustand/react/shallow';
 
 /** See the note in Dashboard.tsx — module scope keeps the `useMemo`s memoized. */
 const INACTIVE_STATUSES = ['completed', 'archived', 'cancelled'];
@@ -48,7 +49,7 @@ export default function CompanyDetail() {
     companies, portfolios, projects, budgetItems, expenses, revenues,
     changeOrders, milestones, risks, indirectCosts,
     loading, deleteCompany, archiveCompany,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ companies: s.companies, portfolios: s.portfolios, projects: s.projects, budgetItems: s.budgetItems, expenses: s.expenses, revenues: s.revenues, changeOrders: s.changeOrders, milestones: s.milestones, risks: s.risks, indirectCosts: s.indirectCosts, loading: s.loading, deleteCompany: s.deleteCompany, archiveCompany: s.archiveCompany })));
 
   const detailsLoaded = useStore((s) => s.detailsLoaded);
 
@@ -310,6 +311,14 @@ export default function CompanyDetail() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        )}
+        {/* While the company's expenses load, hold the chart's place: it arrived late and pushed
+            the whole page down by its height (the largest layout shift on this page). */}
+        {!(detailsLoaded || companyData.isSuccess) && expensesByPortfolio.length === 0 && (
+          <div className="rounded-xl border border-border bg-card p-4 mb-6" aria-hidden="true">
+            <div className="h-5 w-48 rounded bg-muted animate-pulse mb-4" />
+            <div className="h-[280px] rounded bg-muted/40 animate-pulse" />
           </div>
         )}
 

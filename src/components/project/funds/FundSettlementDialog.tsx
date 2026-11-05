@@ -25,6 +25,7 @@ import { isSettlementEditable, needsReason, settlementFigures } from './settleme
 import { SettlementFiguresGrid } from './SettlementFiguresGrid';
 import { OpenItemsNote } from './OpenItemsNote';
 import { AttachmentsEditor } from './AttachmentsEditor';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   /** The fund being settled; the dialog is closed when absent. */
@@ -61,7 +62,7 @@ function StatusNote({ existing }: { existing: FundSettlement | undefined }) {
 export function FundSettlementDialog({
   fund, existing, projectExpenses, projectCustodies, projPRs, projTransfers, readOnly, onClose,
 }: Props) {
-  const { submitSettlement, updateSettlementDraft } = useStore();
+  const { submitSettlement, updateSettlementDraft } = useStore(useShallow((s) => ({ submitSettlement: s.submitSettlement, updateSettlementDraft: s.updateSettlementDraft })));
 
   const [remainingCash, setRemainingCash] = useState(existing ? String(existing.remainingCash) : '0');
   const [diffReason, setDiffReason] = useState(existing?.differenceReason || '');

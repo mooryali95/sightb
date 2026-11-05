@@ -42,6 +42,7 @@ import type {
   ProjectFund,
   Resource,
 } from '@/types/project';
+import { useShallow } from 'zustand/react/shallow';
 
 /** The settle-advance dialog's modes: the four settlement types plus a refund-and-document compound. */
 type AdvanceSettlementMode = AdvanceSettlementType | 'compound';
@@ -69,7 +70,7 @@ export function SettleAdvanceDialog({
   const {
     settlementEvents, expenses, projectFunds, custodies,
     settleAdvance, settleAdvanceWithSplit, reverseSettlementEvent,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ settlementEvents: s.settlementEvents, expenses: s.expenses, projectFunds: s.projectFunds, custodies: s.custodies, settleAdvance: s.settleAdvance, settleAdvanceWithSplit: s.settleAdvanceWithSplit, reverseSettlementEvent: s.reverseSettlementEvent })));
 
   // Starting values, read once: the parent remounts this dialog on every open.
   const outstandingAtOpen = advance ? Math.max(advance.amount - (advance.refundedAmount ?? 0), 0) : 0;

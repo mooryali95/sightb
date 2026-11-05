@@ -26,6 +26,7 @@ import { cn, errorMessage, todayLocal } from '@/lib/utils';
 import { formatCurrency } from '@/lib/finance';
 import { PAYMENT_METHOD_LABELS, type PaymentMethod, type PaymentRequest } from '@/types/project';
 import type { AvailableCustody, AvailableFund } from './SettleAdvanceDialog';
+import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
   /** The request being paid; the dialog is closed when absent. */
@@ -38,7 +39,7 @@ interface Props {
 }
 
 export function PayDialog({ request, initialDate, onClose, availableFunds, availableCustodies }: Props) {
-  const { payPaymentRequest } = useStore();
+  const { payPaymentRequest } = useStore(useShallow((s) => ({ payPaymentRequest: s.payPaymentRequest })));
 
   const [payDate, setPayDate] = useState(initialDate || todayLocal());
   const [payMethod, setPayMethod] = useState<PaymentMethod>('bank_transfer');

@@ -17,10 +17,11 @@ import { PROJECT_STATUS_LABELS, CONTRACT_TYPE_LABELS, type ProjectStatus, type C
 import { VatSplitPreview } from './newproject/VatSplitPreview';
 import { contractFigures, resolveVatRate } from './newproject/contractFigures';
 import { todayLocal } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function NewProject() {
   const [searchParams] = useSearchParams();
-  const { companies, portfolios, addProject, loadAll } = useStore();
+  const { companies, portfolios, addProject, loadAll } = useStore(useShallow((s) => ({ companies: s.companies, portfolios: s.portfolios, addProject: s.addProject, loadAll: s.loadAll })));
   const { isAdmin, canEdit } = useRole();
   const navigate = useNavigate();
 

@@ -34,6 +34,7 @@ import {
   type Resource,
   type ResourceReimbursement,
 } from '@/types/project';
+import { useShallow } from 'zustand/react/shallow';
 
 /** What the balances table pre-fills when it opens the dialog for one resource. */
 export interface NewPaymentRequestPreset {
@@ -55,7 +56,7 @@ interface Props {
 export function NewPaymentRequestDialog({
   open, onOpenChange, projectId, projResources, projReimbs, projBudgetItems, preset,
 }: Props) {
-  const { createPaymentRequest, submitPaymentRequest } = useStore();
+  const { createPaymentRequest, submitPaymentRequest } = useStore(useShallow((s) => ({ createPaymentRequest: s.createPaymentRequest, submitPaymentRequest: s.submitPaymentRequest })));
 
   const [pResourceId, setPResourceId] = useState(preset?.resourceId ?? '');
   const [pType, setPType] = useState<PaymentRequestType>('reimbursement');
