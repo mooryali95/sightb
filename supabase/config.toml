@@ -11,3 +11,5 @@ project_id = "krhvqowmhthokqvmnvxj"
     verify_jwt = false
   [functions.second-factor]
     verify_jwt = false
+  [functions.daily-digest]
+    verify_jwt = false

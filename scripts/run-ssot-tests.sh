@@ -52,6 +52,11 @@ psql "$SUPABASE_DB_URL" \
   -v ON_ERROR_STOP=1 \
   -f supabase/tests/client-errors.sql
 
+echo "▶ Running daily-digest test (service role only; owners and system admins at their sign-in address)…"
+psql "$SUPABASE_DB_URL" \
+  -v ON_ERROR_STOP=1 \
+  -f supabase/tests/daily-digest.sql
+
 echo "▶ Running Vitest suite (finance / funds / budget-comparison / advance-settlement)…"
 bunx vitest run
 
