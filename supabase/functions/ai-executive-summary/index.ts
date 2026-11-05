@@ -2,6 +2,7 @@
 // Receives project metrics, returns concise Arabic insights for executives.
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireWorkingRole } from "../_shared/workingRole.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sightb.lovable.app",
@@ -73,6 +74,10 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Second factor passed, and a role that keeps the books: see ../_shared/workingRole.ts.
+    const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const refused = await requireWorkingRole(service, token, userData.user.id, corsHeaders);
+    if (refused) return refused;
   } catch {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,

@@ -79,6 +79,13 @@ does not happen again.
      `user_roles` itself (42P17); ask `has_role()` instead. Its WITH CHECK
      must require an admin on its own, since INSERT applies only WITH CHECK.
      A name on an expense is linked to a registry entry, never retyped.
+   - Access follows the current role (`20261105120000`): never add an
+     `auth.uid() = user_id OR …` branch to a data policy, never let an admin
+     write or change an owner row or invite, and leave
+     `second_factor_settings.enforce` on. The AI functions go through
+     `_shared/workingRole.ts`. Calendar dates come from `todayLocal()`, never
+     `toISOString()` (`scripts/date-guard.sh`); a handler that awaits a store
+     action goes through `runOrToast`.
    - «الكشف المالي الموحّد» (`src/lib/finance/unified-statement.ts`,
      `src/lib/export/unified-statement.ts`, the «الكشف الموحّد» button on the
      company page): the owner's monthly statement, built from the same money
