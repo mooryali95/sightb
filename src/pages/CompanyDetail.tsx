@@ -46,7 +46,7 @@ export default function CompanyDetail() {
   const { isAdmin, canEdit } = useRole();
   const {
     companies, portfolios, projects, budgetItems, expenses, revenues,
-    changeOrders, milestones, risks, indirectCosts, resources,
+    changeOrders, milestones, risks, indirectCosts,
     loading, deleteCompany, archiveCompany,
   } = useStore();
 
@@ -90,10 +90,18 @@ export default function CompanyDetail() {
   const parties = useParties(id);
   // The statement reads the store at the click: only once the company's expenses and its registry are in.
   const statementReady = (detailsLoaded || companyData.isSuccess) && !parties.isPending;
-  const statement = () => buildUnifiedStatement({
-    companyName: company?.name ?? '', projects: companyProjects, expenses, revenues, changeOrders, resources,
-    parties: (parties.data ?? []).map((p) => ({ id: p.id, name: p.name })),
-  });
+  const loadPayables = useStore((s) => s.loadResourcePayablesForProject);
+  // Open advances live in the payment requests, which load per project; fetch them for every project first.
+  const statement = async () => {
+    await Promise.all(companyProjects.map((p) => loadPayables(p.id)));
+    const s = useStore.getState();
+    return buildUnifiedStatement({
+      companyName: company?.name ?? '', projects: companyProjects,
+      expenses: s.expenses, revenues: s.revenues, changeOrders: s.changeOrders, resources: s.resources,
+      parties: (parties.data ?? []).map((p) => ({ id: p.id, name: p.name })),
+      paymentRequests: s.paymentRequests,
+    });
+  };
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   // The stat card above counts spend through the summary library, which
@@ -210,7 +218,7 @@ export default function CompanyDetail() {
               {companyProjects.length > 0 && (
                 <Button variant="outline" size="sm" className="gap-1.5" disabled={!statementReady} title={statementReady ? undefined : 'جارٍ تحميل الحركات…'} onClick={async () => {
                   try {
-                    await exportUnifiedStatement(statement());
+                    await exportUnifiedStatement(await statement());
                     toast.success('تم تصدير الكشف المالي الموحّد');
                   } catch {
                     toast.error('تعذّر تصدير الكشف');

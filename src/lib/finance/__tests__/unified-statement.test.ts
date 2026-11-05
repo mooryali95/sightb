@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildUnifiedStatement, natureOf } from '../unified-statement';
 import { getProjectSummary } from '../summary';
 import { buildStatementWorkbook } from '@/lib/export/unified-statement';
-import type { ChangeOrder, Expense, Project, Resource, Revenue } from '@/types/project';
+import type { ChangeOrder, Expense, PaymentRequest, Project, Resource, Revenue } from '@/types/project';
 
 const project = (id: string, name: string, contractValue: number): Project => ({
   id, name, contractValue, companyId: 'c', status: 'active', durationMonths: 4, createdAt: '2026-01-01',
@@ -34,9 +34,19 @@ const expenses: Expense[] = [
 ];
 const revenues: Revenue[] = [revenue('a', 80000, 'collected'), revenue('a', 60000, 'invoiced'), revenue('h', 65217.391, 'collected')];
 
+// A paid advance writes no expense: what is still out on it is read from the request, net of what came back.
+const request = (id: string, projectId: string, amount: number, extra: Partial<PaymentRequest>): PaymentRequest =>
+  ({ id, projectId, amount, requestType: 'advance', status: 'paid', isAdvanceOutstanding: true, refundedAmount: 0, ...extra } as PaymentRequest);
+const paymentRequests: PaymentRequest[] = [
+  request('pr-open', 'a', 5000, { refundedAmount: 1000 }),
+  request('pr-settled', 'a', 9000, { isAdvanceOutstanding: false }),
+  request('pr-pending', 'h', 700, { status: 'approved' }),
+  request('pr-other', 'x', 999, {}),
+];
+
 const statement = buildUnifiedStatement({
   companyName: 'منظومة', projects: [albania, hackathon], expenses, revenues, changeOrders, resources,
-  parties: [{ id: 'p-ahmad', name: 'أحمد صبري (أبو رؤى)' }],
+  parties: [{ id: 'p-ahmad', name: 'أحمد صبري (أبو رؤى)' }], paymentRequests,
 });
 
 describe('buildUnifiedStatement', () => {
@@ -50,10 +60,12 @@ describe('buildUnifiedStatement', () => {
     }
   });
 
-  it('leaves out rejected expenses and open advances, and lists the advances beside the figures', () => {
+  it('leaves out rejected expenses and open advances, and lists what is still out on paid advances beside the figures', () => {
     const a = statement.projects[0].figures;
     expect(a.actual).toBe(10000 + 13000 + 3289);
-    expect(a.openAdvances).toBe(5000);
+    expect(a.openAdvances).toBe(4000);
+    expect(statement.projects[1].figures.openAdvances).toBe(0);
+    expect(statement.figures.openAdvances).toBe(4000);
     expect(a.movements).toBe(3);
     expect(a.net).toBe(80000 - 26289);
     expect(a.margin).toBeCloseTo((80000 - 26289) / 80000, 6);
