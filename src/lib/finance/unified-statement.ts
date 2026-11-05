@@ -7,13 +7,16 @@
  * getCollectedRevenue, and the actual spend is getCountedExpenses (rejected
  * expenses and advances not yet settled are left out). So the statement and
  * the project, company and finance pages give one number for one question.
- * Advances still open are listed beside the figures, not inside them.
+ * Advances still open are listed beside the figures, not inside them; a paid
+ * advance writes no expense, so they are read from the payment requests with
+ * the same rule as the payables card (getProjectOutstandingAdvances).
  */
-import type { ChangeOrder, Expense, ExpenseCategory, Project, Resource, Revenue } from '@/types/project';
+import type { ChangeOrder, Expense, ExpenseCategory, PaymentRequest, Project, Resource, Revenue } from '@/types/project';
 import { EXPENSE_CATEGORY_LABELS } from '@/types/project';
 import { getCollectedRevenue, getCountedExpenses } from './summary';
 import { getEffectiveContractValue } from './contract';
 import { attributeExpense, indexResources } from '@/lib/resource-spend';
+import { getProjectOutstandingAdvances } from '@/lib/funds';
 
 export interface StatementParty { id: string; name: string }
 
@@ -25,6 +28,8 @@ export interface StatementInput {
   changeOrders: ChangeOrder[];
   resources: Resource[];
   parties: StatementParty[];
+  /** The projects' payment requests, for the advances still open. */
+  paymentRequests?: PaymentRequest[];
 }
 
 export interface StatementLine {
@@ -98,13 +103,10 @@ const UNNAMED = 'غير مسمّى';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-function figuresOf(contract: number, revenues: Revenue[], expenses: Expense[]): Figures {
+function figuresOf(contract: number, revenues: Revenue[], expenses: Expense[], openAdvances: number): Figures {
   const counted = getCountedExpenses(expenses);
   const collected = getCollectedRevenue(revenues);
   const actual = counted.reduce((s, e) => s + e.amount, 0);
-  const openAdvances = expenses
-    .filter((e) => e.isOutstandingAdvance && e.approvalStatus !== 'rejected')
-    .reduce((s, e) => s + e.amount, 0);
   const net = collected - actual;
   return {
     contract: round2(contract), collected: round2(collected), actual: round2(actual), net: round2(net),
@@ -157,7 +159,10 @@ export function buildUnifiedStatement(input: StatementInput): UnifiedStatement {
     return {
       id: p.id,
       name: p.name,
-      figures: figuresOf(contract, revenues.filter((r) => r.projectId === p.id), expenses.filter((e) => e.projectId === p.id)),
+      figures: figuresOf(
+        contract, revenues.filter((r) => r.projectId === p.id), expenses.filter((e) => e.projectId === p.id),
+        getProjectOutstandingAdvances(p.id, input.paymentRequests).total,
+      ),
       byParty: shares(own, (l) => l.party),
       byNature: shares(own, (l) => l.nature),
       lines: own,
@@ -167,7 +172,7 @@ export function buildUnifiedStatement(input: StatementInput): UnifiedStatement {
   const contract = projects.reduce((s, p) => s + p.figures.contract, 0);
   return {
     companyName: input.companyName,
-    figures: figuresOf(contract, revenues, expenses),
+    figures: figuresOf(contract, revenues, expenses, projects.reduce((s, p) => s + p.figures.openAdvances, 0)),
     projects,
     byParty: shares(lines, (l) => l.party),
     byNature: shares(lines, (l) => l.nature),
