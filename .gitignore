@@ -37,3 +37,6 @@ supabase/.temp/
 # Playwright run output
 test-results/
 playwright-report/
+
+# Python bytecode from scripts/
+__pycache__/
