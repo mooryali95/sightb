@@ -180,15 +180,15 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
           </div>
           <div className="flex h-3 w-full rounded-full overflow-hidden bg-muted">
             <div className="bg-primary h-full" style={{ width: `${pct(directSpend)}%` }} title={`مصروف مباشر: ${formatCurrency(directSpend)}`} />
-            <div className="bg-amber-500 h-full" style={{ width: `${pct(custodyTotalSpend)}%` }} title={`مصروف عبر عُهد: ${formatCurrency(custodyTotalSpend)}`} />
-            <div className="bg-orange-300 h-full" style={{ width: `${pct(inHandsOfHolders)}%` }} title={`بيد حاملي العُهد: ${formatCurrency(inHandsOfHolders)}`} />
-            <div className="bg-emerald-500 h-full" style={{ width: `${pct(summary.remainingInManagerHand)}%` }} title={`بيد المدير: ${formatCurrency(summary.remainingInManagerHand)}`} />
+            <div className="bg-warning h-full" style={{ width: `${pct(custodyTotalSpend)}%` }} title={`مصروف عبر عُهد: ${formatCurrency(custodyTotalSpend)}`} />
+            <div className="bg-warning/50 h-full" style={{ width: `${pct(inHandsOfHolders)}%` }} title={`بيد حاملي العُهد: ${formatCurrency(inHandsOfHolders)}`} />
+            <div className="bg-success h-full" style={{ width: `${pct(summary.remainingInManagerHand)}%` }} title={`بيد المدير: ${formatCurrency(summary.remainingInManagerHand)}`} />
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-primary" /> مصروف مباشر {formatCurrency(directSpend)}</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-500" /> صُرف من العُهد {formatCurrency(custodyTotalSpend)}</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-orange-300" /> بيد حاملي العُهد {formatCurrency(inHandsOfHolders)}</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> بيد المدير {formatCurrency(summary.remainingInManagerHand)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-warning" /> صُرف من العُهد {formatCurrency(custodyTotalSpend)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-warning/20" /> بيد حاملي العُهد {formatCurrency(inHandsOfHolders)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-success" /> بيد المدير {formatCurrency(summary.remainingInManagerHand)}</span>
           </div>
         </Card>
       )}
@@ -223,11 +223,11 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
 
           {/* مستحقات معلّقة */}
           {pendingPayables.total > 0 && (
-            <Card className="p-3 rounded-xl border-amber-300/40 bg-amber-50/40 dark:bg-amber-900/10">
+            <Card className="p-3 rounded-xl border-warning/30 bg-warning/10">
               <div className="flex items-start gap-3">
-                <Clock className="w-4 h-4 mt-0.5 text-warning dark:text-amber-400" />
+                <Clock className="w-4 h-4 mt-0.5 text-warning" />
                 <div className="flex-1 text-xs">
-                  <p className="font-semibold text-amber-800 dark:text-amber-300">
+                  <p className="font-semibold text-warning">
                     مستحقات موارد معلّقة — لم تُصرف بعد (لا تُطرح من النقد)
                   </p>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
@@ -249,8 +249,8 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
             </div>
           )}
           {unlinkedExpenses.length > 0 && (
-            <div className="p-3 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-900/10">
-              <p className="text-sm text-amber-800 dark:text-amber-300">
+            <div className="p-3 rounded-lg border border-warning/30 bg-warning/10">
+              <p className="text-sm text-warning">
                 ⚠️ {unlinkedExpenses.length} مصروف غير مرتبط بأي دفعة أو عهدة (إجمالي {formatCurrency(unlinkedTotal)}).
               </p>
             </div>

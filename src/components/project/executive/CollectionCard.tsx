@@ -33,8 +33,8 @@ export function CollectionCard({ summary }: { summary: ProjectSummary }) {
         {summary.accountsReceivable > 0 && <Progress value={(summary.collectedRevenue + summary.accountsReceivable) / summary.effectiveContractValue * 100} aria-label="المحصّل مع المستحق" className="h-1 opacity-40" />}
       </div>
       <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> محصّل {collectedPct.toFixed(0)}%</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block" /> مفوتر</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-success inline-block" /> محصّل {collectedPct.toFixed(0)}%</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-warning inline-block" /> مفوتر</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm border border-muted-foreground/50 inline-block" /> لم يُفوتر</span>
       </div>
     </SectionCard>

@@ -87,15 +87,15 @@ export function BudgetPlanningSummary({ budgetItems, countedExpenses, contractVa
       </div>
 
       {outstandingAdvances.total > 0 && (
-        <div className="mb-4 p-3 rounded-lg border border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20 flex items-center justify-between gap-3 flex-wrap">
+        <div className="mb-4 p-3 rounded-lg border border-warning/30 bg-warning/10 flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold">سلف قائمة (لم تُسوَّ بعد)</p>
+            <p className="text-xs text-warning font-semibold">سلف قائمة (لم تُسوَّ بعد)</p>
             <p className="text-xs text-muted-foreground">
               أصول قابلة للاسترداد — لا تدخل في التكلفة الفعلية (AC) ولا في حساب CPI حتى تتم تسويتها.
             </p>
           </div>
           <div className="text-end">
-            <p className="text-sm font-mono font-bold text-amber-700 dark:text-amber-400">
+            <p className="text-sm font-mono font-bold text-warning">
               {formatCurrency(outstandingAdvances.total)}
             </p>
             <p className="text-xs text-muted-foreground">{outstandingAdvances.count} سلفة</p>

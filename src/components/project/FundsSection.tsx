@@ -117,7 +117,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                 'flex items-start gap-2 p-3 rounded-lg border text-sm',
                 a.severity === 'high' || a.severity === 'critical'
                   ? 'border-destructive/30 bg-destructive/5 text-destructive'
-                  : 'border-amber-300/40 bg-amber-50 text-amber-800 dark:bg-amber-900/10 dark:text-amber-300',
+                  : 'border-warning/30 bg-warning/10 text-warning',
               )}
             >
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -140,10 +140,10 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
         </div>
 
         {!canCreate.allowed && showCreate && (
-          <div className="mb-3 p-3 rounded-md bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/40 text-xs text-amber-800 dark:text-amber-300 space-y-2">
+          <div className="mb-3 p-3 rounded-md bg-warning/10 border border-warning/30 text-xs text-warning space-y-2">
             <p>⚠️ {canCreate.reason}</p>
             {isAdmin && (
-              <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-200/60 dark:border-amber-700/30">
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-warning/30">
                 <span className="text-xs opacity-80">للحالات الاضطرارية فقط — يُسجَّل في سجل التدقيق</span>
                 <EmergencyFundDialog projectId={projectId} blockingFundNumber={canCreate.blockingFundNumber} />
               </div>
@@ -257,7 +257,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 text-xs gap-1 text-emerald-700 border-emerald-300"
+                                className="h-7 text-xs gap-1 text-success border-success/30"
                                 onClick={() => handleApprove(settlement.id)}
                               >
                                 <ThumbsUp className="w-3 h-3" /> اعتماد

@@ -16,9 +16,9 @@ interface SmartBudgetAlertsProps extends SmartAlertContext {
 }
 
 const SEV_META: Record<SmartAlertSeverity, { label: string; icon: typeof AlertTriangle; bg: string; text: string; ring: string; dot: string }> = {
-  critical: { label: 'حرج',     icon: AlertTriangle, bg: 'bg-red-50 dark:bg-red-900/15',       text: 'text-red-700 dark:text-red-300',     ring: 'border-red-200 dark:border-red-900/40',     dot: 'bg-red-500' },
-  warning:  { label: 'تحذير',   icon: AlertCircle,   bg: 'bg-amber-50 dark:bg-amber-900/15',   text: 'text-amber-700 dark:text-amber-300', ring: 'border-amber-200 dark:border-amber-900/40', dot: 'bg-amber-500' },
-  info:     { label: 'تنبيه',   icon: Info,          bg: 'bg-blue-50 dark:bg-blue-900/15',     text: 'text-blue-700 dark:text-blue-300',   ring: 'border-blue-200 dark:border-blue-900/40',   dot: 'bg-blue-500' },
+  critical: { label: 'حرج',     icon: AlertTriangle, bg: 'bg-destructive/10',       text: 'text-destructive',     ring: 'border-destructive/30',     dot: 'bg-destructive' },
+  warning:  { label: 'تحذير',   icon: AlertCircle,   bg: 'bg-warning/10',   text: 'text-warning', ring: 'border-warning/30', dot: 'bg-warning' },
+  info:     { label: 'تنبيه',   icon: Info,          bg: 'bg-info/10',     text: 'text-info',   ring: 'border-info/30',   dot: 'bg-info' },
 };
 
 export function SmartBudgetAlerts({ onNavigate, ...ctx }: SmartBudgetAlertsProps) {
@@ -35,11 +35,11 @@ export function SmartBudgetAlerts({ onNavigate, ...ctx }: SmartBudgetAlertsProps
 
   if (alerts.length === 0) {
     return (
-      <div className="stat-card border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-900/10">
+      <div className="stat-card border-success/30 bg-success/10">
         <div className="flex items-center gap-2.5">
           <ShieldCheck className="w-5 h-5 text-success" />
           <div>
-            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">المشروع ضمن الحدود الصحية</p>
+            <p className="text-sm font-semibold text-success">المشروع ضمن الحدود الصحية</p>
             <p className="text-xs text-muted-foreground">لا توجد تنبيهات مالية أو إدارية تستوجب الانتباه حالياً</p>
           </div>
         </div>

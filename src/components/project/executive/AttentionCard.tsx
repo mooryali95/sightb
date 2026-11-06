@@ -17,7 +17,7 @@ export function AttentionCard({ expenses, changeOrders, milestones, budgetRemain
   const delayedMilestones = milestones.filter(m => m.status === 'delayed').length;
   if (!(pendingExpenses.length > 0 || pendingCOs.length > 0 || delayedMilestones > 0 || budgetRemaining < 0)) return null;
   return (
-    <SectionCard className="border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10">
+    <SectionCard className="border-warning/30 bg-warning/10">
       <SectionTitle icon={AlertTriangle}>يحتاج تدخل</SectionTitle>
       <div className="space-y-2">
         {pendingExpenses.length > 0 && (

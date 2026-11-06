@@ -275,7 +275,7 @@ export function SettleAdvanceDialog({
                       <span className="text-muted-foreground">مردود سابقاً</span>
                       <span className="font-mono">{formatCurrency(advance.refundedAmount ?? 0)}</span>
                     </div>
-                    <div className="flex justify-between text-amber-700 dark:text-amber-400 font-semibold">
+                    <div className="flex justify-between text-warning font-semibold">
                       <span>المتبقي القائم</span>
                       <span className="font-mono">
                         {formatCurrency(Math.max(advance.amount - (advance.refundedAmount ?? 0), 0))}

@@ -51,7 +51,7 @@ function StatusNote({ existing }: { existing: FundSettlement | undefined }) {
   }
   if (existing.status === 'approved') {
     return (
-      <div className="p-3 rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/10 text-sm text-emerald-700 dark:text-emerald-400">
+      <div className="p-3 rounded-md border border-success/30 bg-success/10 text-sm text-success">
         ✓ مُعتمدة في {existing.approvalDate?.split('T')[0]}
       </div>
     );

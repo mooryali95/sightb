@@ -48,7 +48,7 @@ export function ResultCard({ title, value, subtitle, trend, diff, currency }: {
         <p className="text-xs text-muted-foreground">{title}</p>
         <div className="flex items-center gap-2">
           {trend === 'up' ? (
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <TrendingUp className="w-4 h-4 text-success" />
           ) : (
             <TrendingDown className="w-4 h-4 text-destructive" />
           )}

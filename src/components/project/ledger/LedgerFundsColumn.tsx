@@ -80,13 +80,13 @@ export function LedgerFundsColumn({ funds, custodies, expenses, payReqs, transfe
                 </div>
                 <div className="mt-1.5 h-1.5 w-full bg-muted rounded-full overflow-hidden flex">
                   <div className="h-full bg-primary" style={{ width: `${Math.min(100, (directSpent / Math.max(1, f.amount)) * 100)}%` }} />
-                  <div className="h-full bg-amber-500" style={{ width: `${Math.min(100 - (directSpent / Math.max(1, f.amount)) * 100, (custodyDraw / Math.max(1, f.amount)) * 100)}%` }} />
+                  <div className="h-full bg-warning" style={{ width: `${Math.min(100 - (directSpent / Math.max(1, f.amount)) * 100, (custodyDraw / Math.max(1, f.amount)) * 100)}%` }} />
                   <div className="h-full bg-purple-500" style={{ width: `${Math.min(Math.max(0, 100 - ((directSpent + custodyDraw) / Math.max(1, f.amount)) * 100), (cashTransfersOut / Math.max(1, f.amount)) * 100)}%` }} />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3">
                   <span>مباشر: {formatCurrency(directSpent)}</span>
                   {custodyDraw > 0 && <span className="text-warning">عُهد: {formatCurrency(custodyDraw)}</span>}
-                  {outstandingAdvances > 0 && <span className="text-blue-600">سلف قائمة: {formatCurrency(outstandingAdvances)}</span>}
+                  {outstandingAdvances > 0 && <span className="text-info">سلف قائمة: {formatCurrency(outstandingAdvances)}</span>}
                   {cashTransfersOut > 0 && <span className="text-purple-600">تحويلات نقد: {formatCurrency(cashTransfersOut)}</span>}
                   <span className={cn('flex items-center gap-1', remaining <= 0 && 'text-destructive font-semibold')}>
                     متبقي بيد المدير: {formatCurrency(remaining)}
@@ -117,12 +117,12 @@ export function LedgerFundsColumn({ funds, custodies, expenses, payReqs, transfe
               <div className="border-t border-border bg-muted/30 p-2 space-y-2">
                 {fundCustodies.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">عُهد مسحوبة من هذه الدفعة:</p>
+                    <p className="text-xs font-semibold text-warning">عُهد مسحوبة من هذه الدفعة:</p>
                     {fundCustodies.map((cu) => {
                       // The same figure the custody's own row shows: rejected rows excluded.
                       const cuSpent = custodyBd(cu).spent;
                       return (
-                        <div key={cu.id} className="flex items-center justify-between text-xs bg-amber-50 dark:bg-amber-900/10 px-2 py-1.5 rounded">
+                        <div key={cu.id} className="flex items-center justify-between text-xs bg-warning/10 px-2 py-1.5 rounded">
                           <span className="flex items-center gap-1.5"><HandCoins className="w-3 h-3" />{cu.resourceName}</span>
                           <span className="font-mono text-muted-foreground">{formatCurrency(cuSpent)} / {formatCurrency(cu.amount)}</span>
                         </div>

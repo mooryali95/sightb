@@ -63,13 +63,13 @@ export function PayablesSummaryCards({
         <div className="text-2xl font-bold">{pendingRequestsCount}</div>
       </Card>
       <Card
-        className="p-4 border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20"
+        className="p-4 border-warning/30 bg-warning/10"
         title="السلف المدفوعة لم تُسوَّ بعد — أصل قابل للاسترداد لا يدخل CPI"
       >
-        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm mb-1">
+        <div className="flex items-center gap-2 text-warning text-sm mb-1">
           <FileText className="h-4 w-4" /> سلف قائمة (غير مسوّاة)
         </div>
-        <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+        <div className="text-2xl font-bold text-warning">
           {formatCurrency(outstandingAdvancesTotal)}
         </div>
         <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
@@ -80,7 +80,7 @@ export function PayablesSummaryCards({
               className={cn(
                 'text-xs',
                 oldestAdvanceDays > 60 && 'border-destructive text-destructive',
-                oldestAdvanceDays > 30 && oldestAdvanceDays <= 60 && 'border-amber-500 text-amber-700 dark:text-amber-400',
+                oldestAdvanceDays > 30 && oldestAdvanceDays <= 60 && 'border-warning text-warning',
               )}
             >
               أقدمها: {oldestAdvanceDays} يوم

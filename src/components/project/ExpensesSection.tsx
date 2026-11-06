@@ -151,9 +151,9 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
     <div className="space-y-4">
       {/* Pending approval alert */}
       {pendingCount > 0 && !readOnly && (
-        <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/30">
+        <div className="flex items-center gap-2 p-3 rounded-lg border border-warning/30 bg-warning/10">
           <AlertCircle className="w-4 h-4 text-warning shrink-0" />
-          <p className="text-sm text-amber-700 dark:text-amber-400">
+          <p className="text-sm text-warning">
             {pendingCount} مصروف بانتظار الاعتماد
           </p>
           <BulkApproveButton
@@ -222,7 +222,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     aria-pressed={selected}
                     title={selected ? 'إلغاء التصفية' : 'عرض مصروفاته في الجدول'}
                     className={`text-start p-3 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                      selected ? 'border-primary bg-primary/10' : unlinked ? 'border-dashed border-amber-400/60 bg-amber-50/50 dark:bg-amber-900/10' : 'border-border bg-muted/30 hover:bg-muted/60'
+                      selected ? 'border-primary bg-primary/10' : unlinked ? 'border-dashed border-warning/60 bg-warning/10' : 'border-border bg-muted/30 hover:bg-muted/60'
                     }`}
                   >
                     <p className="text-xs text-muted-foreground truncate">{r.name}</p>
@@ -358,7 +358,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                           {exp.description}
                           {exp.vendor && <span className="block text-xs text-muted-foreground">{exp.vendor}</span>}
                           {exp.sourcePaymentRequestId && (
-                            <Badge variant="outline" className="mt-1 text-xs border-amber-300 text-amber-700 dark:text-amber-400">
+                            <Badge variant="outline" className="mt-1 text-xs border-warning/30 text-warning">
                               تسوية سلفة
                             </Badge>
                           )}
@@ -396,7 +396,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                               {status === 'pending' && (
                                 <>
                                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleApprove(exp.id)} title="اعتماد">
-                                    <Check className="w-3.5 h-3.5 text-green-600" />
+                                    <Check className="w-3.5 h-3.5 text-success" />
                                   </Button>
                                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReject(exp.id)} title="رفض">
                                     <X className="w-3.5 h-3.5 text-destructive" />

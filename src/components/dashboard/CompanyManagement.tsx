@@ -35,7 +35,7 @@ export function CompanyManagement({
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(`/company/${company.id}`)}>
               <Building2 className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium">{company.name}</span>
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">نشطة</span>
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-success/10 text-success">نشطة</span>
             </div>
             {isAdmin && (
               <div className="flex items-center gap-1">

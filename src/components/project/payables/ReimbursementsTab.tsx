@@ -189,7 +189,7 @@ export function ReimbursementsTab({
                         </Button>
                         <Button size="sm" variant="outline"
                           onClick={() => onReject({ id: r.id, kind: 'reimb' })}>
-                          <XCircle className="h-4 w-4 text-red-600" />
+                          <XCircle className="h-4 w-4 text-destructive" />
                         </Button>
                       </>
                     )}

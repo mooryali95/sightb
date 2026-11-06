@@ -47,7 +47,7 @@ interface Props {
 const ageBadgeClasses = (days: number) =>
   days >= 90 ? 'border-destructive text-destructive bg-destructive/10'
   : days >= 60 ? 'border-warning text-warning-foreground bg-warning/15'
-  : days >= 30 ? 'border-amber-500 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30'
+  : days >= 30 ? 'border-warning text-warning bg-warning/10'
   : 'border-muted text-muted-foreground';
 
 export function PaymentRequestsTab({
@@ -127,7 +127,7 @@ export function PaymentRequestsTab({
                 <div className="text-xs text-muted-foreground border-s-2 border-muted ps-2 mb-2">{req.justification}</div>
               )}
               {req.rejectionReason && (
-                <div className="text-xs text-red-600 mb-2">سبب الرفض: {req.rejectionReason}</div>
+                <div className="text-xs text-destructive mb-2">سبب الرفض: {req.rejectionReason}</div>
               )}
 
               {/* Action buttons */}
@@ -190,7 +190,7 @@ export function PaymentRequestsTab({
                   </Button>
                 )}
                 {req.status === 'paid' && req.requestType === 'advance' && !req.isAdvanceOutstanding && req.advanceSettledAt && (
-                  <Badge variant="outline" className="text-success border-emerald-300">
+                  <Badge variant="outline" className="text-success border-success/30">
                     {req.settlementType === 'cash_refund' ? 'رد نقدي' :
                      req.settlementType === 'payroll_deduction' ? 'تحوّلت إلى حافز' :
                      req.settlementType === 'written_off' ? 'مشطوبة' :

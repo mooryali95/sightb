@@ -61,9 +61,9 @@ export function ComparisonView({ amendment }: { amendment: BudgetAmendment }) {
               const diff = afterAmt - beforeAmt;
               const item = r.after || r.before;
               const badgeClass =
-                r.type === 'added' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' :
-                r.type === 'removed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                r.type === 'modified' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' :
+                r.type === 'added' ? 'bg-success/10 text-success' :
+                r.type === 'removed' ? 'bg-destructive/10 text-destructive' :
+                r.type === 'modified' ? 'bg-warning/10 text-warning' :
                 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
               const label = r.type === 'added' ? 'مُضاف' : r.type === 'removed' ? 'محذوف' : r.type === 'modified' ? 'مُعدّل' : '—';
               return (

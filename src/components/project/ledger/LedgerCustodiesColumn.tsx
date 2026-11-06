@@ -62,14 +62,14 @@ export function LedgerCustodiesColumn({ funds, custodies, expenses, payReqs, tra
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm">{c.resourceName}</span>
                     <Badge className={cn('text-xs', c.status === 'active'
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      ? 'bg-success/10 text-success'
                       : 'bg-muted text-muted-foreground')}>
                       {c.status === 'active' ? 'نشطة' : 'مغلقة'}
                     </Badge>
                     {c.sourceFundId ? (() => {
                       const sf = funds.find(f => f.id === c.sourceFundId);
                       return sf ? (
-                        <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 dark:text-amber-400">
+                        <Badge variant="outline" className="text-xs border-warning text-warning">
                           من دفعة #{sf.fundNumber}
                         </Badge>
                       ) : null;

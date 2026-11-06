@@ -47,11 +47,11 @@ export function OpenAmendmentDialog({ projectId }: { projectId: string }) {
           <DialogTitle>فتح الموازنة للتعديل</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
-          <div className="p-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700/50">
-            <p className="text-xs text-amber-800 dark:text-amber-200">
+          <div className="p-3 rounded-lg border border-warning/30 bg-warning/10">
+            <p className="text-xs text-warning">
               🔒 الموازنة حالياً مقفلة بخط الأساس.
             </p>
-            <ul className="text-xs text-amber-700 dark:text-amber-300 mt-2 space-y-1 list-disc ps-4">
+            <ul className="text-xs text-warning mt-2 space-y-1 list-disc ps-4">
               <li>سيتم أخذ لقطة (snapshot) للوضع الحالي قبل التعديل</li>
               <li>ستتمكن من إضافة/تعديل/حذف البنود مؤقتاً</li>
               <li>عند الاعتماد، تُحفظ لقطة بعد التعديل للمقارنة المستقبلية</li>

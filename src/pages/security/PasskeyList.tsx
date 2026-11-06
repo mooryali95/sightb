@@ -27,12 +27,12 @@ function passkeyKindLabel(p: PasskeySummary): string {
  */
 function SignInNote({ passkey: p }: { passkey: PasskeySummary }) {
   if (p.canSignIn === null) return null;
-  if (p.canSignIn) return <p className="text-xs text-emerald-700 dark:text-emerald-400">يصلح للدخول دون كلمة مرور</p>;
+  if (p.canSignIn) return <p className="text-xs text-success">يصلح للدخول دون كلمة مرور</p>;
   if (p.discoverable === false) {
     return <p className="text-xs text-muted-foreground">للتحقق فقط: هذا المفتاح لا يحفظ الحساب ليدخل به وحده.</p>;
   }
   return (
-    <p className="text-xs text-amber-700 dark:text-amber-400">
+    <p className="text-xs text-warning">
       للتحقق فقط. أضف مفتاحاً جديداً من الجهاز نفسه لتدخل به دون كلمة مرور، ثم احذف هذا.
     </p>
   );
