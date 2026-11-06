@@ -4,8 +4,11 @@
  * (tested there); what is pinned here is which card shows, under which
  * title, with which subtitle and verdict.
  */
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+
+const phone = vi.hoisted(() => ({ value: false }));
+vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => phone.value }));
 import type { EVMMetrics, Project, ProjectSummary } from '@/types/project';
 import { ProjectStatsGrid } from '../ProjectStatsGrid';
 
@@ -134,5 +137,22 @@ describe('the collection row and the alerts', () => {
     renderGrid({ pendingExpensesCount: 3, pendingChangeOrders: 1 });
     expect(screen.getByText('3 مصروف بانتظار الاعتماد')).toBeInTheDocument();
     expect(screen.getByText('1 أمر تغيير مقترح')).toBeInTheDocument();
+  });
+});
+
+describe('on a phone', () => {
+  beforeEach(() => { phone.value = true; });
+
+  it('folds the budget and collection rows behind one button, and keeps the contract and alerts in view', () => {
+    renderGrid({ pendingExpensesCount: 2 });
+    expect(screen.getByText('قيمة العقد')).toBeInTheDocument();
+    expect(screen.queryByText('المحصّل فعلياً')).toBeNull();
+    expect(screen.getByText(/مصروف بانتظار الاعتماد/)).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /عرض مؤشرات الموازنة والتحصيل/ });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(button);
+    expect(screen.getByText('المحصّل فعلياً')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /إخفاء مؤشرات الموازنة والتحصيل/ })).toHaveAttribute('aria-expanded', 'true');
+    phone.value = false;
   });
 });
