@@ -3,7 +3,6 @@ import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '@/types/project';
 import type {
   Project, Expense, BudgetItem, Revenue, ChangeOrder, Company,
 } from '@/types/project';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface ProjectCardsProps {
@@ -21,12 +20,7 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
   if (filteredProjects.length === 0) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.35 }}
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8 animate-fade-in">
       {filteredProjects.slice(0, 6).map((project) => {
         const pExpenses = expenses.filter((e) => e.projectId === project.id);
         const pRevenues = revenues.filter((r) => r.projectId === project.id);
@@ -108,6 +102,6 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
           </div>
         );
       })}
-    </motion.div>
+    </div>
   );
 }

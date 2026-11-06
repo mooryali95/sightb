@@ -1,5 +1,4 @@
 import { formatCurrency } from '@/lib/finance';
-import { motion } from 'framer-motion';
 import { Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -18,12 +17,7 @@ export function DashboardCharts({ companyData, statusData }: DashboardChartsProp
   if (companyData.length === 0 && statusData.length === 0) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.3 }}
-      className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
-    >
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 animate-fade-in">
       {companyData.length > 0 && (
         <div className="stat-card">
           <h3 className="text-sm font-semibold mb-4">المصروفات حسب الشركة</h3>
@@ -72,6 +66,6 @@ export function DashboardCharts({ companyData, statusData }: DashboardChartsProp
           </ResponsiveContainer>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

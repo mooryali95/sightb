@@ -5,7 +5,6 @@ import type {
   Project, Expense, BudgetItem, Revenue, ChangeOrder, Risk, Portfolio,
 } from '@/types/project';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface AttentionProjectsProps {
@@ -45,12 +44,7 @@ export function AttentionProjects({
   return (
     <>
       {attentionProjects.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.33 }}
-          className="stat-card mb-8 border-warning/40"
-        >
+        <div className="stat-card mb-8 border-warning/40 animate-fade-in">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-4 h-4 health-warning" />
             <h3 className="text-sm font-semibold">مشاريع تحتاج انتباه ({attentionProjects.length})</h3>
@@ -75,16 +69,11 @@ export function AttentionProjects({
               );
             })}
           </div>
-        </motion.div>
+        </div>
       )}
 
       {openRisks.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.34 }}
-          className="stat-card mb-8"
-        >
+        <div className="stat-card mb-8 animate-fade-in">
           <div className="flex items-center gap-2 mb-3">
             <ShieldAlert className="w-4 h-4 text-destructive" />
             <h3 className="text-sm font-semibold">أعلى المخاطر المفتوحة</h3>
@@ -119,7 +108,7 @@ export function AttentionProjects({
               </tbody>
             </table>
           </div>
-        </motion.div>
+        </div>
       )}
     </>
   );

@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 
 interface Company { id: string; name: string; }
@@ -64,13 +63,11 @@ export function DashboardFilters({
     ...(showInactive ? [{ key: 'inactive', label: 'يشمل المنتهية', clear: () => setShowInactive(false) }] : []),
   ];
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.1 }}
-      className="filter-bar"
-    >
-      <Collapsible open={!isMobile || filtersOpen} onOpenChange={setFiltersOpen}>
+    <div className="filter-bar animate-fade-in">
+      {/* A plain disclosure, not Radix Collapsible: its content reads computed
+          styles as it mounts, which forced a full style pass in the middle of
+          the dashboard's first render (about 170 ms on a mid-range phone). */}
+      <div>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-muted-foreground shrink-0">
@@ -82,14 +79,17 @@ export function DashboardFilters({
               </span>
             )}
           </div>
-          <CollapsibleTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="تبديل التصفية">
-              <ChevronDown className={cn('w-4 h-4 transition-transform', filtersOpen && 'rotate-180')} />
-            </Button>
-          </CollapsibleTrigger>
+          <Button
+            variant="ghost" size="sm" className="h-7 w-7 p-0 md:hidden" aria-label="تبديل التصفية"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen(!filtersOpen)}
+          >
+            <ChevronDown className={cn('w-4 h-4 transition-transform', filtersOpen && 'rotate-180')} />
+          </Button>
         </div>
 
-        <CollapsibleContent className="mt-3 md:!block space-y-3">
+        {(!isMobile || filtersOpen) && (
+        <div id="dashboard-filters" className="mt-3 space-y-3">
           {/* Row 1: Search + Show inactive + Clear */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
             <div className="relative flex-1 min-w-0">
@@ -193,8 +193,9 @@ export function DashboardFilters({
               </SelectContent>
             </Select>
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+        </div>
+        )}
+      </div>
 
       {chips.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3" aria-label="التصفية المطبّقة">
@@ -210,17 +211,13 @@ export function DashboardFilters({
       )}
 
       {hasActiveFilters && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-xs text-muted-foreground mt-2"
-        >
+        <p className="text-xs text-muted-foreground mt-2 animate-fade-in">
           عرض {filteredCount} من {totalCount} مشروع
           {!showInactive && filterStatus === 'all' && (
             <span className="text-muted-foreground/70"> (المشاريع النشطة فقط)</span>
           )}
-        </motion.p>
+        </p>
       )}
-    </motion.div>
+    </div>
   );
 }
