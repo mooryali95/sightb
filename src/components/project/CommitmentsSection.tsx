@@ -11,12 +11,13 @@ import { formatCurrency } from '@/lib/finance';
 import { COMMITMENT_STATUS_LABELS, COMMITMENT_STATUS_COLORS, type Commitment } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Pencil, Eye } from 'lucide-react';
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
 import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 import { CommitmentFormDialog } from './commitments/CommitmentFormDialog';
 import { CommitmentInspector } from './commitments/CommitmentInspector';
+import { UndoDeleteButton } from '@/components/UndoDeleteButton';
+import { deleteWithUndo } from '@/lib/undo-delete';
 
 interface Props {
   projectId: string;
@@ -133,7 +134,7 @@ export function CommitmentsSection({ projectId, commitments, totalPlanned, readO
                             <Button variant="ghost" size="icon" aria-label="تعديل" onClick={() => form.open({ commitment: c })}>
                               <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                             </Button>
-                            <ConfirmDeleteDialog title="حذف الالتزام" description="هل أنت متأكد من حذف هذا الالتزام؟" onConfirm={() => deleteCommitment(c.id)} />
+                            <UndoDeleteButton label="حذف الالتزام" onDelete={() => deleteWithUndo({ collection: 'commitments', id: c.id, row: c, label: 'الالتزام', commit: (row) => deleteCommitment(row.id) })} />
                           </>
                         )}
                       </div>

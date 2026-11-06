@@ -18,10 +18,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pencil, Eye } from 'lucide-react';
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { RevenueFormDialog } from './revenue/RevenueFormDialog';
 import { RevenueInspector } from './revenue/RevenueInspector';
 import { useShallow } from 'zustand/react/shallow';
+import { UndoDeleteButton } from '@/components/UndoDeleteButton';
+import { deleteWithUndo } from '@/lib/undo-delete';
 
 interface RevenueSectionProps {
   projectId: string;
@@ -196,7 +197,7 @@ export function RevenueSection({ projectId, revenues, durationMonths, readOnly =
                       <Button variant="ghost" size="icon" title="تعديل الإيراد" onClick={() => form.open({ revenue: r })}>
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
-                      <ConfirmDeleteDialog title="حذف الإيراد" description="هل أنت متأكد من حذف هذا الإيراد؟" onConfirm={() => deleteRevenue(r.id)} />
+                      <UndoDeleteButton label="حذف الإيراد" onDelete={() => deleteWithUndo({ collection: 'revenues', id: r.id, row: r, label: 'الإيراد', commit: (row) => deleteRevenue(row.id) })} />
                     </div>
                   </td>
                   )}

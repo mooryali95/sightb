@@ -29,10 +29,10 @@ async function openMilestones(page: Page, projectId: string, projectName: string
 }
 async function deleteMilestone(page: Page, name: string) {
   const card = page.getByText(name, { exact: true }).locator('xpath=ancestor::div[.//input[@type="number"]][1]');
-  await card.locator('button', { has: page.locator('svg.text-destructive') }).click();
-  const confirm = page.getByRole('alertdialog');
-  await expect(confirm.getByRole('heading', { name: 'حذف المرحلة' })).toBeVisible();
-  await confirm.getByRole('button', { name: 'حذف' }).click();
+  await card.getByRole('button', { name: 'حذف المرحلة' }).click();
+  await expect(page.getByText('حُذف المرحلة').first()).toBeVisible();
+  // Leaving the page sends a delete still inside its undo window at once.
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
 }
 
 test('deleting the only unfinished milestone rolls the project to 100 and completes it', async ({ page }) => {

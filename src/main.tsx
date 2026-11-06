@@ -8,6 +8,7 @@ import "./index.css";
 import { installGlobalErrorHandlers } from "@/lib/logger";
 import { installRemoteLogging } from "@/lib/observability";
 import { installErrorReporting } from "@/lib/error-reporting";
+import { installDeleteFlush } from "@/lib/undo-delete";
 import { installOfflineQueue, subscribeToQueueFailures } from "@/lib/offline-queue";
 
 const TABLE_LABELS: Record<string, string> = {
@@ -57,6 +58,9 @@ installRemoteLogging();
 
 // Every error also reaches the owner's log in the database (سجل الأعطال).
 installErrorReporting();
+
+// A delete waiting out its undo window is sent if the page is left or hidden.
+installDeleteFlush();
 
 // A queued offline write that fails permanently (تحقق/صلاحيات) must never
 // disappear silently — the optimistic row is still on screen.

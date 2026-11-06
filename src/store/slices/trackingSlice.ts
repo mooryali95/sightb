@@ -29,14 +29,14 @@ export interface TrackingSlice {
   commitments: Commitment[];
   addMilestone: (m: Omit<Milestone, 'id' | 'createdAt'>) => Promise<string>;
   updateMilestone: (id: string, m: MilestoneUpdate) => Promise<void>;
-  deleteMilestone: (id: string) => Promise<void>;
+  deleteMilestone: (id: string, snapshot?: Milestone) => Promise<void>;
   addChangeOrder: (co: Omit<ChangeOrder, 'id' | 'createdAt'>) => Promise<string>;
   updateChangeOrder: (id: string, co: Partial<ChangeOrder>) => Promise<void>;
-  deleteChangeOrder: (id: string) => Promise<void>;
+  deleteChangeOrder: (id: string, snapshot?: ChangeOrder) => Promise<void>;
   applyApprovedChangeOrder: (projectId: string, changeOrder: ChangeOrder) => Promise<void>;
   addRisk: (r: Omit<Risk, 'id' | 'createdAt'>) => Promise<string>;
   updateRisk: (id: string, r: RiskUpdate) => Promise<void>;
-  deleteRisk: (id: string) => Promise<void>;
+  deleteRisk: (id: string, snapshot?: Risk) => Promise<void>;
   addResource: (r: Omit<Resource, 'id' | 'createdAt'>) => Promise<string>;
   updateResource: (id: string, r: Partial<Resource>) => Promise<void>;
   deleteResource: (id: string) => Promise<void>;
@@ -135,8 +135,8 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     set((s) => ({ milestones: s.milestones.map((x) => (x.id === id ? applyMilestoneUpdate(x, m) : x)) }));
   },
 
-  deleteMilestone: async (id) => {
-    const ms = get().milestones.find(m => m.id === id);
+  deleteMilestone: async (id, snapshot) => {
+    const ms = snapshot ?? get().milestones.find(m => m.id === id);
     if (ms) await logDeletion('milestones', id, ms, ms.projectId);
     const { error } = await db.from('milestones').delete().eq('id', id);
     if (error) throw error;
@@ -191,8 +191,8 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     }
   },
 
-  deleteChangeOrder: async (id) => {
-    const co = get().changeOrders.find(c => c.id === id);
+  deleteChangeOrder: async (id, snapshot) => {
+    const co = snapshot ?? get().changeOrders.find(c => c.id === id);
     if (co) await logDeletion('change_orders', id, co, co.projectId);
     const { error } = await db.from('change_orders').delete().eq('id', id);
     if (error) throw error;
@@ -270,8 +270,8 @@ export const createTrackingSlice: StateCreator<AppState, [], [], TrackingSlice> 
     set((s) => ({ risks: s.risks.map((x) => (x.id === id ? applyRiskUpdate(x, r) : x)) }));
   },
 
-  deleteRisk: async (id) => {
-    const risk = get().risks.find(r => r.id === id);
+  deleteRisk: async (id, snapshot) => {
+    const risk = snapshot ?? get().risks.find(r => r.id === id);
     if (risk) await logDeletion('risks', id, risk, risk.projectId);
     const { error } = await db.from('risks').delete().eq('id', id);
     if (error) throw error;

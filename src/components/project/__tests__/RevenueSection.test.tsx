@@ -15,12 +15,13 @@
  * fix commit that follows turns them green without editing a test.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within, act } from '@testing-library/react';
 import { toast } from 'sonner';
 import { useStore, type AppState } from '@/store/useStore';
 import type { Revenue } from '@/types/project';
 import { RevenueSection } from '../RevenueSection';
 import { MILESTONE_ID, PROJECT_ID, milestone, revenues } from './revenue-fixtures';
+import { flushPendingDeletes } from '@/lib/undo-delete';
 
 const actions = {
   addRevenue: vi.fn().mockResolvedValue('new-revenue-id'),
@@ -340,11 +341,13 @@ describe('a save the server refuses', () => {
 });
 
 describe('row actions and the inspector', () => {
-  it('deletes a row after confirmation', async () => {
+  it('deletes a row without a dialog, once the undo window passes', async () => {
     renderSection();
     const [deleteTrigger] = within(rowFor('دفعة ختامية مخططة')).getAllByRole('button').filter((b) => b.querySelector('svg.lucide-trash2'));
     fireEvent.click(deleteTrigger);
-    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'حذف' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(actions.deleteRevenue).not.toHaveBeenCalled();
+    await act(async () => { await flushPendingDeletes(); });
 
     await waitFor(() => expect(actions.deleteRevenue).toHaveBeenCalledWith('rev-planned'));
   });

@@ -12,7 +12,7 @@
  * commit that follows turns it green without editing a test.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within, act } from '@testing-library/react';
 import { toast } from 'sonner';
 import { useStore, type AppState } from '@/store/useStore';
 import type { Expense } from '@/types/project';
@@ -20,6 +20,7 @@ import { ExpensesSection } from '../ExpensesSection';
 import {
   PROJECT_ID, FUND_ID, RESOURCE_ID, expenses, fund, outstandingAdvanceExpense, resource,
 } from './expenses-fixtures';
+import { flushPendingDeletes } from '@/lib/undo-delete';
 // The registry is empty here, so the name fields stay plain inputs.
 vi.mock('@/hooks/useParties', () => ({ useParties: () => ({ data: [], isSuccess: true }) }));
 
@@ -344,13 +345,15 @@ describe('row actions', () => {
     expect(within(rowFor('استشارة تصميم')).queryByTitle('ربط بالدفعة #1')).not.toBeInTheDocument();
   });
 
-  it('deletes a row after confirmation', async () => {
+  it('deletes a row without a dialog, once the undo window passes', async () => {
     renderSection();
     const [deleteTrigger] = within(rowFor('استشارة إنشائية')).getAllByRole('button').filter((b) => b.querySelector('svg.lucide-trash2'));
     fireEvent.click(deleteTrigger);
-    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'حذف' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(actions.deleteExpense).not.toHaveBeenCalled();
+    await act(async () => { await flushPendingDeletes(); });
 
-    await waitFor(() => expect(actions.deleteExpense).toHaveBeenCalledWith('exp-2'));
+    await waitFor(() => expect(actions.deleteExpense).toHaveBeenCalledWith('exp-2', expect.objectContaining({ id: 'exp-2' })));
   });
 
   it('shows a read-only viewer the details control and nothing that writes', () => {

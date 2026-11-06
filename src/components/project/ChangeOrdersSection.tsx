@@ -11,8 +11,9 @@ import {
 } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { ChangeOrderFormDialog } from './changeorders/ChangeOrderFormDialog';
+import { UndoDeleteButton } from '@/components/UndoDeleteButton';
+import { deleteWithUndo } from '@/lib/undo-delete';
 
 interface ChangeOrdersSectionProps {
   projectId: string;
@@ -92,7 +93,7 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
                       <Button variant="ghost" size="icon" title="تعديل أمر التغيير" onClick={() => form.open({ order: co })}>
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
-                      <ConfirmDeleteDialog title="حذف أمر التغيير" description="هل أنت متأكد من حذف أمر التغيير هذا؟" onConfirm={() => deleteChangeOrder(co.id)} />
+                      <UndoDeleteButton label="حذف أمر التغيير" onDelete={() => deleteWithUndo<ChangeOrder>({ collection: 'changeOrders', id: co.id, row: co, label: 'أمر التغيير', commit: (row) => deleteChangeOrder(row.id, row) })} />
                     </div>
                   </td>
                   )}
