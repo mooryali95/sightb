@@ -32,7 +32,7 @@ export function SourcePicker({
 }: SourcePickerProps) {
   const breakdown = custodyId && custodyId !== 'none' ? breakdownOf(custodyId) : undefined;
   return (
-    <div className="space-y-3 p-3 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700/30">
+    <div className="space-y-3 p-3 rounded-lg border border-warning/30 bg-warning/10">
       <Label className="flex items-center gap-1.5">
         <Wallet className="w-3.5 h-3.5" />
         مصدر الصرف

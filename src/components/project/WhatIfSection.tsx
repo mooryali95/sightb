@@ -101,7 +101,7 @@ export function WhatIfSection({
             </div>
           )}
           {scenario.cpi < 0.8 && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-sm">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-warning/10 text-warning text-sm">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>تحذير: مؤشر أداء التكلفة منخفض جداً ({scenario.cpi.toFixed(2)})</span>
             </div>

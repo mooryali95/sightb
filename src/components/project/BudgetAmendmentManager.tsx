@@ -96,7 +96,7 @@ export function BudgetAmendmentManager({
           </h3>
           {activeDraft ? (
             <div className="mt-2 space-y-1">
-              <p className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1.5">
+              <p className="text-xs text-warning font-medium flex items-center gap-1.5">
                 <Unlock className="w-3.5 h-3.5" />
                 الموازنة مفتوحة للتعديل الآن
               </p>
@@ -134,7 +134,7 @@ export function BudgetAmendmentManager({
                     <AlertDialogTitle>إلغاء تعديل الموازنة؟</AlertDialogTitle>
                     <AlertDialogDescription>
                       سيتم إغلاق الموازنة دون اعتماد أي تغييرات. <br />
-                      <span className="text-warning dark:text-amber-400 font-medium">
+                      <span className="text-warning font-medium">
                         ملاحظة: التغييرات التي أجريتها على بنود الموازنة في قاعدة البيانات لن تُسترجع تلقائياً، 
                         لكن لقطة "قبل التعديل" محفوظة ويمكنك الرجوع لها يدوياً.
                       </span>

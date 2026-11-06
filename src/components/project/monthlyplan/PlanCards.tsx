@@ -38,7 +38,7 @@ export function PlanCards({ rows, currency }: { rows: MonthlyBudgetPlanRow[]; cu
                       <span className="text-muted-foreground">فعلي</span>
                     </div>
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-border/60">
-                      <span className={cn('font-mono font-bold', row.variance >= 0 ? 'text-success' : 'text-red-600')}>
+                      <span className={cn('font-mono font-bold', row.variance >= 0 ? 'text-success' : 'text-destructive')}>
                         {row.variance >= 0 ? '+' : ''}{formatCurrency(row.variance, currency)}
                       </span>
                       <span className={cn('text-xs font-bold', meta.text)}>
@@ -53,7 +53,7 @@ export function PlanCards({ rows, currency }: { rows: MonthlyBudgetPlanRow[]; cu
                   <p className="font-bold text-xs">شهر {row.month} — {meta.label}</p>
                   <div className="text-xs space-y-0.5 border-b border-border pb-1.5">
                     <div className="flex justify-between gap-4"><span className="text-muted-foreground">إيراد محصّل:</span><span className="font-mono">{formatCurrency(row.actualRevenue, currency)}</span></div>
-                    <div className="flex justify-between gap-4"><span className="text-muted-foreground">صافي تدفق:</span><span className={cn('font-mono', row.netCashFlow >= 0 ? 'text-success' : 'text-red-600')}>{formatCurrency(row.netCashFlow, currency)}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-muted-foreground">صافي تدفق:</span><span className={cn('font-mono', row.netCashFlow >= 0 ? 'text-success' : 'text-destructive')}>{formatCurrency(row.netCashFlow, currency)}</span></div>
                     <div className="flex justify-between gap-4"><span className="text-muted-foreground">تراكمي مخطط:</span><span className="font-mono">{formatCurrency(row.cumulativePlanned, currency)}</span></div>
                   </div>
                   {row.items.length > 0 ? (

@@ -109,7 +109,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
             <h3 className="text-sm font-semibold flex items-center gap-2">
               بنود الموازنة
               {activeDraft && (
-                <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 flex items-center gap-1">
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-warning/10 text-warning flex items-center gap-1">
                   <Unlock className="w-3 h-3" /> وضع التعديل نشط
                 </span>
               )}

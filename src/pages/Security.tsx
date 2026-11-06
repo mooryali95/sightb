@@ -139,7 +139,7 @@ export default function Security() {
           </div>
 
           {!supported && (
-            <p className="text-xs text-amber-700 dark:text-amber-400">هذا المتصفح لا يدعم مفاتيح المرور. جرّب متصفحاً أحدث أو جهازاً آخر.</p>
+            <p className="text-xs text-warning">هذا المتصفح لا يدعم مفاتيح المرور. جرّب متصفحاً أحدث أو جهازاً آخر.</p>
           )}
 
           {loading ? (

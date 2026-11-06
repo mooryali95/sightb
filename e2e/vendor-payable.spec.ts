@@ -30,6 +30,10 @@ async function openVendors(page: Page) {
   await page.getByRole('tab', { name: 'المالية' }).click();
   await page.getByRole('button', { name: 'مستحقات الموارد', exact: true }).click();
   await expect(page.getByText('ذمم المورّدين (دفعوا نيابة عن المشروع)')).toBeVisible();
+  // The project's details arrive after the tab shows and redraw its rows; a
+  // click that lands mid-redraw is pressed on one button and released on its
+  // replacement, and never fires. Act once the page has stopped loading.
+  await page.waitForLoadState('networkidle');
 }
 
 test('a vendor debt is recorded approved under the vendor, never under a resource', async ({ page }) => {
@@ -43,8 +47,8 @@ test('a vendor debt is recorded approved under the vendor, never under a resourc
   expect(posts(wire, 'resource_reimbursements')).toHaveLength(0);
 
   await dialog.getByPlaceholder('مثال: مؤسسة النور').fill('  مؤسسة النور ');
-  await dialog.getByRole('textbox').nth(1).fill('أسمنت الموقع');
-  await dialog.locator('input[type="number"]').fill('7000');
+  await dialog.getByLabel(/^الوصف/).fill('أسمنت الموقع');
+  await dialog.getByLabel(/^المبلغ/).fill('7000');
   await dialog.getByRole('button', { name: 'حفظ' }).click();
   await expect(page.getByText('تم تسجيل الذمة').first()).toBeVisible();
 

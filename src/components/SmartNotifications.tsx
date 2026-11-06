@@ -22,9 +22,9 @@ const ICONS: Record<string, typeof Bell> = {
 };
 
 const COLORS: Record<Notification['severity'], string> = {
-  critical: 'text-destructive bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
-  warning: 'text-warning bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
-  info: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+  critical: 'text-destructive bg-destructive/10 border-destructive/30',
+  warning: 'text-warning bg-warning/10 border-warning/30',
+  info: 'text-info bg-info/10 border-info/30',
 };
 
 function getRead(): Set<string> {
@@ -71,7 +71,7 @@ export function SmartNotifications() {
           {active.length > 0 && (
             <span className={cn(
               'absolute -top-0.5 -end-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-xs font-bold text-white',
-              critCount > 0 ? 'bg-destructive' : 'bg-amber-500'
+              critCount > 0 ? 'bg-destructive' : 'bg-warning'
             )}>{active.length}</span>
           )}
         </Button>
@@ -106,7 +106,7 @@ export function SmartNotifications() {
                         <Icon className={cn(
                           'w-3.5 h-3.5 shrink-0',
                           topSeverity === 'critical' ? 'text-destructive'
-                            : topSeverity === 'warning' ? 'text-warning' : 'text-blue-600'
+                            : topSeverity === 'warning' ? 'text-warning' : 'text-info'
                         )} />
                         <span className="text-xs font-medium">
                           {TYPE_LABELS[type] || type} ({items.length})

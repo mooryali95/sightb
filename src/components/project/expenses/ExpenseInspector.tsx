@@ -85,7 +85,7 @@ export function ExpenseInspector({
         {exp.sourcePaymentRequestId && (
           <InspectorField
             label="نوع المصروف"
-            value={<Badge variant="outline" className="text-xs border-amber-300 text-amber-700 dark:text-amber-400">تسوية سلفة</Badge>}
+            value={<Badge variant="outline" className="text-xs border-warning/30 text-warning">تسوية سلفة</Badge>}
           />
         )}
       </InspectorSection>

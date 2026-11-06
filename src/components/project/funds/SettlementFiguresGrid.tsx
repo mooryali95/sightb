@@ -25,14 +25,14 @@ export function SettlementFiguresGrid({ received, spent, difference, breakdown }
       </div>
       <div className={cn(
         'p-3 rounded-lg border-2',
-        tone === 'ok' ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-300/40'
+        tone === 'ok' ? 'bg-success/10 border-success/30'
           : tone === 'bad' ? 'bg-destructive/10 border-destructive/40 animate-pulse'
-            : 'bg-amber-50 dark:bg-amber-900/10 border-amber-300/40',
+            : 'bg-warning/10 border-warning/30',
       )}>
         <p className="text-xs text-muted-foreground">الفرق</p>
         <p className={cn(
           'font-mono font-semibold',
-          tone === 'ok' ? 'text-emerald-700 dark:text-emerald-400' : tone === 'bad' ? 'text-destructive text-lg' : 'text-amber-700 dark:text-amber-400',
+          tone === 'ok' ? 'text-success' : tone === 'bad' ? 'text-destructive text-lg' : 'text-warning',
         )}>
           {formatCurrency(difference)}
         </p>

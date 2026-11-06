@@ -137,8 +137,8 @@ export function ChartsSection({ pieData, barData, expenses = [], totalPlanned = 
                     </td>
                     <td>
                       {v.hasData ? (
-                        v.variance > 0 ? <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">وفر 👍</span> :
-                        v.variance < 0 ? <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">تجاوز ⚠️</span> :
+                        v.variance > 0 ? <span className="text-xs px-1.5 py-0.5 rounded-full bg-success/10 text-success">وفر 👍</span> :
+                        v.variance < 0 ? <span className="text-xs px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">تجاوز ⚠️</span> :
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">مطابق</span>
                       ) : <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">لم يحل</span>}
                     </td>

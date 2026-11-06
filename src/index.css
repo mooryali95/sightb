@@ -73,7 +73,7 @@
     --success-foreground: 0 0% 100%;
     --warning: 34 92% 30%;
     --warning-foreground: 0 0% 100%;
-    --info: 215 80% 50%;
+    --info: 215 75% 40%;
     --info-foreground: 0 0% 100%;
 
     --profit: 160 70% 28%;
@@ -151,6 +151,8 @@
     --success-foreground: 222 30% 8%;
     --warning: 38 92% 55%;
     --warning-foreground: 222 30% 8%;
+    --info: 215 85% 68%;
+    --info-foreground: 222 30% 8%;
     --profit: 160 60% 50%;
     --loss: 0 75% 65%;
     --accent-text: 40 55% 60%;

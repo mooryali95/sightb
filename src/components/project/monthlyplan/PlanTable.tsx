@@ -37,12 +37,12 @@ export function PlanTable({ rows, currency, totalPlanned, totalActual, totalReve
                 </td>
                 <td className="font-mono text-sm">{formatCurrency(row.planned, currency)}</td>
                 <td className="font-mono text-sm">{formatCurrency(row.actual, currency)}</td>
-                <td className={cn('font-mono text-sm', row.variance >= 0 ? 'text-success' : 'text-red-600')}>
+                <td className={cn('font-mono text-sm', row.variance >= 0 ? 'text-success' : 'text-destructive')}>
                   {row.variance >= 0 ? '+' : ''}{formatCurrency(row.variance, currency)}
                 </td>
                 <td className="text-xs">{row.planned > 0 ? `${row.utilizationPct.toFixed(1)}%` : '—'}</td>
                 <td className="font-mono text-sm">{formatCurrency(row.actualRevenue, currency)}</td>
-                <td className={cn('font-mono text-sm', row.netCashFlow >= 0 ? 'text-success' : 'text-red-600')}>
+                <td className={cn('font-mono text-sm', row.netCashFlow >= 0 ? 'text-success' : 'text-destructive')}>
                   {formatCurrency(row.netCashFlow, currency)}
                 </td>
                 <td className="font-mono text-sm">{formatCurrency(row.cumulativeActual, currency)}</td>
@@ -54,12 +54,12 @@ export function PlanTable({ rows, currency, totalPlanned, totalActual, totalReve
             <td>—</td>
             <td className="font-mono">{formatCurrency(totalPlanned, currency)}</td>
             <td className="font-mono">{formatCurrency(totalActual, currency)}</td>
-            <td className={cn('font-mono', totalPlanned - totalActual >= 0 ? 'text-success' : 'text-red-600')}>
+            <td className={cn('font-mono', totalPlanned - totalActual >= 0 ? 'text-success' : 'text-destructive')}>
               {formatCurrency(totalPlanned - totalActual, currency)}
             </td>
             <td>{totalPlanned > 0 ? `${((totalActual / totalPlanned) * 100).toFixed(1)}%` : '—'}</td>
             <td className="font-mono">{formatCurrency(totalRevenue, currency)}</td>
-            <td className={cn('font-mono', totalRevenue - totalActual >= 0 ? 'text-success' : 'text-red-600')}>
+            <td className={cn('font-mono', totalRevenue - totalActual >= 0 ? 'text-success' : 'text-destructive')}>
               {formatCurrency(totalRevenue - totalActual, currency)}
             </td>
             <td>—</td>

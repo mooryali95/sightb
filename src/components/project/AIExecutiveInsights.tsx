@@ -67,7 +67,7 @@ export function AIExecutiveInsights({ context }: Props) {
           )}
           {summary.highlights && summary.highlights.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">✓ نقاط قوة</p>
+              <p className="text-xs font-semibold text-success mb-1">✓ نقاط قوة</p>
               <ul className="space-y-1 text-xs text-muted-foreground ps-4">
                 {summary.highlights.map((h, i) => <li key={i} className="list-disc">{h}</li>)}
               </ul>
@@ -75,7 +75,7 @@ export function AIExecutiveInsights({ context }: Props) {
           )}
           {summary.concerns && summary.concerns.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">⚠ مخاوف</p>
+              <p className="text-xs font-semibold text-warning mb-1">⚠ مخاوف</p>
               <ul className="space-y-1 text-xs text-muted-foreground ps-4">
                 {summary.concerns.map((c, i) => <li key={i} className="list-disc">{c}</li>)}
               </ul>
