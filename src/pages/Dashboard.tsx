@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { useState, useMemo, useEffect, lazy } from 'react';
 import { DeferUntilVisible } from '@/components/ui/defer-until-visible';
 import { FirstRunGuide } from '@/components/guide/ConceptGuide';
+import { GettingStarted } from '@/components/guide/GettingStarted';
+import { gettingStartedSteps } from '@/components/guide/gettingStarted';
 import { useIsMobile } from '@/hooks/use-mobile';
 import basserhLogo from '@/assets/basserh-logo.jpg';
 import { useRole } from '@/hooks/useRole';
@@ -113,6 +115,12 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
+            {isAdmin && (
+              <GettingStarted steps={gettingStartedSteps({
+                companies: companies.length, projectIds: projects.map((p) => p.id),
+                budgetItems: budgetItems.length, expenses: expenses.length, revenues: revenues.length,
+              })} />
+            )}
             <FirstRunGuide />
             <DashboardFilters
               companies={activeCompanies} filterCompany={filterCompany} setFilterCompany={setFilterCompany}

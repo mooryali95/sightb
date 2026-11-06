@@ -16,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pencil, Check, X, AlertCircle, Wallet, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/utils';
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
 import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
@@ -28,6 +27,8 @@ import { summarizeSpendByResource, matchesResourceQuery, normalizeArabicName, in
 import { runOrToast } from '@/lib/run-or-toast';
 import { useShallow } from 'zustand/react/shallow';
 import { countAr } from '@/lib/plural';
+import { UndoDeleteButton } from '@/components/UndoDeleteButton';
+import { deleteWithUndo } from '@/lib/undo-delete';
 
 interface ExpensesSectionProps {
   projectId: string;
@@ -418,7 +419,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                               <Button variant="ghost" size="icon" title="تعديل المصروف" onClick={() => form.open({ expense: exp })}>
                                 <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                               </Button>
-                              <ConfirmDeleteDialog title="حذف المصروف" description="هل أنت متأكد من حذف هذا المصروف؟" onConfirm={() => deleteExpense(exp.id)} />
+                              <UndoDeleteButton label="حذف المصروف" onDelete={() => deleteWithUndo<Expense>({ collection: 'expenses', id: exp.id, row: exp, label: 'المصروف', commit: (row) => deleteExpense(row.id, row) })} />
                             </>
                           )}
                         </div>

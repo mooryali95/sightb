@@ -47,7 +47,8 @@ export interface BudgetSlice {
   deleteBudgetItem: (id: string) => Promise<void>;
   addExpense: (e: Omit<Expense, 'id'>) => Promise<string>;
   updateExpense: (id: string, e: ExpenseUpdate) => Promise<void>;
-  deleteExpense: (id: string) => Promise<void>;
+  /** `snapshot` is the row as it was, for a caller that already took it off the screen (deleteWithUndo). */
+  deleteExpense: (id: string, snapshot?: Expense) => Promise<void>;
   addRevenue: (r: Omit<Revenue, 'id'>) => Promise<string>;
   updateRevenue: (id: string, r: RevenueUpdate) => Promise<void>;
   deleteRevenue: (id: string) => Promise<void>;
@@ -169,8 +170,8 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     }
   },
 
-  deleteExpense: async (id) => {
-    const existing = get().expenses.find((x) => x.id === id);
+  deleteExpense: async (id, snapshot) => {
+    const existing = snapshot ?? get().expenses.find((x) => x.id === id);
     const { error } = await db.from('expenses').delete().eq('id', id);
     if (error) throw error;
     set((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) }));

@@ -21,6 +21,7 @@ import { weightedPercent, sortMilestones, statusForPercent } from './milestones/
 import { runOrToast } from '@/lib/run-or-toast';
 import { todayLocal } from '@/lib/utils';
 import { useShallow } from 'zustand/react/shallow';
+import { deleteWithUndo } from '@/lib/undo-delete';
 
 interface MilestonesSectionProps {
   projectId: string;
@@ -112,9 +113,17 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     }
   };
 
-  const handleDelete = async (m: Milestone) => {
-    if (!(await runOrToast(() => deleteMilestone(m.id), 'تعذّر حذف المرحلة'))) return;
-    await runOrToast(() => syncProject(milestones.filter(x => x.id !== m.id)), 'حُذفت المرحلة وتعذّر تحديث إنجاز المشروع');
+  // The milestone leaves the screen at once; the delete and the project's
+  // completion follow once the undo window has passed.
+  const handleDelete = (m: Milestone) => {
+    const rest = milestones.filter(x => x.id !== m.id);
+    deleteWithUndo<Milestone>({
+      collection: 'milestones', id: m.id, row: m, label: 'المرحلة',
+      commit: async (row) => {
+        await deleteMilestone(row.id, row);
+        await runOrToast(() => syncProject(rest), 'حُذفت المرحلة وتعذّر تحديث إنجاز المشروع');
+      },
+    });
   };
 
   const handlePercentChange = async (m: Milestone, newPct: number) => {

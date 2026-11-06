@@ -11,10 +11,11 @@ import {
 } from '@/types/project';
 import { formatCurrency } from '@/lib/finance';
 import { Button } from '@/components/ui/button';
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { AlertTriangle, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { RiskFormDialog } from './risks/RiskFormDialog';
+import { UndoDeleteButton } from '@/components/UndoDeleteButton';
+import { deleteWithUndo } from '@/lib/undo-delete';
 
 interface RisksSectionProps {
   projectId?: string;
@@ -30,13 +31,6 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
 
   const openRisks = risks.filter(r => r.status === 'open' || r.status === 'mitigating');
   const totalExposure = openRisks.reduce((s, r) => s + r.financialImpact, 0);
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteRisk(id);
-      toast.success('تم حذف الخطر');
-    } catch { toast.error('فشل الحذف'); }
-  };
 
   return (
     <div className="space-y-4">
@@ -105,7 +99,7 @@ export function RisksSection({ projectId, portfolioId, risks, readOnly = false }
                   <td>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => form.open({ risk })}>تعديل</Button>
-                      <ConfirmDeleteDialog onConfirm={() => handleDelete(risk.id)} title="حذف الخطر" description={`هل أنت متأكد من حذف "${risk.title}"؟`} />
+                      <UndoDeleteButton label="حذف الخطر" onDelete={() => deleteWithUndo<Risk>({ collection: 'risks', id: risk.id, row: risk, label: 'الخطر', commit: (row) => deleteRisk(row.id, row) })} />
                     </div>
                   </td>
                   )}

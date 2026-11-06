@@ -11,11 +11,12 @@
  * follows turns it green without editing a test.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within, act } from '@testing-library/react';
 import { toast } from 'sonner';
 import { useStore, type AppState } from '@/store/useStore';
 import type { Risk } from '@/types/project';
 import { RisksSection } from '../RisksSection';
+import { flushPendingDeletes } from '@/lib/undo-delete';
 
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }),
@@ -169,12 +170,14 @@ describe('editing a risk', () => {
 });
 
 describe('deleting and the read-only view', () => {
-  it('deletes a risk after confirmation', async () => {
+  it('deletes a risk without a dialog, once the undo window passes', async () => {
     renderSection();
     const [del] = within(rowFor('تقلب العملة')).getAllByRole('button').filter((b) => b.querySelector('svg.lucide-trash2'));
     fireEvent.click(del);
-    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'حذف' }));
-    await waitFor(() => expect(actions.deleteRisk).toHaveBeenCalledWith('r-closed'));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(actions.deleteRisk).not.toHaveBeenCalled();
+    await act(async () => { await flushPendingDeletes(); });
+    await waitFor(() => expect(actions.deleteRisk).toHaveBeenCalledWith('r-closed', expect.objectContaining({ id: 'r-closed' })));
   });
 
   it('shows a viewer the table with nothing that writes', () => {

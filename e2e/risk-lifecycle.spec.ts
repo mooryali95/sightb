@@ -56,25 +56,25 @@ test('mitigating keeps the exposure, closing drops it, and the row stays on the 
   await expect(rowOf(page, 'تأخر التوريد')).toContainText('مغلق');
 });
 
-test('deleting asks by name and removes the risk with its exposure', async ({ page }) => {
+test('deleting takes the risk off at once, «تراجع» brings it back untouched, and the delete goes when the window passes', async ({ page }) => {
   const wire = await stubSupabase(page, { risks: [risk('rk-1', 'تأخر التوريد', 25000, 'open')] });
   await openRisks(page);
   await expect(figure(page, 'إجمالي التعرض المالي')).toHaveText(/^25,000\.00/);
-  const confirm = page.getByRole('alertdialog');
-  // Under load a click can land while the table re-renders and open nothing; retry until the confirmation is up.
+  const del = () => rowOf(page, 'تأخر التوريد').getByRole('button', { name: 'حذف الخطر' });
+
+  // Under load a click can land while the table re-renders; retry until the row is gone.
   await expect(async () => {
-    if (!(await confirm.isVisible())) await rowOf(page, 'تأخر التوريد').locator('button', { has: page.locator('svg.text-destructive') }).click();
-    await expect(confirm).toBeVisible({ timeout: 1000 });
+    if (await del().isVisible()) await del().click();
+    await expect(page.getByText('تأخر التوريد')).toHaveCount(0, { timeout: 1000 });
   }).toPass();
-  await expect(confirm).toContainText('هل أنت متأكد من حذف "تأخر التوريد"؟');
-  await confirm.getByRole('button', { name: 'إلغاء' }).click();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'تراجع' }).click();
+  await expect(rowOf(page, 'تأخر التوريد')).toBeVisible();
   expect(wire.writes.filter((w) => w.method === 'DELETE')).toHaveLength(0);
 
-  await rowOf(page, 'تأخر التوريد').locator('button', { has: page.locator('svg.text-destructive') }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'حذف' }).click();
-  await expect(page.getByText('تم حذف الخطر')).toBeVisible();
-  expect(wire.writes.filter((w) => w.method === 'DELETE').map((w) => w.table)).toEqual(['risks']);
+  await del().click();
+  await expect(page.getByText('حُذف الخطر').first()).toBeVisible();
   await expect(figure(page, 'مخاطر مفتوحة')).toHaveText('0');
   await expect(figure(page, 'إجمالي التعرض المالي')).toHaveText(/^0\.00/);
-  await expect(page.getByText('تأخر التوريد')).toHaveCount(0);
+  await expect.poll(() => wire.writes.filter((w) => w.method === 'DELETE').map((w) => w.table), { timeout: 10_000 }).toEqual(['risks']);
 });

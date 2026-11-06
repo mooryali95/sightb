@@ -13,10 +13,11 @@
  * The fix commits that follow turn them green without editing a test.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within, act } from '@testing-library/react';
 import { useStore, type AppState } from '@/store/useStore';
 import type { Commitment } from '@/types/project';
 import { CommitmentsSection } from '../CommitmentsSection';
+import { flushPendingDeletes } from '@/lib/undo-delete';
 
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }),
@@ -180,11 +181,13 @@ describe('the inspector, deleting, and the read-only view', () => {
     expect(within(inspector).getByText('دفعة أولى مدفوعة')).toBeInTheDocument();
   });
 
-  it('deletes a commitment after confirmation', async () => {
+  it('deletes a commitment without a dialog, once the undo window passes', async () => {
     renderSection();
     const [del] = within(rowFor('عقد مسودة')).getAllByRole('button').filter((b) => b.querySelector('svg.lucide-trash2'));
     fireEvent.click(del);
-    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'حذف' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(actions.deleteCommitment).not.toHaveBeenCalled();
+    await act(async () => { await flushPendingDeletes(); });
     await waitFor(() => expect(actions.deleteCommitment).toHaveBeenCalledWith('c-draft'));
   });
 

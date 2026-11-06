@@ -17,10 +17,11 @@
  * mode. The fix commits that follow turn them green without editing a test.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within, act } from '@testing-library/react';
 import { useStore, type AppState } from '@/store/useStore';
 import type { Milestone, Project, Revenue } from '@/types/project';
 import { MilestonesSection } from '../MilestonesSection';
+import { flushPendingDeletes } from '@/lib/undo-delete';
 
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }),
@@ -227,12 +228,14 @@ describe('the inline percent, deleting, and the read-only view', () => {
     await waitFor(() => expect(actions.updateProject).toHaveBeenCalledWith(PROJECT_ID, { status: 'completed', percentComplete: 100 }));
   });
 
-  it('deletes after confirmation and resyncs the project percent', async () => {
+  it('deletes without a dialog, once the undo window passes and resyncs the project percent', async () => {
     renderSection();
     const [del] = within(cardFor('التسليم')).getAllByRole('button').filter((b) => b.querySelector('svg.lucide-trash2'));
     fireEvent.click(del);
-    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'حذف' }));
-    await waitFor(() => expect(actions.deleteMilestone).toHaveBeenCalledWith('m-handover'));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(actions.deleteMilestone).not.toHaveBeenCalled();
+    await act(async () => { await flushPendingDeletes(); });
+    await waitFor(() => expect(actions.deleteMilestone).toHaveBeenCalledWith('m-handover', expect.objectContaining({ id: 'm-handover' })));
     // (50 + 15) / 0.8 = 81.25 → 81.
     await waitFor(() => expect(actions.updateProject).toHaveBeenCalledWith(PROJECT_ID, { percentComplete: 81 }));
   });

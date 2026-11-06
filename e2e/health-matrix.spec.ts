@@ -42,6 +42,8 @@ test('plots each live project with spend or progress at its rates, coloured by h
   expect((await fills()).filter((f) => f === AMBER)).toHaveLength(1);
   expect((await fills()).filter((f) => f === RED)).toHaveLength(1);
 
+  // The matrix fades in (it moves 8px) as it arrives; point at it once it has settled.
+  await matrix(page).evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
   const tooltip = matrix(page).locator('div.rounded-lg.border.bg-card.text-xs');
   const hoverPoint = async (fill: string, nth = 0) => {
     await points(page).locator(`xpath=self::*[@fill="${fill}"]`).nth(nth).hover({ force: true });
