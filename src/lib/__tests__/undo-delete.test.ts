@@ -8,7 +8,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 type R = { id: string; title: string };
 const rows: R[] = [{ id: 'a', title: 'أ' }, { id: 'b', title: 'ب' }, { id: 'c', title: 'ج' }];
 const risks = () => (useStore.getState() as unknown as { risks: R[] }).risks.map((r) => r.id);
-const undoOf = () => (vi.mocked(toast.success).mock.calls.at(-1)?.[1] as { action: { onClick: () => void } }).action.onClick;
+const undoOf = () => (vi.mocked(toast.success).mock.calls.at(-1)?.[1] as unknown as { action: { onClick: () => void } }).action.onClick;
 
 beforeEach(() => {
   vi.useFakeTimers();
