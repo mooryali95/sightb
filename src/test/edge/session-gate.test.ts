@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * The guard the service-role functions call (send-invite, delete-user,
  * admin-email-status, passkeys). What must hold: nothing is refused while

@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * The gate on the paid AI features (ai-executive-summary, extract-receipt-data):
  * an owner, admin or editor whose session passed its second factor goes on; a
