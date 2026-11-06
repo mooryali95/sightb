@@ -26,12 +26,7 @@ export function ProjectsTable({
   const navigate = useNavigate();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.4 }}
-      className="stat-card"
-    >
+    <div className="stat-card animate-fade-in">
       <h3 className="text-sm font-semibold mb-4">
         {hasActiveFilters ? `المشاريع المصفاة (${filteredProjects.length})` : 'جميع المشاريع'}
       </h3>
@@ -114,19 +109,15 @@ export function ProjectsTable({
         </table>
 
         {filteredProjects.length === 0 && hasActiveFilters && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center py-12 text-muted-foreground"
-          >
+          <div className="flex flex-col items-center py-12 text-muted-foreground animate-fade-in">
             <Search className="w-8 h-8 mb-3 opacity-40" />
             <p className="text-sm">لا توجد مشاريع تطابق التصفية</p>
             <Button variant="ghost" size="sm" onClick={clearFilters} className="mt-2 text-xs">
               مسح الفلاتر
             </Button>
-          </motion.div>
+          </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

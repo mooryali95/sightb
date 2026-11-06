@@ -1,13 +1,7 @@
 import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import { DollarSign, TrendingDown, TrendingUp, Briefcase, Wallet } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { countAr } from '@/lib/plural';
-
-const stagger = {
-  container: { hidden: {}, show: { transition: { staggerChildren: 0.08 } } },
-  item: { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' as const } } },
-};
 
 interface DashboardStatsProps {
   effectiveTotalContract: number;
@@ -35,14 +29,9 @@ export function DashboardStats(props: DashboardStatsProps) {
   } = props;
 
   return (
-    <motion.div
-      variants={stagger.container}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6"
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 animate-fade-in">
       {/* Hero card — Total contract value */}
-      <motion.div variants={stagger.item}>
+      <div>
         <StatCard
           variant="hero"
           title="قيمة العقود الفعّالة"
@@ -53,9 +42,9 @@ export function DashboardStats(props: DashboardStatsProps) {
             : 'القيمة الفعّالة بعد أوامر التغيير'}
           tooltip="مجموع العقود الأصلية + صافي أوامر التغيير المعتمدة للمشاريع الظاهرة. رقم تراكمي لا يتغير مع فلتر الفترة."
         />
-      </motion.div>
+      </div>
 
-      <motion.div variants={stagger.item}>
+      <div>
         <StatCard
           title="الإيرادات المحصّلة"
           value={formatCurrency(collectedRevenue)}
@@ -64,10 +53,10 @@ export function DashboardStats(props: DashboardStatsProps) {
           subtitle={revenueChange !== null ? `${revenueChange > 0 ? '↑' : '↓'} ${Math.abs(revenueChange).toFixed(1)}% عن الفترة السابقة` : 'نقد مستلم فعلياً'}
           tooltip={timePeriod === 'all' ? 'كل الإيرادات التي حالتها «محصّل» للمشاريع الظاهرة.' : 'الإيرادات المحصّلة بتاريخ يقع داخل الفترة المحددة.'}
         />
-      </motion.div>
+      </div>
 
       {/* Expenses — TrendingDown semantics (more spend = bad) */}
-      <motion.div variants={stagger.item}>
+      <div>
         <StatCard
           title="إجمالي المصروفات"
           value={formatCurrency(totalExpenses)}
@@ -78,10 +67,10 @@ export function DashboardStats(props: DashboardStatsProps) {
             : undefined}
           tooltip={timePeriod === 'all' ? 'المصروفات المقبولة بعد استبعاد المرفوض والسلف القائمة.' : 'المصروفات المقبولة داخل الفترة المحددة، بعد استبعاد المرفوض والسلف القائمة.'}
         />
-      </motion.div>
+      </div>
 
       {/* Planned Profit — TrendingUp for positive, TrendingDown for negative */}
-      <motion.div variants={stagger.item}>
+      <div>
         <StatCard
           title="الربح المخطط"
           value={formatCurrency(plannedProfit)}
@@ -90,10 +79,10 @@ export function DashboardStats(props: DashboardStatsProps) {
           subtitle={`هامش: ${plannedProfitMargin.toFixed(1)}%`}
           tooltip="قيمة العقود الفعّالة − الموازنة المعتمدة. رقم مخطط تراكمي وليس الربح النقدي المحقق."
         />
-      </motion.div>
+      </div>
 
       {/* Total projects (always visible, neutral) */}
-      <motion.div variants={stagger.item}>
+      <div>
         <StatCard
           title="إجمالي المشاريع"
           value={filteredProjectsCount.toString()}
@@ -102,7 +91,7 @@ export function DashboardStats(props: DashboardStatsProps) {
           subtitle={`${countAr(activeCompaniesCount, 'company')}${archivedCompaniesCount > 0 ? ` · ${archivedCompaniesCount} مؤرشفة` : ''} · ${countAr(portfoliosCount, 'portfolio')}`}
           tooltip="عدد المشاريع التي تطابق فلاتر الشركة والحالة والبحث الحالية."
         />
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

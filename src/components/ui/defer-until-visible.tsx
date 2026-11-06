@@ -1,4 +1,4 @@
-import { ReactNode, Suspense, useEffect, useRef, useState } from 'react';
+import { ReactNode, Suspense, startTransition, useEffect, useRef, useState } from 'react';
 
 /**
  * Renders its children once they come near the screen, or once the browser
@@ -15,7 +15,10 @@ export function DeferUntilVisible({ minHeight, children, rootMargin = '300px' }:
 
   useEffect(() => {
     if (show) return;
-    const reveal = () => setShow(true);
+    // A transition, so React renders the section in short slices it can
+    // interrupt, not as one long task; several sections revealed in the same
+    // idle moment then share the main thread with input instead of blocking it.
+    const reveal = () => startTransition(() => setShow(true));
     const io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) reveal(); }, { rootMargin });
     if (ref.current) io.observe(ref.current);
     // Safari before 18 has no requestIdleCallback.

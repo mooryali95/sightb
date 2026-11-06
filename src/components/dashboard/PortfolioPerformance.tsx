@@ -2,7 +2,6 @@ import { formatCurrency } from '@/lib/finance';
 import { getPortfolioSummary } from '@/lib/portfolio';
 import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS } from '@/types/project';
 import { FolderKanban } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import type {
   BudgetItem, ChangeOrder, Company, Expense, Milestone, Portfolio, Project, Revenue, Risk,
@@ -33,12 +32,7 @@ export function PortfolioPerformance({
   if (activePortfolios.length === 0) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.32 }}
-      className="mb-8"
-    >
+    <div className="mb-8 animate-fade-in">
       <h3 className="text-sm font-semibold mb-3">أداء المحافظ</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {activePortfolios.map(portfolio => {
@@ -76,6 +70,6 @@ export function PortfolioPerformance({
           );
         })}
       </div>
-    </motion.div>
+    </div>
   );
 }

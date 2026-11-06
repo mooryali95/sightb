@@ -1,7 +1,6 @@
 import { Building2, Archive, ArchiveRestore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Company } from '@/types/project';
@@ -22,12 +21,7 @@ export function CompanyManagement({
   const navigate = useNavigate();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.5 }}
-      className="stat-card mt-6"
-    >
+    <div className="stat-card mt-6 animate-fade-in">
       <h3 className="text-sm font-semibold mb-4">إدارة الشركات</h3>
       <div className="space-y-2">
         {activeCompanies.map((company) => (
@@ -107,6 +101,6 @@ export function CompanyManagement({
           </>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

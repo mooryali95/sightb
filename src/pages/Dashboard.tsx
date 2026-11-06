@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useState, useMemo, useEffect, lazy } from 'react';
 import { DeferUntilVisible } from '@/components/ui/defer-until-visible';
@@ -36,7 +35,7 @@ const HealthMatrix = lazy(() => import('@/components/dashboard/HealthMatrix').th
 export default function Dashboard() {
   const { companies, portfolios, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, indirectCosts, loading, loadAll, saveSnapshot, archiveCompany, unarchiveCompany, deleteCompany } = useStore(useShallow((s) => ({ companies: s.companies, portfolios: s.portfolios, projects: s.projects, budgetItems: s.budgetItems, expenses: s.expenses, revenues: s.revenues, changeOrders: s.changeOrders, milestones: s.milestones, risks: s.risks, indirectCosts: s.indirectCosts, loading: s.loading, loadAll: s.loadAll, saveSnapshot: s.saveSnapshot, archiveCompany: s.archiveCompany, unarchiveCompany: s.unarchiveCompany, deleteCompany: s.deleteCompany })));
   const navigate = useNavigate();
-  const { isAdmin } = useRole();
+  const { isAdmin, loading: roleLoading } = useRole();
   const isMobile = useIsMobile();
 
   const activeCompanies = useMemo(() => companies.filter(c => c.status !== 'archived'), [companies]);
@@ -86,12 +85,14 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+      <div className="animate-fade-in">
         <PageHeader
           eyebrow="نظرة عامة"
           title="لوحة التحكم"
           subtitle="نظرة شاملة على جميع المحافظ والمشاريع"
-          actions={isAdmin && (
+          // The role arrives after the page; hold the button's place meanwhile so
+          // it does not push the whole page down when it appears.
+          actions={roleLoading ? <div className="h-10 w-32" aria-hidden="true" /> : isAdmin && (
             <Button onClick={() => navigate('/companies/new')} className="gap-2">
               <Plus className="w-4 h-4" /> شركة جديدة
             </Button>
@@ -99,8 +100,7 @@ export default function Dashboard() {
         />
 
         {!hasData ? (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col items-center justify-center py-24">
+          <div className="flex flex-col items-center justify-center py-24 animate-fade-in">
             <img src={basserhLogo} alt="بصيرة" className="w-24 h-24 rounded-2xl object-cover mb-6 shadow-lg" />
             <h2 className="text-xl font-bold mb-2">مرحباً بك في رؤية</h2>
             <p className="text-muted-foreground mb-2 text-center max-w-md">نظام إدارة المحافظ والمشاريع المالية</p>
@@ -110,7 +110,7 @@ export default function Dashboard() {
                 <Plus className="w-5 h-5" /> إضافة أول شركة
               </Button>
             )}
-          </motion.div>
+          </div>
         ) : (
           <>
             <FirstRunGuide />
@@ -154,11 +154,13 @@ export default function Dashboard() {
               <DeferUntilVisible minHeight={330}><DashboardCharts companyData={companyData} statusData={statusData} /></DeferUntilVisible>
             )}
 
-            <PortfolioPerformance
-              portfolios={filteredPortfolios} companies={companies} projects={filteredProjects}
-              budgetItems={filteredBudgetItems} expenses={filteredAllExpenses} revenues={filteredAllRevenues}
-              changeOrders={filteredChangeOrders} milestones={filteredMilestones} risks={filteredRisks}
-            />
+            <DeferUntilVisible minHeight={240}>
+              <PortfolioPerformance
+                portfolios={filteredPortfolios} companies={companies} projects={filteredProjects}
+                budgetItems={filteredBudgetItems} expenses={filteredAllExpenses} revenues={filteredAllRevenues}
+                changeOrders={filteredChangeOrders} milestones={filteredMilestones} risks={filteredRisks}
+              />
+            </DeferUntilVisible>
 
             {filteredProjects.length >= 2 && (
               <DeferUntilVisible minHeight={400}>
@@ -176,26 +178,32 @@ export default function Dashboard() {
               indirectCosts={indirectCosts} saveSnapshot={saveSnapshot}
             />
 
-            <ProjectCards
-              filteredProjects={filteredProjects} expenses={filteredAllExpenses}
-              budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
-              companies={companies}
-            />
+            <DeferUntilVisible minHeight={320}>
+              <ProjectCards
+                filteredProjects={filteredProjects} expenses={filteredAllExpenses}
+                budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
+                companies={companies}
+              />
+            </DeferUntilVisible>
 
-            <ProjectsTable
-              filteredProjects={filteredProjects} expenses={filteredAllExpenses}
-              budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
-              companies={companies} hasActiveFilters={hasActiveFilters} clearFilters={clearFilters}
-            />
+            <DeferUntilVisible minHeight={320}>
+              <ProjectsTable
+                filteredProjects={filteredProjects} expenses={filteredAllExpenses}
+                budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
+                companies={companies} hasActiveFilters={hasActiveFilters} clearFilters={clearFilters}
+              />
+            </DeferUntilVisible>
 
-            <CompanyManagement
-              activeCompanies={activeCompanies} archivedCompanies={archivedCompanies}
-              isAdmin={isAdmin} archiveCompany={archiveCompany}
-              unarchiveCompany={unarchiveCompany} deleteCompany={deleteCompany}
-            />
+            <DeferUntilVisible minHeight={200}>
+              <CompanyManagement
+                activeCompanies={activeCompanies} archivedCompanies={archivedCompanies}
+                isAdmin={isAdmin} archiveCompany={archiveCompany}
+                unarchiveCompany={unarchiveCompany} deleteCompany={deleteCompany}
+              />
+            </DeferUntilVisible>
           </>
         )}
-      </motion.div>
+      </div>
     </AppLayout>
   );
 }

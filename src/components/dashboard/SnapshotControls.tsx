@@ -1,6 +1,5 @@
 import { Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { runOrToast } from '@/lib/run-or-toast';
 import { getProjectSummary } from '@/lib/finance';
@@ -28,12 +27,7 @@ export function SnapshotControls({
   changeOrders, milestones, risks, indirectCosts, saveSnapshot,
 }: SnapshotControlsProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.335 }}
-      className="flex gap-2 mb-8"
-    >
+    <div className="flex gap-2 mb-8 animate-fade-in">
       <Button
         variant="outline"
         size="sm"
@@ -70,6 +64,6 @@ export function SnapshotControls({
       <p className="text-xs text-muted-foreground max-w-xs self-center">
         يحفظ نسخة من جميع المؤشرات المالية الحالية لمقارنتها لاحقاً مع الأشهر القادمة
       </p>
-    </motion.div>
+    </div>
   );
 }

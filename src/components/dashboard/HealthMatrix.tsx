@@ -1,5 +1,4 @@
 import { getProjectSummary } from '@/lib/finance';
-import { motion } from 'framer-motion';
 import {
   ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
@@ -35,12 +34,7 @@ export function HealthMatrix({ filteredProjects, expenses, budgetItems, revenues
   if (healthData.length < 2) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.33 }}
-      className="stat-card mb-8"
-    >
+    <div className="stat-card mb-8 animate-fade-in">
       <h3 className="text-sm font-semibold mb-1">مصفوفة صحة المشاريع</h3>
       <p className="text-xs text-muted-foreground mb-4">المحور الأفقي: نسبة الصرف — المحور الرأسي: نسبة الإنجاز</p>
       <ResponsiveContainer width="100%" height={300}>
@@ -69,6 +63,6 @@ export function HealthMatrix({ filteredProjects, expenses, budgetItems, revenues
           </Scatter>
         </ScatterChart>
       </ResponsiveContainer>
-    </motion.div>
+    </div>
   );
 }
