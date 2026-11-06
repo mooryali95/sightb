@@ -120,7 +120,7 @@ test('the budget, the milestones, the collection, the risks and the attention ca
   await expect(risks).toContainText('التعرض يتجاوز الاحتياطي');
 
   const attention = block(page, 'يحتاج تدخل');
-  await expect(attention).toContainText('1 مصروف بانتظار الاعتماد (1,500.00 ر.س)');
+  await expect(attention).toContainText('مصروف واحد بانتظار الاعتماد (1,500.00 ر.س)');
   await expect(attention).toContainText('1 أمر تغيير مقترح');
   await expect(attention).toContainText('1 مرحلة متأخرة');
   await expect(attention).not.toContainText('تجاوز الموازنة');

@@ -324,6 +324,6 @@ describe('deleting a fund', () => {
     fireEvent.click(deleteTrigger);
 
     // Two expenses, 12,000 in total, hang off this fund.
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('2 مصروف (12,000.00 ر.س)');
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('مصروفان (12,000.00 ر.س)');
   });
 });

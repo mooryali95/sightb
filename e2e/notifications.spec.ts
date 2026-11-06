@@ -48,7 +48,7 @@ test('counts and groups what needs attention on live projects, and opens the pro
   await expect(panel.getByText('132% من الموازنة')).toBeVisible();
   // Each kind is a collapsible group; the ones after the first open on request.
   await panel.getByRole('button', { name: 'بانتظار الاعتماد (1)' }).click();
-  await expect(panel.getByText('2 مصروف بانتظار الاعتماد')).toBeVisible();
+  await expect(panel.getByText('مصروفان بانتظار الاعتماد')).toBeVisible();
   await panel.getByRole('button', { name: 'مراحل متأخرة (1)' }).click();
   await expect(panel.getByText('1 مرحلة متأخرة')).toBeVisible();
   await expect(panel.getByText('مشروع مكتمل')).toHaveCount(0);

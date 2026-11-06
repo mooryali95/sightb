@@ -83,6 +83,8 @@ need_text src/App.tsx 'path="/errors"'
 need_text supabase/functions/admin-otp/index.ts "Retired on 6 November 2026"
 need_text supabase/functions/daily-digest/index.ts "digest_token_ok"
 need_text supabase/config.toml "[functions.daily-digest]"
+need_text .github/workflows/quality.yml "colour-guard.sh"
+need_text src/lib/plural.ts "countAr"
 
 [ "$fail" = 0 ] && echo "Protected files and behaviours present."
 exit "$fail"

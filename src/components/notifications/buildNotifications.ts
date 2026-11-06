@@ -6,6 +6,7 @@ import { getProjectSummary } from '@/lib/finance';
 import type {
   BudgetItem, ChangeOrder, Expense, Milestone, PaymentRequest, Project, Revenue, Risk,
 } from '@/types/project';
+import { countAr } from '@/lib/plural';
 
 export interface Notification {
   id: string;
@@ -61,7 +62,7 @@ export function buildNotifications(
 
     const pending = pE.filter(e => e.approvalStatus === 'pending').length;
     if (pending > 0)
-      items.push({ id: `pe-${p.id}`, type: 'approval', severity: 'warning', title: `${pending} مصروف بانتظار الاعتماد`, description: p.name, link: `/project/${p.id}` });
+      items.push({ id: `pe-${p.id}`, type: 'approval', severity: 'warning', title: `${countAr(pending, 'expense')} بانتظار الاعتماد`, description: p.name, link: `/project/${p.id}` });
 
     const pendingCO = pC.filter(c => c.status === 'proposed').length;
     if (pendingCO > 0)
@@ -76,7 +77,7 @@ export function buildNotifications(
 
     const hr = risks.filter(r => r.projectId === p.id && r.status === 'open' && (r.impact === 'high' || r.impact === 'very_high')).length;
     if (hr > 0)
-      items.push({ id: `hr-${p.id}`, type: 'risk', severity: 'warning', title: `${hr} خطر عالي`, description: p.name, link: `/project/${p.id}` });
+      items.push({ id: `hr-${p.id}`, type: 'risk', severity: 'warning', title: `مخاطر عالية: ${hr}`, description: p.name, link: `/project/${p.id}` });
 
     // سلف قائمة متقادمة (> 60 يوم حرج، 30-60 تحذير)
     const outstandingAdv = paymentRequests.filter((r) =>

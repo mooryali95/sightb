@@ -6,12 +6,9 @@ import {
   PieChart, Pie, Cell, LineChart, Line, ReferenceLine, Legend,
 } from 'recharts';
 import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
+import { SERIES } from '@/lib/chart-colors';
 
-const COLORS = [
-  'hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)',
-  'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)', 'hsl(190, 80%, 42%)',
-  'hsl(330, 70%, 50%)', 'hsl(50, 80%, 45%)',
-];
+const COLORS = SERIES;
 
 interface ChartsSectionProps {
   pieData: { name: string; value: number }[];

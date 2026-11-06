@@ -5,8 +5,9 @@ import { Legend,
   PieChart, Pie, Cell,
 } from 'recharts';
 import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
+import { SERIES } from '@/lib/chart-colors';
 
-const COLORS = ['hsl(40, 55%, 55%)', 'hsl(160, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(280, 60%, 50%)'];
+const COLORS = SERIES.slice(0, 5);
 
 interface DashboardChartsProps {
   companyData: { name: string; value: number }[];

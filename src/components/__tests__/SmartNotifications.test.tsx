@@ -110,9 +110,9 @@ describe('what becomes a notification', () => {
     expect(advances[0].closest('.rounded-md')).toHaveClass('text-destructive');
     expect(advances[1].closest('.rounded-md')).toHaveClass('text-warning');
     fireEvent.click(groupHeader(/مخاطر مفتوحة/));
-    expect(within(panel).getByText('1 خطر عالي')).toBeInTheDocument();
+    expect(within(panel).getByText('مخاطر عالية: 1')).toBeInTheDocument();
     fireEvent.click(groupHeader(/بانتظار الاعتماد/));
-    expect(within(panel).getByText('2 مصروف بانتظار الاعتماد')).toBeInTheDocument();
+    expect(within(panel).getByText('مصروفان بانتظار الاعتماد')).toBeInTheDocument();
     expect(within(panel).getByText('1 أمر تغيير مقترح')).toBeInTheDocument();
   });
 });

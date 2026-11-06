@@ -5,6 +5,7 @@ import {
   ResponsiveContainer, Cell,
 } from 'recharts';
 import type { BudgetItem, ChangeOrder, Expense, Project, Revenue } from '@/types/project';
+import { STATUS } from '@/lib/chart-colors';
 
 interface HealthMatrixProps {
   filteredProjects: Project[];
@@ -26,8 +27,8 @@ export function HealthMatrix({ filteredProjects, expenses, budgetItems, revenues
       x: Math.round(s.spendRate),
       y: p.percentComplete,
       z: s.effectiveContractValue,
-      fill: p.percentComplete >= s.spendRate ? 'hsl(160, 60%, 42%)' :
-            p.percentComplete >= s.spendRate * 0.7 ? 'hsl(38, 92%, 50%)' : 'hsl(0, 72%, 51%)',
+      fill: p.percentComplete >= s.spendRate ? STATUS.good :
+            p.percentComplete >= s.spendRate * 0.7 ? STATUS.watch : STATUS.bad,
     };
   }).filter(d => d.x > 0 || d.y > 0);
 

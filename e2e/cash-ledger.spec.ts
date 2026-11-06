@@ -59,7 +59,7 @@ test('the cards split the transfer and the timeline lists each money event once,
   const region = await openLedger(page);
 
   await expect(card(page, 'إجمالي ما تحوّل')).toContainText('50,000.00 ر.س');
-  await expect(card(page, 'إجمالي ما تحوّل')).toContainText('1 دفعة · 1 مفتوحة');
+  await expect(card(page, 'إجمالي ما تحوّل')).toContainText('دفعة واحدة · 1 مفتوحة');
   await expect(card(page, 'بيد حاملي العُهد')).toContainText('5,000.00 ر.س');
   await expect(card(page, 'مصروف موثّق')).toContainText('عُهد 3,000.00 ر.س');
   await expect(card(page, 'مدفوع لمستحقات موارد')).toContainText('10,000.00 ر.س');
@@ -94,7 +94,7 @@ test('the overview warns about spend and custodies with nothing behind them', as
   });
   const region = await openLedger(page);
   await expect(region.getByText('⚠️ 1 عُهدة غير مربوطة بدفعة (إجمالي 4,000.00 ر.س).')).toBeVisible();
-  await expect(region.getByText('⚠️ 1 مصروف غير مرتبط بأي دفعة أو عهدة (إجمالي 7,500.00 ر.س).')).toBeVisible();
+  await expect(region.getByText('⚠️ مصروف واحد بلا ربط بأي دفعة أو عهدة (إجمالي 7,500.00 ر.س).')).toBeVisible();
   await region.getByRole('tab', { name: 'العمليات (5)' }).click();
   await expect(region.getByRole('listitem').filter({ hasText: 'نقل بلا مصدر' })).toContainText('غير مربوط');
   await expect(region.getByRole('listitem').filter({ hasText: 'عهدة طليقة' })).toContainText('غير مربوطة بدفعة');

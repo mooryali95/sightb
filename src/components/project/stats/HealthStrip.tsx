@@ -39,7 +39,7 @@ export function HealthStrip({ project, evm, currentMonth, daysRemaining, healthS
     {openRisksCount > 0 && (
       <>
         <span className="text-muted-foreground">|</span>
-        <span>{openRisksCount} خطر مفتوح</span>
+        <span>مخاطر مفتوحة: {openRisksCount}</span>
       </>
     )}
   </div>

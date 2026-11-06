@@ -3,6 +3,7 @@ import { StatCard } from '@/components/StatCard';
 import { formatCurrency } from '@/lib/finance';
 import type { ProjectSummary, EVMMetrics } from '@/types/project';
 import { DollarSign, TrendingUp, Receipt, Target, Shield } from 'lucide-react';
+import { countAr } from '@/lib/plural';
 
 interface Props {
   summary: ProjectSummary;
@@ -31,7 +32,7 @@ export function CollectionRow({ summary, evm, invoicedCount }: Props) {
         value={formatCurrency(summary.accountsReceivable)}
         icon={<Receipt className="w-4 h-4" />}
         trend={summary.accountsReceivable > 0 ? 'neutral' : undefined}
-        subtitle={summary.accountsReceivable > 0 ? `${invoicedCount} فاتورة قيد التحصيل` : 'لا فواتير معلّقة'}
+        subtitle={summary.accountsReceivable > 0 ? `${countAr(invoicedCount, 'invoice')} قيد التحصيل` : 'لا فواتير معلّقة'}
         tooltip="فواتير أُصدرت للعميل ولم تُحصّل بعد."
       />
       <StatCard

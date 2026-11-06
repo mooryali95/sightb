@@ -1,5 +1,6 @@
 /** The pending-expense and proposed-order pills under the stats. */
 import { Clock, FileEdit } from 'lucide-react';
+import { countAr } from '@/lib/plural';
 
 interface Props {
   pendingExpensesCount: number;
@@ -15,7 +16,7 @@ export function QuickAlerts({ pendingExpensesCount, pendingChangeOrders }: Props
       {pendingExpensesCount > 0 && (
         <div className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20">
           <Clock className="w-3 h-3" />
-          {pendingExpensesCount} مصروف بانتظار الاعتماد
+          {countAr(pendingExpensesCount, 'expense')} بانتظار الاعتماد
         </div>
       )}
       {pendingChangeOrders > 0 && (

@@ -6,6 +6,7 @@ import type { Milestone } from '@/types/project';
 import { SectionCard, SectionTitle } from './SectionCard';
 import type { BudgetSlice } from './executiveFigures';
 import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
+import { STATUS } from '@/lib/chart-colors';
 
 export function BudgetSplitCard({ slices }: { slices: BudgetSlice[] }) {
   return (
@@ -30,10 +31,10 @@ export function MilestonesCard({ milestones }: { milestones: Milestone[] }) {
   const completedMilestones = milestones.filter(m => m.status === 'completed').length;
   const nextMilestone = milestones.find(m => m.status === 'planned' || m.status === 'in_progress');
   const milestoneData = [
-    { name: 'مكتمل', value: milestones.filter(m => m.status === 'completed').length, fill: 'hsl(160, 60%, 42%)' },
-    { name: 'جاري', value: milestones.filter(m => m.status === 'in_progress').length, fill: 'hsl(210, 70%, 50%)' },
-    { name: 'متأخر', value: milestones.filter(m => m.status === 'delayed').length, fill: 'hsl(0, 72%, 51%)' },
-    { name: 'مخطط', value: milestones.filter(m => m.status === 'planned').length, fill: 'hsl(220, 9%, 60%)' },
+    { name: 'مكتمل', value: milestones.filter(m => m.status === 'completed').length, fill: STATUS.good },
+    { name: 'جاري', value: milestones.filter(m => m.status === 'in_progress').length, fill: STATUS.info },
+    { name: 'متأخر', value: milestones.filter(m => m.status === 'delayed').length, fill: STATUS.bad },
+    { name: 'مخطط', value: milestones.filter(m => m.status === 'planned').length, fill: STATUS.neutral },
   ].filter(d => d.value > 0);
 
   return (

@@ -7,6 +7,7 @@
 import { Landmark, Scale, TriangleAlert, TrendingUp, Receipt, Building2, Wallet } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/finance';
+import { countAr } from '@/lib/plural';
 
 interface Props {
   netCash: number;
@@ -42,7 +43,7 @@ export function FinancialBrief({ netCash, receivables, plannedProfit, indirectTo
         <h2 className="text-sm font-semibold flex items-center gap-2"><Scale className="w-4 h-4 text-primary" />المركز المالي</h2>
         <p className={`flex items-center gap-1.5 text-xs ${attentionCount > 0 ? 'text-warning' : 'text-success'}`}>
           <TriangleAlert className="w-3.5 h-3.5" />
-          {attentionCount > 0 ? `${attentionCount} مشروع يحتاج تدخلاً` : 'لا توجد مشاريع حرجة ضمن العرض'}
+          {attentionCount > 0 ? `${countAr(attentionCount, 'project')} بحاجة إلى تدخل` : 'لا توجد مشاريع حرجة ضمن العرض'}
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-border">

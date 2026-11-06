@@ -7,6 +7,7 @@ import type { CashTransfer, Custody, Expense, FundSettlement, PaymentRequest, Pr
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Row } from './SsotRow';
+import { countAr } from '@/lib/plural';
 
 interface Props {
   projectId: string;
@@ -34,7 +35,7 @@ export function FundsBlock({ projectId, currency, funds, settlements, expenses, 
       </AccordionTrigger>
       <AccordionContent className="pt-2 pb-4">
         <Row
-          label={`إجمالي المُحوَّل (${fundsSummary.fundCount} دفعة)`}
+          label={`إجمالي المُحوَّل (${countAr(fundsSummary.fundCount, 'fund')})`}
           value={fundsSummary.totalTransferred}
           formula="Σ project_funds.amount WHERE project_id = ?"
           sources={[{ kind: 'db', label: 'project_funds' }]}

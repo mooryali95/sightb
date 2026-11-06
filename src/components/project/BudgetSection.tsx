@@ -18,6 +18,7 @@ import { BudgetPlanningSummary } from './budget/BudgetPlanningSummary';
 import { ReservesCard } from './budget/ReservesCard';
 import { runOrToast } from '@/lib/run-or-toast';
 import { useShallow } from 'zustand/react/shallow';
+import { countAr } from '@/lib/plural';
 
 interface BudgetSectionProps {
   projectId: string;
@@ -163,7 +164,7 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
                     linked++;
                   }
                 }
-                if (linked > 0) toast.success(`تم ربط ${linked} مصروف تلقائياً`);
+                if (linked > 0) toast.success(`رُبط ${countAr(linked, 'expense')} تلقائياً`);
                 else toast.info('لم يتم العثور على بنود مطابقة');
               }}
             >

@@ -1,3 +1,4 @@
+import { STATUS } from '@/lib/chart-colors';
 /**
  * The executive summary's maths, kept pure: the month's performance and
  * the budget split.
@@ -50,9 +51,9 @@ export function splitBudget(totalPlanned: number, totalActual: number, totalComm
   const trulyAvailable = Math.max(0, totalPlanned - usedOrCommitted);
   const overBudget = Math.max(0, usedOrCommitted - totalPlanned);
   return [
-    { name: 'مصروف', value: totalActual, fill: 'hsl(0, 72%, 51%)' },
-    { name: 'ملتزم غير مصروف', value: committedRemaining, fill: 'hsl(38, 92%, 50%)' },
-    { name: 'متاح', value: trulyAvailable, fill: 'hsl(160, 60%, 42%)' },
-    { name: 'تجاوز', value: overBudget, fill: 'hsl(340, 75%, 55%)' },
+    { name: 'مصروف', value: totalActual, fill: STATUS.bad },
+    { name: 'ملتزم غير مصروف', value: committedRemaining, fill: STATUS.watch },
+    { name: 'متاح', value: trulyAvailable, fill: STATUS.good },
+    { name: 'تجاوز', value: overBudget, fill: STATUS.over },
   ].filter(d => d.value > 0);
 }

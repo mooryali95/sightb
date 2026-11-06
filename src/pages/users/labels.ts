@@ -44,14 +44,14 @@ export const scopeLabels: Record<string, string> = { system: 'النظام', com
 
 export const inviteStatusConfig: Record<string, { label: string; icon: LucideIcon; className: string }> = {
   pending: { label: 'قيد المعالجة', icon: Clock, className: 'bg-muted text-muted-foreground' },
-  sent: { label: 'تم الإرسال', icon: Mail, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  accepted: { label: 'مقبولة ومسجّل', icon: CheckCircle2, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  sent: { label: 'تم الإرسال', icon: Mail, className: 'bg-info/10 text-info' },
+  accepted: { label: 'مقبولة ومسجّل', icon: CheckCircle2, className: 'bg-success/10 text-success' },
   failed: { label: 'فشل الإرسال', icon: AlertCircle, className: 'bg-destructive/10 text-destructive' },
 };
 
 export const deliveryStatusConfig: Record<string, { label: string; icon: LucideIcon; className: string }> = {
   pending: { label: 'البريد بانتظار الإرسال', icon: Clock, className: 'bg-muted text-muted-foreground' },
-  sent: { label: 'البريد أُرسل', icon: Mail, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  sent: { label: 'البريد أُرسل', icon: Mail, className: 'bg-info/10 text-info' },
   failed: { label: 'البريد فشل', icon: AlertCircle, className: 'bg-destructive/10 text-destructive' },
   dlq: { label: 'البريد فشل نهائياً', icon: AlertCircle, className: 'bg-destructive/10 text-destructive' },
 };

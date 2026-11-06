@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/finance';
 import { SPEND_DIMENSION_LABELS, type SpendNode, type SpendTree } from '@/lib/expense-analytics';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronLeft, Plus } from 'lucide-react';
+import { countAr } from '@/lib/plural';
 
 /** عدد الصفوف المعروضة في كل دفعة — تحميل تدريجي للقوائم الكبيرة. */
 const PAGE_SIZE = 40;
@@ -59,7 +60,7 @@ export function SpendTreeList({ tree, viewKey, onInspect }: Props) {
               <span className="min-w-0">
                 <span className="block text-sm font-medium truncate">{n.label}</span>
                 <span className="block text-xs text-muted-foreground">
-                  {SPEND_DIMENSION_LABELS[n.dimension]} · {n.count} مصروف · {n.share.toFixed(1)}%
+                  {SPEND_DIMENSION_LABELS[n.dimension]} · {countAr(n.count, 'expense')} · {n.share.toFixed(1)}%
                   {n.firstDate && ` · ${n.firstDate} → ${n.lastDate}`}
                 </span>
               </span>

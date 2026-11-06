@@ -164,7 +164,7 @@ describe('the spend and profit block', () => {
 describe('the funds block', () => {
   it('totals every fund, draws down each live one, and sums what is in hand and what was settled', () => {
     renderSection();
-    expect(row('إجمالي المُحوَّل (2 دفعة)')).toHaveTextContent('70,000.00 ر.س');
+    expect(row('إجمالي المُحوَّل (دفعتان)')).toHaveTextContent('70,000.00 ر.س');
     expect(screen.getByText('تفصيل الاستنزاف للدفعات النشطة (1):')).toBeInTheDocument();
     const live = screen.getByText(/دفعة #1/).closest('.rounded') as HTMLElement;
     expect(within(live).getByText('مصروف مباشر').closest('.grid')).toHaveTextContent('12,000.00 ر.س');

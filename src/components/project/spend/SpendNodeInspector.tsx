@@ -9,6 +9,7 @@ import {
 } from '@/types/project';
 import { Badge } from '@/components/ui/badge';
 import { InspectorPanel, InspectorSection, InspectorKpiStrip } from '@/components/ui/inspector-panel';
+import { countAr } from '@/lib/plural';
 
 interface Props {
   node: SpendNode;
@@ -21,7 +22,7 @@ export function SpendNodeInspector({ node: active, onClose }: Props) {
       open
       onOpenChange={(v) => !v && onClose()}
       title={active.label}
-      description={`${SPEND_DIMENSION_LABELS[active.dimension]} · ${active.count} مصروف`}
+      description={`${SPEND_DIMENSION_LABELS[active.dimension]} · ${countAr(active.count, 'expense')}`}
       width="lg"
     >
       <InspectorKpiStrip

@@ -60,7 +60,7 @@ describe('the health strip', () => {
     expect(screen.getByText('12 يوم متبقي')).toHaveClass('text-destructive');
     expect(strip).toHaveTextContent('CPI 0.80');
     expect(strip).toHaveTextContent('SPI 0.80');
-    expect(strip).toHaveTextContent('2 خطر مفتوح');
+    expect(strip).toHaveTextContent('مخاطر مفتوحة: 2');
   });
 });
 
@@ -122,7 +122,7 @@ describe('the collection row and the alerts', () => {
   it('shows the collected, the receivables with their invoice count, and the realised profit', () => {
     renderGrid();
     expect(card('المحصّل فعلياً')).toHaveTextContent('40% من العقد');
-    expect(card('ذمم مدينة (مفوتر)')).toHaveTextContent('2 فاتورة قيد التحصيل');
+    expect(card('ذمم مدينة (مفوتر)')).toHaveTextContent('فاتورتان قيد التحصيل');
     expect(card('الربح المحقق')).toHaveTextContent('10,000.00 ر.س');
     expect(card('الربح المحقق')).toHaveTextContent('المخطط: 40,000.00 ر.س');
   });
@@ -135,7 +135,7 @@ describe('the collection row and the alerts', () => {
 
   it('flags pending expenses and proposed orders', () => {
     renderGrid({ pendingExpensesCount: 3, pendingChangeOrders: 1 });
-    expect(screen.getByText('3 مصروف بانتظار الاعتماد')).toBeInTheDocument();
+    expect(screen.getByText('3 مصروفات بانتظار الاعتماد')).toBeInTheDocument();
     expect(screen.getByText('1 أمر تغيير مقترح')).toBeInTheDocument();
   });
 });
@@ -147,7 +147,7 @@ describe('on a phone', () => {
     renderGrid({ pendingExpensesCount: 2 });
     expect(screen.getByText('قيمة العقد')).toBeInTheDocument();
     expect(screen.queryByText('المحصّل فعلياً')).toBeNull();
-    expect(screen.getByText(/مصروف بانتظار الاعتماد/)).toBeInTheDocument();
+    expect(screen.getByText(/بانتظار الاعتماد/)).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /عرض مؤشرات الموازنة والتحصيل/ });
     expect(button).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(button);
