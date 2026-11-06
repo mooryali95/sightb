@@ -55,7 +55,7 @@ test('the seed reads sound, with its contract, budget, spend, burn and realised 
   await expect(stat(page, 'الربح المحقق')).toContainText('-12,000.00 ر.س');
   await expect(stat(page, 'الربح المحقق')).toContainText('المخطط: 600,000.00 ر.س');
   await expect(page.getByText('CPI / SPI / TCPI')).toBeVisible();
-  await expect(page.getByText(/مصروف بانتظار الاعتماد/)).toHaveCount(0);
+  await expect(page.getByText(/بانتظار الاعتماد/)).toHaveCount(0);
 });
 
 test('change orders, commitments, invoices, a high risk, a pending expense and a proposed order each move their figure', async ({ page }) => {
@@ -80,7 +80,7 @@ test('change orders, commitments, invoices, a high risk, a pending expense and a
   }, '17,000.00 ر.س');
   const head = strip(page);
   await expect(head).toContainText('يحتاج انتباه');
-  await expect(head).toContainText('1 خطر مفتوح');
+  await expect(head).toContainText('مخاطر مفتوحة: 1');
 
   await expect(stat(page, 'قيمة العقد المعدّلة')).toContainText('1,050,000.00 ر.س');
   await expect(stat(page, 'قيمة العقد المعدّلة')).toContainText('الأصلية: 1,000,000.00 ر.س');
@@ -96,11 +96,11 @@ test('change orders, commitments, invoices, a high risk, a pending expense and a
   await expect(stat(page, 'المحصّل فعلياً')).toContainText('200,000.00 ر.س');
   await expect(stat(page, 'المحصّل فعلياً')).toContainText('19% من العقد');
   await expect(stat(page, 'ذمم مدينة (مفوتر)')).toContainText('150,000.00 ر.س');
-  await expect(stat(page, 'ذمم مدينة (مفوتر)')).toContainText('2 فاتورة قيد التحصيل');
+  await expect(stat(page, 'ذمم مدينة (مفوتر)')).toContainText('فاتورتان قيد التحصيل');
   await expect(stat(page, 'الربح المحقق')).toContainText('183,000.00 ر.س');
 
   // The pills under the stats; the overview's attention card says the same lower down.
-  await expect(page.locator('div.rounded-full', { hasText: '1 مصروف بانتظار الاعتماد' })).toBeVisible();
+  await expect(page.locator('div.rounded-full', { hasText: 'مصروف واحد بانتظار الاعتماد' })).toBeVisible();
   await expect(page.locator('div.rounded-full', { hasText: '1 أمر تغيير مقترح' })).toBeVisible();
 });
 

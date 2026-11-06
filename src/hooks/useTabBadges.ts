@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { getCountedExpenses } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
 import { useShallow } from 'zustand/react/shallow';
+import { countAr } from '@/lib/plural';
 
 export interface TabBadgeInfo {
   count: number;
@@ -94,12 +95,12 @@ export function useTabBadges(projectId?: string): TabBadges {
       finance: {
         count: financeCount,
         level: financeLevel,
-        hint: `${pendingExpenses} مصروف معلّق · ${overBudgetItems} بند تجاوز 90%`,
+        hint: `${countAr(pendingExpenses, 'expense')} بانتظار الاعتماد · ${overBudgetItems} بند تجاوز 90%`,
       },
       tracking: {
         count: trackingCount,
         level: trackingLevel,
-        hint: `${highRisks} خطر عالٍ · ${proposedCO} أمر تغيير مقترح`,
+        hint: `مخاطر عالية: ${highRisks} · ${proposedCO} أمر تغيير مقترح`,
       },
       management: {
         count: managementCount,

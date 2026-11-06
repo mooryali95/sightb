@@ -198,6 +198,9 @@ jobs:
           echo "All lockfile tarballs resolve from the public npm registry."
 
 
+      - name: Guard the colour tokens
+        run: bash scripts/colour-guard.sh
+
       - name: Audit the dependencies that ship
         run: |
           # Fails on any high or critical advisory in a package that reaches

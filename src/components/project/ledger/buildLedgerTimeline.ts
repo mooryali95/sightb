@@ -60,7 +60,7 @@ export function buildLedgerTimeline({
       type: 'custody', title: `عهدة لـ ${c.resourceName}`,
       subtitle: sf ? `من دفعة #${sf.fundNumber}` : 'غير مربوطة بدفعة',
       amount: c.amount, direction: 'out',
-      badge: { label: 'سحب عهدة', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
+      badge: { label: 'سحب عهدة', cls: 'bg-warning/15 text-warning' },
     });
   });
   expenses.forEach((e) => {
@@ -77,7 +77,7 @@ export function buildLedgerTimeline({
       badge: pr
         ? { label: 'من طلب صرف', cls: 'bg-violet-500/15 text-violet-700 dark:text-violet-400' }
         : cu
-          ? { label: 'من عهدة', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' }
+          ? { label: 'من عهدة', cls: 'bg-warning/15 text-warning' }
           : { label: 'مباشر', cls: 'bg-primary/15 text-primary' },
     });
   });
@@ -108,7 +108,7 @@ export function buildLedgerTimeline({
           : 'رد كامل',
         amount: p.refundedAmount ?? 0,
         direction: 'in',
-        badge: { label: 'رد سلفة', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
+        badge: { label: 'رد سلفة', cls: 'bg-success/15 text-success' },
       });
     });
   settlements.filter((s) => s.projectId === projectId).forEach((st) => evs.push({
@@ -117,7 +117,7 @@ export function buildLedgerTimeline({
     title: `تسوية دفعة — ${SETTLEMENT_STATUS_LABELS[st.status]}`,
     subtitle: `مصروف ${formatCurrency(st.totalSpent)} · متبقي ${formatCurrency(st.remainingCash)}`,
     amount: st.totalSpent, direction: 'neutral',
-    badge: { label: 'تسوية', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
+    badge: { label: 'تسوية', cls: 'bg-success/15 text-success' },
   }));
   resourceSettlements.filter((s) => s.projectId === projectId && s.status === 'signed').forEach((s) => {
     const r = resources.find((x) => x.id === s.resourceId);
@@ -126,7 +126,7 @@ export function buildLedgerTimeline({
       type: 'settlement', title: `مخالصة مورد${r ? ` — ${r.name}` : ''}`,
       subtitle: `إجمالي ${formatCurrency(s.totalOwed)}`,
       amount: s.totalOwed, direction: 'neutral',
-      badge: { label: 'مخالصة', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
+      badge: { label: 'مخالصة', cls: 'bg-success/15 text-success' },
     });
   });
   return evs.sort((a, b) => (b.date || '').localeCompare(a.date || ''));

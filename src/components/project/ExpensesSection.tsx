@@ -27,6 +27,7 @@ import { translateDbError } from './expenses/translateDbError';
 import { summarizeSpendByResource, matchesResourceQuery, normalizeArabicName, indexResources, resourceKeyOf, UNLINKED_KEY } from '@/lib/resource-spend';
 import { runOrToast } from '@/lib/run-or-toast';
 import { useShallow } from 'zustand/react/shallow';
+import { countAr } from '@/lib/plural';
 
 interface ExpensesSectionProps {
   projectId: string;
@@ -154,7 +155,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
         <div className="flex items-center gap-2 p-3 rounded-lg border border-warning/30 bg-warning/10">
           <AlertCircle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-warning">
-            {pendingCount} مصروف بانتظار الاعتماد
+            {countAr(pendingCount, 'expense')} بانتظار الاعتماد
           </p>
           <BulkApproveButton
             pending={filteredExpenses.filter((e) => e.approvalStatus === 'pending')}
@@ -228,7 +229,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
                     <p className="text-xs text-muted-foreground truncate">{r.name}</p>
                     <p className="text-sm font-mono font-semibold mt-1">{formatCurrency(r.total)}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {r.role ? `${r.role} · ` : ''}{r.count} مصروف · {share.toFixed(0)}%
+                      {r.role ? `${r.role} · ` : ''}{countAr(r.count, 'expense')} · {share.toFixed(0)}%
                       {r.matchedByName > 0 && !unlinked && ` · ${r.matchedByName} بالاسم`}
                     </p>
                   </button>

@@ -16,6 +16,7 @@ import { LedgerFundsColumn } from './ledger/LedgerFundsColumn';
 import { LedgerCustodiesColumn } from './ledger/LedgerCustodiesColumn';
 import { LedgerTimeline } from './ledger/LedgerTimeline';
 import { buildLedgerTimeline } from './ledger/buildLedgerTimeline';
+import { countAr } from '@/lib/plural';
 
 interface Props {
   projectId: string;
@@ -130,7 +131,7 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
           </div>
           <p className="text-lg font-mono font-semibold">{formatCurrency(summary.totalTransferred)}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {projectFundsList.length} دفعة{openFundsCount > 0 ? ` · ${openFundsCount} مفتوحة` : ''}
+            {countAr(projectFundsList.length, 'fund')}{openFundsCount > 0 ? ` · ${openFundsCount} مفتوحة` : ''}
           </p>
         </Card>
 
@@ -251,7 +252,7 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
           {unlinkedExpenses.length > 0 && (
             <div className="p-3 rounded-lg border border-warning/30 bg-warning/10">
               <p className="text-sm text-warning">
-                ⚠️ {unlinkedExpenses.length} مصروف غير مرتبط بأي دفعة أو عهدة (إجمالي {formatCurrency(unlinkedTotal)}).
+                ⚠️ {countAr(unlinkedExpenses.length, 'expense')} بلا ربط بأي دفعة أو عهدة (إجمالي {formatCurrency(unlinkedTotal)}).
               </p>
             </div>
           )}

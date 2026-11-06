@@ -35,14 +35,14 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 };
 
 export const PROJECT_STATUS_COLORS: Record<ProjectStatus, string> = {
-  planning:         'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  pending_approval: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  approved:         'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  active:           'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-  'on-hold':        'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+  planning:         'bg-info/10 text-info',
+  pending_approval: 'bg-warning/10 text-warning',
+  approved:         'bg-success/10 text-success',
+  active:           'bg-success/20 text-success',
+  'on-hold':        'bg-warning/10 text-warning',
   completed:        'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
   archived:         'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500',
-  cancelled:        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  cancelled:        'bg-destructive/10 text-destructive',
 };
 
 export type ContractType = 'lump_sum' | 'cost_plus' | 'time_material' | 'unit_price';
@@ -129,9 +129,9 @@ export const APPROVAL_STATUS_LABELS: Record<ApprovalStatus, string> = {
 };
 
 export const APPROVAL_STATUS_COLORS: Record<ApprovalStatus, string> = {
-  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  pending: 'bg-warning/10 text-warning',
+  approved: 'bg-success/10 text-success',
+  rejected: 'bg-destructive/10 text-destructive',
 };
 
 export interface Expense {
@@ -166,8 +166,8 @@ export const REVENUE_STATUS_LABELS: Record<RevenueStatus, string> = {
 
 export const REVENUE_STATUS_COLORS: Record<RevenueStatus, string> = {
   planned: 'bg-muted text-muted-foreground',
-  invoiced: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  collected: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  invoiced: 'bg-warning/10 text-warning',
+  collected: 'bg-success/10 text-success',
 };
 
 export interface Revenue {
@@ -185,9 +185,9 @@ export const MILESTONE_STATUS_LABELS: Record<MilestoneStatus, string> = {
 
 export const MILESTONE_STATUS_COLORS: Record<MilestoneStatus, string> = {
   planned: 'bg-muted text-muted-foreground',
-  in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  delayed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  in_progress: 'bg-info/10 text-info',
+  completed: 'bg-success/10 text-success',
+  delayed: 'bg-destructive/10 text-destructive',
 };
 
 export interface Milestone {
@@ -209,9 +209,9 @@ export const CHANGE_ORDER_STATUS_LABELS: Record<ChangeOrderStatus, string> = {
 };
 
 export const CHANGE_ORDER_STATUS_COLORS: Record<ChangeOrderStatus, string> = {
-  proposed: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  proposed: 'bg-warning/10 text-warning',
+  approved: 'bg-success/10 text-success',
+  rejected: 'bg-destructive/10 text-destructive',
 };
 
 export interface ChangeOrderBudgetItem {
@@ -265,23 +265,23 @@ export const RISK_STATUS_LABELS: Record<RiskStatus, string> = {
 };
 
 export const RISK_PROBABILITY_COLORS: Record<RiskProbability, string> = {
-  low: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  very_high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  low: 'bg-success/10 text-success',
+  medium: 'bg-warning/10 text-warning',
+  high: 'bg-warning/25 text-warning font-medium',
+  very_high: 'bg-destructive/10 text-destructive',
 };
 
 export const RISK_IMPACT_COLORS: Record<RiskImpact, string> = {
-  low: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  very_high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  low: 'bg-success/10 text-success',
+  medium: 'bg-warning/10 text-warning',
+  high: 'bg-warning/25 text-warning font-medium',
+  very_high: 'bg-destructive/10 text-destructive',
 };
 
 export const RISK_STATUS_COLORS: Record<RiskStatus, string> = {
-  open: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  mitigating: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  closed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  open: 'bg-destructive/10 text-destructive',
+  mitigating: 'bg-warning/10 text-warning',
+  closed: 'bg-success/10 text-success',
   occurred: 'bg-destructive/10 text-destructive',
 };
 
@@ -383,9 +383,9 @@ export const COMMITMENT_STATUS_LABELS: Record<CommitmentStatus, string> = {
 };
 export const COMMITMENT_STATUS_COLORS: Record<CommitmentStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
-  active: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  active: 'bg-info/10 text-info',
+  completed: 'bg-success/10 text-success',
+  cancelled: 'bg-destructive/10 text-destructive',
 };
 export interface Commitment {
   id: string;
@@ -443,9 +443,9 @@ export const HEALTH_STATUS_LABELS: Record<HealthStatus, string> = {
 };
 
 export const HEALTH_STATUS_COLORS: Record<HealthStatus, string> = {
-  healthy: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  healthy: 'bg-success/10 text-success',
+  warning: 'bg-warning/10 text-warning',
+  critical: 'bg-destructive/10 text-destructive',
 };
 
 export interface PortfolioSummary {
@@ -524,8 +524,8 @@ export const BUDGET_AMENDMENT_STATUS_LABELS: Record<BudgetAmendmentStatus, strin
 };
 
 export const BUDGET_AMENDMENT_STATUS_COLORS: Record<BudgetAmendmentStatus, string> = {
-  draft:     'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  approved:  'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+  draft:     'bg-warning/10 text-warning',
+  approved:  'bg-success/10 text-success',
   cancelled: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 };
 
@@ -569,9 +569,9 @@ export const FUND_STATUS_LABELS: Record<FundStatus, string> = {
 };
 
 export const FUND_STATUS_COLORS: Record<FundStatus, string> = {
-  transferred:  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  acknowledged: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  settled:      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  transferred:  'bg-info/10 text-info',
+  acknowledged: 'bg-warning/10 text-warning',
+  settled:      'bg-success/10 text-success',
   pending_next: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 };
 
@@ -584,9 +584,9 @@ export const SETTLEMENT_STATUS_LABELS: Record<SettlementStatus, string> = {
 
 export const SETTLEMENT_STATUS_COLORS: Record<SettlementStatus, string> = {
   draft:     'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  submitted: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  approved:  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  rejected:  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  submitted: 'bg-warning/10 text-warning',
+  approved:  'bg-success/10 text-success',
+  rejected:  'bg-destructive/10 text-destructive',
 };
 
 export interface ProjectFund {
@@ -679,10 +679,10 @@ export const REIMBURSEMENT_STATUS_LABELS: Record<ReimbursementStatus, string> = 
 };
 
 export const REIMBURSEMENT_STATUS_COLORS: Record<ReimbursementStatus, string> = {
-  pending_review: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  approved:       'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  reimbursed:     'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  rejected:       'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  pending_review: 'bg-warning/10 text-warning',
+  approved:       'bg-info/10 text-info',
+  reimbursed:     'bg-success/10 text-success',
+  rejected:       'bg-destructive/10 text-destructive',
 };
 
 export interface ReceiptAttachment {
@@ -745,12 +745,12 @@ export const PAYMENT_REQUEST_STATUS_LABELS: Record<PaymentRequestStatus, string>
 
 export const PAYMENT_REQUEST_STATUS_COLORS: Record<PaymentRequestStatus, string> = {
   draft:        'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  submitted:    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  submitted:    'bg-info/10 text-info',
   under_review: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
   approved:     'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-  rejected:     'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  scheduled:    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  paid:         'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  rejected:     'bg-destructive/10 text-destructive',
+  scheduled:    'bg-warning/10 text-warning',
+  paid:         'bg-success/10 text-success',
   cancelled:    'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500',
 };
 
@@ -764,8 +764,8 @@ export const PAYMENT_PRIORITY_LABELS: Record<PaymentPriority, string> = {
 
 export const PAYMENT_PRIORITY_COLORS: Record<PaymentPriority, string> = {
   normal:   'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  urgent:   'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  urgent:   'bg-warning/10 text-warning',
+  critical: 'bg-destructive/10 text-destructive',
 };
 
 export type PaymentMethod = 'bank_transfer' | 'cash' | 'check' | 'card';
@@ -870,8 +870,8 @@ export const RESOURCE_SETTLEMENT_STATUS_LABELS: Record<ResourceSettlementStatus,
 
 export const RESOURCE_SETTLEMENT_STATUS_COLORS: Record<ResourceSettlementStatus, string> = {
   draft:     'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  signed:    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  disputed:  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  signed:    'bg-success/10 text-success',
+  disputed:  'bg-destructive/10 text-destructive',
   cancelled: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500',
 };
 

@@ -37,7 +37,7 @@ test('the confirmation names the linked rows, and deleting unlinks them before t
   const confirm = page.getByRole('alertdialog');
   await expect(confirm.getByRole('heading', { name: 'حذف الدفعة' })).toBeVisible();
   // The seed's 12,000 expense and the appended 8,000 custody draw on fund #1.
-  await expect(confirm).toContainText('حذف الدفعة #1؟ سيتم فك ربط 1 مصروف (12,000.00 ر.س) و1 عهدة (8,000.00 ر.س) — البنود نفسها لن تُحذف.');
+  await expect(confirm).toContainText('حذف الدفعة #1؟ سيتم فك ربط مصروف واحد (12,000.00 ر.س) و1 عهدة (8,000.00 ر.س) — البنود نفسها لن تُحذف.');
   await confirm.getByRole('button', { name: 'إلغاء' }).click();
   expect(byMethod(wire)).toEqual([]);
 

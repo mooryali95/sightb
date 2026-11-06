@@ -69,7 +69,7 @@ function renderExplorer(rows = expenses, search = '') {
 
 /** The group rows, in display order, by the label each expand button carries. */
 function groupLabels(): string[] {
-  return screen.getAllByRole('button', { name: /مصروف ·/ }).map((b) => b.querySelector('.font-medium')?.textContent ?? '');
+  return screen.getAllByRole('button', { name: /(مصروف واحد|مصروفان|مصروفات|مصروفًا|مصروف) ·/ }).map((b) => b.querySelector('.font-medium')?.textContent ?? '');
 }
 
 function card(label: string): HTMLElement {
@@ -114,11 +114,11 @@ describe('the totals', () => {
     expect(groupLabels()).toEqual(['أحمد', 'أيمن']);
     const ayman = screen.getByRole('button', { name: /أيمن/ });
     // 12,000 of 35,000; the rejected row stays in the count, the outstanding advance in neither.
-    expect(ayman).toHaveTextContent(/3 مصروف · 34\.3%/);
+    expect(ayman).toHaveTextContent(/3 مصروفات · 34\.3%/);
     fireEvent.click(ayman);
     expect(groupLabels()).toEqual(['أحمد', 'أيمن', 'رواتب موظفين', 'أخرى']);
     // The pending 2,000 and the rejected 3,000; the count keeps the rejected row.
-    expect(screen.getByRole('button', { name: /أخرى/ })).toHaveTextContent('2 مصروف');
+    expect(screen.getByRole('button', { name: /أخرى/ })).toHaveTextContent('مصروفان');
   });
 });
 

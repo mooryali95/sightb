@@ -41,19 +41,19 @@ test('groups the spend by resource with totals, counts, pending called out and r
   await stubSupabase(page, rows);
   const region = await openExplorer(page);
   const sara = node(region, 'سارة المهندسة');
-  await expect(sara).toContainText('المورد (الفريق) · 3 مصروف');
+  await expect(sara).toContainText('المورد (الفريق) · 3 مصروفات');
   await expect(sara).toContainText('7,000.00 ر.س');
   await expect(sara).toContainText('قيد الاعتماد: 2,000.00 ر.س');
   const none = node(region, 'غير محدّد');
-  await expect(none).toContainText('1 مصروف');
+  await expect(none).toContainText('مصروف واحد');
   await expect(none).toContainText('12,000.00 ر.س');
   await expect(region.getByText('مرفوض (خارج الإجمالي)').locator('..')).toContainText('1,000.00 ر.س');
 
   await sara.getByRole('button').first().click();
-  await expect(node(region, 'سفر وتنقل')).toContainText('الفئة · 3 مصروف');
+  await expect(node(region, 'سفر وتنقل')).toContainText('الفئة · 3 مصروفات');
 
   await region.getByPlaceholder('اسم مورد، جهة، وصف، رقم فاتورة…').fill('فندق');
-  await expect(node(region, 'سارة المهندسة')).toContainText('1 مصروف');
+  await expect(node(region, 'سارة المهندسة')).toContainText('مصروف واحد');
   await expect(node(region, 'سارة المهندسة')).toContainText('2,000.00 ر.س');
   await expect(region.getByRole('button', { name: /^غير محدّد / })).toHaveCount(0);
 });

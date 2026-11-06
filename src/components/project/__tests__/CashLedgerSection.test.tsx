@@ -94,7 +94,7 @@ describe('the five cards agree on one ledger', () => {
   it('reports what was transferred and how many funds are open', () => {
     renderLedger();
     expect(card('إجمالي ما تحوّل')).toHaveTextContent('50,000.00 ر.س');
-    expect(card('إجمالي ما تحوّل')).toHaveTextContent('1 دفعة · 1 مفتوحة');
+    expect(card('إجمالي ما تحوّل')).toHaveTextContent('دفعة واحدة · 1 مفتوحة');
   });
 
   it('reports what is still in the manager\'s hand', () => {
@@ -197,7 +197,7 @@ describe('the funds column', () => {
 describe('warnings', () => {
   it('flags spend that belongs to no fund and no custody', () => {
     renderLedger([...expenses, expense({ id: 'exp-loose', amount: 250, description: 'بلا مصدر' })]);
-    expect(screen.getByText(/1 مصروف غير مرتبط بأي دفعة أو عهدة \(إجمالي 250\.00 ر\.س\)/)).toBeInTheDocument();
+    expect(screen.getByText(/مصروف واحد بلا ربط بأي دفعة أو عهدة \(إجمالي 250\.00 ر\.س\)/)).toBeInTheDocument();
   });
 
   it('flags a custody with no fund behind it', () => {

@@ -36,6 +36,7 @@ import { TableDensityToggle } from '@/components/ui/table-density-toggle';
 import { useTableDensity } from '@/hooks/useTableDensity';
 import { useResponsiveTableLabels } from '@/hooks/useResponsiveTableLabels';
 import { useShallow } from 'zustand/react/shallow';
+import { countAr } from '@/lib/plural';
 
 interface FundsSectionProps {
   projectId: string;
@@ -291,7 +292,7 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                                 const linkedCust = projectCustodies.filter((c) => c.sourceFundId === f.id);
                                 const custTotal = linkedCust.reduce((s, c) => s + c.amount, 0);
                                 const parts: string[] = [];
-                                if (linked.length > 0) parts.push(`${linked.length} مصروف (${formatCurrency(linkedTotal)})`);
+                                if (linked.length > 0) parts.push(`${countAr(linked.length, 'expense')} (${formatCurrency(linkedTotal)})`);
                                 if (linkedCust.length > 0) parts.push(`${linkedCust.length} عهدة (${formatCurrency(custTotal)})`);
                                 if (parts.length === 0) return `حذف الدفعة #${f.fundNumber}؟`;
                                 return `حذف الدفعة #${f.fundNumber}؟ سيتم فك ربط ${parts.join(' و')} — البنود نفسها لن تُحذف.`;

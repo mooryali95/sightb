@@ -118,6 +118,9 @@ does not happen again.
      `supabase/config.toml` (it checks its own token), and migration
      `20261106100000_daily_digest.sql` with the `daily-digest` cron job. The
      recipients come from `auth.users`, never `profiles.email`.
+   - Colours, wording and icons follow `docs/design-system.md`. No raw
+     palette classes such as `text-amber-700`: use the warning, success,
+     destructive and info tokens. Counts go through `countAr`.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

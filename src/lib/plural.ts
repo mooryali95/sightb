@@ -13,6 +13,9 @@ const NOUNS = {
   person: { zero: 'لا أحد', one: 'شخص واحد', two: 'شخصان', few: '{n} أشخاص', many: '{n} شخصًا', other: '{n} شخص' },
   time: { zero: 'لا مرات', one: 'مرة واحدة', two: 'مرتان', few: '{n} مرات', many: '{n} مرةً', other: '{n} مرة' },
   expense: { zero: 'لا مصروفات', one: 'مصروف واحد', two: 'مصروفان', few: '{n} مصروفات', many: '{n} مصروفًا', other: '{n} مصروف' },
+  risk: { zero: 'لا مخاطر', one: 'خطر واحد', two: 'خطران', few: '{n} مخاطر', many: '{n} خطرًا', other: '{n} خطر' },
+  invoice: { zero: 'لا فواتير', one: 'فاتورة واحدة', two: 'فاتورتان', few: '{n} فواتير', many: '{n} فاتورةً', other: '{n} فاتورة' },
+  fund: { zero: 'لا دفعات', one: 'دفعة واحدة', two: 'دفعتان', few: '{n} دفعات', many: '{n} دفعةً', other: '{n} دفعة' },
   item: { zero: 'لا عناصر', one: 'عنصر واحد', two: 'عنصران', few: '{n} عناصر', many: '{n} عنصرًا', other: '{n} عنصر' },
 } satisfies Record<string, Forms>;
 

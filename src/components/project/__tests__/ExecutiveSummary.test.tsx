@@ -205,7 +205,7 @@ describe('milestones, collection and risks', () => {
 describe('what needs attention', () => {
   it('lists the pending expenses with their sum, the proposed orders and the delayed milestones', () => {
     renderSummary();
-    expect(screen.getByText('1 مصروف بانتظار الاعتماد (4,000.00 ر.س)')).toBeInTheDocument();
+    expect(screen.getByText('مصروف واحد بانتظار الاعتماد (4,000.00 ر.س)')).toBeInTheDocument();
     expect(screen.getByText('1 أمر تغيير مقترح')).toBeInTheDocument();
     expect(screen.getByText('1 مرحلة متأخرة')).toBeInTheDocument();
     expect(screen.queryByText(/تجاوز الموازنة بـ/)).not.toBeInTheDocument();

@@ -31,17 +31,17 @@ export interface BarPosition {
 
 export const STATUS_BAR_COLORS: Record<string, string> = {
   planned: 'bg-slate-400 dark:bg-slate-500',
-  in_progress: 'bg-blue-500 dark:bg-blue-400',
-  completed: 'bg-emerald-500 dark:bg-emerald-400',
-  delayed: 'bg-red-500 dark:bg-red-400',
+  in_progress: 'bg-info',
+  completed: 'bg-success',
+  delayed: 'bg-destructive',
   cancelled: 'bg-gray-300 dark:bg-gray-600',
 };
 
 export const ACTUAL_BAR_COLORS: Record<string, string> = {
   planned: 'bg-slate-300/50 dark:bg-slate-600/50',
-  in_progress: 'bg-blue-300/60 dark:bg-blue-600/40',
-  completed: 'bg-emerald-300/60 dark:bg-emerald-600/40',
-  delayed: 'bg-red-300/60 dark:bg-red-600/40',
+  in_progress: 'bg-info/20',
+  completed: 'bg-success/20',
+  delayed: 'bg-destructive/20',
   cancelled: 'bg-gray-200/50 dark:bg-gray-700/50',
 };
 

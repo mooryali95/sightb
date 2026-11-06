@@ -137,7 +137,7 @@ describe('the figures at the top', () => {
 
   it('counts the rows awaiting approval', () => {
     renderSection();
-    expect(screen.getByText('1 مصروف بانتظار الاعتماد')).toBeInTheDocument();
+    expect(screen.getByText('مصروف واحد بانتظار الاعتماد')).toBeInTheDocument();
   });
 
   it('keeps a legacy outstanding advance out of the table', () => {
