@@ -397,6 +397,54 @@ export type Database = {
           },
         ]
       }
+      client_errors: {
+        Row: {
+          context: Json
+          day: string
+          fingerprint: string
+          first_seen: string
+          id: string
+          last_seen: string
+          message: string
+          occurrences: number
+          path: string | null
+          release: string | null
+          scope: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          context?: Json
+          day?: string
+          fingerprint: string
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          message: string
+          occurrences?: number
+          path?: string | null
+          release?: string | null
+          scope: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          context?: Json
+          day?: string
+          fingerprint?: string
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          message?: string
+          occurrences?: number
+          path?: string | null
+          release?: string | null
+          scope?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       commitments: {
         Row: {
           budget_item_id: string | null
@@ -2435,6 +2483,14 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      digest_payload: { Args: never; Returns: Json }
+      digest_recipients: {
+        Args: never
+        Returns: {
+          email: string
+        }[]
+      }
+      digest_token_ok: { Args: { _token: string }; Returns: boolean }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
@@ -2499,6 +2555,18 @@ export type Database = {
       repair_orphan_cash_transfer: {
         Args: { _reason: string; _transfer_id: string }
         Returns: Json
+      }
+      report_client_error: {
+        Args: {
+          _context?: Json
+          _fingerprint: string
+          _message: string
+          _path?: string
+          _release?: string
+          _scope: string
+          _user_agent?: string
+        }
+        Returns: undefined
       }
       require_second_factor: { Args: never; Returns: undefined }
       second_factor_ok: { Args: never; Returns: boolean }
