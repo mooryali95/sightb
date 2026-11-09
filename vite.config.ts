@@ -43,6 +43,10 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 1200,
   },
   resolve: {
+    // One React for the whole app. When the dev server re-bundles its
+    // dependencies mid-session, a page can otherwise mix two React copies and
+    // crash with "dispatcher is null" on the first hook.
+    dedupe: ["react", "react-dom", "react/jsx-runtime"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
