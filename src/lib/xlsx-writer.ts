@@ -69,7 +69,25 @@ export const bookNew = (): Workbook => ({ sheets: [] });
  * called together, so the two-step dance served no purpose.
  */
 export function appendSheet(wb: Workbook, rows: SheetRow[], name: string): void {
-  wb.sheets.push({ name, rows });
+  wb.sheets.push({ name: uniqueSheetName(wb, name), rows });
+}
+
+/**
+ * Excel refuses a workbook holding two sheets with the same name (compared
+ * without case), and every name is capped at 31 characters. Sheets named after
+ * projects collide easily: two projects with one name, two long names sharing
+ * their first 31 characters, or a project called like a fixed sheet. A repeat
+ * gets " (2)", " (3)"… with its base shortened so the suffix still fits.
+ */
+export function uniqueSheetName(wb: Workbook, name: string): string {
+  const taken = new Set(wb.sheets.map((s) => s.name.toLocaleLowerCase()));
+  const base = name.slice(0, 31) || 'ورقة';
+  if (!taken.has(base.toLocaleLowerCase())) return base;
+  for (let n = 2; ; n++) {
+    const suffix = ` (${n})`;
+    const candidate = `${base.slice(0, 31 - suffix.length).trimEnd()}${suffix}`;
+    if (!taken.has(candidate.toLocaleLowerCase())) return candidate;
+  }
 }
 
 /** Excel refuses a sheet name over 31 characters or holding : \\ / ? * [ ]. */
@@ -79,7 +97,7 @@ export function sheetName(raw: string): string {
 
 /** Append a laid-out sheet: rows of cells, with optional column widths in characters. */
 export function appendGrid(wb: Workbook, grid: GridCell[][], name: string, widths?: number[]): void {
-  wb.sheets.push({ name, rows: [], grid, widths });
+  wb.sheets.push({ name: uniqueSheetName(wb, name), rows: [], grid, widths });
 }
 
 function gridCell(c: GridCell) {
