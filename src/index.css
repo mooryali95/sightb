@@ -527,12 +527,15 @@ input, textarea { caret-color: hsl(var(--accent-text)); }
 
 /* Tap feedback on every button. `scale` composes with any translate the
  * button already carries, so positioned icons do not jump. */
-button:not(:disabled), [role="button"], [role="tab"] {
-  transition-property: color, background-color, border-color, box-shadow, opacity, scale;
-  transition-duration: var(--duration-fast);
-  transition-timing-function: var(--ease-out);
+@layer base {
+  /* In the base layer so a button's own transition utilities still win. */
+  button:not(:disabled), [role="button"], [role="tab"] {
+    transition-property: color, background-color, border-color, box-shadow, opacity, scale;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+  button:not(:disabled):active, [role="button"]:active, [role="tab"]:active { scale: 0.97; }
 }
-button:not(:disabled):active, [role="button"]:active, [role="tab"]:active { scale: 0.97; }
 
 /* Loading placeholders: a soft light sweeps across instead of blinking. */
 .skeleton-shimmer {
