@@ -1,6 +1,6 @@
 # Handoff to Lovable — scope and protected areas
 
-Owner's instruction (Omar): Lovable works only within the scope below and
+Owner's instruction: Lovable works only within the scope below and
 **never modifies, reverts or deletes work done through GitHub pull requests**.
 Between 11 and 14 October 2026, Lovable commits deleted merged, tested work
 (`src/lib/resource-spend.ts`, the budget-overrun card, their tests) and

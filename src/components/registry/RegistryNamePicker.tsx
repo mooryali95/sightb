@@ -1,7 +1,7 @@
 /**
  * Pick who was paid from the company's registry instead of typing a name.
- * Typing searches the registry however the name is spelled («دأيمن» finds
- * «د أيمن أصلان»); a name not there yet can be added on the spot, or kept as
+ * Typing searches the registry however the name is spelled («دأنور» finds
+ * «د أنور أسعد»); a name not there yet can be added on the spot, or kept as
  * plain text. Before the registry exists on the database it is a plain input.
  */
 import { useMemo, useState } from 'react';

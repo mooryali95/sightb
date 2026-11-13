@@ -84,7 +84,7 @@ export function PartyFormDialog({ companyId, open, onOpenChange, party, initial,
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="party-name">الاسم *</Label>
-            <Input id="party-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: د أيمن أصلان" />
+            <Input id="party-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: د أنور أسعد" />
           </div>
 
           <fieldset className="space-y-1.5">
@@ -108,7 +108,7 @@ export function PartyFormDialog({ companyId, open, onOpenChange, party, initial,
           <div className="space-y-1.5">
             <Label htmlFor="party-alias">أسماء أخرى يُكتب بها</Label>
             <div className="flex gap-2">
-              <Input id="party-alias" value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="مثال: دأيمن، أبو رؤى"
+              <Input id="party-alias" value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="مثال: دأنور، أبو ليلى"
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAlias(); } }} />
               <Button type="button" variant="outline" onClick={addAlias} disabled={!alias.trim()}>إضافة</Button>
             </div>

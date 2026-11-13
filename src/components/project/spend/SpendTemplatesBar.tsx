@@ -48,7 +48,7 @@ export function SpendTemplatesBar({ projectId, current, onApply }: Props) {
           <Input
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            placeholder="مثال: مصروفات الربع الأول — د. أيمن"
+            placeholder="مثال: مصروفات الربع الأول — د. أنور"
           />
         </div>
         <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={!templateName.trim()}>

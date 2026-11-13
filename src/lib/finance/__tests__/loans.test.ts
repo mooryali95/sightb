@@ -12,9 +12,9 @@ const e = (from: LedgerNode, to: LedgerNode, amount: number, date: string, type:
 describe('loans through the company', () => {
   const entries = [
     e(party('owner'), C, 100000, '2026-01-01', 'advance', '2026-06-30'),
-    e(C, project('albania'), 100000, '2026-01-02'),
+    e(C, project('tabuk'), 100000, '2026-01-02'),
     e(party('friend'), C, 20000, '2026-02-01', 'advance', '2026-03-01'),
-    e(project('albania'), C, 30000, '2026-04-01', 'repayment'),
+    e(project('tabuk'), C, 30000, '2026-04-01', 'repayment'),
     e(C, party('owner'), 10000, '2026-04-02', 'repayment'),
     // A salary advance to a person is not a loan to the company.
     e(C, party('staff'), 500, '2026-04-03'),
@@ -49,18 +49,18 @@ describe('loans through the company', () => {
   });
 
   it('follows the funding a project still owes', () => {
-    expect(fundingByProject(entries)).toEqual([{ projectId: 'albania', funded: 100000, returned: 30000, outstanding: 70000, firstDate: '2026-01-02' }]);
+    expect(fundingByProject(entries)).toEqual([{ projectId: 'tabuk', funded: 100000, returned: 30000, outstanding: 70000, firstDate: '2026-01-02' }]);
   });
 
   it('alerts when the project collected since its funding, up to what it owes and what it has', () => {
     const funding = fundingByProject(entries);
     const collected = [
-      { projectId: 'albania', amount: 5000, date: '2025-12-01' }, // before the funding: not counted
-      { projectId: 'albania', amount: 50000, date: '2026-03-01' },
+      { projectId: 'tabuk', amount: 5000, date: '2025-12-01' }, // before the funding: not counted
+      { projectId: 'tabuk', amount: 50000, date: '2026-03-01' },
     ];
-    expect(recoveryAlerts(funding, collected)).toEqual([{ projectId: 'albania', available: 20000, suggested: 20000 }]);
-    expect(recoveryAlerts(funding, [{ projectId: 'albania', amount: 500000, date: '2026-03-01' }])[0].suggested).toBe(70000);
-    expect(recoveryAlerts(funding, [{ projectId: 'albania', amount: 30000, date: '2026-03-01' }])).toEqual([]);
+    expect(recoveryAlerts(funding, collected)).toEqual([{ projectId: 'tabuk', available: 20000, suggested: 20000 }]);
+    expect(recoveryAlerts(funding, [{ projectId: 'tabuk', amount: 500000, date: '2026-03-01' }])[0].suggested).toBe(70000);
+    expect(recoveryAlerts(funding, [{ projectId: 'tabuk', amount: 30000, date: '2026-03-01' }])).toEqual([]);
   });
 
   it('offers the recovered money to the lender owed most, net of what was passed on', () => {
@@ -85,10 +85,10 @@ describe('plain words', () => {
   it('says who owes whom, largest first, and counts the rest', () => {
     const fmt = (n: number) => String(n);
     const s = plainSummary([
-      { name: 'محمود', owesCompany: -80000 }, { name: 'مشروع ألبانيا', owesCompany: 70000 },
+      { name: 'محمود', owesCompany: -80000 }, { name: 'مشروع تبوك', owesCompany: 70000 },
       { name: 'عمر', owesCompany: 500 }, { name: 'صالح', owesCompany: 0 }, { name: 'سعيد', owesCompany: 100 },
     ], fmt);
-    expect(s.lines).toEqual(['المنظومة عليها لـمحمود 80000', 'مشروع ألبانيا عليه للمنظومة 70000', 'عمر عليه للمنظومة 500']);
+    expect(s.lines).toEqual(['المنظومة عليها لـمحمود 80000', 'مشروع تبوك عليه للمنظومة 70000', 'عمر عليه للمنظومة 500']);
     expect(s.more).toBe(1);
   });
 });

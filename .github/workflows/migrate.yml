@@ -33,6 +33,11 @@ concurrency:
   group: supabase-migrate-production
   cancel-in-progress: false
 
+# Read-only token: no job here writes to the repository. Kept explicit
+# so a public fork's pull request can never get more.
+permissions:
+  contents: read
+
 jobs:
   migrate:
     runs-on: ubuntu-latest

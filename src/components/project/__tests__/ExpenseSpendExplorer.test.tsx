@@ -27,7 +27,7 @@ vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn(), useToast: () => ({ toast: 
 const PROJECT_ID = 'p-1';
 
 const resources: Resource[] = [
-  { id: 'r1', projectId: PROJECT_ID, name: 'أيمن', monthlyCost: 0, createdAt: '' },
+  { id: 'r1', projectId: PROJECT_ID, name: 'أنور', monthlyCost: 0, createdAt: '' },
   { id: 'r2', projectId: PROJECT_ID, name: 'أحمد', monthlyCost: 0, createdAt: '' },
 ];
 const budgetItems: BudgetItem[] = [
@@ -111,12 +111,12 @@ describe('the totals', () => {
 
   it('groups by resource, largest first, with each share, and drills into the category level', () => {
     renderExplorer();
-    expect(groupLabels()).toEqual(['أحمد', 'أيمن']);
-    const ayman = screen.getByRole('button', { name: /أيمن/ });
+    expect(groupLabels()).toEqual(['أحمد', 'أنور']);
+    const anwar = screen.getByRole('button', { name: /أنور/ });
     // 12,000 of 35,000; the rejected row stays in the count, the outstanding advance in neither.
-    expect(ayman).toHaveTextContent(/3 مصروفات · 34\.3%/);
-    fireEvent.click(ayman);
-    expect(groupLabels()).toEqual(['أحمد', 'أيمن', 'رواتب موظفين', 'أخرى']);
+    expect(anwar).toHaveTextContent(/3 مصروفات · 34\.3%/);
+    fireEvent.click(anwar);
+    expect(groupLabels()).toEqual(['أحمد', 'أنور', 'رواتب موظفين', 'أخرى']);
     // The pending 2,000 and the rejected 3,000; the count keeps the rejected row.
     expect(screen.getByRole('button', { name: /أخرى/ })).toHaveTextContent('مصروفان');
   });
@@ -127,9 +127,9 @@ describe('filters and sort', () => {
     renderExplorer();
     fireEvent.change(screen.getByPlaceholderText(/اسم مورد، جهة/), { target: { value: 'مواصلات' } });
     expect(card('إجمالي المطابق')).toHaveTextContent('2,000.00 ر.س');
-    expect(groupLabels()).toEqual(['أيمن']);
+    expect(groupLabels()).toEqual(['أنور']);
     fireEvent.click(screen.getByRole('button', { name: /مسح الفلاتر/ }));
-    expect(groupLabels()).toEqual(['أحمد', 'أيمن']);
+    expect(groupLabels()).toEqual(['أحمد', 'أنور']);
     expect(screen.queryByRole('button', { name: /مسح الفلاتر/ })).not.toBeInTheDocument();
   });
 
@@ -147,7 +147,7 @@ describe('filters and sort', () => {
   it('flips the sort direction', () => {
     renderExplorer();
     fireEvent.click(screen.getByRole('button', { name: /تنازلي/ }));
-    expect(groupLabels()).toEqual(['أيمن', 'أحمد']);
+    expect(groupLabels()).toEqual(['أنور', 'أحمد']);
     expect(screen.getByRole('button', { name: /تصاعدي/ })).toBeInTheDocument();
   });
 
@@ -161,7 +161,7 @@ describe('filters and sort', () => {
 describe('the inspector, templates, sharing and export', () => {
   it('opens a group with its approved and pending split and its expenses', () => {
     renderExplorer();
-    fireEvent.click(within(screen.getByRole('button', { name: /أيمن/ }).parentElement as HTMLElement).getByRole('button', { name: 'تفاصيل' }));
+    fireEvent.click(within(screen.getByRole('button', { name: /أنور/ }).parentElement as HTMLElement).getByRole('button', { name: 'تفاصيل' }));
     const inspector = screen.getByRole('dialog');
     expect(within(inspector).getAllByText('معتمد')[0].nextElementSibling).toHaveTextContent('10,000.00 ر.س');
     expect(within(inspector).getByText('قيد الاعتماد').nextElementSibling).toHaveTextContent('2,000.00 ر.س');
@@ -175,7 +175,7 @@ describe('the inspector, templates, sharing and export', () => {
     fireEvent.change(screen.getByPlaceholderText(/مصروفات الربع الأول/), { target: { value: 'المواصلات' } });
     fireEvent.click(screen.getByRole('button', { name: /حفظ القالب/ }));
     fireEvent.click(screen.getByRole('button', { name: /مسح الفلاتر/ }));
-    expect(groupLabels()).toEqual(['أحمد', 'أيمن']);
+    expect(groupLabels()).toEqual(['أحمد', 'أنور']);
 
     fireEvent.click(screen.getByRole('button', { name: 'المواصلات' }));
     expect(card('إجمالي المطابق')).toHaveTextContent('2,000.00 ر.س');
