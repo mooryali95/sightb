@@ -31,7 +31,7 @@ export function StandaloneProjectCards({ projects, countedExpenses, changeOrders
             return (
               <div
                 key={project.id}
-                className="rounded-xl border border-border bg-card p-4 cursor-pointer hover:border-primary/40 hover:shadow-sm transition"
+                className="card-interactive rounded-xl border border-border bg-card p-4 cursor-pointer"
                 onClick={() => navigate(`/project/${project.id}`)}
               >
                 <div className="flex items-center justify-between mb-2">
