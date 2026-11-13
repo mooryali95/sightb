@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Done
+- [x] 2026-11-13 — Motion and polish layer: tiles rise in one after another, tap feedback on buttons, shimmering loading placeholders, animated tabs and side-menu marker, fading phone menu overlay, top-bar shadow on scroll, gold line on page change, soft page backdrop, branded loading screen. All honour reduced motion. Signed-in pages not yet seen in the browser.
 - [x] Login HTTP-200 error responses and incomplete checks no longer count as successful verification. Browser confirmed the injected session's missing session identifier returns to login once, rather than repeatedly opening dashboard/code. Regression tests cover the refusal.
 - [x] 2026-10-07 — Revenue status (and every edit) did nothing. Root cause: the update policies on 14 tables (companies, portfolios, projects, budget_items, expenses, revenues, cost_baselines, resources, custodies, milestones, change_orders, risks, indirect_costs, periodic_snapshots) had a WITH CHECK that selected from its own table, which Postgres rejects with `42P17 infinite recursion detected in policy`. The published site swallowed the error, so the click looked like nothing happened. Fix: migration resets each WITH CHECK to the policy's USING scope. Owner immutability is still enforced by `trg_immutable_owner`. Verified as the owner via the REST API: revenue, expense, project and milestone updates now succeed, and anonymous updates still return no rows.
 - [x] Revenue form shows the server's refusal reason (commit b6209667). Built, but not yet on the published site.

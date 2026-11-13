@@ -14,12 +14,20 @@ export function NavItem({ collapsed, label, icon, active, onClick }: {
       onClick={onClick}
       aria-label={label}
       className={cn(
-        'relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+        'group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-200',
         collapsed && 'justify-center px-2',
-        active ? 'bg-sidebar-primary/15 text-sidebar-primary font-semibold border-s-2 border-sidebar-primary' : 'text-sidebar-foreground hover:bg-sidebar-accent',
+        active ? 'bg-sidebar-primary/15 text-sidebar-primary font-semibold' : 'text-sidebar-foreground hover:bg-sidebar-accent',
       )}
     >
-      {icon}
+      {/* The gold marker grows in on the active link and shrinks away when it leaves. */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          'absolute start-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-sidebar-primary origin-center transition-transform duration-300 ease-out',
+          active ? 'scale-y-100' : 'scale-y-0',
+        )}
+      />
+      <span className="flex shrink-0 transition-transform duration-200 ease-out group-hover:-translate-y-px">{icon}</span>
       {!collapsed && <span>{label}</span>}
     </button>
   );

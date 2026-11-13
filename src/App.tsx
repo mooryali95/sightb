@@ -51,9 +51,13 @@ function AppBootstrap({ children }: { children: ReactNode }) {
 }
 
 const PageLoader = () => (
-  <div className="min-h-dvh flex items-center justify-center bg-background">
-    <div className="text-center space-y-3">
-      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+  <div className="min-h-dvh flex items-center justify-center app-surface">
+    <div className="pop-in text-center space-y-4">
+      <div className="relative w-12 h-12 mx-auto" aria-hidden="true">
+        <div className="absolute inset-0 rounded-full border-2 border-border" />
+        <div className="absolute inset-0 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+        <div className="absolute inset-3 rounded-full gradient-gold-soft" />
+      </div>
       <p className="text-sm text-muted-foreground">جاري التحميل...</p>
     </div>
   </div>
