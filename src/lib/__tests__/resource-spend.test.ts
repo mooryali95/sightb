@@ -9,11 +9,11 @@ const res = (id: string, name: string, role?: string): Resource =>
 const exp = (over: Partial<Expense>): Expense =>
   ({ id: Math.random().toString(), projectId: 'p', amount: 0, approvalStatus: 'approved', ...over } as Expense);
 
-const team = [res('r-ayman', 'أيمن أصلان', 'مهندس'), res('r-omar', 'عمر عبدالحميد'), res('r-ahmad', 'أحمد صبري')];
+const team = [res('r-anwar', 'أنور أسعد', 'مهندس'), res('r-omar', 'عمر عبدالكريم'), res('r-ahmad', 'أحمد سالم')];
 
 describe('normalizeArabicName', () => {
   it('treats hamza, ta marbuta, alef maqsura, diacritics and spacing as the same name', () => {
-    expect(normalizeArabicName('أيمن  أصلان')).toBe(normalizeArabicName('ايمن اصلان'));
+    expect(normalizeArabicName('أنور  أسعد')).toBe(normalizeArabicName('انور اسعد'));
     expect(normalizeArabicName('مؤسسة الهدى')).toBe(normalizeArabicName('موسسه الهدي'));
     expect(normalizeArabicName('عُمَر')).toBe(normalizeArabicName('عمر'));
   });
@@ -21,40 +21,40 @@ describe('normalizeArabicName', () => {
 
 describe('summarizeSpendByResource', () => {
   it('counts an expense whose vendor names the resource but was never linked — the reported gap', () => {
-    const out = summarizeSpendByResource([exp({ amount: 500, vendor: 'ايمن اصلان' })], team);
-    expect(out[0]).toMatchObject({ key: 'r-ayman', total: 500, count: 1, matchedByName: 1 });
+    const out = summarizeSpendByResource([exp({ amount: 500, vendor: 'انور اسعد' })], team);
+    expect(out[0]).toMatchObject({ key: 'r-anwar', total: 500, count: 1, matchedByName: 1 });
   });
 
   it('never credits a resource from المسؤول — that is a different person', () => {
-    const out = summarizeSpendByResource([exp({ amount: 400, responsible: 'أيمن أصلان', description: 'أتعاب' })], team);
+    const out = summarizeSpendByResource([exp({ amount: 400, responsible: 'أنور أسعد', description: 'أتعاب' })], team);
     expect(out).toEqual([expect.objectContaining({ key: UNLINKED_KEY, total: 400 })]);
   });
 
   it('credits the resource named in the description, by full or first name', () => {
     const out = summarizeSpendByResource([
-      exp({ amount: 400, responsible: 'أحمد صبري', description: 'دفعة أيمن أصلان عن التصميم' }),
+      exp({ amount: 400, responsible: 'أحمد سالم', description: 'دفعة أنور أسعد عن التصميم' }),
       exp({ amount: 250, description: 'تحويل لعمر' }),
-      exp({ amount: 50, description: 'أتعاب ايمن' }),
+      exp({ amount: 50, description: 'أتعاب انور' }),
     ], team);
-    expect(out.map((b) => [b.key, b.total])).toEqual([['r-ayman', 450], ['r-omar', 250]]);
+    expect(out.map((b) => [b.key, b.total])).toEqual([['r-anwar', 450], ['r-omar', 250]]);
   });
 
   it('does not guess: a shared first name, or two people in one description, credits nobody', () => {
     const out = summarizeSpendByResource([
       exp({ amount: 10, description: 'دفعة أحمد' }),
-      exp({ amount: 20, description: 'عمر وأيمن' }),
+      exp({ amount: 20, description: 'عمر وأنور' }),
       exp({ amount: 30, description: 'عمرو للنقل' }),
     ], [...team, res('r-ahmad2', 'أحمد علي')]);
     expect(out).toEqual([expect.objectContaining({ key: UNLINKED_KEY, total: 60 })]);
   });
 
   it('prefers the explicit link over the typed name', () => {
-    const out = summarizeSpendByResource([exp({ amount: 100, resourceId: 'r-omar', vendor: 'أيمن أصلان' })], team);
+    const out = summarizeSpendByResource([exp({ amount: 100, resourceId: 'r-omar', vendor: 'أنور أسعد' })], team);
     expect(out[0].key).toBe('r-omar');
   });
 
   it('matches the vendor field', () => {
-    const out = summarizeSpendByResource([exp({ amount: 70, vendor: 'أحمد صبري' })], team);
+    const out = summarizeSpendByResource([exp({ amount: 70, vendor: 'أحمد سالم' })], team);
     expect(out[0].key).toBe('r-ahmad');
   });
 
@@ -62,7 +62,7 @@ describe('summarizeSpendByResource', () => {
     const rows = [
       exp({ amount: 1000, resourceId: 'r-omar' }),
       exp({ amount: 300, vendor: 'مطبعة الرياض' }),
-      exp({ amount: 2000, vendor: 'أحمد صبري' }),
+      exp({ amount: 2000, vendor: 'أحمد سالم' }),
     ];
     const out = summarizeSpendByResource(rows, team);
     expect(out.map((b) => b.key)).toEqual(['r-ahmad', 'r-omar', UNLINKED_KEY]);
@@ -72,10 +72,10 @@ describe('summarizeSpendByResource', () => {
 
 describe('matchesResourceQuery', () => {
   it('finds by name or role, ignoring spelling variants', () => {
-    const [ayman] = summarizeSpendByResource([exp({ amount: 1, resourceId: 'r-ayman' })], team);
-    expect(matchesResourceQuery(ayman, 'ايمن')).toBe(true);
-    expect(matchesResourceQuery(ayman, 'مهندس')).toBe(true);
-    expect(matchesResourceQuery(ayman, 'عمر')).toBe(false);
-    expect(matchesResourceQuery(ayman, '  ')).toBe(true);
+    const [anwar] = summarizeSpendByResource([exp({ amount: 1, resourceId: 'r-anwar' })], team);
+    expect(matchesResourceQuery(anwar, 'انور')).toBe(true);
+    expect(matchesResourceQuery(anwar, 'مهندس')).toBe(true);
+    expect(matchesResourceQuery(anwar, 'عمر')).toBe(false);
+    expect(matchesResourceQuery(anwar, '  ')).toBe(true);
   });
 });

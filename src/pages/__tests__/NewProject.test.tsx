@@ -73,7 +73,7 @@ function pick(shown: string, option: RegExp) {
   fireEvent.keyDown(screen.getByRole('option', { name: option }), { key: 'Enter' });
 }
 
-const nameInput = () => screen.getByPlaceholderText(/مشروع الرواد/);
+const nameInput = () => screen.getByPlaceholderText(/مشروع الأفق/);
 const contractInput = () => screen.getByPlaceholderText('230,000');
 /** The VAT rate field: the third number input, after the contract value and the retention. */
 const vatInput = () => screen.getAllByRole('spinbutton')[2];

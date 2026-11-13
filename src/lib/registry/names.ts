@@ -1,12 +1,12 @@
 /**
  * One person, many spellings. Expenses name who was paid in free text, so
- * «د أيمن», «دأيمن» and «د. أيمن أصلان» are three people to a computer and
+ * «د أنور», «دأنور» and «د. أنور أسعد» are three people to a computer and
  * one to everyone else. These rules read them as one, for matching only:
  * the registry keeps each name as the owner wrote it.
  */
 
 const TITLES = /^(?:دكتور|الدكتور|د\s*[./]\s*|د\s+|م\s*[./]\s*|أ\s*[./]\s*|ا\s*[./]\s*)/;
-// «دأيمن», «دعمر»: a title stuck to a name the registry knows begins with a
+// «دأنور», «دعمر»: a title stuck to a name the registry knows begins with a
 // letter other than «د». Only stripped when what follows is a common first
 // letter of a name and the word is long enough not to be a name itself.
 const STUCK_TITLE = /^د(?=[اأإآعمحيسخصطفكلنهو])(?=\S{4,})/;
@@ -71,7 +71,7 @@ export interface UnlinkedGroup {
   count: number;
   total: number;
   suggestion: { partyId: string; sure: boolean } | null;
-  /** Another group whose name contains every word of this one, when exactly one does: «أيمن» → «أيمن أصلان». */
+  /** Another group whose name contains every word of this one, when exactly one does: «أنور» → «أنور أسعد». */
   mergeInto: string | null;
 }
 

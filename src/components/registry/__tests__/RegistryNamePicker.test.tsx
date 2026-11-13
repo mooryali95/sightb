@@ -5,9 +5,9 @@ import type { Party } from '@/lib/finance/company-ledger';
 import { RegistryNamePicker, type RegistryName } from '../RegistryNamePicker';
 
 const parties: Party[] = [
-  { id: 'p-ayman', companyId: 'c1', name: 'د أيمن أصلان', kind: 'person', archived: false, role: 'مستشار', aliases: [] },
+  { id: 'p-anwar', companyId: 'c1', name: 'د أنور أسعد', kind: 'person', archived: false, role: 'مستشار', aliases: [] },
   { id: 'p-omar', companyId: 'c1', name: 'عمر', kind: 'vendor', archived: false, aliases: ['عمر الحربي'] },
-  { id: 'p-old', companyId: 'c1', name: 'أيمن القديم', kind: 'person', archived: true, aliases: [] },
+  { id: 'p-old', companyId: 'c1', name: 'أنور القديم', kind: 'person', archived: true, aliases: [] },
 ];
 const state = { data: parties as Party[] };
 vi.mock('@/hooks/useParties', () => ({ useParties: () => ({ data: state.data, isSuccess: true }) }));
@@ -34,10 +34,10 @@ describe('RegistryNamePicker', () => {
   it('finds a person however the name is spelled and links the pick', () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
-    open(); search('دأيمن');
-    expect(screen.queryByText('أيمن القديم')).toBeNull();
-    fireEvent.click(screen.getByText('د أيمن أصلان'));
-    expect(onChange).toHaveBeenLastCalledWith({ text: 'د أيمن أصلان', partyId: 'p-ayman' }, parties[0]);
+    open(); search('دأنور');
+    expect(screen.queryByText('أنور القديم')).toBeNull();
+    fireEvent.click(screen.getByText('د أنور أسعد'));
+    expect(onChange).toHaveBeenLastCalledWith({ text: 'د أنور أسعد', partyId: 'p-anwar' }, parties[0]);
     expect(screen.getByRole('combobox')).toHaveTextContent('من السجل');
   });
 

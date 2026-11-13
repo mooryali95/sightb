@@ -71,7 +71,7 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   );
 
   // The search now covers the vendor and the linked resource's name too, and
-  // ignores Arabic spelling variants (أ/ا، ة/ه، ى/ي), so "ايمن" finds "أيمن".
+  // ignores Arabic spelling variants (أ/ا، ة/ه، ى/ي), so "انور" finds "أنور".
   const resourceNameById = useMemo(() => new Map(resources.map((r) => [r.id, r.name])), [resources]);
   const q = normalizeArabicName(searchQuery);
   const matchesFilters = (exp: Expense) => {

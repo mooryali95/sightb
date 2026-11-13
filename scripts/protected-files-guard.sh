@@ -50,6 +50,8 @@ need_text src/components/project/stats/BudgetRow.tsx "تجاوز الموازن�
 need_text src/pages/__tests__/Login.test.tsx "checking once and saying \"code sent\" once"
 need_text AGENTS.md "docs/LOVABLE_HANDOFF.md"
 need_text .github/workflows/quality.yml "ssot-guard.sh"
+need_text .github/workflows/quality.yml "public-data-guard.sh"
+need_file SECURITY.md
 need_text src/lib/finance/summary.ts "export function getCollectedRevenue"
 need_text src/pages/CompanyDetail.tsx "CompanyLedgerSection"
 need_text src/pages/project-detail/ProjectSection.tsx "ChargedCostsCard"

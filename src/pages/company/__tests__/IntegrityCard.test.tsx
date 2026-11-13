@@ -11,7 +11,7 @@ import { IntegrityCard } from '../IntegrityCard';
  * gives no verdict while it waits or when it cannot load them.
  */
 const P = 'p1';
-const project = { id: P, name: 'ألبانيا', status: 'active', contractValue: 0 } as Project;
+const project = { id: P, name: 'تبوك', status: 'active', contractValue: 0 } as Project;
 const custody = { id: 'c1', projectId: P, resourceName: 'عهدة المشتريات', amount: 5000, status: 'active' } as Custody;
 const spend = { id: 'e1', projectId: P, custodyId: 'c1', description: 'مشتريات', amount: 7000, date: '2026-03-10', approvalStatus: 'approved' } as Expense;
 const transfer = { id: 't1', projectId: P, fromFundId: 'f1', toCustodyId: 'c1', amount: 3000, transferDate: '2026-03-05' } as CashTransfer;

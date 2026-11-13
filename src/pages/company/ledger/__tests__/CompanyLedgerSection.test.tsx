@@ -30,15 +30,15 @@ const projects = [{ id: 'p1', name: 'برج الأفق', weight: 3_000_000 }, { 
 const ledger: CompanyLedger = {
   parties: [
     { id: 'omar', companyId: 'c1', name: 'عمر', kind: 'owner', archived: false },
-    { id: 'ayman', companyId: 'c1', name: 'أيمن', kind: 'person', archived: false },
+    { id: 'anwar', companyId: 'c1', name: 'أنور', kind: 'person', archived: false },
   ],
   expenses: [
-    { id: 'e1', companyId: 'c1', date: '2026-10-01', amount: 10000, description: 'راتب أكتوبر', kind: 'salary', partyId: 'ayman', paidByPartyId: null },
+    { id: 'e1', companyId: 'c1', date: '2026-10-01', amount: 10000, description: 'راتب أكتوبر', kind: 'salary', partyId: 'anwar', paidByPartyId: null },
     { id: 'e2', companyId: 'c1', date: '2026-10-02', amount: 2000, description: 'إيجار المكتب', kind: 'rent', partyId: null, paidByPartyId: 'omar' },
   ],
   allocations: [{ id: 'a1', expenseId: 'e1', projectId: 'p1', amount: 6000 }],
   entries: [
-    { id: 'm1', companyId: 'c1', date: '2026-10-03', amount: 3000, type: 'advance', from: { kind: 'company', id: null }, to: { kind: 'party', id: 'ayman' }, note: '', dueDate: null, salaryExpenseId: null },
+    { id: 'm1', companyId: 'c1', date: '2026-10-03', amount: 3000, type: 'advance', from: { kind: 'company', id: null }, to: { kind: 'party', id: 'anwar' }, note: '', dueDate: null, salaryExpenseId: null },
     { id: 'm2', companyId: 'c1', date: '2026-10-04', amount: 40000, type: 'advance', from: { kind: 'company', id: null }, to: { kind: 'project', id: 'p2' }, note: 'تمويل', dueDate: null, salaryExpenseId: null },
   ],
 };
