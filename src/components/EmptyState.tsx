@@ -18,14 +18,17 @@ export function EmptyState({ icon, title, description, action, className }: Empt
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center text-center py-10 px-4 rounded-xl border border-dashed border-border bg-muted/20',
+        'pop-in flex flex-col items-center justify-center text-center py-10 px-4 rounded-xl border border-dashed border-border bg-muted/20',
         className
       )}
       role="status"
     >
       {icon && (
-        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-3">
-          {icon}
+        <div className="relative mb-4" aria-hidden="true">
+          <div className="absolute -inset-2 rounded-full gradient-gold-soft" />
+          <div className="float-soft relative w-12 h-12 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-muted-foreground">
+            {icon}
+          </div>
         </div>
       )}
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
