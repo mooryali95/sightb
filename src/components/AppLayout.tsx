@@ -16,16 +16,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const content = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
   usePageEnter(content, pathname);
+  // The top bar gains a shadow once the page scrolls under it.
+  const [scrolled, setScrolled] = useState(false);
 
   return (
-    <div className="flex min-h-dvh w-full">
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-foreground/40 z-20 md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+    <div className="flex min-h-dvh w-full app-surface">
+      {/* Mobile overlay — fades in and out with the drawer */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          'fixed inset-0 bg-foreground/40 backdrop-blur-[2px] z-20 md:hidden transition-opacity duration-300 ease-out',
+          mobileOpen ? 'opacity-100' : 'opacity-0 pointer-events-none',
+        )}
+        onClick={() => setMobileOpen(false)}
+      />
 
       {/* Sidebar - hidden on mobile unless open */}
       <div className={cn(
@@ -41,9 +45,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
         />
       </div>
 
-      <main className="flex-1 overflow-auto min-w-0">
+      <main
+        className="flex-1 overflow-auto min-w-0"
+        onScroll={(e) => {
+          const next = e.currentTarget.scrollTop > 4;
+          if (next !== scrolled) setScrolled(next);
+        }}
+      >
         {/* Top bar with breadcrumb, search & notifications */}
-        <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className={cn(
+          'relative flex items-center justify-between gap-3 px-4 md:px-6 py-3 border-b bg-card/75 backdrop-blur-md sticky top-0 z-10 transition-[box-shadow,border-color] duration-300',
+          scrolled ? 'border-border shadow-card' : 'border-border/60',
+        )}>
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <Button
               variant="ghost"
@@ -67,6 +80,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <SmartNotifications />
             <ThemeToggle />
           </div>
+          {/* A thin gold line runs once on every page change */}
+          <div key={pathname} aria-hidden="true" className="route-progress absolute inset-x-0 -bottom-px pointer-events-none" />
         </div>
 
         {/* Content wrapper — fixed p-6 (responsive comes from inner grids) */}
