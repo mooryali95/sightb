@@ -6,7 +6,7 @@ import { useCoreData, useCompanyData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency, getCountedExpenses, getEffectiveContractValue } from '@/lib/finance';
+import { formatCurrency, getCountedExpenses, getEffectiveContractValue, getProjectSummary } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
 import { companyNet } from '@/lib/finance/company-net';
 import { summarizeCompanyExpenses } from '@/lib/finance/company-ledger';
@@ -31,6 +31,9 @@ import { PortfolioCards } from './company/PortfolioCards';
 import { StandaloneProjectCards } from './company/StandaloneProjectCards';
 import { buildCompanyExport } from './company/buildCompanyExport';
 import { CompanyLedgerSection } from './company/ledger/CompanyLedgerSection';
+import { CompanyMap } from './company/map/CompanyMap';
+import { LedgerNotReady } from '@/services/companyLedgerService';
+import type { MapProjectInput } from '@/lib/finance/company-map';
 import { RegistrySection } from './company/registry/RegistrySection';
 import { IntegrityCard } from './company/IntegrityCard';
 import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
@@ -124,6 +127,21 @@ export default function CompanyDetail() {
   }, [compPortfolios, companyProjects, standaloneProjects, countedExpenses]);
 
   const [showInactive, setShowInactive] = useState(false);
+
+  // «خريطة المنظومة»: every live project with the figures its own page shows, grouped by portfolio.
+  // Follows the page's «عرض المنتهية» toggle, like every other list here.
+  const mapProjects = useMemo<MapProjectInput[]>(() => companyProjects
+    .filter((p) => showInactive || !INACTIVE_STATUSES.includes(p.status))
+    .map((p) => {
+      const s = getProjectSummary(p,
+        budgetItems.filter((b) => b.projectId === p.id), expenses.filter((e) => e.projectId === p.id),
+        revenues.filter((r) => r.projectId === p.id), changeOrders.filter((o) => o.projectId === p.id));
+      return {
+        id: p.id, name: p.name, status: p.status,
+        group: portfolios.find((f) => f.id === p.portfolioId)?.name ?? 'دون محفظة',
+        contract: s.effectiveContractValue, planned: s.totalPlanned, actual: s.totalActual, collected: s.collectedRevenue,
+      };
+    }), [companyProjects, showInactive, budgetItems, expenses, revenues, changeOrders, portfolios]);
 
   const visibleCompanyProjects = useMemo(() => {
     if (showInactive) return companyProjects;
@@ -281,6 +299,15 @@ export default function CompanyDetail() {
             <StatCard title="مشاريع متعثرة" value={String(summary.totalAtRiskProjects)} icon={<AlertTriangle className="w-4 h-4" />} trend={summary.totalAtRiskProjects > 0 ? 'down' : 'up'} tooltip="مشاريع معلقة أو ملغاة أو تجاوز صرفها الموازنة المعتمدة." />
           </div>
         )}
+
+        <CompanyMap
+          companyName={company.name}
+          projects={mapProjects}
+          ledger={ledger.error instanceof LedgerNotReady ? 'not-ready' : ledger.data ?? (ledger.isError ? 'not-ready' : null)}
+          loading={!detailsLoaded && mapProjects.length === 0}
+          net={net?.net ?? null}
+          onNewProject={isAdmin || canEdit('company', id!) ? () => navigate(`/project/new?company=${id}`) : undefined}
+        />
 
         {/* Expense Distribution Pie Chart */}
         {expensesByPortfolio.length > 0 && (

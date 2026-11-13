@@ -121,6 +121,8 @@ does not happen again.
    - Colours, wording and icons follow `docs/design-system.md`. No raw
      palette classes such as `text-amber-700`: use the warning, success,
      destructive and info tokens. Counts go through `countAr`.
+   - «خريطة المنظومة»: `src/lib/finance/company-map.ts`, `src/pages/company/map/**`,
+     `e2e/company-map.spec.ts`. Its figures come only from `buildCompanyMap`.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

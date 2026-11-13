@@ -40,6 +40,10 @@ vi.mock('@/hooks/useCompanyLedger', () => ({
 }));
 vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => undefined, useCompanyData: () => undefined }));
 // The company ledger has its own tests (CompanyLedgerSection.test.tsx); here it only has to be placed.
+// The map has its own tests (CompanyMap.test.tsx); here it only has to receive the company's projects.
+vi.mock('../company/map/CompanyMap', () => ({
+  CompanyMap: ({ projects }: { projects: { id: string }[] }) => <div data-testid="company-map">{projects.map((p) => p.id).join(',')}</div>,
+}));
 vi.mock('../company/ledger/CompanyLedgerSection', () => ({
   CompanyLedgerSection: ({ projects }: { projects: { name: string }[] }) => <div data-testid="ledger">{projects.map((p) => p.name).join('،')}</div>,
 }));
