@@ -81,6 +81,11 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      boxShadow: {
+        card: "var(--shadow-card)",
+        elevated: "var(--shadow-elevated)",
+        gold: "var(--shadow-gold)",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
