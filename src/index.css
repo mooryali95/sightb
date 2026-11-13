@@ -478,6 +478,95 @@ input, textarea { caret-color: hsl(var(--accent-text)); }
 /* Amounts never break between the figure and its currency. */
 .money { white-space: nowrap; font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
 
+/* ============= Motion layer =============
+ * One vocabulary for the whole app: things rise in, lift on hover, press on
+ * tap. Short (≤320ms), eased out, and switched off by the reduced-motion rule
+ * below. Only opacity, transform and scale move, so nothing reflows. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes soft-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes shimmer {
+  from { background-position: 150% 0; }
+  to   { background-position: -50% 0; }
+}
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+@keyframes route-progress {
+  0%   { transform: scaleX(0); opacity: 1; }
+  70%  { transform: scaleX(0.85); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+
+/* Figure tiles arrive one after another, 40ms apart, the first eight only. */
+.stat-card { animation: rise-in 320ms var(--ease-out) both; }
+.stat-card:nth-child(2) { animation-delay: 40ms; }
+.stat-card:nth-child(3) { animation-delay: 80ms; }
+.stat-card:nth-child(4) { animation-delay: 120ms; }
+.stat-card:nth-child(5) { animation-delay: 160ms; }
+.stat-card:nth-child(6) { animation-delay: 200ms; }
+.stat-card:nth-child(7) { animation-delay: 240ms; }
+.stat-card:nth-child(8) { animation-delay: 280ms; }
+
+/* Any container can stagger its direct children the same way. */
+.stagger-in > * { animation: rise-in 320ms var(--ease-out) both; }
+.stagger-in > *:nth-child(2) { animation-delay: 40ms; }
+.stagger-in > *:nth-child(3) { animation-delay: 80ms; }
+.stagger-in > *:nth-child(4) { animation-delay: 120ms; }
+.stagger-in > *:nth-child(5) { animation-delay: 160ms; }
+.stagger-in > *:nth-child(n+6) { animation-delay: 200ms; }
+
+.pop-in { animation: soft-pop 240ms var(--ease-out) both; }
+.float-soft { animation: float-y 4s var(--ease-in-out) infinite; }
+
+/* Tap feedback on every button. `scale` composes with any translate the
+ * button already carries, so positioned icons do not jump. */
+button:not(:disabled), [role="button"], [role="tab"] {
+  transition-property: color, background-color, border-color, box-shadow, opacity, scale;
+  transition-duration: var(--duration-fast);
+  transition-timing-function: var(--ease-out);
+}
+button:not(:disabled):active, [role="button"]:active, [role="tab"]:active { scale: 0.97; }
+
+/* Loading placeholders: a soft light sweeps across instead of blinking. */
+.skeleton-shimmer {
+  background-color: hsl(var(--muted));
+  background-image: linear-gradient(90deg, transparent 0%, hsl(var(--card) / 0.65) 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* The thin gold line under the top bar that runs on every page change. */
+.route-progress {
+  height: 2px;
+  background: var(--gradient-gold);
+  transform-origin: right center;
+  animation: route-progress 600ms var(--ease-out) forwards;
+}
+
+/* The page sits on a quiet surface: a faint gold light in one corner and a
+ * navy one in the other, fixed so it never scrolls or repaints. */
+.app-surface {
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(60rem 30rem at 100% -10%, hsl(var(--gold) / 0.07), transparent 60%),
+    radial-gradient(50rem 30rem at 0% 110%, hsl(var(--info) / 0.05), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Cards lift a little when they can be clicked. */
+@media (hover: hover) {
+  .card-interactive { transition: box-shadow var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out); }
+  .card-interactive:hover { box-shadow: var(--shadow-elevated); transform: translateY(-2px); border-color: hsl(var(--gold) / 0.35); }
+}
+
 /* Reduced motion: no travel, no scale, no stagger; a short fade at most. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -486,6 +575,8 @@ input, textarea { caret-color: hsl(var(--accent-text)); }
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
+  button:active, [role="button"]:active, [role="tab"]:active { scale: none; }
+  .float-soft, .skeleton-shimmer { animation: none !important; }
 }
 
 /* Date fields: the native text hides at rest, the Arabic reading shows over it (see ui/input). */
