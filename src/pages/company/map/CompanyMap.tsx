@@ -89,7 +89,7 @@ export function CompanyMap({ companyName, projects, ledger, loading, net, onNewP
               {net !== null && (
                 <div className="text-left">
                   <p className="text-xs opacity-85">صافي الشركة المخطط</p>
-                  <p className={cn('font-mono text-2xl font-bold tabular-nums', net < 0 && 'text-red-300')}>{money(net)}</p>
+                  <p className="font-mono text-2xl font-bold tabular-nums">{net < 0 && <span className="ml-1 text-sm font-semibold">▼ عجز</span>}{money(net)}</p>
                 </div>
               )}
             </div>

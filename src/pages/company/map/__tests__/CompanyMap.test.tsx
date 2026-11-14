@@ -79,6 +79,11 @@ describe('CompanyMap', () => {
     expect(screen.getByText('أُرسل إلى المشاريع').parentElement).toHaveTextContent('عاد منه 15,000.00');
   });
 
+  it('marks a planned deficit in words, not by colour alone', () => {
+    renderMap({ net: -5000 });
+    expect(screen.getByText('صافي الشركة المخطط').parentElement).toHaveTextContent('▼ عجز');
+  });
+
   it('says what belongs to the company alone, to both, and to the projects alone', () => {
     renderMap();
     const band = screen.getByRole('img', { name: /للمنظومة وحدها/ });
