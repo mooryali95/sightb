@@ -75,7 +75,6 @@ export default function CompanyDetail() {
   const exportLedger = useMemo(() => (ledger.data && net ? { net, expenses: ledger.data.expenses, allocations: ledger.data.allocations } : undefined), [ledger.data, net]);
 
   const companyProjects = useMemo(() => projects.filter(p => p.companyId === id), [projects, id]);
-  const standaloneProjects = useMemo(() => companyProjects.filter(p => !p.portfolioId), [companyProjects]);
   const registryProjects = useMemo(() => companyProjects.map((p) => ({ id: p.id, name: p.name })), [companyProjects]);
   const registryExpenses = useMemo(() => {
     const ids = new Set(companyProjects.map((p) => p.id));
@@ -107,6 +106,12 @@ export default function CompanyDetail() {
     });
   };
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
+  // Filed under no portfolio of this company (none, a deleted one, another company's):
+  // listed here, as getCompanySummary counts it, so the list and the totals agree.
+  const standaloneProjects = useMemo(() => {
+    const home = new Set(compPortfolios.map(p => p.id));
+    return companyProjects.filter(p => !p.portfolioId || !home.has(p.portfolioId));
+  }, [companyProjects, compPortfolios]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   // The stat card above counts spend through the summary library, which
   // leaves out rejected expenses and advances still outstanding. The chart

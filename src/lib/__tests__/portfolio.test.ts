@@ -25,7 +25,7 @@ const risk = (over: Partial<Risk>): Risk => one<Risk>({ id: 'k', status: 'open',
 // B: 50k contract with a 10k approved order, 50k planned, 60k spent (over budget), fully done, 5k reserve.
 const A = project({ id: 'A', contractValue: 100000, percentComplete: 50 });
 const B = project({ id: 'B', contractValue: 50000, percentComplete: 100, managementReserve: 5000 });
-const elsewhere = project({ id: 'Z', portfolioId: 'pf2', contractValue: 999999, percentComplete: 100 });
+const elsewhere = project({ id: 'Z', companyId: 'c2', portfolioId: 'pf2', contractValue: 999999, percentComplete: 100 });
 const projects = [A, B, elsewhere];
 const budgets = [budget('A', 80000), budget('B', 50000), budget('Z', 1), budget('N', 50000)];
 const expenses = [expense('A', 40000), expense('B', 60000), expense('Z', 999999), expense('A', 5000, { approvalStatus: 'rejected' })];
@@ -176,5 +176,25 @@ describe('a company summary', () => {
       [one<IndirectCost>({ id: 'i3', companyId: 'c1', amount: 40000 })]);
     expect(heavy.netProfitAfterIndirect).toBe(-10000);
     expect(heavy.healthStatus).toBe('critical');
+  });
+});
+
+describe('the company total reconciles with its projects', () => {
+  const company = one<Company>({ id: 'c1', name: 'المنظومة' });
+  const other = one<Portfolio>({ id: 'pfX', companyId: 'c2', name: 'محفظة شركة أخرى', targetRevenue: 0, targetMargin: 0 });
+  // Y is c1's but filed under c2's portfolio; W is c2's under c1's portfolio.
+  const Y = project({ id: 'Y', portfolioId: 'pfX', contractValue: 7000 });
+  const W = project({ id: 'W', companyId: 'c2', contractValue: 3000 });
+  const orphan = project({ id: 'Q', portfolioId: 'gone', contractValue: 1 });
+  const all = [A, B, elsewhere, Y, W, orphan]; // Q is filed under a portfolio that no longer exists
+  const exps = [...expenses, expense('Y', 700), expense('W', 300), expense('Q', 50)];
+  const total = (c: Company) => getCompanySummary(c, [portfolio, other], all, budgets, exps, revenues, orders, [], [], []);
+  const spentBy = (companyId: string) =>
+    all.filter((p) => p.companyId === companyId).reduce((s, p) => s + exps.filter((e) => e.projectId === p.id && e.approvalStatus !== 'rejected').reduce((t, e) => t + e.amount, 0), 0);
+
+  it('counts every project of the company once, wherever it is filed, and none of another company', () => {
+    expect(total(company).totalActual).toBe(spentBy('c1'));
+    expect(total(company).totalActual).toBe(100750); // A 40,000 + B 60,000 + Y 700 + Q 50
+    expect(total(one<Company>({ id: 'c2', name: 'أخرى' })).totalActual).toBe(spentBy('c2'));
   });
 });
