@@ -220,6 +220,10 @@ jobs:
         # The repository is public: see SECURITY.md.
         run: bash scripts/public-data-guard.sh
 
+      - name: Guard functions open without a JWT
+        # verify_jwt = false makes a function public; it must check its caller itself.
+        run: bash scripts/function-auth-guard.sh
+
       - name: Guard one source per money rule
         # The counted-expense rule and the revenue sums live in
         # src/lib/finance/summary.ts; a hand-copied version fails here.

@@ -51,6 +51,8 @@ need_text src/pages/__tests__/Login.test.tsx "checking once and saying \"code se
 need_text AGENTS.md "docs/LOVABLE_HANDOFF.md"
 need_text .github/workflows/quality.yml "ssot-guard.sh"
 need_text .github/workflows/quality.yml "public-data-guard.sh"
+need_text .github/workflows/quality.yml "function-auth-guard.sh"
+need_file scripts/function-auth-guard.sh
 need_file SECURITY.md
 need_file src/lib/finance/company-map.ts
 need_file src/lib/finance/__tests__/company-map.test.ts
