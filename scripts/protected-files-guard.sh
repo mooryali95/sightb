@@ -56,6 +56,9 @@ need_file src/lib/finance/company-map.ts
 need_file src/lib/finance/__tests__/company-map.test.ts
 need_file src/pages/company/map/CompanyMap.tsx
 need_file e2e/company-map.spec.ts
+need_file src/components/finance/flow-parts.tsx
+need_file src/components/project/ledger/ProjectCompanyLink.tsx
+need_text src/pages/project-detail/ProjectSection.tsx "<ProjectCompanyLink"
 need_text src/pages/CompanyDetail.tsx "<CompanyMap"
 need_text src/lib/finance/summary.ts "export function getCollectedRevenue"
 need_text src/pages/CompanyDetail.tsx "CompanyLedgerSection"

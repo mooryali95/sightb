@@ -57,6 +57,13 @@ for (const theme of ['light', 'dark'] as const) {
 
       await project.click();
       await expect(page).toHaveURL(new RegExp(`/project/${PROJECT_ID}$`));
+
+      // The project's own page tells the same story, from the same function.
+      const link = page.getByRole('region', { name: 'علاقة المشروع بالمنظومة' });
+      await expect(link.getByText('وصله من المنظومة').locator('..')).toContainText('89,000.00');
+      await expect(link.getByText('عاد منه إليها').locator('..')).toContainText('30,000.00');
+      await expect(link).toContainText('عليه للمنظومة 50,000.00');
+      if (dir) await link.screenshot({ path: `${dir}/project-link-${theme}.png`, animations: 'disabled' });
     });
   });
 }

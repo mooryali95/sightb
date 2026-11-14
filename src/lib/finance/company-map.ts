@@ -101,3 +101,12 @@ export function buildCompanyMap(
     },
   };
 }
+
+// The label is in the body colour so it always reads; the colour rides on
+// the symbol and the border, and the symbol alone carries the meaning.
+export const HEALTH: Record<MapHealth, { symbol: string; label: string; tone: string; mark: string }> = {
+  good: { symbol: '✓', label: 'على المسار', tone: 'border-success/40', mark: 'text-success' },
+  warn: { symbol: '▲', label: 'يحتاج انتباه', tone: 'border-warning/50', mark: 'text-warning' },
+  bad: { symbol: '✕', label: 'تجاوز الموازنة', tone: 'border-destructive/50', mark: 'text-destructive' },
+  idle: { symbol: '○', label: 'لا صرف جارٍ', tone: 'border-border', mark: 'text-muted-foreground' },
+};

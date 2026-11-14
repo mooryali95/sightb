@@ -9,11 +9,12 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Building2, FolderKanban, Landmark, Network, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/finance';
-import { buildCompanyMap, type MapHealth, type MapProject, type MapProjectInput } from '@/lib/finance/company-map';
+import { buildCompanyMap, HEALTH, type MapProject, type MapProjectInput } from '@/lib/finance/company-map';
 import type { CompanyExpense, ExpenseAllocation, IntercompanyEntry } from '@/lib/finance/company-ledger';
 import { cn } from '@/lib/utils';
+import { FlowBar, SpendRing } from '@/components/finance/flow-parts';
 
 interface Props {
   companyName: string;
@@ -25,14 +26,6 @@ interface Props {
   onNewProject?: () => void;
 }
 
-// The label is in the body colour so it always reads; the colour rides on
-// the symbol and the border, and the symbol alone carries the meaning.
-const HEALTH: Record<MapHealth, { symbol: string; label: string; tone: string; mark: string }> = {
-  good: { symbol: '✓', label: 'على المسار', tone: 'border-success/40', mark: 'text-success' },
-  warn: { symbol: '▲', label: 'يحتاج انتباه', tone: 'border-warning/50', mark: 'text-warning' },
-  bad: { symbol: '✕', label: 'تجاوز الموازنة', tone: 'border-destructive/50', mark: 'text-destructive' },
-  idle: { symbol: '○', label: 'لا صرف جارٍ', tone: 'border-border', mark: 'text-muted-foreground' },
-};
 
 const money = (n: number) => formatCurrency(n);
 
@@ -162,22 +155,6 @@ function SplitCell({ swatch, label, value, hint }: { swatch: string; label: stri
   );
 }
 
-/** Spend against budget as a ring; the arc is clamped, the number is not. */
-function SpendRing({ pct, health }: { pct: number | null; health: MapHealth }) {
-  const r = 18, c = 2 * Math.PI * r;
-  const shown = Math.min(100, pct ?? 0);
-  const stroke = health === 'bad' ? 'hsl(var(--destructive))' : health === 'warn' ? 'hsl(var(--warning))' : 'hsl(var(--accent))';
-  return (
-    <svg viewBox="0 0 44 44" className="h-12 w-12 shrink-0 -rotate-90" role="img" aria-label={pct === null ? 'بلا موازنة' : `صُرف ${pct.toFixed(0)}% من الموازنة`}>
-      <circle cx="22" cy="22" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
-      <circle cx="22" cy="22" r={r} fill="none" stroke={stroke} strokeWidth="5" strokeLinecap="round"
-        strokeDasharray={c} strokeDashoffset={c * (1 - shown / 100)} className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700" />
-      <text x="22" y="22" transform="rotate(90 22 22)" textAnchor="middle" dominantBaseline="central" className="fill-foreground font-mono text-[10px] font-semibold">
-        {pct === null ? '—' : `${Math.round(pct)}%`}
-      </text>
-    </svg>
-  );
-}
 
 function ProjectStrip({ p, index, flows }: { p: MapProject; index: number; flows: boolean }) {
   const navigate = useNavigate();
@@ -220,19 +197,3 @@ function ProjectStrip({ p, index, flows }: { p: MapProject; index: number; flows
   );
 }
 
-function FlowBar({ icon, label, amount, scale, tip, children }: { icon: React.ReactNode; label: string; amount: number; scale: number; tip: string; children: React.ReactNode }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="flex items-center gap-2 text-[11px]">
-          <span className="flex w-24 shrink-0 items-center gap-1 whitespace-nowrap text-muted-foreground">{icon}{label}</span>
-          <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-            <span className="flex h-full overflow-hidden rounded-full motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${Math.max(scale * 100, amount > 0 ? 3 : 0)}%` }}>{children}</span>
-          </span>
-          <span className="w-24 shrink-0 text-left font-mono tabular-nums">{money(amount)}</span>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent className="text-xs">{tip}</TooltipContent>
-    </Tooltip>
-  );
-}
