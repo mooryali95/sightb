@@ -353,7 +353,7 @@ export default function CompanyDetail() {
 
         <RegistrySection companyId={id!} projects={registryProjects} expenses={registryExpenses} canEdit={isAdmin || canEdit('company', id!)} />
 
-        <IntegrityCard projects={companyProjects} />
+        <IntegrityCard projects={companyProjects} companyId={company.id} />
 
         <CompanyLedgerSection companyId={id!} projects={ledgerProjects} collected={ledgerCollected} canEdit={isAdmin || canEdit('company', id!)} />
 

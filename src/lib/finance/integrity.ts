@@ -6,13 +6,14 @@
  */
 import { getCollectedRevenue } from './summary';
 import type { CashTransfer, Custody, Expense, FundSettlement, PaymentRequest, Project, ProjectFund, ResourceReimbursement, Revenue } from '@/types/project';
+import { balancesWithCompany, type CompanyExpense, type ExpenseAllocation, type IntercompanyEntry } from './company-ledger';
 import { getCustodyRemaining, getFundRemaining } from '@/lib/funds';
 
 export type IntegritySeverity = 'error' | 'warning' | 'info';
 
 export interface IntegrityIssue {
   severity: IntegritySeverity;
-  rule: 'no_source' | 'duplicate' | 'custody_over' | 'fund_over' | 'gap_no_reason' | 'cash_left_finished' | 'revenue_over_contract' | 'owed' | 'settlement_pending_finished' | 'collected_no_date';
+  rule: 'no_source' | 'duplicate' | 'custody_over' | 'fund_over' | 'gap_no_reason' | 'cash_left_finished' | 'revenue_over_contract' | 'owed' | 'settlement_pending_finished' | 'collected_no_date' | 'allocation_over' | 'finished_owes_company';
   projectId: string;
   text: string;
   amount: number;
@@ -30,6 +31,8 @@ export interface IntegrityInput {
   cashTransfers?: CashTransfer[];
   /** Effective contract value by project (original plus approved changes). */
   contractOf: (projectId: string) => number;
+  /** The company's own books, when live: what it charged and lent its projects. */
+  companyLedger?: { entries: IntercompanyEntry[]; allocations: ExpenseAllocation[]; expenses: CompanyExpense[] } | null;
 }
 
 const FINISHED = ['completed', 'archived', 'cancelled'];
@@ -116,6 +119,29 @@ export function checkIntegrity(i: IntegrityInput): IntegrityIssue[] {
       out.push({ severity: 'info', rule: 'owed', projectId: p.id, amount: rb.amount, text: `مستحق لم يُسدَّد: ${rb.description}` });
     }
   }
+  // 7. The company's books close too: no expense charged beyond its amount,
+  //    and no finished project left owing the company.
+  const L = i.companyLedger;
+  if (L) {
+    const mine = new Set(i.projects.map((p) => p.id));
+    for (const e of L.expenses) {
+      const rows = L.allocations.filter((a) => a.expenseId === e.id);
+      const charged = r2(rows.reduce((t, a) => t + a.amount, 0));
+      const over = r2(charged - e.amount);
+      const at = rows.find((a) => mine.has(a.projectId));
+      if (over > 0.005 && at) {
+        out.push({ severity: 'error', rule: 'allocation_over', projectId: at.projectId, amount: over, text: `مصروف المنظومة «${e.description || 'بلا وصف'}» حُمِّل على المشاريع بأكثر من مبلغه` });
+      }
+    }
+    for (const b of balancesWithCompany(L.entries, L.expenses)) {
+      if (b.node.kind !== 'project' || !b.node.id) continue;
+      const p = i.projects.find((x) => x.id === b.node.id);
+      if (p && FINISHED.includes(p.status) && b.owesCompany > 0.005) {
+        out.push({ severity: 'warning', rule: 'finished_owes_company', projectId: p.id, amount: r2(b.owesCompany), text: 'المشروع منتهٍ وما زال عليه للمنظومة: سجّل السداد أو التسوية لإغلاق الحساب' });
+      }
+    }
+  }
+
   const rank = { error: 0, warning: 1, info: 2 };
   return out.sort((a, b) => rank[a.severity] - rank[b.severity] || b.amount - a.amount);
 }

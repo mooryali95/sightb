@@ -5,6 +5,9 @@ import { useStore, type AppState } from '@/store/useStore';
 import type { CashTransfer, Custody, Expense, Project } from '@/types/project';
 import { IntegrityCard } from '../IntegrityCard';
 
+const ledger = vi.hoisted(() => ({ value: { data: undefined as unknown } }));
+vi.mock('@/hooks/useCompanyLedger', () => ({ useCompanyLedger: () => ledger.value }));
+
 /**
  * The company opened directly, with the details already in the store but no
  * cash transfers: the card loads the transfers itself before judging, and
@@ -23,6 +26,7 @@ const loaders = (transfers: () => Promise<void>) => ({
 });
 
 beforeEach(() => {
+  ledger.value = { data: undefined };
   useStore.setState({
     detailsLoaded: true, expenses: [spend], custodies: [custody], cashTransfers: [], projectFunds: [], fundSettlements: [],
     revenues: [], reimbursements: [], paymentRequests: [], changeOrders: [],
@@ -50,5 +54,15 @@ describe('IntegrityCard', () => {
     fail(new Error('down'));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('تعذّر تحميل بيانات الفحص'));
     expect(screen.queryByText(/الحسابات مغلقة/)).toBeNull();
+  });
+
+  it('judges the company books with the projects: a finished project still owing the company is named', async () => {
+    useStore.setState({ ...loaders(async () => {}), expenses: [], custodies: [] } as unknown as Partial<AppState>);
+    const C = { kind: 'company', id: null };
+    ledger.value = { data: { expenses: [], allocations: [], entries: [
+      { id: 'l', companyId: 'c', date: '2026-05-01', amount: 4000, type: 'advance', from: C, to: { kind: 'project', id: P }, note: '', dueDate: null, salaryExpenseId: null },
+    ] } };
+    render(<MemoryRouter><IntegrityCard projects={[{ ...project, status: 'completed' }]} companyId="c" /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText(/ما زال عليه للمنظومة/)).toBeInTheDocument());
   });
 });
