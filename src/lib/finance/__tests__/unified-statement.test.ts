@@ -17,10 +17,10 @@ const revenue = (projectId: string, amount: number, status: Revenue['status']): 
   id: `r${++n}`, projectId, description: 'دفعة', amount, date: '2026-02-01', month: 1, revenueType: 'milestone', status,
 });
 
-const albania = project('a', 'ألبانيا', 200000);
-const hackathon = project('h', 'الهاكثون', 130434.78);
+const tabuk = project('a', 'تبوك', 200000);
+const forum = project('h', 'الملتقى', 130434.78);
 const other = project('x', 'شركة أخرى', 999);
-const resources: Resource[] = [{ id: 'res-omar', projectId: 'a', name: 'عمر عبدالحميد', monthlyCost: 0, createdAt: '' } as Resource];
+const resources: Resource[] = [{ id: 'res-omar', projectId: 'a', name: 'عمر عبدالكريم', monthlyCost: 0, createdAt: '' } as Resource];
 const changeOrders: ChangeOrder[] = [{ id: 'co', projectId: 'h', amount: 0 } as unknown as ChangeOrder];
 
 const expenses: Expense[] = [
@@ -45,13 +45,13 @@ const paymentRequests: PaymentRequest[] = [
 ];
 
 const statement = buildUnifiedStatement({
-  companyName: 'منظومة', projects: [albania, hackathon], expenses, revenues, changeOrders, resources,
-  parties: [{ id: 'p-ahmad', name: 'أحمد صبري (أبو رؤى)' }], paymentRequests,
+  companyName: 'منظومة', projects: [tabuk, forum], expenses, revenues, changeOrders, resources,
+  parties: [{ id: 'p-ahmad', name: 'أحمد سالم (أبو ليلى)' }], paymentRequests,
 });
 
 describe('buildUnifiedStatement', () => {
   it('gives each project the same contract, collected and actual as the project summary', () => {
-    for (const p of [albania, hackathon]) {
+    for (const p of [tabuk, forum]) {
       const s = getProjectSummary(p, [], expenses.filter((e) => e.projectId === p.id), revenues.filter((r) => r.projectId === p.id), changeOrders.filter((o) => o.projectId === p.id));
       const f = statement.projects.find((x) => x.id === p.id)!.figures;
       expect(f.contract).toBeCloseTo(s.effectiveContractValue, 2);
@@ -81,9 +81,9 @@ describe('buildUnifiedStatement', () => {
 
   it('names who the money went to: registry, then linked or named resource, then the vendor text', () => {
     const party = (amount: number) => statement.lines.find((l) => l.amount === amount)!.party;
-    expect(party(13000)).toBe('أحمد صبري (أبو رؤى)');
-    expect(party(10000)).toBe('عمر عبدالحميد');
-    expect(party(18000)).toBe('عمر عبدالحميد');
+    expect(party(13000)).toBe('أحمد سالم (أبو ليلى)');
+    expect(party(10000)).toBe('عمر عبدالكريم');
+    expect(party(18000)).toBe('عمر عبدالكريم');
     expect(party(3289)).toBe('د صالح');
   });
 
@@ -91,7 +91,7 @@ describe('buildUnifiedStatement', () => {
     const sum = (xs: { amount: number }[]) => xs.reduce((s, x) => s + x.amount, 0);
     expect(sum(statement.byParty)).toBe(statement.figures.actual);
     expect(sum(statement.byNature)).toBe(statement.figures.actual);
-    expect(statement.byParty[0]).toMatchObject({ label: 'عمر عبدالحميد', amount: 28000, count: 2 });
+    expect(statement.byParty[0]).toMatchObject({ label: 'عمر عبدالكريم', amount: 28000, count: 2 });
     expect(statement.byParty.reduce((s, x) => s + x.share, 0)).toBeCloseTo(1, 9);
   });
 
@@ -114,7 +114,7 @@ describe('buildStatementWorkbook', () => {
   const cells = (name: string) => wb.sheets.find((s) => s.name === name)!.grid!.flat().map((c) => (c && typeof c === 'object' ? c.value : c));
 
   it('lays out the combined sheet, a sheet per project, the movements and the collections', () => {
-    expect(wb.sheets.map((s) => s.name)).toEqual(['منظومة — المجمّع', 'ألبانيا', 'الهاكثون', 'مصدر_الحقيقة', 'التحصيل']);
+    expect(wb.sheets.map((s) => s.name)).toEqual(['منظومة — المجمّع', 'تبوك', 'الملتقى', 'مصدر_الحقيقة', 'التحصيل']);
   });
 
   it('puts the same figures in the combined sheet and in the movements total', () => {

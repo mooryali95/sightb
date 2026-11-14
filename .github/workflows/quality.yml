@@ -9,6 +9,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Read-only token: no job here writes to the repository. Kept explicit
+# so a public fork's pull request can never get more.
+permissions:
+  contents: read
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -211,6 +216,10 @@ jobs:
           # Build and test tools are reported, not gated: the advisories left
           # there (vite 5, vitest 3) clear only with their next major versions.
           bun audit --audit-level=high || echo "::warning::build or test tools carry advisories; see the list above"
+      - name: Guard against personal and business data
+        # The repository is public: see SECURITY.md.
+        run: bash scripts/public-data-guard.sh
+
       - name: Guard one source per money rule
         # The counted-expense rule and the revenue sums live in
         # src/lib/finance/summary.ts; a hand-copied version fails here.

@@ -1,6 +1,6 @@
 # Handoff to Lovable — scope and protected areas
 
-Owner's instruction (Omar): Lovable works only within the scope below and
+Owner's instruction: Lovable works only within the scope below and
 **never modifies, reverts or deletes work done through GitHub pull requests**.
 Between 11 and 14 October 2026, Lovable commits deleted merged, tested work
 (`src/lib/resource-spend.ts`, the budget-overrun card, their tests) and
@@ -121,6 +121,8 @@ does not happen again.
    - Colours, wording and icons follow `docs/design-system.md`. No raw
      palette classes such as `text-amber-700`: use the warning, success,
      destructive and info tokens. Counts go through `countAr`.
+   - «خريطة المنظومة»: `src/lib/finance/company-map.ts`, `src/pages/company/map/**`,
+     `e2e/company-map.spec.ts`. Its figures come only from `buildCompanyMap`.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

@@ -25,7 +25,7 @@ const sections = [
   'AuditLogSection', 'MilestonesSection', 'ChangeOrdersSection', 'RisksSection', 'WhatIfSection', 'CommitmentsSection',
   'SmartBudgetAlerts', 'FundsSection', 'CashLedgerSection', 'ExpenseSpendExplorer',
   'CashFlowSankey', 'ResourcePayablesSection', 'VendorPayablesPanel', 'ExecutiveSummary',
-  'PerformanceComparisonSection', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog', 'ledger/ChargedCostsCard', 'ledger/CompanyFundingCard', 'funds/PendingCarryCard',
+  'PerformanceComparisonSection', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog', 'ledger/ChargedCostsCard', 'ledger/CompanyFundingCard', 'ledger/ProjectCompanyLink', 'funds/PendingCarryCard',
 ];
 for (const path of sections) {
   const name = path.split('/').pop()!;
@@ -119,6 +119,7 @@ describe('ProjectDetail', () => {
     expect(screen.getByTestId('header')).toHaveTextContent('ro=false');
     expect(screen.getByRole('region', { name: 'الوضع المالي المختصر' })).toBeInTheDocument();
     expect(shown()).toEqual(['ExecutiveSummary', 'AIExecutiveInsights', 'ProjectStatsGrid', 'ProjectEditDialog']);
+    expect(screen.getByTestId('ProjectCompanyLink')).toBeInTheDocument(); // the project's link to its company
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['الملخص', 'التخطيط', 'المالية3', 'المتابعة', 'الإدارة1']);
     expect(within(groupTab('المالية')).getByText('3')).toHaveClass('bg-destructive');
     expect(screen.queryByTestId('fab')).not.toBeInTheDocument();

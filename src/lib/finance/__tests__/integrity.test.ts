@@ -3,7 +3,7 @@ import { checkIntegrity, type IntegrityInput } from '../integrity';
 import type { Custody, Expense, FundSettlement, Project, ProjectFund, ResourceReimbursement, Revenue } from '@/types/project';
 
 const P = 'p1';
-const project = (status = 'active') => ({ id: P, name: 'ألبانيا', status } as Project);
+const project = (status = 'active') => ({ id: P, name: 'تبوك', status } as Project);
 const exp = (over: Partial<Expense>): Expense => ({ id: Math.random().toString(), projectId: P, category: 'other', description: 'x', amount: 100, date: '2026-05-01', month: 1, approvalStatus: 'approved', isVatExempt: true, ...over } as Expense);
 const fund = (over: Partial<ProjectFund> = {}): ProjectFund => ({ id: 'f1', projectId: P, fundNumber: 1, amount: 1000, transferDate: '2026-04-01', status: 'acknowledged', createdBy: 'u', createdAt: 'c', updatedAt: 'u', ...over });
 const base = (over: Partial<IntegrityInput> = {}): IntegrityInput => ({
