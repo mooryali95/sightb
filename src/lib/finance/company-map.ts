@@ -110,3 +110,29 @@ export const HEALTH: Record<MapHealth, { symbol: string; label: string; tone: st
   bad: { symbol: '✕', label: 'تجاوز الموازنة', tone: 'border-destructive/50', mark: 'text-destructive' },
   idle: { symbol: '○', label: 'لا صرف جارٍ', tone: 'border-border', mark: 'text-muted-foreground' },
 };
+
+/**
+ * «المنظومات» on the dashboard: each company's projects counted by health,
+ * with its spend against plan, from the same healthOf the company map uses.
+ */
+export interface CompanyHealthRow {
+  companyId: string; name: string;
+  counts: Record<MapHealth, number>;
+  total: number; planned: number; actual: number;
+  /** Spend against plan, % (null without a plan). */
+  spendPct: number | null;
+}
+
+export function companiesOverview(
+  companies: { id: string; name: string }[],
+  projects: (MapProjectInput & { companyId: string })[],
+): CompanyHealthRow[] {
+  return companies.map((c) => {
+    const mine = projects.filter((p) => p.companyId === c.id);
+    const counts: Record<MapHealth, number> = { bad: 0, warn: 0, good: 0, idle: 0 };
+    for (const p of mine) counts[healthOf(p)] += 1;
+    const planned = r2(mine.reduce((s, p) => s + p.planned, 0));
+    const actual = r2(mine.reduce((s, p) => s + p.actual, 0));
+    return { companyId: c.id, name: c.name, counts, total: mine.length, planned, actual, spendPct: planned > 0 ? r2((actual / planned) * 100) : null };
+  }).sort((a, b) => b.counts.bad - a.counts.bad || b.counts.warn - a.counts.warn || b.actual - a.actual);
+}

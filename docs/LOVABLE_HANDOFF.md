@@ -123,6 +123,11 @@ does not happen again.
      destructive and info tokens. Counts go through `countAr`.
    - «خريطة المنظومة»: `src/lib/finance/company-map.ts`, `src/pages/company/map/**`,
      `e2e/company-map.spec.ts`. Its figures come only from `buildCompanyMap`.
+   - «المنظومات» on the dashboard: `src/components/dashboard/CompaniesOverview.tsx`,
+     `e2e/companies-overview.spec.ts`. Health comes only from `healthOf`.
+   - Company totals count every project once, by its `companyId`
+     (`getCompanySummary` in `src/lib/portfolio.ts`); the company-books
+     rules in `src/lib/finance/integrity.ts` stay.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages
