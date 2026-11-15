@@ -55,6 +55,8 @@ need_text .github/workflows/quality.yml "function-auth-guard.sh"
 need_file scripts/function-auth-guard.sh
 need_file SECURITY.md
 need_file src/lib/finance/company-map.ts
+need_file src/lib/finance/statements.ts
+need_file src/lib/finance/__tests__/statements.test.ts
 need_file src/components/dashboard/CompaniesOverview.tsx
 need_file src/pages/portfolio/PortfolioHealth.tsx
 need_file src/components/dashboard/__tests__/CompaniesOverview.test.tsx

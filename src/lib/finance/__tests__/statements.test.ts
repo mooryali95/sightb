@@ -1,0 +1,70 @@
+import { describe, it, expect } from 'vitest';
+import { cashFlowStatement, incomeStatement, monthsOf, receivablesAging } from '../statements';
+import type { Expense, Revenue } from '@/types/project';
+
+const rev = (id: string, projectId: string, amount: number, status: Revenue['status'], over: Partial<Revenue> = {}) =>
+  ({ id, projectId, amount, status, description: id, date: '2026-01-15', month: 1, revenueType: 'milestone', ...over } as Revenue);
+const exp = (id: string, projectId: string, amount: number, date: string, over: Partial<Expense> = {}) =>
+  ({ id, projectId, amount, date, description: id, approvalStatus: 'approved', month: 1, category: 'other', ...over } as Expense);
+const Q1 = { from: '2026-01-01', to: '2026-03-31' };
+
+const revenues = [
+  rev('a1', 'A', 100000, 'collected', { invoiceDate: '2026-01-10', collectionDate: '2026-02-05' }),
+  rev('a2', 'A', 40000, 'invoiced', { invoiceDate: '2026-03-01' }),
+  rev('a3', 'A', 999, 'planned'),
+  rev('b1', 'B', 60000, 'invoiced', { invoiceDate: '2025-12-20' }), // billed before the period
+];
+const expenses = [
+  exp('e1', 'A', 30000, '2026-01-20'), exp('e2', 'B', 20000, '2026-02-10'),
+  exp('e3', 'A', 5000, '2026-02-11', { approvalStatus: 'rejected' }), exp('e4', 'A', 7000, '2026-02-12', { isOutstandingAdvance: true }),
+  exp('e5', 'B', 1000, '2026-04-02'), // after the period
+];
+
+describe('incomeStatement', () => {
+  it('bills by invoice date, costs the counted expenses dated in the period, and nets the company and indirect costs', () => {
+    const s = incomeStatement({ revenues, expenses, companyExpenses: [{ date: '2026-02-01', amount: 10000 }, { date: '2025-12-01', amount: 99 }], indirect: 5000 }, Q1);
+    expect(s).toEqual({ revenue: 140000, directCost: 50000, grossProfit: 90000, grossMargin: 64.29, companyCost: 10000, indirectCost: 5000, netProfit: 75000, netMargin: 53.57 });
+  });
+
+  it('adds up: the projects\' statements sum to the whole', () => {
+    const of = (id: string) => incomeStatement({ revenues: revenues.filter((r) => r.projectId === id), expenses: expenses.filter((e) => e.projectId === id) }, Q1);
+    const whole = incomeStatement({ revenues, expenses }, Q1);
+    expect(of('A').revenue + of('B').revenue).toBe(whole.revenue);
+    expect(of('A').directCost + of('B').directCost).toBe(whole.directCost);
+  });
+
+  it('gives no margin, not NaN, without revenue', () => {
+    expect(incomeStatement({ revenues: [], expenses: [] }, Q1).grossMargin).toBeNull();
+  });
+});
+
+describe('cashFlowStatement', () => {
+  it('counts cash when it moved, month by month, and carries the balance', () => {
+    const months = cashFlowStatement({ revenues, expenses, otherIn: [{ date: '2026-01-02', amount: 50000 }], opening: 1000 }, Q1);
+    expect(months).toEqual([
+      { month: '2026-01', inflow: 50000, outflow: 30000, net: 20000, balance: 21000 },
+      { month: '2026-02', inflow: 100000, outflow: 20000, net: 80000, balance: 101000 },
+      { month: '2026-03', inflow: 0, outflow: 0, net: 0, balance: 101000 },
+    ]);
+  });
+
+  it('closes: opening plus every month\'s net is the closing balance', () => {
+    const m = cashFlowStatement({ revenues, expenses, opening: 500 }, Q1);
+    expect(500 + m.reduce((s, x) => s + x.net, 0)).toBe(m[m.length - 1].balance);
+  });
+
+  it('spans the year end', () => {
+    expect(monthsOf({ from: '2025-11-10', to: '2026-02-01' })).toEqual(['2025-11', '2025-12', '2026-01', '2026-02']);
+  });
+});
+
+describe('receivablesAging', () => {
+  it('sorts what is billed and unpaid by how long it has waited', () => {
+    expect(receivablesAging(revenues, '2026-03-31')).toEqual([
+      { bucket: '0-30', amount: 40000, count: 1 },
+      { bucket: '31-60', amount: 0, count: 0 },
+      { bucket: '61-90', amount: 0, count: 0 },
+      { bucket: '90+', amount: 60000, count: 1 },
+    ]);
+  });
+});
