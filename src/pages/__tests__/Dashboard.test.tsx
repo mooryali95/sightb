@@ -23,6 +23,7 @@ vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => ({ isError: false }), 
 // One company expense of 5,000 on c1 and one on a company not on screen.
 vi.mock('@/hooks/useCompanyLedger', () => ({
   useCompanyExpenseAmounts: () => ({ data: [{ companyId: 'c1', amount: 5000 }, { companyId: 'elsewhere', amount: 999 }] }),
+  useCompanyLedger: () => ({ data: undefined }),
 }));
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
 vi.mock('@/components/AppLayout', () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <>{children}</> }));

@@ -82,16 +82,16 @@ export default function Dashboard() {
   const hasActiveFilters = active.length > 0;
 
   // «المنظومات»: every company's filtered projects, by health, as on its map.
-  const overview = useMemo(() => companiesOverview(
-    activeCompanies.filter((c) => filteredProjects.some((p) => p.companyId === c.id)),
-    filteredProjects.map((p) => {
+  const overviewProjects = useMemo(() => filteredProjects.map((p) => {
       const s = getProjectSummary(p,
         budgetItems.filter((b) => b.projectId === p.id), expenses.filter((e) => e.projectId === p.id),
         revenues.filter((r) => r.projectId === p.id), changeOrders.filter((o) => o.projectId === p.id));
       return { id: p.id, name: p.name, status: p.status, group: '', companyId: p.companyId,
         contract: s.effectiveContractValue, planned: s.totalPlanned, actual: s.totalActual, collected: s.collectedRevenue };
-    }),
-  ), [activeCompanies, filteredProjects, budgetItems, expenses, revenues, changeOrders]);
+    }), [filteredProjects, budgetItems, expenses, revenues, changeOrders]);
+  const overview = useMemo(() => companiesOverview(
+    activeCompanies.filter((c) => filteredProjects.some((p) => p.companyId === c.id)), overviewProjects,
+  ), [activeCompanies, filteredProjects, overviewProjects]);
   const hasData = companies.length > 0;
 
   // Show skeleton while initial data is loading and we have no data yet
@@ -166,7 +166,7 @@ export default function Dashboard() {
               attentionCount={attentionProjectsCount} timePeriod={timePeriod}
             />
 
-            <CompaniesOverview rows={overview} />
+            <CompaniesOverview rows={overview} projects={overviewProjects} />
 
             <AttentionProjects
               filteredProjects={filteredProjects} expenses={filteredAllExpenses}

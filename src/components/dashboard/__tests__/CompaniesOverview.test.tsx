@@ -3,11 +3,15 @@
  * each project counted under the same health as on the company map, said in
  * symbols and words, not colour alone.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { CompaniesOverview } from '../CompaniesOverview';
 import { companiesOverview, type MapProjectInput } from '@/lib/finance/company-map';
+
+const books = vi.hoisted(() => ({ byCompany: {} as Record<string, unknown> }));
+vi.mock('@/hooks/useCompanyLedger', () => ({ useCompanyLedger: (id: string) => ({ data: books.byCompany[id] }) }));
+beforeEach(() => { books.byCompany = {}; });
 
 const p = (id: string, companyId: string, over: Partial<MapProjectInput> = {}) => ({
   id, name: id, group: '', status: 'active' as const, contract: 100000, planned: 80000, actual: 20000, collected: 0, companyId, ...over,
@@ -29,7 +33,7 @@ describe('companiesOverview', () => {
 });
 
 describe('CompaniesOverview', () => {
-  const show = (rows = companiesOverview(companies, projects)) => render(<MemoryRouter><CompaniesOverview rows={rows} /></MemoryRouter>);
+  const show = (rows = companiesOverview(companies, projects)) => render(<MemoryRouter><CompaniesOverview rows={rows} projects={projects} /></MemoryRouter>);
 
   it('names each company with its health in words, and links to it', () => {
     show();
@@ -43,5 +47,16 @@ describe('CompaniesOverview', () => {
   it('stays out of the way with a single company', () => {
     const { container } = show(companiesOverview([companies[0]], projects));
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('adds what the company sent its projects, what came back and what they still owe, from its own books', () => {
+    const C = { kind: 'company', id: null };
+    books.byCompany.b = { expenses: [], allocations: [], entries: [
+      { id: 'f', companyId: 'b', date: '2026-05-01', amount: 30000, type: 'advance', from: C, to: { kind: 'project', id: 'b1' }, note: '', dueDate: null, salaryExpenseId: null },
+      { id: 'r', companyId: 'b', date: '2026-05-02', amount: 10000, type: 'repayment', from: { kind: 'project', id: 'b1' }, to: C, note: '', dueDate: null, salaryExpenseId: null },
+    ] };
+    show();
+    expect(screen.getByRole('link', { name: /^النماء:/ })).toHaveTextContent('أرسلت للمشاريع 30,000.00 ر.س · عاد 10,000.00 ر.س · لها عليها 20,000.00 ر.س');
+    expect(screen.getByRole('link', { name: /^الأفق:/ })).not.toHaveTextContent('أرسلت للمشاريع');
   });
 });

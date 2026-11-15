@@ -6,12 +6,15 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Network } from 'lucide-react';
 import { formatCurrency } from '@/lib/finance';
-import { HEALTH, type CompanyHealthRow, type MapHealth } from '@/lib/finance/company-map';
+import { buildCompanyMap, HEALTH, type CompanyHealthRow, type MapHealth, type MapProjectInput } from '@/lib/finance/company-map';
+import { useCompanyLedger } from '@/hooks/useCompanyLedger';
 
 const ORDER: MapHealth[] = ['bad', 'warn', 'good', 'idle'];
 const BAR: Record<MapHealth, string> = { bad: 'bg-destructive', warn: 'bg-warning', good: 'bg-success', idle: 'bg-muted-foreground/30' };
 
-export function CompaniesOverview({ rows }: { rows: CompanyHealthRow[] }) {
+type Input = MapProjectInput & { companyId: string };
+
+export function CompaniesOverview({ rows, projects = [] }: { rows: CompanyHealthRow[]; projects?: Input[] }) {
   if (rows.length < 2) return null; // one company: its own page says it better
   return (
     <section aria-label="المنظومات" className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -22,35 +25,49 @@ export function CompaniesOverview({ rows }: { rows: CompanyHealthRow[] }) {
         </ul>
       </header>
       <ul className="divide-y divide-border">
-        {rows.map((r) => {
-          const label = ORDER.filter((h) => r.counts[h] > 0).map((h) => `${HEALTH[h].label} ${r.counts[h]}`).join('، ');
-          return (
-            <li key={r.companyId}>
-              <Link to={`/company/${r.companyId}`} aria-label={`${r.name}: ${r.total} مشروع${label ? `، ${label}` : ''}`}
-                className="group grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 rounded-lg px-1 py-2.5 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-                <span className="truncate text-sm font-medium">{r.name}</span>
-                <span className="min-w-0">
-                  <span className="flex h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
-                    {ORDER.map((h) => r.counts[h] > 0 && <span key={h} className={BAR[h]} style={{ width: `${(r.counts[h] / r.total) * 100}%` }} />)}
-                  </span>
-                  <span className="mt-1 flex flex-wrap gap-x-3 text-[11px] text-muted-foreground" aria-hidden>
-                    {r.total === 0 ? <span>لا مشاريع بعد</span> : ORDER.filter((h) => r.counts[h] > 0).map((h) => (
-                      <span key={h}><span className={HEALTH[h].mark}>{HEALTH[h].symbol}</span> {r.counts[h]}</span>
-                    ))}
-                  </span>
-                </span>
-                <span className="flex items-center gap-2 text-xs">
-                  <span className="text-end">
-                    <span className="block font-mono tabular-nums">{formatCurrency(r.actual)}</span>
-                    <span className="block text-[10px] text-muted-foreground">{r.spendPct === null ? 'بلا موازنة' : `${Math.round(r.spendPct)}% من الموازنة`}</span>
-                  </span>
-                  <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" aria-hidden />
-                </span>
-              </Link>
-            </li>
-          );
-        })}
+        {rows.map((r) => <Row key={r.companyId} r={r} projects={projects.filter((p) => p.companyId === r.companyId)} />)}
       </ul>
     </section>
+  );
+}
+
+/**
+ * One company. Its books load on their own, so a company whose ledger is not
+ * live, or that the reader cannot see, keeps its health row without the line.
+ */
+function Row({ r, projects }: { r: CompanyHealthRow; projects: Input[] }) {
+  const ledger = useCompanyLedger(r.companyId).data;
+  const books = ledger ? buildCompanyMap(projects, ledger).company : null;
+  const label = ORDER.filter((h) => r.counts[h] > 0).map((h) => `${HEALTH[h].label} ${r.counts[h]}`).join('، ');
+  return (
+    <li>
+      <Link to={`/company/${r.companyId}`} aria-label={`${r.name}: ${r.total} مشروع${label ? `، ${label}` : ''}`}
+        className="group grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 rounded-lg px-1 py-2.5 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <span className="truncate text-sm font-medium">{r.name}</span>
+        <span className="min-w-0">
+          <span className="flex h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
+            {ORDER.map((h) => r.counts[h] > 0 && <span key={h} className={BAR[h]} style={{ width: `${(r.counts[h] / r.total) * 100}%` }} />)}
+          </span>
+          <span className="mt-1 flex flex-wrap gap-x-3 text-[11px] text-muted-foreground" aria-hidden>
+            {r.total === 0 ? <span>لا مشاريع بعد</span> : ORDER.filter((h) => r.counts[h] > 0).map((h) => (
+              <span key={h}><span className={HEALTH[h].mark}>{HEALTH[h].symbol}</span> {r.counts[h]}</span>
+            ))}
+          </span>
+          {books && (books.fundedOut > 0 || books.charged > 0 || books.owedToCompany > 0) && (
+            <span className="mt-0.5 block text-[11px] text-muted-foreground">
+              أرسلت للمشاريع {formatCurrency(books.fundedOut + books.charged)} · عاد {formatCurrency(books.returned)}
+              {books.owedToCompany > 0.005 && <> · لها عليها <b className="font-mono font-medium text-foreground">{formatCurrency(books.owedToCompany)}</b></>}
+            </span>
+          )}
+        </span>
+        <span className="flex items-center gap-2 text-xs">
+          <span className="text-end">
+            <span className="block font-mono tabular-nums">{formatCurrency(r.actual)}</span>
+            <span className="block text-[10px] text-muted-foreground">{r.spendPct === null ? 'بلا موازنة' : `${Math.round(r.spendPct)}% من الموازنة`}</span>
+          </span>
+          <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" aria-hidden />
+        </span>
+      </Link>
+    </li>
   );
 }
