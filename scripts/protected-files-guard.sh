@@ -56,6 +56,7 @@ need_file scripts/function-auth-guard.sh
 need_file SECURITY.md
 need_file src/lib/finance/company-map.ts
 need_file src/components/dashboard/CompaniesOverview.tsx
+need_file src/pages/portfolio/PortfolioHealth.tsx
 need_file src/components/dashboard/__tests__/CompaniesOverview.test.tsx
 need_file e2e/companies-overview.spec.ts
 need_file src/lib/finance/__tests__/company-map.test.ts
