@@ -125,6 +125,10 @@ does not happen again.
      `e2e/company-map.spec.ts`. Its figures come only from `buildCompanyMap`.
    - «المنظومات» on the dashboard: `src/components/dashboard/CompaniesOverview.tsx`,
      `e2e/companies-overview.spec.ts`. Health comes only from `healthOf`.
+   - «القوائم المالية»: `src/lib/finance/statements.ts`,
+     `src/pages/financial-overview/StatementsPanel.tsx`, `e2e/statements.spec.ts`.
+     Income is by invoice date, cash by the day it moved; the company's own
+     cost leaves out shares a project already paid (`companyOwnCost`).
    - Company totals count every project once, by its `companyId`
      (`getCompanySummary` in `src/lib/portfolio.ts`); the company-books
      rules in `src/lib/finance/integrity.ts` stay.

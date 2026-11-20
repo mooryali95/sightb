@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { cashFlowStatement, incomeStatement, monthsOf, receivablesAging } from '../statements';
+import { cashFlowStatement, companyOwnCost, incomeStatement, monthsOf, obligations, partyCash, receivablesAging } from '../statements';
+import type { IntercompanyEntry } from '../company-ledger';
+import type { Commitment } from '@/types/project';
 import type { Expense, Revenue } from '@/types/project';
 
 const rev = (id: string, projectId: string, amount: number, status: Revenue['status'], over: Partial<Revenue> = {}) =>
@@ -22,7 +24,7 @@ const expenses = [
 
 describe('incomeStatement', () => {
   it('bills by invoice date, costs the counted expenses dated in the period, and nets the company and indirect costs', () => {
-    const s = incomeStatement({ revenues, expenses, companyExpenses: [{ date: '2026-02-01', amount: 10000 }, { date: '2025-12-01', amount: 99 }], indirect: 5000 }, Q1);
+    const s = incomeStatement({ revenues, expenses, companyExpenses: [{ date: '2026-02-01', amount: 10000 }, { date: '2025-12-01', amount: 99 }], indirect: [{ date: '2026-03-31', amount: 5000 }, { date: '2026-04-01', amount: 77 }] }, Q1);
     expect(s).toEqual({ revenue: 140000, directCost: 50000, grossProfit: 90000, grossMargin: 64.29, companyCost: 10000, indirectCost: 5000, netProfit: 75000, netMargin: 53.57 });
   });
 
@@ -66,5 +68,30 @@ describe('receivablesAging', () => {
       { bucket: '61-90', amount: 0, count: 0 },
       { bucket: '90+', amount: 60000, count: 1 },
     ]);
+  });
+});
+
+describe('the company edge', () => {
+  it('leaves out of the company cost the share a project already paid itself', () => {
+    const e = { id: 'x', companyId: 'c', date: '2026-02-01', amount: 1000, description: '', kind: 'salary' as const, partyId: null, paidByPartyId: null };
+    expect(companyOwnCost([e], [
+      { id: '1', expenseId: 'x', projectId: 'A', amount: 300, settledInProject: true },
+      { id: '2', expenseId: 'x', projectId: 'B', amount: 200 },
+    ])).toEqual([{ date: '2026-02-01', amount: 700 }]);
+  });
+
+  it('counts cash from and to parties, and not what moves between the company and its projects', () => {
+    const mv = (from: IntercompanyEntry['from'], to: IntercompanyEntry['to'], amount: number) =>
+      ({ id: `${amount}`, companyId: 'c', date: '2026-01-05', amount, type: 'advance', from, to, note: '', dueDate: null, salaryExpenseId: null }) as IntercompanyEntry;
+    const C = { kind: 'company' as const, id: null }, L = { kind: 'party' as const, id: 'l' }, P = { kind: 'project' as const, id: 'A' };
+    const cash = partyCash([mv(L, C, 500), mv(C, P, 400), mv(P, L, 100), mv(L, P, 50)]);
+    expect(cash.in.map((x) => x.amount)).toEqual([500, 50]);
+    expect(cash.out.map((x) => x.amount)).toEqual([100]);
+  });
+
+  it('sums the advances still out and the contracted work not yet paid', () => {
+    const c = (totalAmount: number, spentAmount: number, status = 'active') => ({ id: `${totalAmount}`, projectId: 'A', description: '', totalAmount, spentAmount, status, createdAt: '' }) as Commitment;
+    expect(obligations(expenses, [c(10000, 4000), c(500, 500), c(900, 0, 'cancelled')]))
+      .toEqual({ advances: 7000, advanceCount: 1, commitments: 6000, commitmentCount: 1 });
   });
 });

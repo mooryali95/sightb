@@ -14,12 +14,15 @@
  * sums: the reconciliation test pins it.
  */
 import { getBilledRevenue, getCollectedRevenue, getCountedExpenses, getOutstandingInvoiced } from './summary';
-import type { Expense, Revenue } from '@/types/project';
+import type { CompanyExpense, ExpenseAllocation, IntercompanyEntry } from './company-ledger';
+import type { Commitment, Expense, Revenue } from '@/types/project';
 
 export interface Period { from: string; to: string }
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const within = (d: string | undefined, p: Period) => !!d && d >= p.from && d <= p.to;
 const billedOn = (r: Revenue) => r.invoiceDate || r.date;
+
+export interface Dated { date: string; amount: number }
 
 export interface IncomeStatement {
   revenue: number;
@@ -36,13 +39,13 @@ export interface IncomeStatement {
 
 export function incomeStatement(input: {
   revenues: Revenue[]; expenses: Expense[];
-  companyExpenses?: { date: string; amount: number }[];
-  indirect?: number;
+  companyExpenses?: Dated[];
+  indirect?: Dated[];
 }, period: Period): IncomeStatement {
   const revenue = r2(getBilledRevenue(input.revenues.filter((r) => within(billedOn(r), period))));
   const directCost = r2(getCountedExpenses(input.expenses).filter((e) => within(e.date, period)).reduce((s, e) => s + e.amount, 0));
   const companyCost = r2((input.companyExpenses ?? []).filter((e) => within(e.date, period)).reduce((s, e) => s + e.amount, 0));
-  const indirectCost = r2(input.indirect ?? 0);
+  const indirectCost = r2((input.indirect ?? []).filter((e) => within(e.date, period)).reduce((s, e) => s + e.amount, 0));
   const grossProfit = r2(revenue - directCost);
   const netProfit = r2(grossProfit - companyCost - indirectCost);
   const pct = (n: number) => (revenue > 0 ? r2((n / revenue) * 100) : null);
@@ -66,8 +69,8 @@ export function monthsOf(p: Period): string[] {
 export function cashFlowStatement(input: {
   revenues: Revenue[]; expenses: Expense[];
   /** Cash in from outside the scope's operations (funding, loans), dated. */
-  otherIn?: { date: string; amount: number }[];
-  otherOut?: { date: string; amount: number }[];
+  otherIn?: Dated[];
+  otherOut?: Dated[];
   opening?: number;
 }, period: Period): CashMonth[] {
   let balance = input.opening ?? 0;
@@ -95,4 +98,53 @@ export function receivablesAging(revenues: Revenue[], today: string): { bucket: 
     const rows = open.filter((r) => bucketOf(days(billedOn(r))) === bucket);
     return { bucket, amount: r2(getOutstandingInvoiced(rows)), count: rows.length };
   });
+}
+
+/**
+ * The company's own cost, dated: each company expense less the shares a
+ * project already paid from its own spend (settledInProject). Those are in
+ * the projects' direct cost, so counting them here too would count them twice.
+ */
+export function companyOwnCost(expenses: CompanyExpense[], allocations: ExpenseAllocation[]): Dated[] {
+  return expenses.map((e) => ({
+    date: e.date,
+    amount: r2(e.amount - allocations.filter((a) => a.expenseId === e.id && a.settledInProject).reduce((s, a) => s + a.amount, 0)),
+  }));
+}
+
+/**
+ * Cash that crossed the company's edge through its ledger: anything from a
+ * party (a loan in, a repayment in) and anything to a party. Movements
+ * between the company and its projects stay inside, so they are left out.
+ */
+export function partyCash(entries: IntercompanyEntry[]): { in: Dated[]; out: Dated[] } {
+  return {
+    in: entries.filter((e) => e.from.kind === 'party' && e.to.kind !== 'party').map((e) => ({ date: e.date, amount: e.amount })),
+    out: entries.filter((e) => e.to.kind === 'party' && e.from.kind !== 'party').map((e) => ({ date: e.date, amount: e.amount })),
+  };
+}
+
+/** What is still out or promised: advances not yet settled, and contracted work not yet paid. */
+export function obligations(expenses: Expense[], commitments: Commitment[]): { advances: number; advanceCount: number; commitments: number; commitmentCount: number } {
+  const adv = expenses.filter((e) => e.isOutstandingAdvance && e.approvalStatus !== 'rejected');
+  const open = commitments.filter((c) => c.status === 'active' && c.totalAmount > c.spentAmount);
+  return {
+    advances: r2(adv.reduce((s, e) => s + e.amount, 0)), advanceCount: adv.length,
+    commitments: r2(open.reduce((s, c) => s + (c.totalAmount - c.spentAmount), 0)), commitmentCount: open.length,
+  };
+}
+
+/** The period presets of the statements screen, ending today. */
+export type Span = 'ytd' | 'quarter' | 'month' | '12m';
+
+export function periodOf(span: Span, today: string): Period {
+  const [y, m] = today.split('-').map(Number);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  if (span === 'month') return { from: `${y}-${pad(m)}-01`, to: today };
+  if (span === 'quarter') return { from: `${y}-${pad(Math.floor((m - 1) / 3) * 3 + 1)}-01`, to: today };
+  if (span === '12m') {
+    const start = new Date(Date.UTC(y, m - 12, 1));
+    return { from: `${start.getUTCFullYear()}-${pad(start.getUTCMonth() + 1)}-01`, to: today };
+  }
+  return { from: `${y}-01-01`, to: today };
 }

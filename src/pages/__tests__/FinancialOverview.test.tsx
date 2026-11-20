@@ -11,6 +11,7 @@ import type { BudgetItem, Company, Expense, Project } from '@/types/project';
 import FinancialOverview from '../FinancialOverview';
 
 vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => undefined, useDetailsData: () => undefined }));
+vi.mock('@/hooks/useCompanyLedger', () => ({ useCompanyLedger: () => ({ data: undefined }) }));
 vi.mock('@/components/AppLayout', () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 
 const project = (over: Partial<Project>): Project => ({
