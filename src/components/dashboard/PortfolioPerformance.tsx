@@ -3,6 +3,7 @@ import { getPortfolioSummary } from '@/lib/portfolio';
 import { HEALTH_STATUS_LABELS, HEALTH_STATUS_COLORS } from '@/types/project';
 import { FolderKanban } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { LifetimeNote } from './LifetimeNote';
 import type {
   BudgetItem, ChangeOrder, Company, Expense, Milestone, Portfolio, Project, Revenue, Risk,
 } from '@/types/project';
@@ -17,10 +18,11 @@ interface PortfolioPerformanceProps {
   changeOrders: ChangeOrder[];
   milestones: Milestone[];
   risks: Risk[];
+  timePeriod?: string;
 }
 
 export function PortfolioPerformance({
-  portfolios, companies, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks,
+  portfolios, companies, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks, timePeriod,
 }: PortfolioPerformanceProps) {
   const navigate = useNavigate();
   const activePortfolios = portfolios.filter(p => {
@@ -34,6 +36,7 @@ export function PortfolioPerformance({
   return (
     <div className="mb-8 animate-fade-in">
       <h3 className="text-sm font-semibold mb-3">أداء المحافظ</h3>
+      <LifetimeNote timePeriod={timePeriod} className="-mt-2 mb-3" />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {activePortfolios.map(portfolio => {
           const ps = getPortfolioSummary(portfolio, projects, budgetItems, expenses, revenues, changeOrders, milestones, risks);

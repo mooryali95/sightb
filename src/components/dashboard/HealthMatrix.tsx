@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import type { BudgetItem, ChangeOrder, Expense, Project, Revenue } from '@/types/project';
 import { STATUS } from '@/lib/chart-colors';
+import { LifetimeNote } from './LifetimeNote';
 
 interface HealthMatrixProps {
   filteredProjects: Project[];
@@ -12,9 +13,10 @@ interface HealthMatrixProps {
   budgetItems: BudgetItem[];
   revenues: Revenue[];
   changeOrders: ChangeOrder[];
+  timePeriod?: string;
 }
 
-export function HealthMatrix({ filteredProjects, expenses, budgetItems, revenues, changeOrders }: HealthMatrixProps) {
+export function HealthMatrix({ filteredProjects, expenses, budgetItems, revenues, changeOrders, timePeriod }: HealthMatrixProps) {
   const healthData = filteredProjects.map(p => {
     const pExp = expenses.filter((e) => e.projectId === p.id);
     const pBud = budgetItems.filter((b) => b.projectId === p.id);
@@ -37,6 +39,7 @@ export function HealthMatrix({ filteredProjects, expenses, budgetItems, revenues
     <div className="stat-card mb-8 animate-fade-in">
       <h3 className="text-sm font-semibold mb-1">مصفوفة صحة المشاريع</h3>
       <p className="text-xs text-muted-foreground mb-4">المحور الأفقي: نسبة الصرف — المحور الرأسي: نسبة الإنجاز</p>
+      <LifetimeNote timePeriod={timePeriod} className="-mt-3 mb-4" />
       <ResponsiveContainer width="100%" height={300}>
         <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />

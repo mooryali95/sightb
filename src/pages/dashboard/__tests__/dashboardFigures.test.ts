@@ -154,6 +154,36 @@ describe('dashboardFigures', () => {
   });
 });
 
+describe('what stands beside the projects follows the same filters', () => {
+  const pfs = [one<Portfolio>({ id: 'pf1', companyId: 'c1' }), one<Portfolio>({ id: 'pf2', companyId: 'c1' }), one<Portfolio>({ id: 'pf3', companyId: 'c2' })];
+  const input = {
+    companies, portfolios: pfs, projects, budgetItems: [], expenses: [], revenues: [], changeOrders: [], milestones: [],
+    risks: [
+      one<Risk>({ id: 'k-p1', projectId: 'p1' }), one<Risk>({ id: 'k-pf1', portfolioId: 'pf1' }), one<Risk>({ id: 'k-pf2', portfolioId: 'pf2' }),
+      one<Risk>({ id: 'k-pf3', portfolioId: 'pf3' }), one<Risk>({ id: 'k-gone', portfolioId: 'deleted' }), one<Risk>({ id: 'k-free' }),
+    ],
+  };
+  const ids = (f: ReturnType<typeof dashboardFigures>) => f.filteredRisks.map((r) => r.id);
+
+  it('keeps a portfolio\'s risk with its company and its portfolio, and leaves it alone under status and search', () => {
+    // c2 is archived: its portfolio's risk is hidden with its projects until c2 is chosen.
+    expect(ids(dashboardFigures(input, filters(), NOW))).toEqual(['k-p1', 'k-pf1', 'k-pf2', 'k-gone', 'k-free']);
+    expect(ids(dashboardFigures(input, filters({ filterCompany: 'c2' }), NOW))).toEqual(['k-pf3', 'k-gone', 'k-free']);
+    expect(ids(dashboardFigures(input, filters({ filterPortfolio: 'pf2' }), NOW))).toEqual(['k-pf2', 'k-gone', 'k-free']);
+    expect(ids(dashboardFigures(input, filters({ filterPortfolio: 'standalone', showInactive: true }), NOW))).toEqual(['k-gone', 'k-free']);
+    expect(ids(dashboardFigures(input, filters({ searchQuery: 'لا شيء' }), NOW))).toEqual(['k-pf1', 'k-pf2', 'k-gone', 'k-free']);
+  });
+
+  it('counts every live company and every portfolio unfiltered, and only those of the visible projects once narrowed', () => {
+    expect(dashboardFigures(input, filters(), NOW)).toMatchObject({ companiesInView: 1, archivedCompaniesInView: 1, portfoliosInView: 3 });
+    // Showing finished projects widens the list; it is not a narrowing.
+    expect(dashboardFigures(input, filters({ showInactive: true }), NOW)).toMatchObject({ companiesInView: 1, archivedCompaniesInView: 1, portfoliosInView: 3 });
+    expect(dashboardFigures(input, filters({ filterCompany: 'c2' }), NOW)).toMatchObject({ companiesInView: 1, archivedCompaniesInView: 0, portfoliosInView: 0 });
+    expect(dashboardFigures(input, filters({ searchQuery: 'الرياض' }), NOW)).toMatchObject({ companiesInView: 1, archivedCompaniesInView: 0, portfoliosInView: 1 });
+    expect(dashboardFigures(input, filters({ searchQuery: 'لا شيء' }), NOW)).toMatchObject({ companiesInView: 0, portfoliosInView: 0 });
+  });
+});
+
 describe('filters beyond the company', () => {
   const portfolios = [one<Portfolio>({ id: 'pf1', companyId: 'c1', name: 'المحفظة السكنية' })];
   it('narrows to a portfolio or to standalone projects', () => {

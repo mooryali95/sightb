@@ -147,8 +147,32 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   const cashDate = (r: Revenue) => r.collectionDate || r.date;
   const filteredChangeOrders = changeOrders.filter((co) => visibleProjectIds.has(co.projectId));
   const filteredMilestones = milestones.filter((m) => visibleProjectIds.has(m.projectId));
-  const filteredRisks = risks.filter((r) => !r.projectId || visibleProjectIds.has(r.projectId));
   const filteredPortfolios = portfolios.filter((portfolio) => filteredProjects.some((project) => project.portfolioId === portfolio.id));
+
+  // A project's risk follows its project. A portfolio's risk follows the
+  // company and portfolio filters, which are the portfolio's own attributes;
+  // status and search describe projects, so they leave it in place. Before
+  // 20 November every risk without a project showed under any filter, so a
+  // chosen company listed another company's portfolio risks.
+  const pfFilter = f.filterPortfolio ?? 'all';
+  const portfolioInScope = (id: string) => {
+    const row = portfolios.find((p) => p.id === id);
+    if (!row) return true;
+    if (pfFilter === 'standalone' || (pfFilter !== 'all' && row.id !== pfFilter)) return false;
+    if (f.filterCompany !== 'all') return row.companyId === f.filterCompany;
+    return companies.find((c) => c.id === row.companyId)?.status !== 'archived';
+  };
+  const filteredRisks = risks.filter((r) => (r.projectId ? visibleProjectIds.has(r.projectId) : r.portfolioId ? portfolioInScope(r.portfolioId) : true));
+
+  // The companies and portfolios the project count stands beside. Unfiltered,
+  // every live company and every portfolio, as before; once a filter narrows
+  // the projects, only the ones those projects belong to.
+  const narrowed = f.filterCompany !== 'all' || pfFilter !== 'all' || f.filterStatus !== 'all' || f.searchQuery.trim() !== '';
+  const companiesInView = narrowed
+    ? new Set(filteredProjects.map((p) => p.companyId)).size
+    : companies.filter((c) => c.status !== 'archived').length;
+  const archivedCompaniesInView = narrowed ? 0 : companies.filter((c) => c.status === 'archived').length;
+  const portfoliosInView = narrowed ? filteredPortfolios.length : portfolios.length;
 
   // Stats
   const totalContractValue = filteredProjects.reduce((s, p) => s + p.contractValue, 0);
@@ -202,6 +226,7 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
     totalContractValue, totalExpenses, approvedChangeImpact, effectiveTotalContract, plannedProfit, plannedProfitMargin,
     collectedRevenue, expenseChange, revenueChange, attentionProjectsCount, companyData, statusData,
     netCash, receivables, indirectTotal, netPlannedProfit, netPlannedMargin,
+    companiesInView, archivedCompaniesInView, portfoliosInView,
   };
 }
 

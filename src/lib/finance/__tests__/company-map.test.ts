@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCompanyMap, healthOf, type MapProjectInput } from '../company-map';
+import { buildCompanyMap, healthOf, projectFlows, type MapProjectInput } from '../company-map';
 import type { CompanyExpense, ExpenseAllocation, IntercompanyEntry } from '../company-ledger';
 
 const p = (id: string, over: Partial<MapProjectInput> = {}): MapProjectInput => ({
@@ -46,6 +46,14 @@ describe('buildCompanyMap', () => {
     expect(map.company).toMatchObject({ ownSpend: 13000, charged: 6000, retained: 7000, fundedOut: 50000, returned: 15000, owedToCompany: 35000 });
     expect(map.split).toEqual({ companyOnly: 7000, between: 56000, projectOnly: 60000 });
     expect(map.company.charged + map.company.retained).toBe(map.company.ownSpend);
+  });
+
+  it('sums the flows of the projects it is handed, so a filtered list gives the filtered flows', () => {
+    expect(projectFlows(map.projects)).toEqual({ sent: 56000, returned: 15000, owed: 35000 });
+    expect(projectFlows(map.projects.filter((q) => q.id === 'y'))).toEqual({ sent: 10000, returned: 0, owed: 10000 });
+    expect(projectFlows([])).toEqual({ sent: 0, returned: 0, owed: 0 });
+    // A project the company owes does not cancel what another owes it.
+    expect(projectFlows([map.projects[0], { ...map.projects[1], owes: -4000 }]).owed).toBe(25000);
   });
 
   it('groups projects by portfolio in the order they come', () => {

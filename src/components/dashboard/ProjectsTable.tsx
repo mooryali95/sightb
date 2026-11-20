@@ -7,6 +7,7 @@ import { ArrowLeft, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { LifetimeNote } from './LifetimeNote';
 
 interface ProjectsTableProps {
   filteredProjects: Project[];
@@ -17,11 +18,12 @@ interface ProjectsTableProps {
   companies: Company[];
   hasActiveFilters: boolean;
   clearFilters: () => void;
+  timePeriod?: string;
 }
 
 export function ProjectsTable({
   filteredProjects, expenses, budgetItems, revenues, changeOrders, companies,
-  hasActiveFilters, clearFilters,
+  hasActiveFilters, clearFilters, timePeriod,
 }: ProjectsTableProps) {
   const navigate = useNavigate();
 
@@ -30,6 +32,7 @@ export function ProjectsTable({
       <h3 className="text-sm font-semibold mb-4">
         {hasActiveFilters ? `المشاريع المصفاة (${filteredProjects.length})` : 'جميع المشاريع'}
       </h3>
+      <LifetimeNote timePeriod={timePeriod} className="-mt-3 mb-4" />
       <div className="overflow-x-auto">
         <table className="data-table">
           <thead>

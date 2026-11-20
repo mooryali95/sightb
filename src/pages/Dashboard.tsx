@@ -77,6 +77,7 @@ export default function Dashboard() {
     totalContractValue, totalExpenses, approvedChangeImpact, effectiveTotalContract, plannedProfit, plannedProfitMargin,
     collectedRevenue, expenseChange, revenueChange, attentionProjectsCount, companyData, statusData,
     netCash, receivables, indirectTotal, netPlannedProfit, netPlannedMargin,
+    companiesInView, archivedCompaniesInView, portfoliosInView,
   } = figures;
 
   const hasActiveFilters = active.length > 0;
@@ -155,9 +156,9 @@ export default function Dashboard() {
               plannedProfitMargin={plannedProfitMargin} collectedRevenue={collectedRevenue}
               revenueChange={revenueChange} timePeriod={timePeriod}
               filteredProjectsCount={filteredProjects.length}
-              activeCompaniesCount={activeCompanies.length}
-              archivedCompaniesCount={archivedCompanies.length}
-              portfoliosCount={portfolios.length}
+              activeCompaniesCount={companiesInView}
+              archivedCompaniesCount={archivedCompaniesInView}
+              portfoliosCount={portfoliosInView}
             />
 
             <FinancialBrief
@@ -166,12 +167,12 @@ export default function Dashboard() {
               attentionCount={attentionProjectsCount} timePeriod={timePeriod}
             />
 
-            <CompaniesOverview rows={overview} projects={overviewProjects} />
+            <CompaniesOverview rows={overview} projects={overviewProjects} timePeriod={timePeriod} />
 
             <AttentionProjects
               filteredProjects={filteredProjects} expenses={filteredAllExpenses}
               budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
-              risks={risks} projects={projects} portfolios={portfolios}
+              risks={filteredRisks} projects={projects} portfolios={portfolios} timePeriod={timePeriod}
             />
 
             {(companyData.length > 0 || statusData.length > 0) && (
@@ -182,7 +183,7 @@ export default function Dashboard() {
               <PortfolioPerformance
                 portfolios={filteredPortfolios} companies={companies} projects={filteredProjects}
                 budgetItems={filteredBudgetItems} expenses={filteredAllExpenses} revenues={filteredAllRevenues}
-                changeOrders={filteredChangeOrders} milestones={filteredMilestones} risks={filteredRisks}
+                changeOrders={filteredChangeOrders} milestones={filteredMilestones} risks={filteredRisks} timePeriod={timePeriod}
               />
             </DeferUntilVisible>
 
@@ -191,6 +192,7 @@ export default function Dashboard() {
                 <HealthMatrix
                   filteredProjects={filteredProjects} expenses={filteredAllExpenses}
                   budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
+                  timePeriod={timePeriod}
                 />
               </DeferUntilVisible>
             )}
@@ -206,7 +208,7 @@ export default function Dashboard() {
               <ProjectCards
                 filteredProjects={filteredProjects} expenses={filteredAllExpenses}
                 budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
-                companies={companies}
+                companies={companies} timePeriod={timePeriod}
               />
             </DeferUntilVisible>
 
@@ -214,7 +216,7 @@ export default function Dashboard() {
               <ProjectsTable
                 filteredProjects={filteredProjects} expenses={filteredAllExpenses}
                 budgetItems={filteredBudgetItems} revenues={filteredAllRevenues} changeOrders={filteredChangeOrders}
-                companies={companies} hasActiveFilters={hasActiveFilters} clearFilters={clearFilters}
+                companies={companies} hasActiveFilters={hasActiveFilters} clearFilters={clearFilters} timePeriod={timePeriod}
               />
             </DeferUntilVisible>
 

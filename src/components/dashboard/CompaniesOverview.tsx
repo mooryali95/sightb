@@ -6,15 +6,16 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Network } from 'lucide-react';
 import { formatCurrency } from '@/lib/finance';
-import { buildCompanyMap, HEALTH, type CompanyHealthRow, type MapHealth, type MapProjectInput } from '@/lib/finance/company-map';
+import { buildCompanyMap, projectFlows, HEALTH, type CompanyHealthRow, type MapHealth, type MapProjectInput } from '@/lib/finance/company-map';
 import { useCompanyLedger } from '@/hooks/useCompanyLedger';
+import { LifetimeNote } from './LifetimeNote';
 
 const ORDER: MapHealth[] = ['bad', 'warn', 'good', 'idle'];
 const BAR: Record<MapHealth, string> = { bad: 'bg-destructive', warn: 'bg-warning', good: 'bg-success', idle: 'bg-muted-foreground/30' };
 
 type Input = MapProjectInput & { companyId: string };
 
-export function CompaniesOverview({ rows, projects = [] }: { rows: CompanyHealthRow[]; projects?: Input[] }) {
+export function CompaniesOverview({ rows, projects = [], timePeriod }: { rows: CompanyHealthRow[]; projects?: Input[]; timePeriod?: string }) {
   if (rows.length < 2) return null; // one company: its own page says it better
   return (
     <section aria-label="المنظومات" className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -24,6 +25,7 @@ export function CompaniesOverview({ rows, projects = [] }: { rows: CompanyHealth
           {ORDER.map((h) => <li key={h}><span className={HEALTH[h].mark} aria-hidden>{HEALTH[h].symbol}</span> {HEALTH[h].label}</li>)}
         </ul>
       </header>
+      <LifetimeNote timePeriod={timePeriod} className="mb-2" />
       <ul className="divide-y divide-border">
         {rows.map((r) => <Row key={r.companyId} r={r} projects={projects.filter((p) => p.companyId === r.companyId)} />)}
       </ul>
@@ -34,10 +36,13 @@ export function CompaniesOverview({ rows, projects = [] }: { rows: CompanyHealth
 /**
  * One company. Its books load on their own, so a company whose ledger is not
  * live, or that the reader cannot see, keeps its health row without the line.
+ * The line counts the projects on screen only: what was sent to them, what
+ * they returned and what they still owe, so it follows the filters like the
+ * health counts beside it.
  */
 function Row({ r, projects }: { r: CompanyHealthRow; projects: Input[] }) {
   const ledger = useCompanyLedger(r.companyId).data;
-  const books = ledger ? buildCompanyMap(projects, ledger).company : null;
+  const books = ledger ? projectFlows(buildCompanyMap(projects, ledger).projects) : null;
   const label = ORDER.filter((h) => r.counts[h] > 0).map((h) => `${HEALTH[h].label} ${r.counts[h]}`).join('، ');
   return (
     <li>
@@ -53,10 +58,10 @@ function Row({ r, projects }: { r: CompanyHealthRow; projects: Input[] }) {
               <span key={h}><span className={HEALTH[h].mark}>{HEALTH[h].symbol}</span> {r.counts[h]}</span>
             ))}
           </span>
-          {books && (books.fundedOut > 0 || books.charged > 0 || books.owedToCompany > 0) && (
+          {books && (books.sent > 0 || books.owed > 0) && (
             <span className="mt-0.5 block text-[11px] text-muted-foreground">
-              أرسلت للمشاريع {formatCurrency(books.fundedOut + books.charged)} · عاد {formatCurrency(books.returned)}
-              {books.owedToCompany > 0.005 && <> · لها عليها <b className="font-mono font-medium text-foreground">{formatCurrency(books.owedToCompany)}</b></>}
+              أرسلت للمشاريع {formatCurrency(books.sent)} · عاد {formatCurrency(books.returned)}
+              {books.owed > 0.005 && <> · لها عليها <b className="font-mono font-medium text-foreground">{formatCurrency(books.owed)}</b></>}
             </span>
           )}
         </span>

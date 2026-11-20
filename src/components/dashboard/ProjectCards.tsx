@@ -4,6 +4,7 @@ import type {
   Project, Expense, BudgetItem, Revenue, ChangeOrder, Company,
 } from '@/types/project';
 import { useNavigate } from 'react-router-dom';
+import { LifetimeNote } from './LifetimeNote';
 
 interface ProjectCardsProps {
   filteredProjects: Project[];
@@ -12,14 +13,17 @@ interface ProjectCardsProps {
   revenues: Revenue[];
   changeOrders: ChangeOrder[];
   companies: Company[];
+  timePeriod?: string;
 }
 
-export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues, changeOrders, companies }: ProjectCardsProps) {
+export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues, changeOrders, companies, timePeriod }: ProjectCardsProps) {
   const navigate = useNavigate();
 
   if (filteredProjects.length === 0) return null;
 
   return (
+    <>
+    <LifetimeNote timePeriod={timePeriod} className="mb-2" />
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8 animate-fade-in">
       {filteredProjects.slice(0, 6).map((project) => {
         const pExpenses = expenses.filter((e) => e.projectId === project.id);
@@ -103,5 +107,6 @@ export function ProjectCards({ filteredProjects, expenses, budgetItems, revenues
         );
       })}
     </div>
+    </>
   );
 }

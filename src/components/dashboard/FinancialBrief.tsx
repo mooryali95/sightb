@@ -52,7 +52,7 @@ export function FinancialBrief({ netCash, receivables, plannedProfit, indirectTo
           <div className="grid grid-cols-2">
             <Figure icon={<Wallet className="w-3.5 h-3.5" />} label="صافي النقد" value={formatCurrency(netCash)} tone={netCash >= 0 ? 'good' : 'bad'}
               formula="الإيرادات المحصّلة (بتاريخ التحصيل) − المصروفات المحتسبة، للمشاريع الظاهرة وفي الفترة المحددة." />
-            <Figure icon={<Receipt className="w-3.5 h-3.5" />} label="مستحق على العملاء" value={formatCurrency(receivables)}
+            <Figure icon={<Receipt className="w-3.5 h-3.5" />} label={timePeriod === 'all' ? 'مستحق على العملاء' : 'مستحق على العملاء (الآن، لا للفترة)'} value={formatCurrency(receivables)}
               formula="دفعات فُوترت ولم تُحصَّل بعد. رصيد قائم الآن، لا يتغيّر مع فلتر الفترة." />
           </div>
         </div>

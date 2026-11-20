@@ -102,6 +102,17 @@ export function buildCompanyMap(
   };
 }
 
+/**
+ * What passed between the company and the projects given: sent to them
+ * (funding and charges), returned by them, and what they still owe it. Read
+ * off the map's own rows, so a filtered list gives the filtered flows.
+ */
+export function projectFlows(projects: MapProject[]): { sent: number; returned: number; owed: number } {
+  let sent = 0, returned = 0, owed = 0;
+  for (const p of projects) { sent += p.funded + p.charged; returned += p.returned; owed += Math.max(p.owes, 0); }
+  return { sent: r2(sent), returned: r2(returned), owed: r2(owed) };
+}
+
 // The label is in the body colour so it always reads; the colour rides on
 // the symbol and the border, and the symbol alone carries the meaning.
 export const HEALTH: Record<MapHealth, { symbol: string; label: string; tone: string; mark: string }> = {

@@ -27,6 +27,9 @@ export function DashboardStats(props: DashboardStatsProps) {
     collectedRevenue, revenueChange, timePeriod, filteredProjectsCount,
     activeCompaniesCount, archivedCompaniesCount, portfoliosCount,
   } = props;
+  // The contract and the planned profit are not dated: with a period chosen
+  // the cards beside them narrow and these two say, in view, that they do not.
+  const cumulative = timePeriod === 'all' ? '' : ' · تراكمي، لا يتبع الفترة';
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 animate-fade-in">
@@ -37,9 +40,9 @@ export function DashboardStats(props: DashboardStatsProps) {
           title="قيمة العقود الفعّالة"
           value={formatCurrency(effectiveTotalContract)}
           icon={<DollarSign className="w-5 h-5" />}
-          subtitle={approvedChangeImpact !== 0
+          subtitle={`${approvedChangeImpact !== 0
             ? `الأصلية: ${formatCurrency(totalContractValue)}`
-            : 'القيمة الفعّالة بعد أوامر التغيير'}
+            : 'القيمة الفعّالة بعد أوامر التغيير'}${cumulative}`}
           tooltip="مجموع العقود الأصلية + صافي أوامر التغيير المعتمدة للمشاريع الظاهرة. رقم تراكمي لا يتغير مع فلتر الفترة."
         />
       </div>
@@ -76,7 +79,7 @@ export function DashboardStats(props: DashboardStatsProps) {
           value={formatCurrency(plannedProfit)}
           icon={plannedProfit >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           trend={plannedProfit >= 0 ? 'up' : 'down'}
-          subtitle={`هامش: ${plannedProfitMargin.toFixed(1)}%`}
+          subtitle={`هامش: ${plannedProfitMargin.toFixed(1)}%${cumulative}`}
           tooltip="قيمة العقود الفعّالة − الموازنة المعتمدة. رقم مخطط تراكمي وليس الربح النقدي المحقق."
         />
       </div>
