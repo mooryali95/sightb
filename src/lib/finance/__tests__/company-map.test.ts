@@ -22,6 +22,7 @@ describe('healthOf', () => {
     expect(healthOf(p('a', { actual: 90000 }))).toBe('bad');           // past the budget
     expect(healthOf(p('a', { status: 'completed', actual: 90000 }))).toBe('idle');
     expect(healthOf(p('a', { planned: 0, actual: 0 }))).toBe('idle');
+    expect(healthOf(p('a', { planned: 0, actual: 250000 }))).toBe('warn');  // spending with no budget is not "on track"
     expect(healthOf(p('a', { status: 'on-hold', planned: 0, actual: 0 }))).toBe('warn');
   });
 });
@@ -43,8 +44,8 @@ describe('buildCompanyMap', () => {
   });
 
   it('says what belongs to the company, to both, and to the project, without counting anything twice', () => {
-    expect(map.company).toMatchObject({ ownSpend: 13000, charged: 6000, retained: 7000, fundedOut: 50000, returned: 15000, owedToCompany: 35000 });
-    expect(map.split).toEqual({ companyOnly: 7000, between: 56000, projectOnly: 60000 });
+    expect(map.company).toMatchObject({ ownSpend: 13000, charged: 6000, retained: 7000, fundedOut: 50000, returned: 15000, owedToCompany: 35000, owedByProjects: 35000 });
+    expect(map.split).toEqual({ companyOnly: 7000, between: 6000, projectOnly: 60000 });
     expect(map.company.charged + map.company.retained).toBe(map.company.ownSpend);
   });
 
@@ -62,6 +63,25 @@ describe('buildCompanyMap', () => {
     expect(withIds.projects.map((q) => q.sent)).toEqual([46000, 10000, 0]);
     expect(withIds.flowMax).toBe(56000);
     expect(buildCompanyMap([p('x')], null).flowMax).toBe(1); // never zero: it is divided by
+  });
+
+  it('counts each riyal spent once: funding is a transfer, and a share the project paid itself is not added again', () => {
+    // The company funds A with 100,000 and A spends exactly that: 100,000 of real money, not 200,000.
+    const funded = buildCompanyMap([p('A', { actual: 100000 })], { entries: [move('f', C, P('A'), 100000)], expenses: [], allocations: [] });
+    expect(funded.split).toEqual({ companyOnly: 0, between: 0, projectOnly: 100000 });
+    // A 1,000 company bill, 300 charged to A and paid by A from its own 20,000 spend: 1,000 + 20,000 − 300.
+    const settled = buildCompanyMap([p('A')], { entries: [], expenses: [exp('e', 1000)], allocations: [{ ...alloc('e', 'A', 300), settledInProject: true }] });
+    expect(settled.split).toEqual({ companyOnly: 700, between: 300, projectOnly: 19700 });
+    expect(settled.split.companyOnly + settled.split.between + settled.split.projectOnly).toBe(1000 + 20000 - 300);
+  });
+
+  it('keeps the company\'s own figures whole when the finished projects are hidden', () => {
+    const done = p('done', { status: 'completed', actual: 9000 });
+    const books = { entries: [move('f', C, P('done'), 50000)], expenses: [exp('e', 9000)], allocations: [alloc('e', 'done', 9000)] };
+    const view = buildCompanyMap([p('live')], books, [p('live'), done]);
+    expect(view.projects.map((q) => q.id)).toEqual(['live']);
+    expect(view.company).toMatchObject({ fundedOut: 50000, charged: 9000, owedToCompany: 50000, owedByProjects: 50000 });
+    expect(view.split.projectOnly).toBe(29000);            // both projects' spend
   });
 
   it('groups projects by portfolio in the order they come', () => {

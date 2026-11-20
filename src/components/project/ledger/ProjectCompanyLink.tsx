@@ -1,7 +1,7 @@
 /**
  * «علاقة المشروع بالمنظومة» on the project's overview: the same strip the
  * company map draws for this project, from the same function, so the two
- * pages always agree. It says what the project spent from its own funds,
+ * pages always agree. It says what the project spent directly,
  * what reached it from the company (funding and charged costs), what it
  * sent back, and what it still owes, with a way to the company map.
  */
@@ -38,7 +38,7 @@ export function ProjectCompanyLink({ project, companyId, companyName }: Props) {
         <div className="flex items-center gap-3">
           <SpendRing pct={p.spendPct} health={p.health} />
           <dl className="grid flex-1 grid-cols-3 gap-2 text-xs">
-            <Figure label="من دفعاته (للمشروع وحده)" value={p.actual} />
+            <Figure label="مصروفه المباشر" value={p.actual} />
             <Figure label="وصله من المنظومة" value={fromCompany} />
             <Figure label="عاد منه إليها" value={p.returned} />
           </dl>

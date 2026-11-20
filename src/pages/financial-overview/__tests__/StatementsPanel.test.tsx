@@ -4,7 +4,7 @@
  * with the company's own cost taken from its ledger.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { useStore, type AppState } from '@/store/useStore';
 import type { Commitment, Company, Expense, Project, Revenue } from '@/types/project';
@@ -24,6 +24,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-03-31T09:00:00'));
   ledger.value = { data: undefined };
   useStore.setState({
+    detailsLoaded: true, projectDataLoaded: new Set<string>(),
     companies: [{ id: 'c1', name: 'الأفق', status: 'active', createdAt: '' } as Company],
     projects: [{ id: 'A', companyId: 'c1', name: 'برج', currency: 'SAR', status: 'active' } as Project,
       { id: 'Z', companyId: 'other', name: 'غيره', currency: 'SAR', status: 'active' } as Project],
@@ -65,8 +66,8 @@ describe('StatementsPanel', () => {
     const rows = card('التدفق النقدي').getAllByRole('row');
     expect(rows[1]).toHaveTextContent('يناير 2026');
     expect(rows[1]).toHaveTextContent('▼ -30,000.00');
-    expect(rows[2]).toHaveTextContent('100,000.00');      // collected in February
-    expect(rows[3]).toHaveTextContent('70,000.00');       // running total through March
+    expect(rows[2]).toHaveTextContent('93,000.00');       // 100,000 collected in February, 7,000 handed out as an advance
+    expect(rows[3]).toHaveTextContent('63,000.00');       // running total through March
   });
 
   it('ages what is billed and unpaid, and totals the advances and commitments still open', () => {
@@ -101,6 +102,25 @@ describe('StatementsPanel for a set of projects', () => {
   it('draws nothing when none of the projects is there', () => {
     const { container } = render(<MemoryRouter><StatementsPanel only={{ companyId: 'c1', projectIds: [] }} /></MemoryRouter>);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('StatementsPanel while loading', () => {
+  it('states no figure until the data is in, then states them', () => {
+    useStore.setState({ detailsLoaded: false } as Partial<AppState>);
+    const { rerender } = show();
+    expect(screen.getByRole('region', { name: 'القوائم المالية' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('الإيراد المفوتر')).not.toBeInTheDocument();
+    act(() => useStore.setState({ detailsLoaded: true } as Partial<AppState>));
+    rerender(<MemoryRouter><StatementsPanel /><Where /></MemoryRouter>);
+    expect(screen.getByText('الإيراد المفوتر')).toBeInTheDocument();
+  });
+
+  it('waits for the ledger instead of calling it unavailable while it loads', () => {
+    ledger.value = { data: undefined, isLoading: true } as never;
+    show();
+    expect(screen.queryByText(/دفتر المنظومة غير متاح/)).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'القوائم المالية' })).toHaveAttribute('aria-busy', 'true');
   });
 });
 

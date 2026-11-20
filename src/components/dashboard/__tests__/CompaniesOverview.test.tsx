@@ -56,7 +56,7 @@ describe('CompaniesOverview', () => {
       { id: 'r', companyId: 'b', date: '2026-05-02', amount: 10000, type: 'repayment', from: { kind: 'project', id: 'b1' }, to: C, note: '', dueDate: null, salaryExpenseId: null },
     ] };
     show();
-    expect(screen.getByRole('link', { name: /^النماء:/ })).toHaveTextContent('أرسلت للمشاريع 30,000.00 ر.س · عاد 10,000.00 ر.س · لها عليها 20,000.00 ر.س');
+    expect(screen.getByRole('link', { name: /^النماء:/ })).toHaveTextContent('أرسلت للمشاريع 30,000.00 ر.س · عاد 10,000.00 ر.س · لها على المشاريع 20,000.00 ر.س');
     expect(screen.getByRole('link', { name: /^الأفق:/ })).not.toHaveTextContent('أرسلت للمشاريع');
   });
 });

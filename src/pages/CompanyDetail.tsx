@@ -135,8 +135,7 @@ export default function CompanyDetail() {
 
   // «خريطة المنظومة»: every live project with the figures its own page shows, grouped by portfolio.
   // Follows the page's «عرض المنتهية» toggle, like every other list here.
-  const mapProjects = useMemo<MapProjectInput[]>(() => companyProjects
-    .filter((p) => showInactive || !INACTIVE_STATUSES.includes(p.status))
+  const allMapProjects = useMemo<MapProjectInput[]>(() => companyProjects
     .map((p) => {
       const s = getProjectSummary(p,
         budgetItems.filter((b) => b.projectId === p.id), expenses.filter((e) => e.projectId === p.id),
@@ -147,7 +146,8 @@ export default function CompanyDetail() {
         groupId: portfolios.find((f) => f.id === p.portfolioId)?.id ?? null,
         contract: s.effectiveContractValue, planned: s.totalPlanned, actual: s.totalActual, collected: s.collectedRevenue,
       };
-    }), [companyProjects, showInactive, budgetItems, expenses, revenues, changeOrders, portfolios]);
+    }), [companyProjects, budgetItems, expenses, revenues, changeOrders, portfolios]);
+  const mapProjects = useMemo(() => allMapProjects.filter((p) => showInactive || !INACTIVE_STATUSES.includes(p.status)), [allMapProjects, showInactive]);
 
   const visibleCompanyProjects = useMemo(() => {
     if (showInactive) return companyProjects;
@@ -310,6 +310,7 @@ export default function CompanyDetail() {
           companyId={company.id}
           companyName={company.name}
           projects={mapProjects}
+          allProjects={allMapProjects}
           ledger={ledger.error instanceof LedgerNotReady ? 'not-ready' : ledger.data ?? (ledger.isError ? 'not-ready' : null)}
           loading={!detailsLoaded && mapProjects.length === 0}
           net={net?.net ?? null}

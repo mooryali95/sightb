@@ -87,7 +87,7 @@ describe('CompanyMap', () => {
   it('says what belongs to the company alone, to both, and to the projects alone', () => {
     renderMap();
     const band = screen.getByRole('img', { name: /للمنظومة وحدها/ });
-    expect(band).toHaveAccessibleName('للمنظومة وحدها 4,000.00 ر.س، بينهما 46,000.00 ر.س، للمشاريع وحدها 160,000.00 ر.س');
+    expect(band).toHaveAccessibleName('للمنظومة وحدها 4,000.00 ر.س، بينهما 6,000.00 ر.س، للمشاريع وحدها 160,000.00 ر.س');
   });
 
   it('still shows the projects, without flows, when the ledger is not live, and says why', () => {

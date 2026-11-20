@@ -7,9 +7,11 @@
  * What belongs where:
  *   - the company alone: its own spend that stayed on it (not charged), and
  *     what it owes people (loans, bills they paid);
- *   - between the two: funding the company sent a project, what it charged
- *     the project, and what the project sent back;
- *   - the project alone: its direct spend from its own funds.
+ *   - between the two: what the company charged its projects (a cost), and,
+ *     shown apart because it is a transfer and not a cost, the funding it
+ *     sent them and what they sent back;
+ *   - the projects alone: their direct spend, less the charged shares they
+ *     paid themselves, which are already counted as charged.
  */
 import { fundingByProject } from './loans';
 import { summarizeCompanyExpenses, balancesWithCompany, type CompanyExpense, type ExpenseAllocation, type IntercompanyEntry } from './company-ledger';
@@ -61,6 +63,8 @@ export interface CompanyMap {
     ownSpend: number; charged: number; retained: number;
     fundedOut: number; returned: number;
     owedToCompany: number; owedByCompany: number;
+    /** The part of owedToCompany that projects owe (the rest is people). */
+    owedByProjects: number;
   };
   /** The three columns of «what belongs to whom». */
   split: { companyOnly: number; between: number; projectOnly: number };
@@ -73,6 +77,7 @@ export function healthOf(p: MapProjectInput): MapHealth {
   if (FINISHED.includes(p.status)) return 'idle';
   if (p.status === 'on-hold') return 'warn';            // before "no spend": a paused project needs a decision
   if (p.planned === 0 && p.actual === 0) return 'idle';
+  if (p.planned === 0) return 'warn';                   // spending with no budget to hold it against
   if (p.planned > 0 && p.actual > p.planned) return 'bad';
   return needsAttention({ status: p.status }, p.actual, p.planned, p.contract - p.planned) ? 'warn' : 'good';
 }
@@ -80,6 +85,13 @@ export function healthOf(p: MapProjectInput): MapHealth {
 export function buildCompanyMap(
   projects: MapProjectInput[],
   ledger: { entries: IntercompanyEntry[]; allocations: ExpenseAllocation[]; expenses: CompanyExpense[] } | null,
+  /**
+   * Every project of the company, when `projects` is a filtered view of them.
+   * The company's own figures (the hub and the split) always cover the whole
+   * company: taken from the visible projects only, "sent to projects" fell
+   * to zero for a hidden finished project while "owed to us" still counted it.
+   */
+  all: MapProjectInput[] = projects,
 ): CompanyMap {
   const entries = ledger?.entries ?? [];
   const funding = new Map(fundingByProject(entries).map((f) => [f.projectId, f]));
@@ -108,18 +120,26 @@ export function buildCompanyMap(
   });
   const owedToCompany = r2([...balances.values()].filter((v) => v > 0).reduce((s, v) => s + v, 0));
   const owedByCompany = r2([...balances.values()].filter((v) => v < 0).reduce((s, v) => s - v, 0));
-  const fundedOut = r2(mapped.reduce((s, p) => s + p.funded, 0));
-  const returned = r2(mapped.reduce((s, p) => s + p.returned, 0));
+  const owedByProjects = r2(balancesWithCompany(entries, ledger?.expenses ?? [])
+    .filter((b) => b.node.kind === 'project' && b.owesCompany > 0).reduce((s, b) => s + b.owesCompany, 0));
+  const fundedOut = r2([...funding.values()].reduce((s, f) => s + f.funded, 0));
+  const returned = r2([...funding.values()].reduce((s, f) => s + f.returned, 0));
+  // A share a project paid from its own spend is in that project's actual
+  // and in what the company charged: counted once, on the charged side.
+  const ownExpenses = new Set((ledger?.expenses ?? []).map((e) => e.id));
+  const settled = r2((ledger?.allocations ?? []).filter((a) => a.settledInProject && ownExpenses.has(a.expenseId)).reduce((s, a) => s + a.amount, 0));
 
   return {
     projects: mapped,
     groups,
     flowMax: Math.max(1, ...groups.map((g) => Math.max(g.sent, g.returned))),
-    company: { ownSpend: summary.total, charged: summary.allocated, retained: summary.retained, fundedOut, returned, owedToCompany, owedByCompany },
+    company: { ownSpend: summary.total, charged: summary.allocated, retained: summary.retained, fundedOut, returned, owedToCompany, owedByCompany, owedByProjects },
+    // Cost only, each riyal once. Funding is a transfer, not a cost: the
+    // project's spend from it is already in projectOnly, so it is not here.
     split: {
       companyOnly: summary.retained,
-      between: r2(fundedOut + summary.allocated),
-      projectOnly: r2(mapped.reduce((s, p) => s + p.actual, 0)),
+      between: summary.allocated,
+      projectOnly: Math.max(0, r2(all.reduce((s, p) => s + p.actual, 0) - settled)),
     },
   };
 }

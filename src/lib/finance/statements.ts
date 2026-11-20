@@ -4,16 +4,20 @@
  *
  *   - incomeStatement: accrual basis. Revenue is what was billed in the
  *     period (by invoice date), direct cost the counted expenses dated in it.
- *     At company scope the company's own spend counts whole, as companyNet
- *     counts it: charging a share to a project moves it, it does not remove it.
+ *     At company scope the company's own spend counts less the shares a
+ *     project already paid from its own spend (companyOwnCost): those are in
+ *     the projects' direct cost. companyNet counts the expense whole, so this
+ *     line can be lower than the company page's «مصاريف المنظومة».
  *   - cashFlowStatement: cash basis, direct method (IAS 7). What was collected
- *     and what was paid, month by month, with the running balance.
+ *     (on its collection date, or the revenue's date when none was recorded,
+ *     as the dashboard does) and what was paid, advances still outstanding
+ *     included, month by month, with the running balance.
  *   - receivablesAging: billed and not collected, by how long it has waited.
  *
- * A period is inclusive ISO dates. A sum across scopes equals the scopes'
- * sums: the reconciliation test pins it.
+ * A period is inclusive ISO dates. Revenue and direct cost add up across
+ * projects: the reconciliation test pins it.
  */
-import { getBilledRevenue, getCollectedRevenue, getCountedExpenses, getOutstandingInvoiced } from './summary';
+import { getBilledRevenue, getCashExpenses, getCollectedRevenue, getCountedExpenses, getOutstandingInvoiced } from './summary';
 import type { CompanyExpense, ExpenseAllocation, IntercompanyEntry } from './company-ledger';
 import type { Commitment, Expense, Revenue } from '@/types/project';
 
@@ -74,12 +78,12 @@ export function cashFlowStatement(input: {
   opening?: number;
 }, period: Period): CashMonth[] {
   let balance = input.opening ?? 0;
-  const counted = getCountedExpenses(input.expenses);
+  const paid = getCashExpenses(input.expenses);
   return monthsOf(period).map((month) => {
     const inMonth = (d: string | undefined) => !!d && d.slice(0, 7) === month && within(d, period);
-    const collected = getCollectedRevenue(input.revenues.filter((r) => inMonth(r.collectionDate)));
+    const collected = getCollectedRevenue(input.revenues.filter((r) => inMonth(r.collectionDate || r.date)));
     const inflow = r2(collected + (input.otherIn ?? []).filter((x) => inMonth(x.date)).reduce((s, x) => s + x.amount, 0));
-    const outflow = r2(counted.filter((e) => inMonth(e.date)).reduce((s, e) => s + e.amount, 0)
+    const outflow = r2(paid.filter((e) => inMonth(e.date)).reduce((s, e) => s + e.amount, 0)
       + (input.otherOut ?? []).filter((x) => inMonth(x.date)).reduce((s, x) => s + x.amount, 0));
     const net = r2(inflow - outflow);
     balance = r2(balance + net);
@@ -108,8 +112,20 @@ export function receivablesAging(revenues: Revenue[], today: string): { bucket: 
 export function companyOwnCost(expenses: CompanyExpense[], allocations: ExpenseAllocation[]): Dated[] {
   return expenses.map((e) => ({
     date: e.date,
-    amount: r2(e.amount - allocations.filter((a) => a.expenseId === e.id && a.settledInProject).reduce((s, a) => s + a.amount, 0)),
+    // Never below zero: shares settled past the amount are a data fault the
+    // integrity card names (allocation_over), not extra profit.
+    amount: Math.max(0, r2(e.amount - allocations.filter((a) => a.expenseId === e.id && a.settledInProject).reduce((s, a) => s + a.amount, 0))),
   }));
+}
+
+/**
+ * The company's own cost that left as cash on the expense's date. A bill
+ * someone paid from their pocket (paidByPartyId) cost the company no cash
+ * that day: the cash leaves when the company repays them, and that ledger
+ * movement is already in partyCash. Counting both counted it twice.
+ */
+export function companyCashCost(expenses: CompanyExpense[], allocations: ExpenseAllocation[]): Dated[] {
+  return companyOwnCost(expenses.filter((e) => !e.paidByPartyId), allocations);
 }
 
 /**

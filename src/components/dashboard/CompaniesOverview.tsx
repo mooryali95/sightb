@@ -61,7 +61,7 @@ function Row({ r, projects }: { r: CompanyHealthRow; projects: Input[] }) {
           {books && (books.sent > 0 || books.owed > 0) && (
             <span className="mt-0.5 block text-[11px] text-muted-foreground">
               أرسلت للمشاريع {formatCurrency(books.sent)} · عاد {formatCurrency(books.returned)}
-              {books.owed > 0.005 && <> · لها عليها <b className="font-mono font-medium text-foreground">{formatCurrency(books.owed)}</b></>}
+              {books.owed > 0.005 && <> · لها على المشاريع <b className="font-mono font-medium text-foreground">{formatCurrency(books.owed)}</b></>}
             </span>
           )}
         </span>

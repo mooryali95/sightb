@@ -50,7 +50,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(map.getByRole('button', { name: /^برج الأعمال:/ })).toContainText('عليه للمنظومة 20,000.00');
 
       await expect(map.getByText('مصاريف المنظومة').locator('..')).toContainText('9,000.00 ر.س حُمِّلت على المشاريع · 3,000.00 ر.س بقيت عليها');
-      await expect(map.getByRole('img', { name: /للمنظومة وحدها 3,000.00 ر.س، بينهما 109,000.00 ر.س/ })).toBeVisible();
+      await expect(map.getByRole('img', { name: /للمنظومة وحدها 3,000.00 ر.س، بينهما 9,000.00 ر.س/ })).toBeVisible();
 
       const dir = process.env.MAP_SHOTS;
       if (dir) await map.screenshot({ path: `${dir}/company-map-${theme}.png`, animations: 'disabled' });

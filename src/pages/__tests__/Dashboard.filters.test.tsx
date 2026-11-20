@@ -120,7 +120,7 @@ describe('search narrows every section to the same projects', () => {
     // nor the 3,000 charged to it, and it owes only its own 10,000).
     const systems = screen.getByRole('region', { name: 'المنظومات' });
     expect(within(systems).getByRole('link', { name: /^شركة الواحة:/ })).toHaveAccessibleName('شركة الواحة: 1 مشروع، يحتاج انتباه 1');
-    expect(within(systems).getByRole('link', { name: /^شركة الواحة:/ })).toHaveTextContent('أرسلت للمشاريع 10,000.00 ر.س · عاد 0.00 ر.س · لها عليها 10,000.00 ر.س');
+    expect(within(systems).getByRole('link', { name: /^شركة الواحة:/ })).toHaveTextContent('أرسلت للمشاريع 10,000.00 ر.س · عاد 0.00 ر.س · لها على المشاريع 10,000.00 ر.س');
     expect(within(systems).getByRole('link', { name: /^شركة السدرة:/ })).toHaveAccessibleName('شركة السدرة: 1 مشروع، يحتاج انتباه 1');
     // The attention list, the cards, the table, the matrix, the portfolios and the charts.
     expect(shown(attention())).toEqual(two);
@@ -144,7 +144,7 @@ describe('search narrows every section to the same projects', () => {
     open('');
     expect(shown(table())).toEqual(names);
     expect(projectCount()).toHaveTextContent('شركتان · 3 محافظ');
-    expect(within(screen.getByRole('region', { name: 'المنظومات' })).getByRole('link', { name: /^شركة الواحة:/ })).toHaveTextContent('أرسلت للمشاريع 20,000.00 ر.س · عاد 0.00 ر.س · لها عليها 17,000.00 ر.س');
+    expect(within(screen.getByRole('region', { name: 'المنظومات' })).getByRole('link', { name: /^شركة الواحة:/ })).toHaveTextContent('أرسلت للمشاريع 20,000.00 ر.س · عاد 0.00 ر.س · لها على المشاريع 17,000.00 ر.س');
     for (const t of ['تأخر التوريد', 'تعثر المقاول', 'تغير الأسعار', 'نقص العمالة']) expect(topRisks()).toHaveTextContent(t);
   });
 });

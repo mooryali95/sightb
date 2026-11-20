@@ -25,6 +25,8 @@ interface Props {
   companyId: string;
   companyName: string;
   projects: MapProjectInput[];
+  /** Every project of the company, when `projects` hides the finished ones: the company's own figures cover them all. */
+  allProjects?: MapProjectInput[];
   /** null while loading; 'not-ready' when the ledger tables are not live. */
   ledger: { entries: IntercompanyEntry[]; allocations: ExpenseAllocation[]; expenses: CompanyExpense[] } | null | 'not-ready';
   loading?: boolean;
@@ -35,7 +37,7 @@ interface Props {
 
 const money = (n: number) => formatCurrency(n);
 
-export function CompanyMap({ companyId, companyName, projects, ledger, loading, net, onNewProject }: Props) {
+export function CompanyMap({ companyId, companyName, projects, allProjects, ledger, loading, net, onNewProject }: Props) {
   const [params, setParams] = useSearchParams();
   const structure = params.get('map') === 'structure';
   const setStructure = (on: boolean) => setParams((prev) => {
@@ -44,7 +46,7 @@ export function CompanyMap({ companyId, companyName, projects, ledger, loading, 
     return next;
   }, { replace: true });
   const live = ledger !== null && ledger !== 'not-ready' ? ledger : null;
-  const map = useMemo(() => buildCompanyMap(projects, live), [projects, live]);
+  const map = useMemo(() => buildCompanyMap(projects, live, allProjects ?? projects), [projects, live, allProjects]);
 
   if (loading) {
     return (
@@ -140,7 +142,7 @@ export function CompanyMap({ companyId, companyName, projects, ledger, loading, 
 
         {/* What belongs to whom. */}
         <footer className="border-t border-border bg-muted/30 px-5 py-4">
-          <p className="mb-2 text-xs font-semibold">لمن يتبع كل ريال</p>
+          <p className="mb-2 text-xs font-semibold">لمن يتبع كل ريال صُرف</p>
           <div className="flex h-2.5 overflow-hidden rounded-full bg-muted" role="img"
             aria-label={`للمنظومة وحدها ${money(map.split.companyOnly)}، بينهما ${money(map.split.between)}، للمشاريع وحدها ${money(map.split.projectOnly)}`}>
             <span className="bg-foreground/70" style={{ width: `${(map.split.companyOnly / splitTotal) * 100}%` }} />
@@ -149,8 +151,8 @@ export function CompanyMap({ companyId, companyName, projects, ledger, loading, 
           </div>
           <dl className="mt-3 grid grid-cols-3 gap-3 text-xs">
             <SplitCell swatch="bg-foreground/70" label="للمنظومة وحدها" value={map.split.companyOnly} hint="مصاريفها التي لم تُحمَّل على مشروع" />
-            <SplitCell swatch="bg-accent" label="بين المنظومة والمشاريع" value={map.split.between} hint="تمويل أرسلته + ما حمّلته من مصاريفها" />
-            <SplitCell swatch="bg-success/70" label="للمشاريع وحدها" value={map.split.projectOnly} hint="المصروف المباشر من دفعات كل مشروع" />
+            <SplitCell swatch="bg-accent" label="بين المنظومة والمشاريع" value={map.split.between} hint="ما حمّلته المنظومة من مصاريفها على المشاريع" />
+            <SplitCell swatch="bg-success/70" label="للمشاريع وحدها" value={map.split.projectOnly} hint="مصروف المشاريع المباشر، دون حصص المنظومة التي سدّدتها" />
           </dl>
         </footer>
       </section>

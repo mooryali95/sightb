@@ -27,7 +27,7 @@ describe('ProjectCompanyLink', () => {
     } };
     renderCard();
     const card = screen.getByRole('region', { name: 'علاقة المشروع بالمنظومة' });
-    expect(screen.getByText('من دفعاته (للمشروع وحده)').parentElement).toHaveTextContent('20,000.00');
+    expect(screen.getByText('مصروفه المباشر').parentElement).toHaveTextContent('20,000.00');
     expect(screen.getByText('وصله من المنظومة').parentElement).toHaveTextContent('46,000.00');
     expect(screen.getByText('عاد منه إليها').parentElement).toHaveTextContent('15,000.00');
     expect(card).toHaveTextContent('عليه للمنظومة 25,000.00');

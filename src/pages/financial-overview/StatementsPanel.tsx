@@ -16,7 +16,7 @@ import { useStore } from '@/store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useCompanyLedger } from '@/hooks/useCompanyLedger';
 import { formatCurrency, sumMoney } from '@/lib/finance';
-import { cashFlowStatement, chargedToProjects, companyOwnCost, incomeStatement, obligations, partyCash, periodOf, projectsCash, receivablesAging, type AgingBucket, type Span } from '@/lib/finance/statements';
+import { cashFlowStatement, chargedToProjects, companyCashCost, companyOwnCost, incomeStatement, obligations, partyCash, periodOf, projectsCash, receivablesAging, type AgingBucket, type Span } from '@/lib/finance/statements';
 import { cn, todayLocal } from '@/lib/utils';
 
 const SPANS: { key: Span; label: string }[] = [
@@ -30,6 +30,7 @@ export function StatementsPanel({ only }: { only?: { companyId: string; projectI
   const s = useStore(useShallow((st) => ({
     companies: st.companies, projects: st.projects, expenses: st.expenses, revenues: st.revenues,
     indirectCosts: st.indirectCosts, commitments: st.commitments,
+    detailsLoaded: st.detailsLoaded, projectDataLoaded: st.projectDataLoaded,
   })));
   const [params, setParams] = useSearchParams();
   const companies = s.companies.filter((c) => c.status !== 'archived');
@@ -37,7 +38,10 @@ export function StatementsPanel({ only }: { only?: { companyId: string; projectI
   const onlyIds = only?.projectIds.join(',');
   const span = (SPANS.find((x) => x.key === params.get('span'))?.key ?? 'ytd') as Span;
   const set = (key: string, value: string) => setParams((prev) => { const out = new URLSearchParams(prev); out.set(key, value); return out; }, { replace: true });
-  const ledger = useCompanyLedger(companyId).data;
+  const ledgerQuery = useCompanyLedger(companyId);
+  const ledger = ledgerQuery.data;
+  // A zero drawn before the figures arrive reads as a real zero, so nothing is stated until they are in.
+  const ready = s.detailsLoaded || (!!only && only.projectIds.every((id) => s.projectDataLoaded.has(id)));
   const today = todayLocal();
 
   const view = useMemo(() => {
@@ -58,13 +62,22 @@ export function StatementsPanel({ only }: { only?: { companyId: string; projectI
     return {
       currency: currencies[0] ?? 'SAR', mixed: currencies.length > 1, period, projectCount: projects.length,
       income: incomeStatement({ revenues, expenses, companyExpenses: own, indirect }, period),
-      months: cashFlowStatement({ revenues, expenses, otherIn: cash.in, otherOut: wanted ? cash.out : [...cash.out, ...own, ...indirect] }, period),
+      months: cashFlowStatement({ revenues, expenses, otherIn: cash.in, otherOut: wanted ? cash.out : [...cash.out, ...(ledger ? companyCashCost(ledger.expenses, ledger.allocations) : []), ...indirect] }, period),
       aging: receivablesAging(revenues, today),
       owed: obligations(expenses, s.commitments.filter((c) => ids.has(c.projectId))),
     };
   }, [companyId, onlyIds, span, today, ledger, s.projects, s.revenues, s.expenses, s.indirectCosts, s.commitments]);
 
   if (!view || !companyId || (only && view.projectCount === 0)) return null;
+  if (!ready || ledgerQuery.isLoading) {
+    return (
+      <section aria-label="القوائم المالية" aria-busy="true" className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div className="h-5 w-40 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-40 animate-pulse rounded-xl bg-muted/60 motion-reduce:animate-none" />)}</div>
+        <p className="sr-only">جارٍ تحميل القوائم المالية</p>
+      </section>
+    );
+  }
   const money = (n: number) => formatCurrency(n, view.currency);
   const { income, months, aging, owed } = view;
   const maxFlow = Math.max(1, ...months.map((m) => Math.max(m.inflow, m.outflow)));
@@ -106,7 +119,7 @@ export function StatementsPanel({ only }: { only?: { companyId: string; projectI
               <Line label="الإيراد المفوتر" value={money(income.revenue)} />
               <Line label="− التكلفة المباشرة للمشاريع" value={money(income.directCost)} muted />
               <Line label="= مجمل الربح" value={money(income.grossProfit)} strong negative={income.grossProfit < 0} note={income.grossMargin === null ? undefined : `${income.grossMargin.toFixed(1)}%`} />
-              <Line label={only ? '− المحمَّل من المنظومة' : '− مصاريف المنظومة'} value={money(income.companyCost)} muted />
+              <Line label={only ? '− المحمَّل من المنظومة' : '− مصاريف المنظومة'} value={money(income.companyCost)} muted note={only ? undefined : 'بعد استبعاد ما سدّده المشروع'} />
               {!only && <Line label="− تكاليف غير مباشرة" value={money(income.indirectCost)} muted />}
               <Line label="= صافي الربح" value={money(income.netProfit)} strong total negative={income.netProfit < 0} note={income.netMargin === null ? undefined : `${income.netMargin.toFixed(1)}%`} />
             </dl>

@@ -44,6 +44,15 @@ export function getCountedExpenses<T extends { approvalStatus?: string; isOutsta
   return expenses.filter((expense) => expense.approvalStatus !== 'rejected' && !expense.isOutstandingAdvance);
 }
 
+/**
+ * Expenses that are cash out: every row that was not rejected. An advance
+ * still outstanding is not cost yet (getCountedExpenses leaves it out), but
+ * the money has left, so a cash statement counts it.
+ */
+export function getCashExpenses<T extends { approvalStatus?: string }>(expenses: T[]): T[] {
+  return expenses.filter((expense) => expense.approvalStatus !== 'rejected');
+}
+
 export function getProjectSummary(
   project: Project,
   budgetItems: BudgetItem[],

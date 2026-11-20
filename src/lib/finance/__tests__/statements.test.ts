@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cashFlowStatement, chargedToProjects, companyOwnCost, incomeStatement, monthsOf, obligations, partyCash, projectsCash, receivablesAging } from '../statements';
+import { cashFlowStatement, chargedToProjects, companyCashCost, companyOwnCost, incomeStatement, monthsOf, obligations, partyCash, projectsCash, receivablesAging } from '../statements';
 import type { IntercompanyEntry } from '../company-ledger';
 import type { Commitment } from '@/types/project';
 import type { Expense, Revenue } from '@/types/project';
@@ -45,14 +45,20 @@ describe('cashFlowStatement', () => {
     const months = cashFlowStatement({ revenues, expenses, otherIn: [{ date: '2026-01-02', amount: 50000 }], opening: 1000 }, Q1);
     expect(months).toEqual([
       { month: '2026-01', inflow: 50000, outflow: 30000, net: 20000, balance: 21000 },
-      { month: '2026-02', inflow: 100000, outflow: 20000, net: 80000, balance: 101000 },
-      { month: '2026-03', inflow: 0, outflow: 0, net: 0, balance: 101000 },
+      // The 7,000 advance still outstanding is cash out, though not cost yet; the rejected 5,000 is neither.
+      { month: '2026-02', inflow: 100000, outflow: 27000, net: 73000, balance: 94000 },
+      { month: '2026-03', inflow: 0, outflow: 0, net: 0, balance: 94000 },
     ]);
   });
 
   it('closes: opening plus every month\'s net is the closing balance', () => {
     const m = cashFlowStatement({ revenues, expenses, opening: 500 }, Q1);
     expect(500 + m.reduce((s, x) => s + x.net, 0)).toBe(m[m.length - 1].balance);
+  });
+
+  it('counts a collection with no recorded day on the revenue\'s own date, as the dashboard does', () => {
+    const undated = [rev('u', 'A', 50000, 'collected', { date: '2026-01-05', invoiceDate: '2026-01-05' })];
+    expect(cashFlowStatement({ revenues: undated, expenses: [] }, Q1)[0]).toMatchObject({ month: '2026-01', inflow: 50000 });
   });
 
   it('spans the year end', () => {
@@ -78,6 +84,19 @@ describe('the company edge', () => {
       { id: '1', expenseId: 'x', projectId: 'A', amount: 300, settledInProject: true },
       { id: '2', expenseId: 'x', projectId: 'B', amount: 200 },
     ])).toEqual([{ date: '2026-02-01', amount: 700 }]);
+  });
+
+  it('never lets shares settled past the amount turn the cost negative', () => {
+    const e = { id: 'x', companyId: 'c', date: '2026-02-01', amount: 1000, description: '', kind: 'salary' as const, partyId: null, paidByPartyId: null };
+    expect(companyOwnCost([e], [{ id: '1', expenseId: 'x', projectId: 'A', amount: 1250, settledInProject: true }])[0].amount).toBe(0);
+  });
+
+  it('counts a bill someone paid from their pocket once: when the company repays them', () => {
+    const bill = { id: 'x', companyId: 'c', date: '2026-01-10', amount: 1000, description: '', kind: 'other' as const, partyId: null, paidByPartyId: 'owner' };
+    const repay = { id: 'r', companyId: 'c', date: '2026-02-10', amount: 1000, type: 'repayment', from: { kind: 'company', id: null }, to: { kind: 'party', id: 'owner' }, note: '', dueDate: null, salaryExpenseId: null } as IntercompanyEntry;
+    const months = cashFlowStatement({ revenues: [], expenses: [], otherOut: [...partyCash([repay]).out, ...companyCashCost([bill], [])] }, Q1);
+    expect(months.map((m) => m.outflow)).toEqual([0, 1000, 0]);
+    expect(companyOwnCost([bill], [])).toEqual([{ date: '2026-01-10', amount: 1000 }]); // still cost in January
   });
 
   it('counts cash from and to parties, and not what moves between the company and its projects', () => {
