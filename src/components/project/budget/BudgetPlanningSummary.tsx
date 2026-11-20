@@ -4,7 +4,7 @@
  * recoverable outside actual cost; the two utilisation bars; and the
  * per-category table. A recurring item counts once per month everywhere.
  */
-import { formatCurrency, getTotalPlanned } from '@/lib/finance';
+import { formatCurrency, getTotalPlanned, sumMoney } from '@/lib/finance';
 import { EXPENSE_CATEGORY_LABELS, type BudgetItem, type Expense, type ExpenseCategory } from '@/types/project';
 import { BarChart3 } from 'lucide-react';
 
@@ -19,7 +19,7 @@ interface Props {
 
 export function BudgetPlanningSummary({ budgetItems, countedExpenses, contractValue, taxPercent, outstandingAdvances }: Props) {
   const totalPlanned = getTotalPlanned(budgetItems);
-  const totalActual = countedExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalActual = sumMoney(countedExpenses);
   const taxAmount = contractValue > 0 && taxPercent > 0 ? contractValue * (taxPercent / 100) : 0;
   const contractValueInclTax = contractValue + taxAmount;
   const unallocated = contractValue - totalPlanned;

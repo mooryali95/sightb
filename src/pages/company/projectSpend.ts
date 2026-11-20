@@ -3,6 +3,7 @@
  * and how much of its contract that is. Both project lists on the company
  * page draw their bar from this so they cannot drift apart.
  */
+import { sumMoney } from '@/lib/finance';
 import type { Expense, Project } from '@/types/project';
 
 export interface ProjectSpend {
@@ -12,7 +13,7 @@ export interface ProjectSpend {
 }
 
 export function projectSpend(project: Project, countedExpenses: Expense[]): ProjectSpend {
-  const totalSpent = countedExpenses.filter(e => e.projectId === project.id).reduce((s, e) => s + e.amount, 0);
+  const totalSpent = sumMoney(countedExpenses.filter(e => e.projectId === project.id));
   const spentPercent = project.contractValue > 0 ? Math.min((totalSpent / project.contractValue) * 100, 100) : 0;
   return { totalSpent, spentPercent };
 }

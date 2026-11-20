@@ -6,7 +6,7 @@ import { useCoreData, useCompanyData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency, getCountedExpenses, getEffectiveContractValue, getProjectSummary } from '@/lib/finance';
+import { formatCurrency, getCountedExpenses, getEffectiveContractValue, getProjectSummary, sumMoney } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
 import { companyNet } from '@/lib/finance/company-net';
 import { summarizeCompanyExpenses } from '@/lib/finance/company-ledger';
@@ -123,10 +123,10 @@ export default function CompanyDetail() {
     const data: { name: string; value: number }[] = [];
     compPortfolios.forEach(p => {
       const portfolioProjectIds = companyProjects.filter(pr => pr.portfolioId === p.id).map(pr => pr.id);
-      const total = countedExpenses.filter(e => portfolioProjectIds.includes(e.projectId)).reduce((s, e) => s + e.amount, 0);
+      const total = sumMoney(countedExpenses.filter(e => portfolioProjectIds.includes(e.projectId)));
       if (total > 0) data.push({ name: p.name, value: total });
     });
-    const standaloneTotal = countedExpenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
+    const standaloneTotal = sumMoney(countedExpenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)));
     if (standaloneTotal > 0) data.push({ name: 'مشاريع مستقلة', value: standaloneTotal });
     return data;
   }, [compPortfolios, companyProjects, standaloneProjects, countedExpenses]);

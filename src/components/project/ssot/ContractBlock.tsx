@@ -1,5 +1,5 @@
 /** The contract, the approved orders' impact, the effective value, and the revenues. */
-import { getCollectedRevenue, getBilledRevenue } from '@/lib/finance';
+import { getApprovedChangeImpact, getCollectedRevenue, getBilledRevenue } from '@/lib/finance';
 import type { ChangeOrder, ProjectSummary, Revenue } from '@/types/project';
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Row } from './SsotRow';
@@ -15,7 +15,7 @@ interface Props {
 
 export function ContractBlock({ projectId, currency, contractValue, summary, changeOrders, revenues }: Props) {
   const approvedCO = changeOrders.filter((c) => c.status === 'approved');
-  const approvedCOImpact = approvedCO.reduce((s, c) => s + c.amountImpact, 0);
+  const approvedCOImpact = getApprovedChangeImpact(changeOrders);
   const collectedRevenue = getCollectedRevenue(revenues);
   const invoicedRevenue = getBilledRevenue(revenues);
 

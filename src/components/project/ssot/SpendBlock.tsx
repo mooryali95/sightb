@@ -2,6 +2,8 @@
 import type { Expense, PaymentRequest, ProjectSummary } from '@/types/project';
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Row } from './SsotRow';
+import { getRejectedExpenseTotal } from '@/lib/finance';
+import { getProjectOutstandingAdvances } from '@/lib/funds';
 
 interface Props {
   projectId: string;
@@ -12,10 +14,8 @@ interface Props {
 }
 
 export function SpendBlock({ projectId, currency, summary, expenses, paymentRequests }: Props) {
-  const rejectedExpenses = expenses.filter((e) => e.approvalStatus === 'rejected').reduce((s, e) => s + e.amount, 0);
-  const outstandingAdvancesAll = paymentRequests
-    .filter((p) => p.projectId === projectId && p.requestType === 'advance' && p.status === 'paid' && p.isAdvanceOutstanding === true)
-    .reduce((s, p) => s + Math.max(p.amount - (p.refundedAmount ?? 0), 0), 0);
+  const rejectedExpenses = getRejectedExpenseTotal(expenses);
+  const outstandingAdvancesAll = getProjectOutstandingAdvances(projectId, paymentRequests).total;
 
   return (
     <AccordionItem value="profit" className="border border-border rounded-lg bg-card px-3 md:px-4">

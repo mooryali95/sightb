@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useStore } from '@/store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useCompanyLedger } from '@/hooks/useCompanyLedger';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import { cashFlowStatement, chargedToProjects, companyOwnCost, incomeStatement, obligations, partyCash, periodOf, projectsCash, receivablesAging, type AgingBucket, type Span } from '@/lib/finance/statements';
 import { cn, todayLocal } from '@/lib/utils';
 
@@ -70,7 +70,7 @@ export function StatementsPanel({ only }: { only?: { companyId: string; projectI
   const maxFlow = Math.max(1, ...months.map((m) => Math.max(m.inflow, m.outflow)));
   const maxAge = Math.max(1, ...aging.map((a) => a.amount));
   const totalIn = months.reduce((t, m) => t + m.inflow, 0), totalOut = months.reduce((t, m) => t + m.outflow, 0);
-  const late = aging.filter((a) => a.bucket !== '0-30').reduce((t, a) => t + a.amount, 0);
+  const late = sumMoney(aging.filter((a) => a.bucket !== '0-30'));
 
   return (
     <section aria-label="القوائم المالية" className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">

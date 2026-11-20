@@ -5,7 +5,7 @@
  * be deleted once moved. With nothing left it does not show.
  */
 import { useStore } from '@/store/useStore';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import { INDIRECT_COST_CATEGORY_LABELS, type IndirectCost } from '@/types/project';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { toast } from 'sonner';
@@ -19,7 +19,7 @@ interface Props {
 export function IndirectCostsCard({ companyId, costs, canEdit }: Props) {
   const deleteIndirectCost = useStore((s) => s.deleteIndirectCost);
   if (costs.length === 0) return null;
-  const totalIndirect = costs.reduce((s, ic) => s + ic.amount, 0);
+  const totalIndirect = sumMoney(costs);
   return (
     <div className="stat-card mb-6">
       <div className="flex items-center justify-between mb-4">

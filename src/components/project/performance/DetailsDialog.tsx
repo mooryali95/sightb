@@ -6,7 +6,7 @@ import { GitCompare } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import { getExpensesForBudgetItem, type CategoryGroup, type ItemComparison } from '@/lib/budget-comparison';
 import type { Expense } from '@/types/project';
 import { Metric } from './ComparisonParts';
@@ -42,7 +42,7 @@ export function DetailsDialog({
   }
   rows.sort((a, b) => (a.expense.date || '').localeCompare(b.expense.date || ''));
 
-  const totalActual = rows.reduce((s, r) => s + (Number(r.expense.amount) || 0), 0);
+  const totalActual = sumMoney(rows.map((r) => r.expense));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

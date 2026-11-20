@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
-import { formatCurrency, calculateEVM, getCurrentMonth } from '@/lib/finance';
+import { formatCurrency, calculateEVM, getCurrentMonth, sumMoney } from '@/lib/finance';
 import type { BaselineItem, Expense } from '@/types/project';
 
 interface BudgetAlertsProps {
@@ -74,9 +74,7 @@ export function BudgetAlerts({ totalPlanned, totalActual, contractValue, budgetI
 
     // Per-item alerts
     budgetItems.forEach(item => {
-      const itemActual = expenses
-        .filter(e => e.budgetItemId === item.id)
-        .reduce((s, e) => s + e.amount, 0);
+      const itemActual = sumMoney(expenses.filter(e => e.budgetItemId === item.id));
       const itemPct = item.plannedAmount > 0 ? (itemActual / item.plannedAmount) * 100 : 0;
 
       for (const t of THRESHOLDS) {

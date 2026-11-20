@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import {
   type Expense,
   type Custody,
@@ -89,26 +89,20 @@ export function CashLedgerSection({ projectId, funds, settlements, expenses, cus
 
   // مدفوع لمستحقات موارد (expenses مُولَّدة عبر طلبات صرف)
   const paidToResources = useMemo(
-    () => projectPayReqs
-      .filter((p) => p.status === 'paid' && p.autoCreatedExpenseId)
-      .reduce((s, p) => s + p.amount, 0),
+    () => sumMoney(projectPayReqs.filter((p) => p.status === 'paid' && p.autoCreatedExpenseId)),
     [projectPayReqs],
   );
 
   const pendingPayables = useMemo(() => {
-    const approvedNotPaid = reimbursements
-      .filter((r) => r.projectId === projectId && r.status === 'approved')
-      .reduce((s, r) => s + r.amount, 0);
-    const inFlightRequests = projectPayReqs
-      .filter((p) => ['submitted', 'under_review', 'approved', 'scheduled'].includes(p.status))
-      .reduce((s, p) => s + p.amount, 0);
+    const approvedNotPaid = sumMoney(reimbursements.filter((r) => r.projectId === projectId && r.status === 'approved'));
+    const inFlightRequests = sumMoney(projectPayReqs.filter((p) => ['submitted', 'under_review', 'approved', 'scheduled'].includes(p.status)));
     return { approvedNotPaid, inFlightRequests, total: approvedNotPaid + inFlightRequests };
   }, [reimbursements, projectPayReqs, projectId]);
 
   const unlinkedExpenses = projectExpenses.filter((e) => !e.fundId && !e.custodyId);
-  const unlinkedTotal = unlinkedExpenses.reduce((s, e) => s + e.amount, 0);
+  const unlinkedTotal = sumMoney(unlinkedExpenses);
   const unlinkedCustodies = projectCustodies.filter((c) => !c.sourceFundId);
-  const unlinkedCustodyTotal = unlinkedCustodies.reduce((s, c) => s + c.amount, 0);
+  const unlinkedCustodyTotal = sumMoney(unlinkedCustodies);
 
   const transferred = summary.totalTransferred;
   const pct = (v: number) => (transferred > 0 ? (v / transferred) * 100 : 0);

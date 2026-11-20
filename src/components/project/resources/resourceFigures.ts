@@ -2,7 +2,7 @@
  * The figures shown for one resource, computed once for the table row and
  * once for the inspector so the two cannot drift apart.
  */
-import { getTotalPlanned } from '@/lib/finance';
+import { getTotalPlanned, sumMoney } from '@/lib/finance';
 import type { BudgetItem, Expense, Resource } from '@/types/project';
 
 export interface ResourceFigures {
@@ -23,7 +23,7 @@ export interface ResourceFigures {
 export function resourceFigures(
   r: Resource, budgetItems: BudgetItem[], countedExpenses: Expense[], durationMonths: number,
 ): ResourceFigures {
-  const totalSpent = countedExpenses.filter(e => e.resourceId === r.id).reduce((s, e) => s + e.amount, 0);
+  const totalSpent = sumMoney(countedExpenses.filter(e => e.resourceId === r.id));
   const linkedBudget = budgetItems.filter(b => b.resourceId === r.id);
   const plannedForResource = linkedBudget.length > 0
     ? getTotalPlanned(linkedBudget)

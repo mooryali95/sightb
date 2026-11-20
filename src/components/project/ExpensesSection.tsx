@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { useDialogSession } from '@/hooks/useDialogSession';
-import { formatCurrency, calcVAT, addVAT } from '@/lib/finance';
+import { formatCurrency, calcVAT, addVAT, sumMoney } from '@/lib/finance';
 import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS,
   type ExpenseCategory, type ApprovalStatus, type Resource, type Custody, type BudgetItem,
@@ -144,8 +144,8 @@ export function ExpensesSection({ projectId, durationMonths, expenses, resources
   const resourceSpendShown = resourceSpend.filter((r) => matchesResourceQuery(r, resourceQuery));
   const resourceSpendTotal = resourceSpend.reduce((s, r) => s + r.total, 0);
 
-  const totalExpenses = countedExpenses.reduce((s, e) => s + e.amount, 0);
-  const totalRevenue = revenues.reduce((s, r) => s + r.amount, 0);
+  const totalExpenses = sumMoney(countedExpenses);
+  const totalRevenue = sumMoney(revenues);
   const spendFromRevenue = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0;
   const spendFromContract = contractValue > 0 ? (totalExpenses / contractValue) * 100 : 0;
 

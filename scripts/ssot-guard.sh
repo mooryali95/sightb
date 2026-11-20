@@ -20,4 +20,21 @@ if [ -n "$hits" ]; then
   echo "ssot-guard: use getCountedExpenses / getCollectedRevenue / getOutstandingInvoiced / getBilledRevenue from @/lib/finance."
   exit 1
 fi
-echo "Every money rule comes from src/lib/finance/summary.ts."
+# Money addition has one home too: sumMoney (rounded to the halala) or a named
+# rule from @/lib/finance. On 20 November 46 hand-written amount sums were
+# found in 27 files under src/components and src/pages; most only added an
+# already-filtered list, a few re-implemented a rule (approved change orders,
+# planned revenue, rejected spend, outstanding advances). All were moved, and
+# a new one fails here naming the file. The second pattern catches a reduce
+# whose callback starts on the next line.
+SUM_FIELDS='(amount|plannedAmount|amountImpact)'
+sums=$(grep -rnE \
+  -e "\(\w+, \w+\) => \w+ [+] \(?(Number\()?(\w+\.)+${SUM_FIELDS}\b" \
+  -e "\.reduce\(.*[+] *\(?(Number\()?(\w+\.)+${SUM_FIELDS}\b" \
+  src/components src/pages --include='*.ts' --include='*.tsx' | grep -v '/__tests__/' || true)
+if [ -n "$sums" ]; then
+  echo "$sums" | sed 's/^/  hand-written amount sum: /'
+  echo "ssot-guard: add money with sumMoney(rows) from @/lib/finance, or the named rule (getApprovedChangeImpact, getPlannedRevenue, getRejectedExpenseTotal, getTotalPlanned)."
+  exit 1
+fi
+echo "Every money rule comes from src/lib/finance/summary.ts, and no component adds amounts by hand."

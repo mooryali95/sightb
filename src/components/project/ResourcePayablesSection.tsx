@@ -13,7 +13,7 @@ import {
 import { Download, FileSpreadsheet, FileDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import { getResourceBalance } from '@/lib/resource-payables';
 import { exportPayablesSummaryCSV } from '@/lib/payables-export';
 import { Card } from '@/components/ui/card';
@@ -122,9 +122,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     return custodies
       .filter((c) => c.projectId === projectId && c.status === 'active')
       .map((c) => {
-        const spent = expenses
-          .filter((e) => e.custodyId === c.id)
-          .reduce((s, e) => s + e.amount, 0);
+        const spent = sumMoney(expenses.filter((e) => e.custodyId === c.id));
         const transfersIn = getCustodyCashTransfersIn(c.id, projTransfers);
         const outstandingAdv = getCustodyOutstandingAdvances(c.id, projReqs);
         return { custody: c, remaining: (c.amount + transfersIn) - spent - outstandingAdv };

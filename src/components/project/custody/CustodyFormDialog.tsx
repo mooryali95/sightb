@@ -13,7 +13,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import type { Custody, Expense } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,7 +86,7 @@ export function CustodyFormDialog({
         : (notes.trim() || undefined);
       if (editingId) {
         const original = custodies.find(c => c.id === editingId);
-        const spent = expenses.filter((e) => e.custodyId === editingId).reduce((s, e) => s + e.amount, 0);
+        const spent = sumMoney(expenses.filter((e) => e.custodyId === editingId));
         const newAmt = parseFloat(amount);
         if (original && newAmt !== original.amount && newAmt < spent) {
           toast.error(`لا يمكن تخفيض المبلغ تحت ${formatCurrency(spent)} (المصروف عليها)`);

@@ -5,7 +5,7 @@
  */
 import { useStore } from '@/store/useStore';
 import { useDialogSession } from '@/hooks/useDialogSession';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, getApprovedChangeImpact, getEffectiveContractValue } from '@/lib/finance';
 import {
   CHANGE_ORDER_TYPE_LABELS, CHANGE_ORDER_STATUS_LABELS, CHANGE_ORDER_STATUS_COLORS, type ChangeOrder,
 } from '@/types/project';
@@ -27,8 +27,8 @@ export function ChangeOrdersSection({ projectId, changeOrders, contractValue, re
   // Remounted on open so an edit starts from the row and an add starts blank; see useDialogSession.
   const form = useDialogSession<{ order?: ChangeOrder }>();
 
-  const approvedImpact = changeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
-  const effectiveValue = contractValue + approvedImpact;
+  const approvedImpact = getApprovedChangeImpact(changeOrders);
+  const effectiveValue = getEffectiveContractValue(contractValue, changeOrders);
 
   return (
     <div className="stat-card">

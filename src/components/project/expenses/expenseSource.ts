@@ -1,11 +1,9 @@
-import { formatCurrency, removeVAT } from '@/lib/finance';
+import { formatCurrency, removeVAT, sumMoney } from '@/lib/finance';
 import type { BudgetItem, Expense, ProjectFund } from '@/types/project';
 
 /** What a budget item still holds after the spend counted against it; rejected rows count nowhere. */
 export function budgetItemRemaining(item: BudgetItem, expenses: Expense[]): number {
-  const spent = expenses
-    .filter((e) => e.budgetItemId === item.id && e.approvalStatus !== 'rejected')
-    .reduce((s, e) => s + e.amount, 0);
+  const spent = sumMoney(expenses.filter((e) => e.budgetItemId === item.id && e.approvalStatus !== 'rejected'));
   return item.plannedAmount - spent;
 }
 

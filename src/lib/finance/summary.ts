@@ -30,6 +30,15 @@ export function getBilledRevenue(revenues: RevenueLike[]): number {
   return sum(revenues.filter((r) => r.status === 'invoiced' || r.status === 'collected'));
 }
 
+/** Not billed yet: revenues still planned. */
+export function getPlannedRevenue(revenues: RevenueLike[]): number {
+  return sum(revenues.filter((r) => r.status === 'planned'));
+}
+/** What was turned down: rejected expenses, shown apart and never in actual cost. */
+export function getRejectedExpenseTotal(expenses: { approvalStatus?: string; amount: number }[]): number {
+  return sum(expenses.filter((e) => e.approvalStatus === 'rejected'));
+}
+
 /** Expenses that belong in actual cost everywhere in the product. */
 export function getCountedExpenses<T extends { approvalStatus?: string; isOutstandingAdvance?: boolean }>(expenses: T[]): T[] {
   return expenses.filter((expense) => expense.approvalStatus !== 'rejected' && !expense.isOutstandingAdvance);
@@ -55,7 +64,7 @@ export function getProjectSummary(
 
   const collectedRevenue = getCollectedRevenue(revenues);
   const invoicedRevenue = getOutstandingInvoiced(revenues);
-  const totalPlannedRevenue = revenues.filter(r => r.status === 'planned').reduce((sum, r) => sum + r.amount, 0);
+  const totalPlannedRevenue = getPlannedRevenue(revenues);
   const realizedProfit = collectedRevenue - totalActual;
   const realizedProfitMargin = collectedRevenue > 0 ? (realizedProfit / collectedRevenue) * 100 : 0;
   const accountsReceivable = invoicedRevenue; // invoiced but not yet collected

@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn, errorMessage } from '@/lib/utils';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import {
   PAYMENT_REQUEST_STATUS_LABELS,
   type PaymentRequest,
@@ -56,9 +56,7 @@ export function EditLinksDialog({ request, projReimbs, onClose }: Props) {
       };
       // If reimbursement type and not yet paid, recompute amount from linked items
       if (request.requestType === 'reimbursement' && request.status !== 'paid') {
-        const newAmount = projReimbs
-          .filter((r) => editLinkedIds.includes(r.id))
-          .reduce((s, r) => s + r.amount, 0);
+        const newAmount = sumMoney(projReimbs.filter((r) => editLinkedIds.includes(r.id)));
         if (newAmount > 0) updates.amount = newAmount;
       }
       await updatePaymentRequest(request.id, updates);
@@ -127,7 +125,7 @@ export function EditLinksDialog({ request, projReimbs, onClose }: Props) {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  المجموع الجديد: <strong>{formatCurrency(projReimbs.filter((r) => editLinkedIds.includes(r.id)).reduce((s, r) => s + r.amount, 0))}</strong>
+                  المجموع الجديد: <strong>{formatCurrency(sumMoney(projReimbs.filter((r) => editLinkedIds.includes(r.id))))}</strong>
                 </p>
               </div>
             )}

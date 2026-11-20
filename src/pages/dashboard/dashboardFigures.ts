@@ -8,7 +8,7 @@ import {
   startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear,
   subMonths, subQuarters, subYears, isWithinInterval, parseISO,
 } from 'date-fns';
-import { getCountedExpenses, getEffectiveContractValue, getOutstandingInvoiced, getTotalPlanned } from '@/lib/finance';
+import { getApprovedChangeImpact, getCollectedRevenue, getCountedExpenses, getEffectiveContractValue, getOutstandingInvoiced, getTotalPlanned, sumMoney } from '@/lib/finance';
 import { normalizeArabicName } from '@/lib/resource-spend';
 import {
   PROJECT_STATUS_LABELS,
@@ -152,19 +152,19 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
 
   // Stats
   const totalContractValue = filteredProjects.reduce((s, p) => s + p.contractValue, 0);
-  const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalExpenses = sumMoney(filteredExpenses);
   const totalPlanned = getTotalPlanned(filteredBudgetItems);
-  const approvedChangeImpact = filteredChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
+  const approvedChangeImpact = getApprovedChangeImpact(filteredChangeOrders);
   const effectiveTotalContract = totalContractValue + approvedChangeImpact;
   const plannedProfit = effectiveTotalContract - totalPlanned;
   const plannedProfitMargin = effectiveTotalContract > 0 ? (plannedProfit / effectiveTotalContract) * 100 : 0;
-  const collectedRevenue = filteredAllRevenues.filter((r) => r.status === 'collected' && isInRange(cashDate(r), currentRange)).reduce((s, r) => s + r.amount, 0);
-  const prevExpenses = previousRange ? filteredAllExpenses.filter((e) => isInRange(e.date, previousRange)).reduce((s, e) => s + e.amount, 0) : 0;
-  const prevRevenue = previousRange ? filteredAllRevenues.filter((r) => r.status === 'collected' && isInRange(cashDate(r), previousRange)).reduce((s, r) => s + r.amount, 0) : 0;
+  const collectedRevenue = getCollectedRevenue(filteredAllRevenues.filter((r) => isInRange(cashDate(r), currentRange)));
+  const prevExpenses = previousRange ? sumMoney(filteredAllExpenses.filter((e) => isInRange(e.date, previousRange))) : 0;
+  const prevRevenue = previousRange ? getCollectedRevenue(filteredAllRevenues.filter((r) => isInRange(cashDate(r), previousRange))) : 0;
   const expenseChange = prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : null;
   const revenueChange = prevRevenue > 0 ? ((collectedRevenue - prevRevenue) / prevRevenue) * 100 : null;
   const attentionProjectsCount = filteredProjects.filter((project) => {
-    const spend = filteredAllExpenses.filter((expense) => expense.projectId === project.id).reduce((sum, expense) => sum + expense.amount, 0);
+    const spend = sumMoney(filteredAllExpenses.filter((expense) => expense.projectId === project.id));
     const plan = getTotalPlanned(filteredBudgetItems.filter((item) => item.projectId === project.id));
     const contract = getEffectiveContractValue(project.contractValue, filteredChangeOrders.filter((o) => o.projectId === project.id));
     return needsAttention(project, spend, plan, contract - plan);
@@ -179,15 +179,15 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   // which nets them off the same way. With one company chosen, only its own.
   const visibleCompanyIds = new Set(filteredProjects.map((p) => p.companyId));
   if (f.filterCompany !== 'all') visibleCompanyIds.add(f.filterCompany);
-  const indirectTotal = (input.indirectCosts ?? []).filter((c) => visibleCompanyIds.has(c.companyId)).reduce((s, c) => s + c.amount, 0)
-    + (input.companyExpenses ?? []).filter((c) => visibleCompanyIds.has(c.companyId)).reduce((s, c) => s + c.amount, 0);
+  const indirectTotal = sumMoney((input.indirectCosts ?? []).filter((c) => visibleCompanyIds.has(c.companyId)))
+    + sumMoney((input.companyExpenses ?? []).filter((c) => visibleCompanyIds.has(c.companyId)));
   const netPlannedProfit = plannedProfit - indirectTotal;
   const netPlannedMargin = effectiveTotalContract > 0 ? (netPlannedProfit / effectiveTotalContract) * 100 : 0;
 
   // The same rows as the total expenses card: visible projects, counted, in the period.
   const companyData = companies.map((c) => {
     const compProjects = filteredProjects.filter((p) => p.companyId === c.id);
-    const total = filteredExpenses.filter((e) => compProjects.some((p) => p.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
+    const total = sumMoney(filteredExpenses.filter((e) => compProjects.some((p) => p.id === e.projectId)));
     return { name: c.name, value: total };
   }).filter((d) => d.value > 0);
 

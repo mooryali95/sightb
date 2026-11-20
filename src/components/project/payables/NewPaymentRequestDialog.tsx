@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import { errorMessage } from '@/lib/utils';
 import {
   EXPENSE_CATEGORY_LABELS,
@@ -76,9 +76,7 @@ export function NewPaymentRequestDialog({
 
   const computedAmount = useMemo(() => {
     if (pType !== 'reimbursement') return 0;
-    return eligibleReimbs
-      .filter((r) => pSelectedReimbs.includes(r.id))
-      .reduce((s, r) => s + r.amount, 0);
+    return sumMoney(eligibleReimbs.filter((r) => pSelectedReimbs.includes(r.id)));
   }, [pType, eligibleReimbs, pSelectedReimbs]);
 
   const handleCreateReq = async () => {
