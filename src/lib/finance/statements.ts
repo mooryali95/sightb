@@ -148,3 +148,24 @@ export function periodOf(span: Span, today: string): Period {
   }
   return { from: `${y}-01-01`, to: today };
 }
+
+/**
+ * For a set of projects (one project, a portfolio): what the company charged
+ * them and they have not already paid themselves, dated as the expense. It
+ * is cost on top of their direct spend, as chargedCostTotals counts it.
+ */
+export function chargedToProjects(expenses: CompanyExpense[], allocations: ExpenseAllocation[], projectIds: Set<string>): Dated[] {
+  const dateOf = new Map(expenses.map((e) => [e.id, e.date]));
+  return allocations
+    .filter((a) => projectIds.has(a.projectId) && !a.settledInProject && dateOf.has(a.expenseId))
+    .map((a) => ({ date: dateOf.get(a.expenseId)!, amount: a.amount }));
+}
+
+/** Ledger cash crossing the edge of a set of projects: funding in, repayments out. Moves inside the set are left out. */
+export function projectsCash(entries: IntercompanyEntry[], projectIds: Set<string>): { in: Dated[]; out: Dated[] } {
+  const inside = (n: IntercompanyEntry['from']) => n.kind === 'project' && !!n.id && projectIds.has(n.id);
+  return {
+    in: entries.filter((e) => inside(e.to) && !inside(e.from)).map((e) => ({ date: e.date, amount: e.amount })),
+    out: entries.filter((e) => inside(e.from) && !inside(e.to)).map((e) => ({ date: e.date, amount: e.amount })),
+  };
+}

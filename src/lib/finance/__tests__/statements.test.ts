@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cashFlowStatement, companyOwnCost, incomeStatement, monthsOf, obligations, partyCash, receivablesAging } from '../statements';
+import { cashFlowStatement, chargedToProjects, companyOwnCost, incomeStatement, monthsOf, obligations, partyCash, projectsCash, receivablesAging } from '../statements';
 import type { IntercompanyEntry } from '../company-ledger';
 import type { Commitment } from '@/types/project';
 import type { Expense, Revenue } from '@/types/project';
@@ -93,5 +93,26 @@ describe('the company edge', () => {
     const c = (totalAmount: number, spentAmount: number, status = 'active') => ({ id: `${totalAmount}`, projectId: 'A', description: '', totalAmount, spentAmount, status, createdAt: '' }) as Commitment;
     expect(obligations(expenses, [c(10000, 4000), c(500, 500), c(900, 0, 'cancelled')]))
       .toEqual({ advances: 7000, advanceCount: 1, commitments: 6000, commitmentCount: 1 });
+  });
+});
+
+describe('the edge of a set of projects', () => {
+  const ids = new Set(['A', 'B']);
+  it('counts what the company charged them on top of their own spend, dated as the expense', () => {
+    const e = { id: 'x', companyId: 'c', date: '2026-02-01', amount: 1000, description: '', kind: 'salary' as const, partyId: null, paidByPartyId: null };
+    expect(chargedToProjects([e], [
+      { id: '1', expenseId: 'x', projectId: 'A', amount: 300, settledInProject: true },
+      { id: '2', expenseId: 'x', projectId: 'B', amount: 200 },
+      { id: '3', expenseId: 'x', projectId: 'Z', amount: 100 },
+    ], ids)).toEqual([{ date: '2026-02-01', amount: 200 }]);
+  });
+
+  it('counts funding in and repayments out, and not a move between two of them', () => {
+    const mv = (from: IntercompanyEntry['from'], to: IntercompanyEntry['to'], amount: number) =>
+      ({ id: `${amount}`, companyId: 'c', date: '2026-01-05', amount, type: 'advance', from, to, note: '', dueDate: null, salaryExpenseId: null }) as IntercompanyEntry;
+    const C = { kind: 'company' as const, id: null }, pr = (id: string) => ({ kind: 'project' as const, id });
+    const cash = projectsCash([mv(C, pr('A'), 500), mv(pr('A'), C, 120), mv(pr('A'), pr('B'), 40), mv(C, pr('Z'), 9)], ids);
+    expect(cash.in.map((x) => x.amount)).toEqual([500]);
+    expect(cash.out.map((x) => x.amount)).toEqual([120]);
   });
 });

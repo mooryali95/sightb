@@ -84,6 +84,26 @@ describe('StatementsPanel', () => {
   });
 });
 
+describe('StatementsPanel for a set of projects', () => {
+  it('charges what the company put on the project, counts its funding as cash in, and drops the company-only lines', () => {
+    const C = { kind: 'company', id: null };
+    ledger.value = { data: {
+      expenses: [{ id: 'x', companyId: 'c1', date: '2026-02-01', amount: 9000, description: '', kind: 'salary', partyId: null, paidByPartyId: null }],
+      allocations: [{ id: 'a', expenseId: 'x', projectId: 'A', amount: 5000 }],
+      entries: [{ id: 'f', companyId: 'c1', date: '2026-01-05', amount: 20000, type: 'advance', from: C, to: { kind: 'project', id: 'A' }, note: '', dueDate: null, salaryExpenseId: null }],
+    } };
+    render(<MemoryRouter><StatementsPanel only={{ companyId: 'c1', projectIds: ['A'] }} /></MemoryRouter>);
+    expect(line('قائمة الدخل', '− المحمَّل من المنظومة')).toHaveTextContent('5,000.00');
+    expect(card('قائمة الدخل').queryByText('− تكاليف غير مباشرة')).not.toBeInTheDocument();
+    expect(card('التدفق النقدي').getAllByRole('row')[1]).toHaveTextContent('▼ -10,000.00'); // 20,000 funding in, 30,000 spent
+  });
+
+  it('draws nothing when none of the projects is there', () => {
+    const { container } = render(<MemoryRouter><StatementsPanel only={{ companyId: 'c1', projectIds: [] }} /></MemoryRouter>);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
 describe('periodOf', () => {
   it('starts each preset where it should and ends today', () => {
     expect(periodOf('ytd', '2026-11-20')).toEqual({ from: '2026-01-01', to: '2026-11-20' });

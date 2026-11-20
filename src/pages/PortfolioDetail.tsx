@@ -1,3 +1,4 @@
+import { StatementsPanel } from './financial-overview/StatementsPanel';
 import { PortfolioHealth } from './portfolio/PortfolioHealth';
 import { useEffect, useMemo } from 'react';
 import { useDialogSession } from '@/hooks/useDialogSession';
@@ -218,6 +219,8 @@ export default function PortfolioDetail() {
         )}
 
         <PortfolioHealth projects={healthProjects} />
+
+        <StatementsPanel only={{ companyId: portfolio.companyId, projectIds: portfolioProjects.map((p) => p.id) }} />
 
         <ProjectComparisonTable rows={projectSummaries} />
 

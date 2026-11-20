@@ -16,7 +16,7 @@ import { useStore } from '@/store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useCompanyLedger } from '@/hooks/useCompanyLedger';
 import { formatCurrency } from '@/lib/finance';
-import { cashFlowStatement, companyOwnCost, incomeStatement, obligations, partyCash, periodOf, receivablesAging, type AgingBucket, type Span } from '@/lib/finance/statements';
+import { cashFlowStatement, chargedToProjects, companyOwnCost, incomeStatement, obligations, partyCash, periodOf, projectsCash, receivablesAging, type AgingBucket, type Span } from '@/lib/finance/statements';
 import { cn, todayLocal } from '@/lib/utils';
 
 const SPANS: { key: Span; label: string }[] = [
@@ -25,14 +25,16 @@ const SPANS: { key: Span; label: string }[] = [
 const AGE_LABEL: Record<AgingBucket, string> = { '0-30': 'حتى 30 يوماً', '31-60': '31 – 60 يوماً', '61-90': '61 – 90 يوماً', '90+': 'أكثر من 90 يوماً' };
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
-export function StatementsPanel() {
+/** Without `only`: a whole company, chosen on the panel. With it: these projects of that company (a portfolio, one project). */
+export function StatementsPanel({ only }: { only?: { companyId: string; projectIds: string[] } } = {}) {
   const s = useStore(useShallow((st) => ({
     companies: st.companies, projects: st.projects, expenses: st.expenses, revenues: st.revenues,
     indirectCosts: st.indirectCosts, commitments: st.commitments,
   })));
   const [params, setParams] = useSearchParams();
   const companies = s.companies.filter((c) => c.status !== 'archived');
-  const companyId = companies.find((c) => c.id === params.get('co'))?.id ?? companies[0]?.id;
+  const companyId = only?.companyId ?? companies.find((c) => c.id === params.get('co'))?.id ?? companies[0]?.id;
+  const onlyIds = only?.projectIds.join(',');
   const span = (SPANS.find((x) => x.key === params.get('span'))?.key ?? 'ytd') as Span;
   const set = (key: string, value: string) => setParams((prev) => { const out = new URLSearchParams(prev); out.set(key, value); return out; }, { replace: true });
   const ledger = useCompanyLedger(companyId).data;
@@ -40,25 +42,29 @@ export function StatementsPanel() {
 
   const view = useMemo(() => {
     if (!companyId) return null;
-    const projects = s.projects.filter((p) => p.companyId === companyId);
+    const wanted = onlyIds === undefined ? null : new Set(onlyIds.split(',').filter(Boolean));
+    const projects = s.projects.filter((p) => p.companyId === companyId && (!wanted || wanted.has(p.id)));
     const ids = new Set(projects.map((p) => p.id));
     const currencies = [...new Set(projects.map((p) => p.currency))];
     const revenues = s.revenues.filter((r) => ids.has(r.projectId));
     const expenses = s.expenses.filter((e) => ids.has(e.projectId));
     const period = periodOf(span, today);
-    const own = ledger ? companyOwnCost(ledger.expenses, ledger.allocations) : [];
-    const indirect = s.indirectCosts.filter((c) => c.companyId === companyId).map((c) => ({ date: c.date, amount: c.amount }));
-    const cash = ledger ? partyCash(ledger.entries) : { in: [], out: [] };
+    // A whole company carries its own cost and its indirect costs, and its cash
+    // edge is the parties. A set of projects carries what the company charged
+    // it, which is not cash, and its cash edge is the funding in and out.
+    const own = !ledger ? [] : wanted ? chargedToProjects(ledger.expenses, ledger.allocations, ids) : companyOwnCost(ledger.expenses, ledger.allocations);
+    const indirect = wanted ? [] : s.indirectCosts.filter((c) => c.companyId === companyId).map((c) => ({ date: c.date, amount: c.amount }));
+    const cash = !ledger ? { in: [], out: [] } : wanted ? projectsCash(ledger.entries, ids) : partyCash(ledger.entries);
     return {
       currency: currencies[0] ?? 'SAR', mixed: currencies.length > 1, period, projectCount: projects.length,
       income: incomeStatement({ revenues, expenses, companyExpenses: own, indirect }, period),
-      months: cashFlowStatement({ revenues, expenses, otherIn: cash.in, otherOut: [...cash.out, ...own, ...indirect] }, period),
+      months: cashFlowStatement({ revenues, expenses, otherIn: cash.in, otherOut: wanted ? cash.out : [...cash.out, ...own, ...indirect] }, period),
       aging: receivablesAging(revenues, today),
       owed: obligations(expenses, s.commitments.filter((c) => ids.has(c.projectId))),
     };
-  }, [companyId, span, today, ledger, s.projects, s.revenues, s.expenses, s.indirectCosts, s.commitments]);
+  }, [companyId, onlyIds, span, today, ledger, s.projects, s.revenues, s.expenses, s.indirectCosts, s.commitments]);
 
-  if (!view || !companyId) return null;
+  if (!view || !companyId || (only && view.projectCount === 0)) return null;
   const money = (n: number) => formatCurrency(n, view.currency);
   const { income, months, aging, owed } = view;
   const maxFlow = Math.max(1, ...months.map((m) => Math.max(m.inflow, m.outflow)));
@@ -74,7 +80,7 @@ export function StatementsPanel() {
           <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"><CalendarRange className="h-3.5 w-3.5" aria-hidden />من {view.period.from} إلى {view.period.to} · {view.projectCount} مشروع</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {companies.length > 1 && (
+          {!only && companies.length > 1 && (
             <Select value={companyId} onValueChange={(v) => set('co', v)}>
               <SelectTrigger className="w-[200px]" aria-label="المنظومة"><SelectValue /></SelectTrigger>
               <SelectContent>{companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
@@ -100,11 +106,11 @@ export function StatementsPanel() {
               <Line label="الإيراد المفوتر" value={money(income.revenue)} />
               <Line label="− التكلفة المباشرة للمشاريع" value={money(income.directCost)} muted />
               <Line label="= مجمل الربح" value={money(income.grossProfit)} strong negative={income.grossProfit < 0} note={income.grossMargin === null ? undefined : `${income.grossMargin.toFixed(1)}%`} />
-              <Line label="− مصاريف المنظومة" value={money(income.companyCost)} muted />
-              <Line label="− تكاليف غير مباشرة" value={money(income.indirectCost)} muted />
+              <Line label={only ? '− المحمَّل من المنظومة' : '− مصاريف المنظومة'} value={money(income.companyCost)} muted />
+              {!only && <Line label="− تكاليف غير مباشرة" value={money(income.indirectCost)} muted />}
               <Line label="= صافي الربح" value={money(income.netProfit)} strong total negative={income.netProfit < 0} note={income.netMargin === null ? undefined : `${income.netMargin.toFixed(1)}%`} />
             </dl>
-            {!ledger && <p className="mt-2 text-[11px] text-muted-foreground">○ دفتر المنظومة غير متاح، فمصاريفها غير مخصومة هنا.</p>}
+            {!ledger && <p className="mt-2 text-[11px] text-muted-foreground">○ دفتر المنظومة غير متاح، فمصاريفها وتمويلها غير محسوبة هنا.</p>}
           </article>
 
           <article aria-label="التدفق النقدي" className="rounded-xl border border-border p-3">
@@ -126,7 +132,7 @@ export function StatementsPanel() {
               </tbody>
               <tfoot><tr className="border-t border-border font-medium"><th scope="row" className="pt-1.5 text-start">المجموع</th><td className="pt-1.5 text-[11px] text-muted-foreground">داخل {money(totalIn)} · خارج {money(totalOut)}</td><td className="pt-1.5 text-end font-mono tabular-nums" colSpan={2}>{totalIn - totalOut < 0 ? '▼ عجز ' : ''}{money(totalIn - totalOut)}</td></tr></tfoot>
             </table>
-            <p className="mt-2 flex gap-3 text-[11px] text-muted-foreground"><span><span className="inline-block h-1.5 w-3 rounded-full bg-success" aria-hidden /> داخل: تحصيل وقروض</span><span><span className="inline-block h-1.5 w-3 rounded-full bg-foreground/35" aria-hidden /> خارج: صرف وسداد</span><span>التراكمي يبدأ من صفر أول الفترة</span></p>
+            <p className="mt-2 flex gap-3 text-[11px] text-muted-foreground"><span><span className="inline-block h-1.5 w-3 rounded-full bg-success" aria-hidden /> داخل: تحصيل {only ? 'وتمويل' : 'وقروض'}</span><span><span className="inline-block h-1.5 w-3 rounded-full bg-foreground/35" aria-hidden /> خارج: صرف وسداد</span><span>التراكمي يبدأ من صفر أول الفترة</span></p>
           </article>
 
           <article aria-label="أعمار الذمم" className="rounded-xl border border-border p-3">

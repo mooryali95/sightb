@@ -36,6 +36,8 @@ let ProjectDetail: React.ComponentType;
 beforeAll(async () => {
   ProjectDetail = (await import('../ProjectDetail')).default;
 });
+// The statements panel has its own tests; here it would need the company ledger.
+vi.mock('@/pages/financial-overview/StatementsPanel', () => ({ StatementsPanel: () => <div data-testid="StatementsPanel" /> }));
 vi.mock('@/components/project/ProjectDetailHeader', () => ({
   ProjectDetailHeader: (p: { isReadOnly: boolean; onArchive: () => void; onDelete: () => void; onExportExcel: () => void; onExportPDF: () => void }) => (
     <div data-testid="header">header ro={String(p.isReadOnly)}
