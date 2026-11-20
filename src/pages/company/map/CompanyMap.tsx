@@ -4,10 +4,14 @@
  * money that went to it from the company (funding, charged costs) and came
  * back. A three-column band says what belongs to the company alone, to
  * both, and to the project alone. Figures come from buildCompanyMap.
+ *
+ * «قائمة / هيكل» switches the projects between the strips and the drawn
+ * structure (OrgStructure). The choice lives in the address bar as
+ * ?map=structure, so the view can be shared and survives a reload.
  */
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowDown, ArrowUp, Building2, FolderKanban, Landmark, Network, Plus } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowDown, ArrowUp, Building2, FolderKanban, Landmark, Network, Plus, Rows3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/finance';
@@ -15,8 +19,10 @@ import { buildCompanyMap, HEALTH, type MapProject, type MapProjectInput } from '
 import type { CompanyExpense, ExpenseAllocation, IntercompanyEntry } from '@/lib/finance/company-ledger';
 import { cn } from '@/lib/utils';
 import { FlowBar, SpendRing } from '@/components/finance/flow-parts';
+import { OrgStructure } from './OrgStructure';
 
 interface Props {
+  companyId: string;
   companyName: string;
   projects: MapProjectInput[];
   /** null while loading; 'not-ready' when the ledger tables are not live. */
@@ -29,7 +35,14 @@ interface Props {
 
 const money = (n: number) => formatCurrency(n);
 
-export function CompanyMap({ companyName, projects, ledger, loading, net, onNewProject }: Props) {
+export function CompanyMap({ companyId, companyName, projects, ledger, loading, net, onNewProject }: Props) {
+  const [params, setParams] = useSearchParams();
+  const structure = params.get('map') === 'structure';
+  const setStructure = (on: boolean) => setParams((prev) => {
+    const next = new URLSearchParams(prev);
+    if (on) next.set('map', 'structure'); else next.delete('map');
+    return next;
+  }, { replace: true });
   const live = ledger !== null && ledger !== 'not-ready' ? ledger : null;
   const map = useMemo(() => buildCompanyMap(projects, live), [projects, live]);
 
@@ -61,11 +74,19 @@ export function CompanyMap({ companyName, projects, ledger, loading, net, onNewP
       <section aria-label="خريطة المنظومة" className="mb-6 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
           <h2 className="flex items-center gap-2 font-bold"><Network className="h-5 w-5 text-accent" aria-hidden />خريطة المنظومة</h2>
-          <ul className="flex flex-wrap gap-3 text-[11px] text-muted-foreground" aria-label="مفتاح الألوان">
-            <li className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-accent" />تمويل من المنظومة</li>
-            <li className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-foreground/35" />محمَّل من مصاريفها</li>
-            <li className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-success" />عاد إلى المنظومة</li>
-          </ul>
+          <div className="flex flex-wrap items-center gap-3">
+            {!structure && (
+              <ul className="flex flex-wrap gap-3 text-[11px] text-muted-foreground" aria-label="مفتاح الألوان">
+                <li className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-accent" />تمويل من المنظومة</li>
+                <li className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-foreground/35" />محمَّل من مصاريفها</li>
+                <li className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-success" />عاد إلى المنظومة</li>
+              </ul>
+            )}
+            <div role="group" aria-label="طريقة عرض المشاريع" className="inline-flex rounded-lg border border-border bg-background p-0.5 text-xs">
+              <ViewButton on={!structure} onClick={() => setStructure(false)} icon={<Rows3 className="h-3.5 w-3.5" aria-hidden />}>قائمة</ViewButton>
+              <ViewButton on={structure} onClick={() => setStructure(true)} icon={<Network className="h-3.5 w-3.5" aria-hidden />}>هيكل</ViewButton>
+            </div>
+          </div>
         </header>
 
         {/* The hub: the company itself. */}
@@ -95,7 +116,7 @@ export function CompanyMap({ companyName, projects, ledger, loading, net, onNewP
             </dl>
           </div>
           {/* The trunk the projects hang from. */}
-          <div aria-hidden className="mx-auto h-6 w-px bg-gradient-to-b from-accent to-border" />
+          {structure ? <div className="h-4" /> : <div aria-hidden className="mx-auto h-6 w-px bg-gradient-to-b from-accent to-border" />}
         </div>
 
         {ledger === 'not-ready' && (
@@ -104,6 +125,7 @@ export function CompanyMap({ companyName, projects, ledger, loading, net, onNewP
           </p>
         )}
 
+        {structure ? <OrgStructure companyId={companyId} companyName={companyName} map={map} flows={live !== null} /> : (
         <div className="space-y-5 px-5 pb-5">
           {map.groups.map((g) => (
             <div key={g.name}>
@@ -114,6 +136,7 @@ export function CompanyMap({ companyName, projects, ledger, loading, net, onNewP
             </div>
           ))}
         </div>
+        )}
 
         {/* What belongs to whom. */}
         <footer className="border-t border-border bg-muted/30 px-5 py-4">
@@ -132,6 +155,16 @@ export function CompanyMap({ companyName, projects, ledger, loading, net, onNewP
         </footer>
       </section>
     </TooltipProvider>
+  );
+}
+
+function ViewButton({ on, onClick, icon, children }: { on: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <button type="button" aria-pressed={on} onClick={onClick}
+      className={cn('inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+        on ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>
+      {icon}{children}
+    </button>
   );
 }
 

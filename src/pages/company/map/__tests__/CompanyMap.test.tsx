@@ -32,7 +32,7 @@ const projects = [
 function Where() { return <span data-testid="where">{useLocation().pathname}</span>; }
 const renderMap = (props: Partial<React.ComponentProps<typeof CompanyMap>> = {}) => render(
   <MemoryRouter initialEntries={['/company/c']}>
-    <Routes><Route path="*" element={<><CompanyMap companyName="الأفق" projects={projects} ledger={ledger} net={120000} {...props} /><Where /></>} /></Routes>
+    <Routes><Route path="*" element={<><CompanyMap companyId="c" companyName="الأفق" projects={projects} ledger={ledger} net={120000} {...props} /><Where /></>} /></Routes>
   </MemoryRouter>,
 );
 const strip = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}:`) });

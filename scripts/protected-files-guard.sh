@@ -67,6 +67,15 @@ need_file e2e/companies-overview.spec.ts
 need_file src/lib/finance/__tests__/company-map.test.ts
 need_file src/pages/company/map/CompanyMap.tsx
 need_file e2e/company-map.spec.ts
+need_file src/lib/finance/org-structure.ts
+need_file src/lib/finance/__tests__/org-structure.test.ts
+need_file src/pages/company/map/OrgStructure.tsx
+need_file src/pages/company/map/__tests__/OrgStructure.test.tsx
+need_file e2e/org-structure.spec.ts
+need_text src/pages/company/map/CompanyMap.tsx "<OrgStructure"
+need_file src/components/dashboard/LifetimeNote.tsx
+need_file src/pages/__tests__/Dashboard.filters.test.tsx
+need_text scripts/ssot-guard.sh "hand-written amount sum"
 need_file src/components/finance/flow-parts.tsx
 need_file src/components/project/ledger/ProjectCompanyLink.tsx
 need_text src/pages/project-detail/ProjectSection.tsx "<ProjectCompanyLink"

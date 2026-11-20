@@ -56,6 +56,14 @@ describe('buildCompanyMap', () => {
     expect(projectFlows([map.projects[0], { ...map.projects[1], owes: -4000 }]).owed).toBe(25000);
   });
 
+  it('gives each group its portfolio and its own flows, and the largest flow on any line', () => {
+    const withIds = buildCompanyMap([p('x', { group: 'السكني', groupId: 'pf-1' }), p('y', { group: 'السكني', groupId: 'pf-1' }), p('z')], ledger);
+    expect(withIds.groups.map((g) => [g.name, g.id, g.sent, g.returned])).toEqual([['السكني', 'pf-1', 56000, 15000], ['مستقلة', null, 0, 0]]);
+    expect(withIds.projects.map((q) => q.sent)).toEqual([46000, 10000, 0]);
+    expect(withIds.flowMax).toBe(56000);
+    expect(buildCompanyMap([p('x')], null).flowMax).toBe(1); // never zero: it is divided by
+  });
+
   it('groups projects by portfolio in the order they come', () => {
     expect(map.groups.map((g) => [g.name, g.projects.length])).toEqual([['السكني', 2], ['مستقلة', 1]]);
   });

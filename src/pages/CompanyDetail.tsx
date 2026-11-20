@@ -144,6 +144,7 @@ export default function CompanyDetail() {
       return {
         id: p.id, name: p.name, status: p.status,
         group: portfolios.find((f) => f.id === p.portfolioId)?.name ?? 'دون محفظة',
+        groupId: portfolios.find((f) => f.id === p.portfolioId)?.id ?? null,
         contract: s.effectiveContractValue, planned: s.totalPlanned, actual: s.totalActual, collected: s.collectedRevenue,
       };
     }), [companyProjects, showInactive, budgetItems, expenses, revenues, changeOrders, portfolios]);
@@ -306,6 +307,7 @@ export default function CompanyDetail() {
         )}
 
         <CompanyMap
+          companyId={company.id}
           companyName={company.name}
           projects={mapProjects}
           ledger={ledger.error instanceof LedgerNotReady ? 'not-ready' : ledger.data ?? (ledger.isError ? 'not-ready' : null)}

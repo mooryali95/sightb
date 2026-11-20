@@ -19,6 +19,8 @@ import type { ProjectStatus } from '@/types/project';
 export interface MapProjectInput {
   id: string; name: string; group: string; status: ProjectStatus;
   contract: number; planned: number; actual: number; collected: number;
+  /** The portfolio the group stands for; absent for projects outside any portfolio. */
+  groupId?: string | null;
 }
 
 export type MapHealth = 'good' | 'warn' | 'bad' | 'idle';
@@ -29,6 +31,8 @@ export interface MapProject extends MapProjectInput {
   spendPct: number | null;
   funded: number;
   charged: number;
+  /** Everything the company sent it: funding and charges together. */
+  sent: number;
   returned: number;
   /** What the project still owes the company (negative: the company owes it). */
   owes: number;
@@ -37,9 +41,22 @@ export interface MapProject extends MapProjectInput {
   backScale: number;
 }
 
+/** A portfolio (or the projects outside any) with what passed between the company and its projects. */
+export interface MapGroup {
+  name: string;
+  /** The portfolio's id; null for the projects outside any portfolio. */
+  id: string | null;
+  projects: MapProject[];
+  /** Funding and charges the company sent the group's projects, and what they returned. */
+  sent: number;
+  returned: number;
+}
+
 export interface CompanyMap {
   projects: MapProject[];
-  groups: { name: string; projects: MapProject[] }[];
+  groups: MapGroup[];
+  /** The largest flow on any line of the structure view (a group's or a project's), at least 1. */
+  flowMax: number;
   company: {
     ownSpend: number; charged: number; retained: number;
     fundedOut: number; returned: number;
@@ -82,9 +99,13 @@ export function buildCompanyMap(
     };
   });
   const maxFlow = Math.max(1, ...base.map((p) => Math.max(p.funded + p.charged, p.returned)));
-  const mapped: MapProject[] = base.map((p) => ({ ...p, outScale: r2((p.funded + p.charged) / maxFlow), backScale: r2(p.returned / maxFlow) }));
+  const mapped: MapProject[] = base.map((p) => ({ ...p, sent: r2(p.funded + p.charged), outScale: r2((p.funded + p.charged) / maxFlow), backScale: r2(p.returned / maxFlow) }));
 
-  const groups = [...new Set(mapped.map((p) => p.group))].map((name) => ({ name, projects: mapped.filter((p) => p.group === name) }));
+  const groups: MapGroup[] = [...new Set(mapped.map((p) => p.group))].map((name) => {
+    const own = mapped.filter((p) => p.group === name);
+    const flows = projectFlows(own);
+    return { name, id: own[0]?.groupId ?? null, projects: own, sent: flows.sent, returned: flows.returned };
+  });
   const owedToCompany = r2([...balances.values()].filter((v) => v > 0).reduce((s, v) => s + v, 0));
   const owedByCompany = r2([...balances.values()].filter((v) => v < 0).reduce((s, v) => s - v, 0));
   const fundedOut = r2(mapped.reduce((s, p) => s + p.funded, 0));
@@ -93,6 +114,7 @@ export function buildCompanyMap(
   return {
     projects: mapped,
     groups,
+    flowMax: Math.max(1, ...groups.map((g) => Math.max(g.sent, g.returned))),
     company: { ownSpend: summary.total, charged: summary.allocated, retained: summary.retained, fundedOut, returned, owedToCompany, owedByCompany },
     split: {
       companyOnly: summary.retained,
@@ -109,7 +131,7 @@ export function buildCompanyMap(
  */
 export function projectFlows(projects: MapProject[]): { sent: number; returned: number; owed: number } {
   let sent = 0, returned = 0, owed = 0;
-  for (const p of projects) { sent += p.funded + p.charged; returned += p.returned; owed += Math.max(p.owes, 0); }
+  for (const p of projects) { sent += p.sent; returned += p.returned; owed += Math.max(p.owes, 0); }
   return { sent: r2(sent), returned: r2(returned), owed: r2(owed) };
 }
 
