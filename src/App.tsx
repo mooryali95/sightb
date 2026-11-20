@@ -17,6 +17,7 @@ import { useScrollRegions } from "@/lib/a11y/scroll-regions";
 import { LazyMotion, MotionConfig } from "framer-motion";
 import { SessionTimeoutWarning } from "@/components/SessionTimeoutWarning";
 import { useCoreData } from "@/hooks/useAppData";
+import { applyTextSize, readPreferences } from "@/lib/preferences";
 
 // Eagerly load landing/login (initial pages users see)
 import Landing from "./pages/Landing";
@@ -42,6 +43,10 @@ const ControlCenter = lazy(pageLoaders.controlCenter);
 const FinancialOverview = lazy(pageLoaders.finance);
 const PartyDetail = lazy(pageLoaders.party);
 const Organize = lazy(pageLoaders.organize);
+const Settings = lazy(pageLoaders.settings);
+
+// The text size chosen in Settings applies before the first page paints.
+applyTextSize(readPreferences().textSize);
 
 
 function AppBootstrap({ children }: { children: ReactNode }) {
@@ -113,6 +118,7 @@ const App = () => (
                       <Route path="/errors" element={<ProtectedRoute><ErrorLog /></ProtectedRoute>} />
                       <Route path="/finance" element={<ProtectedRoute><FinancialOverview /></ProtectedRoute>} />
                       <Route path="/control-center" element={<ProtectedRoute><ControlCenter /></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute><ErrorBoundary><Settings /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/organize" element={<ProtectedRoute><ErrorBoundary><Organize /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="/m/expense/new" element={<ProtectedRoute><ErrorBoundary><MobileExpenseCapture /></ErrorBoundary></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />

@@ -585,3 +585,6 @@ input, textarea { caret-color: hsl(var(--accent-text)); }
 /* Date fields: the native text hides at rest, the Arabic reading shows over it (see ui/input). */
 .date-native:not(:focus) { color: transparent; }
 .date-native::-webkit-calendar-picker-indicator { opacity: 0.7; cursor: pointer; }
+
+/* Larger text, chosen in Settings: everything sized in rem scales with it. */
+html[data-text-size="large"] { font-size: 112.5%; }

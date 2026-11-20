@@ -9,9 +9,13 @@ import { GlobalSearch } from '@/components/GlobalSearch';
 import { SmartNotifications } from '@/components/SmartNotifications';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { AppBreadcrumb } from '@/components/AppBreadcrumb';
+import { readPreferences } from '@/lib/preferences';
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
+  // Pages open with the side menu folded when that was chosen in Settings (never in the phone drawer).
+  const [collapsed, setCollapsed] = useState(
+    () => readPreferences().sidebarCollapsed && typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches === true,
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
   const content = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
