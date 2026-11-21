@@ -113,10 +113,14 @@ export function buildCompanyMap(
   const maxFlow = Math.max(1, ...base.map((p) => Math.max(p.funded + p.charged, p.returned)));
   const mapped: MapProject[] = base.map((p) => ({ ...p, sent: r2(p.funded + p.charged), outScale: r2((p.funded + p.charged) / maxFlow), backScale: r2(p.returned / maxFlow) }));
 
-  const groups: MapGroup[] = [...new Set(mapped.map((p) => p.group))].map((name) => {
-    const own = mapped.filter((p) => p.group === name);
+  // Grouped by the portfolio itself where the caller says which it is: two
+  // portfolios of one name were merged into one box that linked to the first.
+  // A caller that gives only the name is still grouped by it.
+  const keyOf = (p: MapProjectInput) => (p.groupId !== undefined ? `id:${p.groupId ?? ''}` : `name:${p.group}`);
+  const groups: MapGroup[] = [...new Set(mapped.map(keyOf))].map((key) => {
+    const own = mapped.filter((p) => keyOf(p) === key);
     const flows = projectFlows(own);
-    return { name, id: own[0]?.groupId ?? null, projects: own, sent: flows.sent, returned: flows.returned };
+    return { name: own[0].group, id: own[0].groupId ?? null, projects: own, sent: flows.sent, returned: flows.returned };
   });
   const owedToCompany = r2([...balances.values()].filter((v) => v > 0).reduce((s, v) => s + v, 0));
   const owedByCompany = r2([...balances.values()].filter((v) => v < 0).reduce((s, v) => s - v, 0));

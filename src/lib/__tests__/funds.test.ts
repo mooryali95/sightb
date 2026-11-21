@@ -427,3 +427,22 @@ describe('carried cash and repayments to the company', () => {
     expect(s).toMatchObject({ totalDocumentedSpend: 0, totalReturnedToCompany: 700, remainingInManagerHand: 300 });
   });
 });
+
+describe('availableCustodiesOf', () => {
+  it('offers each active custody with the balance its own screen shows: a rejected expense spent nothing', async () => {
+    const { availableCustodiesOf, getCustodyRemaining } = await import('../funds');
+    type C = Parameters<typeof availableCustodiesOf>[1][number];
+    type E = NonNullable<Parameters<typeof availableCustodiesOf>[2]>[number];
+    const custody = { id: 'c1', projectId: 'p', resourceName: 'عهدة', amount: 1000, status: 'active' } as C;
+    const closed = { ...custody, id: 'c2', status: 'closed' } as C;
+    const elsewhere = { ...custody, id: 'c3', projectId: 'other' } as C;
+    const spent = (id: string, amount: number, approvalStatus: string) => ({ id, projectId: 'p', custodyId: 'c1', amount, approvalStatus }) as E;
+    const expenses = [spent('ok', 300, 'approved'), spent('no', 400, 'rejected')];
+
+    const offered = availableCustodiesOf('p', [custody, closed, elsewhere], expenses);
+    expect(offered.map((x) => [x.custody.id, x.remaining])).toEqual([['c1', 700]]);
+    expect(offered[0].remaining).toBe(getCustodyRemaining(custody, expenses));
+    // Spent to the last riyal: not offered.
+    expect(availableCustodiesOf('p', [custody], [spent('all', 1000, 'approved')])).toEqual([]);
+  });
+});

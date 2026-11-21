@@ -13,7 +13,8 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency, sumMoney } from '@/lib/finance';
+import { formatCurrency } from '@/lib/finance';
+import { getCustodyBreakdown } from '@/lib/funds';
 import type { Custody, Expense } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,7 +87,8 @@ export function CustodyFormDialog({
         : (notes.trim() || undefined);
       if (editingId) {
         const original = custodies.find(c => c.id === editingId);
-        const spent = sumMoney(expenses.filter((e) => e.custodyId === editingId));
+        // What the custody screen counts as spent: rejected expenses are not.
+        const spent = original ? getCustodyBreakdown(original, expenses).spent : 0;
         const newAmt = parseFloat(amount);
         if (original && newAmt !== original.amount && newAmt < spent) {
           toast.error(`لا يمكن تخفيض المبلغ تحت ${formatCurrency(spent)} (المصروف عليها)`);

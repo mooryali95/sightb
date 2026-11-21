@@ -99,7 +99,7 @@ function ProjectNode({ p, flows, max, style, samples }: { p: MapProject; flows: 
   const h = HEALTH[p.health];
   return (
     <Link to={`/project/${p.id}`} style={style} title={flows ? `تمويل ${money(p.funded)} + محمَّل من مصاريف المنظومة ${money(p.charged)}` : undefined}
-      aria-label={`${p.name}: ${h.label}${flows ? `، ${flowWords(p.sent, p.returned)}` : ''}`}
+      aria-label={`${p.name}: ${h.label}، ${p.spendPct === null ? 'بلا موازنة' : `صُرف ${Math.round(p.spendPct)}% من الموازنة`}${flows ? `، ${flowWords(p.sent, p.returned)}` : ''}`}
       className={cn(NODE, 'px-2.5 py-2', h.tone)}>
       <span className="block truncate text-sm font-semibold">{p.name}</span>
       <span className="mt-1 flex items-center justify-between gap-1 text-[11px]">

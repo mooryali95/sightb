@@ -84,6 +84,11 @@ describe('buildCompanyMap', () => {
     expect(view.split.projectOnly).toBe(29000);            // both projects' spend
   });
 
+  it('keeps two portfolios of one name apart, each with its own link and its own flows', () => {
+    const twins = buildCompanyMap([p('x', { group: 'عام', groupId: 'pf-1' }), p('y', { group: 'عام', groupId: 'pf-2' })], ledger);
+    expect(twins.groups.map((g) => [g.name, g.id, g.projects.map((q) => q.id), g.sent])).toEqual([['عام', 'pf-1', ['x'], 46000], ['عام', 'pf-2', ['y'], 10000]]);
+  });
+
   it('groups projects by portfolio in the order they come', () => {
     expect(map.groups.map((g) => [g.name, g.projects.length])).toEqual([['السكني', 2], ['مستقلة', 1]]);
   });

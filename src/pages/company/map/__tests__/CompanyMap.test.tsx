@@ -76,7 +76,7 @@ describe('CompanyMap', () => {
     const hub = screen.getByText('صافي الشركة المخطط').parentElement!;
     expect(hub).toHaveTextContent('120,000.00');
     expect(screen.getByText('مصاريف المنظومة').parentElement).toHaveTextContent('6,000.00 ر.س حُمِّلت على المشاريع · 4,000.00 ر.س بقيت عليها');
-    expect(screen.getByText('أُرسل إلى المشاريع').parentElement).toHaveTextContent('عاد منه 15,000.00');
+    expect(screen.getByText('تمويل أُرسل إلى المشاريع').parentElement).toHaveTextContent('عاد منه 15,000.00');
   });
 
   it('marks a planned deficit in words, not by colour alone', () => {
@@ -94,6 +94,13 @@ describe('CompanyMap', () => {
     renderMap({ ledger: 'not-ready' });
     expect(screen.getByRole('status')).toHaveTextContent('دفتر المنظومة غير مفعّل بعد');
     expect(strip('برج الأفق')).not.toHaveTextContent('من المنظومة');
+  });
+
+  it('says the strips leave out the hidden finished projects while the company figures keep them', () => {
+    renderMap();
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    renderMap({ projects: projects.slice(0, 3), allProjects: projects });
+    expect(screen.getByRole('note')).toHaveTextContent('1 منتهٍ مخفي');
   });
 
   it('opens the project from its strip', () => {

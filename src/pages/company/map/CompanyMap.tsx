@@ -47,6 +47,7 @@ export function CompanyMap({ companyId, companyName, projects, allProjects, ledg
   }, { replace: true });
   const live = ledger !== null && ledger !== 'not-ready' ? ledger : null;
   const map = useMemo(() => buildCompanyMap(projects, live, allProjects ?? projects), [projects, live, allProjects]);
+  const hidden = Math.max(0, (allProjects?.length ?? projects.length) - projects.length);
 
   if (loading) {
     return (
@@ -112,11 +113,16 @@ export function CompanyMap({ companyId, companyName, projects, allProjects, ledg
             <dl className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
               <HubFigure label="مصاريف المنظومة" value={c.ownSpend}
                 note={c.ownSpend > 0 ? `${money(c.charged)} حُمِّلت على المشاريع · ${money(c.retained)} بقيت عليها` : 'لا مصاريف مسجّلة'} />
-              <HubFigure label="أُرسل إلى المشاريع" value={c.fundedOut} note={`عاد منه ${money(c.returned)}`} />
+              <HubFigure label="تمويل أُرسل إلى المشاريع" value={c.fundedOut} note={`عاد منه ${money(c.returned)}`} />
               <HubFigure label="لنا على المشاريع والأشخاص" value={c.owedToCompany} />
               <HubFigure label="علينا للأشخاص" value={c.owedByCompany} />
             </dl>
           </div>
+          {hidden > 0 && (
+            <p role="note" className="mt-3 text-center text-[11px] text-muted-foreground">
+              أرقام المنظومة أعلاه تشمل كل مشاريعها. المشاريع أدناه هي المعروضة فقط: {hidden} منتهٍ مخفي لا تظهر حركته في الأشرطة والخطوط.
+            </p>
+          )}
           {/* The trunk the projects hang from. */}
           {structure ? <div className="h-4" /> : <div aria-hidden className="mx-auto h-6 w-px bg-gradient-to-b from-accent to-border" />}
         </div>

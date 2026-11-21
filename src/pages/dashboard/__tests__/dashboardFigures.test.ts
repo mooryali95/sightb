@@ -150,7 +150,7 @@ describe('dashboardFigures', () => {
     const f = dashboardFigures(input, filters({ searchQuery: 'لا شيء' }), NOW);
     expect(f.filteredProjects).toEqual([]);
     expect(f).toMatchObject({ totalContractValue: 0, totalExpenses: 0, plannedProfitMargin: 0, companyData: [], statusData: [] });
-    expect(f.filteredRisks.map((r) => r.id)).toEqual(['k3']);
+    expect(f.filteredRisks).toEqual([]);   // a search that matches no project lists no risk either
   });
 });
 
@@ -165,13 +165,16 @@ describe('what stands beside the projects follows the same filters', () => {
   };
   const ids = (f: ReturnType<typeof dashboardFigures>) => f.filteredRisks.map((r) => r.id);
 
-  it('keeps a portfolio\'s risk with its company and its portfolio, and leaves it alone under status and search', () => {
+  it('keeps a portfolio\'s risk with its company and its portfolio, and under a search only while its portfolio is on the page', () => {
     // c2 is archived: its portfolio's risk is hidden with its projects until c2 is chosen.
     expect(ids(dashboardFigures(input, filters(), NOW))).toEqual(['k-p1', 'k-pf1', 'k-pf2', 'k-gone', 'k-free']);
-    expect(ids(dashboardFigures(input, filters({ filterCompany: 'c2' }), NOW))).toEqual(['k-pf3', 'k-gone', 'k-free']);
-    expect(ids(dashboardFigures(input, filters({ filterPortfolio: 'pf2' }), NOW))).toEqual(['k-pf2', 'k-gone', 'k-free']);
-    expect(ids(dashboardFigures(input, filters({ filterPortfolio: 'standalone', showInactive: true }), NOW))).toEqual(['k-gone', 'k-free']);
-    expect(ids(dashboardFigures(input, filters({ searchQuery: 'لا شيء' }), NOW))).toEqual(['k-pf1', 'k-pf2', 'k-gone', 'k-free']);
+    expect(ids(dashboardFigures(input, filters({ filterCompany: 'c2' }), NOW))).toEqual(['k-pf3']);
+    expect(ids(dashboardFigures(input, filters({ filterPortfolio: 'pf2' }), NOW))).toEqual(['k-pf2']);
+    expect(ids(dashboardFigures(input, filters({ filterPortfolio: 'standalone', showInactive: true }), NOW))).toEqual([]);
+    // «الرياض» is p1, in pf1: its risk and its portfolio's stay; pf2 has no project on the page.
+    expect(ids(dashboardFigures(input, filters({ searchQuery: 'الرياض' }), NOW))).toEqual(['k-p1', 'k-pf1']);
+    expect(ids(dashboardFigures(input, filters({ searchQuery: 'لا شيء' }), NOW))).toEqual([]);
+    expect(ids(dashboardFigures(input, filters({ filterStatus: 'on-hold' }), NOW))).toEqual([]);
   });
 
   it('counts every live company and every portfolio unfiltered, and only those of the visible projects once narrowed', () => {
@@ -181,6 +184,8 @@ describe('what stands beside the projects follows the same filters', () => {
     expect(dashboardFigures(input, filters({ filterCompany: 'c2' }), NOW)).toMatchObject({ companiesInView: 1, archivedCompaniesInView: 0, portfoliosInView: 0 });
     expect(dashboardFigures(input, filters({ searchQuery: 'الرياض' }), NOW)).toMatchObject({ companiesInView: 1, archivedCompaniesInView: 0, portfoliosInView: 1 });
     expect(dashboardFigures(input, filters({ searchQuery: 'لا شيء' }), NOW)).toMatchObject({ companiesInView: 0, portfoliosInView: 0 });
+    // A chosen company still counts when none of its projects is on the page.
+    expect(dashboardFigures(input, filters({ filterCompany: 'c1', filterStatus: 'on-hold' }), NOW)).toMatchObject({ companiesInView: 1, portfoliosInView: 0 });
   });
 });
 

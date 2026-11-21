@@ -72,7 +72,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(org.getByRole('link', { name: 'محفظة الطرق: مشروعان، من المنظومة 200,000.00 ر.س، إلى المنظومة 120,000.00 ر.س' })).toHaveAttribute('href', `/portfolio/${ROADS}`);
       await expect(org.getByRole('link', { name: /^دون محفظة: مشروع واحد، من المنظومة 89,000.00/ })).toHaveAttribute('href', `/?company=${COMPANY_ID}&portfolio=standalone`);
       const tower = org.getByRole('link', { name: /^برج الأعمال:/ });
-      await expect(tower).toHaveAccessibleName('برج الأعمال: يحتاج انتباه، من المنظومة 20,000.00 ر.س، إلى المنظومة 0.00 ر.س');
+      await expect(tower).toHaveAccessibleName('برج الأعمال: يحتاج انتباه، صُرف 0% من الموازنة، من المنظومة 20,000.00 ر.س، إلى المنظومة 0.00 ر.س');
       await expect(tower).toContainText('▲ يحتاج انتباه');
       const seeded = org.getByRole('link', { name: /^مشروع الاختبار:/ });
       await expect(seeded).toContainText('✓ على المسار');

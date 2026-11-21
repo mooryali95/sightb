@@ -544,3 +544,22 @@ export function getSettlementForFund(
 ): FundSettlement | null {
   return settlements.find((st) => st.fundId === fundId) || null;
 }
+
+/**
+ * The project's active custodies that still hold money, each with the
+ * balance its own screen shows. The pay and settle dialogs offer these. It
+ * was summed by hand there and counted rejected expenses, so a custody that
+ * showed 700 refused a 500 payment with «المتاح: 300».
+ */
+export function availableCustodiesOf(
+  projectId: string,
+  custodies: Custody[],
+  expenses: Expense[] = [],
+  cashTransfers: CashTransfer[] = [],
+  paymentRequests: PaymentRequest[] = [],
+): { custody: Custody; remaining: number }[] {
+  return custodies
+    .filter((c) => c.projectId === projectId && c.status === 'active')
+    .map((c) => ({ custody: c, remaining: getCustodyRemaining(c, expenses, cashTransfers, paymentRequests) }))
+    .filter((x) => x.remaining > 0);
+}

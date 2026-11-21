@@ -94,7 +94,7 @@ describe('the structure', () => {
     expect(links[0]).toHaveAccessibleName('المنظومة الأفق: مشاريعها في لوحة التحكم');
     expect(node(/^المحفظة السكنية:/)).toHaveAccessibleName('المحفظة السكنية: مشروعان، من المنظومة 46,000.00 ر.س، إلى المنظومة 15,000.00 ر.س');
     expect(node(/^دون محفظة:/)).toHaveAccessibleName('دون محفظة: مشروعان، من المنظومة 4,000.00 ر.س، إلى المنظومة 0.00 ر.س');
-    expect(node(/^برج الأفق:/)).toHaveAccessibleName('برج الأفق: على المسار، من المنظومة 46,000.00 ر.س، إلى المنظومة 15,000.00 ر.س');
+    expect(node(/^برج الأفق:/)).toHaveAccessibleName('برج الأفق: على المسار، صُرف 25% من الموازنة، من المنظومة 46,000.00 ر.س، إلى المنظومة 15,000.00 ر.س');
     for (const l of links) expect(l).not.toHaveAttribute('tabindex', '-1');
   });
 
@@ -154,7 +154,7 @@ describe('states', () => {
   it('draws the structure without money when the ledger is not live, and says why', () => {
     renderMap('/company/c?map=structure', { ledger: 'not-ready' });
     expect(screen.getByRole('status')).toHaveTextContent('دفتر المنظومة غير مفعّل بعد');
-    expect(node(/^برج الأفق:/)).toHaveAccessibleName('برج الأفق: على المسار');
+    expect(node(/^برج الأفق:/)).toHaveAccessibleName('برج الأفق: على المسار، صُرف 25% من الموازنة');
     expect(node(/^برج الأفق:/)).not.toHaveTextContent('↓');
     expect(node(/^المحفظة السكنية:/)).toHaveAccessibleName('المحفظة السكنية: مشروعان');
     expect(lines('out')).toHaveLength(0);
