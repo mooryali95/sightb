@@ -10,6 +10,7 @@ import { useStore } from '@/store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { describeRoles, strongestRole, ROLE_LABELS } from '@/lib/settings-access';
 import { GeneralSettings } from './settings/GeneralSettings';
+import { OrganizationSettings } from './settings/OrganizationSettings';
 import { ToolsSection } from './settings/ToolsSection';
 import { PermissionsSection } from './settings/PermissionsSection';
 import { PoliciesSection } from './settings/PoliciesSection';
@@ -44,6 +45,7 @@ export default function Settings() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] items-start">
         <div className="space-y-6 min-w-0 stagger-in">
           <GeneralSettings />
+          <OrganizationSettings canManage={isAdmin} roleLoading={loading} />
           <ToolsSection access={{ isAdmin, isOwner }} loading={loading} />
           <PermissionsSection lines={lines} strongest={strongest} loading={loading} />
           <PoliciesSection />

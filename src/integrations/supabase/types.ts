@@ -1257,6 +1257,39 @@ export type Database = {
           },
         ]
       }
+      organization_settings: {
+        Row: {
+          default_currency: string
+          default_duration_months: number
+          default_retention_percent: number
+          default_tax_percent: number
+          id: string
+          singleton: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          default_currency?: string
+          default_duration_months?: number
+          default_retention_percent?: number
+          default_tax_percent?: number
+          id?: string
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          default_currency?: string
+          default_duration_months?: number
+          default_retention_percent?: number
+          default_tax_percent?: number
+          id?: string
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       parties: {
         Row: {
           aliases: string[]

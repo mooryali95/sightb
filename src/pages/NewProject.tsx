@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { useCoreData } from '@/hooks/useAppData';
@@ -18,6 +18,7 @@ import { VatSplitPreview } from './newproject/VatSplitPreview';
 import { contractFigures, resolveVatRate } from './newproject/contractFigures';
 import { todayLocal } from '@/lib/utils';
 import { useShallow } from 'zustand/react/shallow';
+import { useOrgSettings } from '@/hooks/useOrgSettings';
 
 export default function NewProject() {
   const [searchParams] = useSearchParams();
@@ -38,12 +39,25 @@ export default function NewProject() {
   const [resourceCount, setResourceCount] = useState('1');
   // Must be the ISO code, not the symbol: `projects_currency_iso4217` rejects
   // anything else, so writing 'ر.س' here fails project creation outright.
-  const [currency] = useState<string>(DEFAULT_CURRENCY);
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [contractType, setContractType] = useState<ContractType>('lump_sum');
   const [retentionPercent, setRetentionPercent] = useState('0');
   const [loading, setLoading] = useState(false);
   const [taxPercent, setTaxPercent] = useState('15');
   const [vatInclusive, setVatInclusive] = useState(false);
+
+  // The organisation's defaults arrive after the first render; they fill only
+  // the fields the person has not typed in yet.
+  const { settings: org, loaded: orgLoaded } = useOrgSettings();
+  const touched = useRef(new Set<string>());
+  const touch = (k: string) => touched.current.add(k);
+  useEffect(() => {
+    if (!orgLoaded) return;
+    if (!touched.current.has('tax')) setTaxPercent(String(org.defaultTaxPercent));
+    if (!touched.current.has('retention')) setRetentionPercent(String(org.defaultRetentionPercent));
+    if (!touched.current.has('duration')) setDurationMonths(String(org.defaultDurationMonths));
+    setCurrency(org.defaultCurrency);
+  }, [org, orgLoaded]);
 
   const editableCompanies = useMemo(() => companies.filter(c => isAdmin || canEdit('company', c.id)), [companies, isAdmin, canEdit]);
   const filteredPortfolios = portfolios.filter((p) => p.companyId === companyId);
@@ -169,11 +183,11 @@ export default function NewProject() {
             </div>
             <div className="space-y-2">
               <Label>نسبة المحتجزات %</Label>
-              <Input type="number" value={retentionPercent} onChange={(e) => setRetentionPercent(e.target.value)} min="0" max="100" step="0.1" />
+              <Input type="number" value={retentionPercent} onChange={(e) => { touch('retention'); setRetentionPercent(e.target.value); }} min="0" max="100" step="0.1" />
             </div>
             <div className="space-y-2">
               <Label>نسبة الضريبة (VAT) %</Label>
-              <Input type="number" value={taxPercent} onChange={(e) => setTaxPercent(e.target.value)} min="0" max="100" step="0.1" />
+              <Input type="number" value={taxPercent} onChange={(e) => { touch('tax'); setTaxPercent(e.target.value); }} min="0" max="100" step="0.1" />
             </div>
           </div>
 
@@ -188,7 +202,7 @@ export default function NewProject() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>مدة المشروع (أشهر)</Label>
-              <Input type="number" value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} min="1" />
+              <Input type="number" value={durationMonths} onChange={(e) => { touch('duration'); setDurationMonths(e.target.value); }} min="1" />
             </div>
             <div className="space-y-2">
               <Label>عدد الموارد البشرية</Label>
