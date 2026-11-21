@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowDownUp, Info, Search, AlertTriangle, Download } from 'lucide-react';
 import { buildOverviewCsv, downloadCsv } from '@/pages/financial-overview/overviewCsv';
+import { StatementsPanel } from '@/pages/financial-overview/StatementsPanel';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/AppLayout';
@@ -161,6 +162,7 @@ export default function FinancialOverview() {
         <Kpi label="مشاريع تحتاج انتباه" value={riskCount} tone={riskCount ? 'destructive' : 'success'}
           hint="بنفس قاعدة لوحة التحكم: صرف يتجاوز 90% من الموازنة، أو خسارة مخططة، أو مشروع معلّق أو ملغى." />
       </div>
+      <StatementsPanel />
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative">
           <Search className="w-4 h-4 absolute top-1/2 -translate-y-1/2 start-3 text-muted-foreground" />

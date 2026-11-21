@@ -3,11 +3,15 @@ import { ChangeOrder } from '@/types/project';
 /**
  * Calculate the effective contract value after approved change orders
  */
-export function getEffectiveContractValue(contractValue: number, changeOrders: ChangeOrder[]): number {
-  const approvedImpact = changeOrders
+export function getEffectiveContractValue(contractValue: number, changeOrders: Pick<ChangeOrder, 'status' | 'amountImpact'>[]): number {
+  return contractValue + getApprovedChangeImpact(changeOrders);
+}
+
+/** What approved change orders add to (or take from) the contract. Only approved ones count. */
+export function getApprovedChangeImpact(changeOrders: Pick<ChangeOrder, 'status' | 'amountImpact'>[]): number {
+  return changeOrders
     .filter(co => co.status === 'approved')
     .reduce((sum, co) => sum + co.amountImpact, 0);
-  return contractValue + approvedImpact;
 }
 
 /**

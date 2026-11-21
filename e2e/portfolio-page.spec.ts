@@ -100,3 +100,19 @@ test('the payables section sums the approved-but-unpaid claims of the team and t
   await row('مشروع حرج').getByRole('button').click();
   await expect(page).toHaveURL(/\/project\/p-bad$/);
 });
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`shows each project's health as on the company map, over budget first (${theme})`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.addInitScript((t) => localStorage.setItem('theme', t), theme);
+    await openPortfolio(page);
+    const health = page.getByRole('region', { name: 'حالة مشاريع المحفظة' });
+    await expect(health.getByRole('link')).toHaveText([/مشروع حرج/, /مشروع محذَّر/, /مشروع سليم/]);
+    await expect(health.getByRole('link').first()).toHaveAccessibleName('مشروع حرج: تجاوز الموازنة');
+    await expect(health).toContainText('✕ تجاوز الموازنة 1');
+    const dir = process.env.MAP_SHOTS;
+    if (dir) await health.screenshot({ path: `${dir}/portfolio-health-${theme}.png`, animations: 'disabled' });
+    await health.getByRole('link').first().click();
+    await expect(page).toHaveURL(/\/project\/p-bad$/);
+  });
+}

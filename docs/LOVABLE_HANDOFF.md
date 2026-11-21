@@ -1,6 +1,6 @@
 # Handoff to Lovable — scope and protected areas
 
-Owner's instruction (Omar): Lovable works only within the scope below and
+Owner's instruction: Lovable works only within the scope below and
 **never modifies, reverts or deletes work done through GitHub pull requests**.
 Between 11 and 14 October 2026, Lovable commits deleted merged, tested work
 (`src/lib/resource-spend.ts`, the budget-overrun card, their tests) and
@@ -121,6 +121,35 @@ does not happen again.
    - Colours, wording and icons follow `docs/design-system.md`. No raw
      palette classes such as `text-amber-700`: use the warning, success,
      destructive and info tokens. Counts go through `countAr`.
+   - «خريطة المنظومة»: `src/lib/finance/company-map.ts`, `src/pages/company/map/**`,
+     `e2e/company-map.spec.ts`. Its figures come only from `buildCompanyMap`.
+   - «هيكل المنظومة», the drawn structure behind the map's «قائمة / هيكل»
+     toggle (`?map=structure`): `src/lib/finance/org-structure.ts`,
+     `src/pages/company/map/OrgStructure.tsx`, their tests and
+     `e2e/org-structure.spec.ts`. Inline SVG, no chart library. Line thickness
+     comes from `flowWidth` over `buildCompanyMap`'s amounts; status is the
+     `HEALTH` symbol and word; every box stays a link.
+   - Dashboard filters: every section reads the one filter state
+     (`useDashboardFilters` → `dashboardFigures`). A section whose figures are
+     for the project's whole life shows `LifetimeNote` under a period
+     (`src/components/dashboard/LifetimeNote.tsx`,
+     `src/pages/__tests__/Dashboard.filters.test.tsx`).
+   - Money is added with `sumMoney` or a named rule from `@/lib/finance`,
+     never a hand-written `reduce` in a component; `scripts/ssot-guard.sh`
+     fails on one.
+   - «المنظومات» on the dashboard: `src/components/dashboard/CompaniesOverview.tsx`,
+     `e2e/companies-overview.spec.ts`. Health comes only from `healthOf`.
+   - Invoices in another currency: `src/lib/finance/fx.ts`,
+     `src/components/project/expenses/ForeignInvoiceFields.tsx`, migration
+     `20261121090000`. `expenses.amount` stays in the project's currency and
+     is the only figure the books read; never convert it or fetch a rate.
+   - «القوائم المالية»: `src/lib/finance/statements.ts`,
+     `src/pages/financial-overview/StatementsPanel.tsx`, `e2e/statements.spec.ts`.
+     Income is by invoice date, cash by the day it moved; the company's own
+     cost leaves out shares a project already paid (`companyOwnCost`).
+   - Company totals count every project once, by its `companyId`
+     (`getCompanySummary` in `src/lib/portfolio.ts`); the company-books
+     rules in `src/lib/finance/integrity.ts` stay.
    - `.github/**`, `scripts/**`, `CLAUDE.md`, `docs/**`, `AGENTS.md`,
      `eslint.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 4. **Never point `bun.lock` at a private registry** (`*.pkg.dev`). Packages

@@ -30,7 +30,7 @@ vi.mock('recharts', () => {
 
 const PROJECT_ID = 'p-1';
 const resources: Resource[] = [
-  { id: 'r1', projectId: PROJECT_ID, name: 'أيمن', monthlyCost: 0, createdAt: '' },
+  { id: 'r1', projectId: PROJECT_ID, name: 'أنور', monthlyCost: 0, createdAt: '' },
   { id: 'r2', projectId: PROJECT_ID, name: 'أحمد', monthlyCost: 0, createdAt: '' },
 ];
 function expense(over: Partial<Expense>): Expense {
@@ -76,9 +76,9 @@ describe('with repairs and an unlinked expense', () => {
     expect(screen.getByText('تم رصد اختلافات في أرقام الصرف')).toBeInTheDocument();
     expect(screen.getByText(/فرق قبل\/بعد الإصلاح:/)).toHaveTextContent('1,500.00 ر.س');
     expect(screen.getByText(/مصروفات بلا دفعة أو عهدة:/)).toHaveTextContent('1,500.00 ر.س (1 عملية) — أحمد');
-    // Largest gap first: أيمن 600, the unassigned 500, أحمد 400.
+    // Largest gap first: أنور 600, the unassigned 500, أحمد 400.
     const bars = within(screen.getByTestId('bars')).getAllByRole('listitem').map((li) => li.textContent);
-    expect(bars[0]).toBe('أيمن: 8600 / 8000 / 600');
+    expect(bars[0]).toBe('أنور: 8600 / 8000 / 600');
     expect(bars[2]).toBe('أحمد: 5900 / 5500 / 400');
     expect(bars).toHaveLength(3);
     expect(screen.getByText('أحمد: 1,500.00 ر.س (1)')).toBeInTheDocument();
@@ -102,9 +102,9 @@ describe('with repairs and an unlinked expense', () => {
   it('opens a group to show which lines the repair changed', async () => {
     renderChart();
     await waitFor(() => expect(tile('إجمالي الفجوة')).toHaveTextContent('1,500.00 ر.س'));
-    fireEvent.click(rowButton('أيمن'));
+    fireEvent.click(rowButton('أنور'));
     const panel = screen.getByRole('dialog');
-    expect(within(panel).getByText('مقارنة تفصيلية — أيمن')).toBeInTheDocument();
+    expect(within(panel).getByText('مقارنة تفصيلية — أنور')).toBeInTheDocument();
     expect(within(panel).getByText('تغيّر عنصر واحد من أصل 2')).toBeInTheDocument();
     expect(within(panel).getByText('قبل الإصلاح').nextElementSibling).toHaveTextContent('8,600.00 ر.س');
     const changed = within(panel).getByText('رواتب من العهدة').closest('.rounded') as HTMLElement;

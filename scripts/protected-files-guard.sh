@@ -50,6 +50,39 @@ need_text src/components/project/stats/BudgetRow.tsx "تجاوز الموازن�
 need_text src/pages/__tests__/Login.test.tsx "checking once and saying \"code sent\" once"
 need_text AGENTS.md "docs/LOVABLE_HANDOFF.md"
 need_text .github/workflows/quality.yml "ssot-guard.sh"
+need_text .github/workflows/quality.yml "public-data-guard.sh"
+need_text .github/workflows/quality.yml "function-auth-guard.sh"
+need_file scripts/function-auth-guard.sh
+need_file SECURITY.md
+need_file src/lib/finance/company-map.ts
+need_file src/lib/finance/statements.ts
+need_file src/lib/finance/fx.ts
+need_file src/components/project/expenses/ForeignInvoiceFields.tsx
+need_file supabase/migrations/20261121090000_expense_foreign_currency.sql
+need_file src/hooks/__tests__/useCompanyData.test.tsx
+need_file src/pages/financial-overview/StatementsPanel.tsx
+need_file e2e/statements.spec.ts
+need_file src/lib/finance/__tests__/statements.test.ts
+need_file src/components/dashboard/CompaniesOverview.tsx
+need_file src/pages/portfolio/PortfolioHealth.tsx
+need_file src/components/dashboard/__tests__/CompaniesOverview.test.tsx
+need_file e2e/companies-overview.spec.ts
+need_file src/lib/finance/__tests__/company-map.test.ts
+need_file src/pages/company/map/CompanyMap.tsx
+need_file e2e/company-map.spec.ts
+need_file src/lib/finance/org-structure.ts
+need_file src/lib/finance/__tests__/org-structure.test.ts
+need_file src/pages/company/map/OrgStructure.tsx
+need_file src/pages/company/map/__tests__/OrgStructure.test.tsx
+need_file e2e/org-structure.spec.ts
+need_text src/pages/company/map/CompanyMap.tsx "<OrgStructure"
+need_file src/components/dashboard/LifetimeNote.tsx
+need_file src/pages/__tests__/Dashboard.filters.test.tsx
+need_text scripts/ssot-guard.sh "hand-written amount sum"
+need_file src/components/finance/flow-parts.tsx
+need_file src/components/project/ledger/ProjectCompanyLink.tsx
+need_text src/pages/project-detail/ProjectSection.tsx "<ProjectCompanyLink"
+need_text src/pages/CompanyDetail.tsx "<CompanyMap"
 need_text src/lib/finance/summary.ts "export function getCollectedRevenue"
 need_text src/pages/CompanyDetail.tsx "CompanyLedgerSection"
 need_text src/pages/project-detail/ProjectSection.tsx "ChargedCostsCard"

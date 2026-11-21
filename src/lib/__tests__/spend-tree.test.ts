@@ -14,8 +14,8 @@ const one = <T,>(row: Partial<T>): T => row as T;
 
 
 const resources = fixture<Resource>([
-  { id: 'r1', projectId: 'p1', name: 'أيمن أصلان', monthlyCost: 0 },
-  { id: 'r2', projectId: 'p1', name: 'أحمد صبري', monthlyCost: 0 },
+  { id: 'r1', projectId: 'p1', name: 'أنور أسعد', monthlyCost: 0 },
+  { id: 'r2', projectId: 'p1', name: 'أحمد سالم', monthlyCost: 0 },
 ]);
 
 const expenses = fixture<Expense>([
@@ -29,10 +29,10 @@ describe('buildSpendTree', () => {
   it('nests resource → category and keeps totals consistent', () => {
     const tree = buildSpendTree(expenses, ['resource', 'category'], {}, { resources });
     expect(tree.grandTotal).toBe(35500);
-    const ayman = tree.nodes.find((n) => n.label === 'أيمن أصلان')!;
-    expect(ayman.total).toBe(12000);
-    expect(ayman.children.map((c) => c.total)).toEqual([10000, 2000]);
-    expect(ayman.children[0].path).toEqual(['r1', 'salary']);
+    const anwar = tree.nodes.find((n) => n.label === 'أنور أسعد')!;
+    expect(anwar.total).toBe(12000);
+    expect(anwar.children.map((c) => c.total)).toEqual([10000, 2000]);
+    expect(anwar.children[0].path).toEqual(['r1', 'salary']);
   });
 
   it('leaf nodes carry the underlying expenses for drill-down', () => {
@@ -68,9 +68,9 @@ describe('buildSpendConsistency', () => {
 
   it('spreads repair amounts over the custody expenses to rebuild the "before" figures', () => {
     const rep = buildSpendConsistency(expenses, [{ id: 'x', custodyId: 'c1', amount: 1200 }], 'resource', { resources });
-    const ayman = rep.rows.find((r) => r.label === 'أيمن أصلان')!;
-    expect(ayman.after).toBe(12000);
-    expect(ayman.before).toBeCloseTo(13200);
+    const anwar = rep.rows.find((r) => r.label === 'أنور أسعد')!;
+    expect(anwar.after).toBe(12000);
+    expect(anwar.before).toBeCloseTo(13200);
     expect(rep.totalGap).toBeCloseTo(1200);
   });
 
@@ -84,7 +84,7 @@ describe('spend templates', () => {
   beforeEach(() => localStorage.clear());
 
   it('saves, lists per project and deletes templates', () => {
-    const t = saveSpendTemplate({ name: 'الربع الأول', projectId: 'p1', dimensions: ['resource'], filters: { query: 'أيمن' }, sort: { key: 'total', dir: 'desc' } });
+    const t = saveSpendTemplate({ name: 'الربع الأول', projectId: 'p1', dimensions: ['resource'], filters: { query: 'أنور' }, sort: { key: 'total', dir: 'desc' } });
     saveSpendTemplate({ name: 'عام', projectId: null, dimensions: ['category'], filters: {}, sort: { key: 'total', dir: 'desc' } });
     expect(listSpendTemplates('p1')).toHaveLength(2);
     expect(listSpendTemplates('p2')).toHaveLength(1);
@@ -102,7 +102,7 @@ describe('spend templates', () => {
 });
 
 describe('outstanding advances in the spend tree', () => {
-  // Same rows plus an advance still outstanding on أيمن: money handed over,
+  // Same rows plus an advance still outstanding on أنور: money handed over,
   // not yet spent, which no summary in the app counts as cost.
   const withAdvance = [
     ...expenses,
@@ -114,17 +114,17 @@ describe('outstanding advances in the spend tree', () => {
     expect(tree.grandTotal).toBe(35500);
     expect(tree.grandCount).toBe(4);
     expect(tree.outstandingAdvanceTotal).toBe(4000);
-    const ayman = tree.nodes.find((n) => n.label === 'أيمن أصلان')!;
-    expect(ayman.total).toBe(12000);
-    expect(ayman.count).toBe(2);
-    expect(ayman.expenses.map((e) => e.id)).not.toContain('e5');
+    const anwar = tree.nodes.find((n) => n.label === 'أنور أسعد')!;
+    expect(anwar.total).toBe(12000);
+    expect(anwar.count).toBe(2);
+    expect(anwar.expenses.map((e) => e.id)).not.toContain('e5');
   });
 
   it('keeps it out of the flat report the same way', () => {
     const report = buildSpendReport(withAdvance, 'resource', {}, { resources });
     expect(report.grandTotal).toBe(35500);
     expect(report.outstandingAdvanceTotal).toBe(4000);
-    expect(report.groups.find((g) => g.label === 'أيمن أصلان')!.total).toBe(12000);
+    expect(report.groups.find((g) => g.label === 'أنور أسعد')!.total).toBe(12000);
   });
 
   it('writes the figure into both exports, outside the grand total', () => {

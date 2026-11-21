@@ -10,7 +10,7 @@ import type { CompanyExpense } from '@/lib/finance/company-ledger';
 const SALEH = 'saleh';
 const exp = (id: string, projectId: string, amount: number, category: string, date: string, over: Record<string, unknown> = {}) =>
   ({ id, projectId, amount, category, date, description: id, approvalStatus: 'approved', partyId: SALEH, month: 1, ...over });
-const projects = [{ id: 'alb', name: 'ألبانيا' }, { id: 'hack', name: 'الهاكثون' }];
+const projects = [{ id: 'alb', name: 'تبوك' }, { id: 'hack', name: 'الملتقى' }];
 const companyExpenses: CompanyExpense[] = [
   { id: 'c1', companyId: 'co', date: '2026-08-06', amount: 4611, description: 'مصروفات منظومة', kind: 'government', partyId: null, paidByPartyId: SALEH },
   { id: 'c2', companyId: 'co', date: '2026-10-07', amount: 3289, description: 'التزام سابق', kind: 'other', partyId: null, paidByPartyId: SALEH },
@@ -23,14 +23,14 @@ describe('summarizeParty', () => {
       exp('incentive', 'alb', 2100, 'salary', '2026-10-07'),
       exp('ticket', 'alb', 516.24, 'travel', '2026-07-02'),
       exp('rejected', 'alb', 999, 'other', '2026-07-02', { approvalStatus: 'rejected' }),
-      exp('someone-else', 'hack', 5000, 'salary', '2026-01-01', { partyId: 'ayman' }),
+      exp('someone-else', 'hack', 5000, 'salary', '2026-01-01', { partyId: 'anwar' }),
     ],
     projects, companyExpenses, entries: [],
   });
 
   it('adds up what every project paid them, leaving out rejected rows and other people', () => {
     expect(s.paidByProjects).toBe(10516.24);
-    expect(s.byProject).toEqual([{ projectId: 'alb', name: 'ألبانيا', total: 10516.24, count: 3 }]);
+    expect(s.byProject).toEqual([{ projectId: 'alb', name: 'تبوك', total: 10516.24, count: 3 }]);
   });
 
   it('splits it by kind of spend, biggest first', () => {
@@ -45,7 +45,7 @@ describe('summarizeParty', () => {
 
   it('lists every row newest first (the larger first on the same day), with the project it came from', () => {
     expect(s.rows.map((r) => r.id)).toEqual(['repay', 'c2', 'incentive', 'c1', 'ticket']);
-    expect(s.rows[0]).toMatchObject({ source: 'project', projectName: 'ألبانيا', amount: 7900 });
+    expect(s.rows[0]).toMatchObject({ source: 'project', projectName: 'تبوك', amount: 7900 });
     expect(s.rows[1]).toMatchObject({ source: 'company', amount: 3289, paidByThem: true });
   });
 });

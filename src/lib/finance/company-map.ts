@@ -1,0 +1,195 @@
+/**
+ * «خريطة المنظومة»: the company and its projects in one picture, and the
+ * money between them. Every figure comes from the functions that already
+ * own it (fundingByProject, summarizeCompanyExpenses, needsAttention), so the
+ * map can never disagree with the ledger or the project pages.
+ *
+ * What belongs where:
+ *   - the company alone: its own spend that stayed on it (not charged), and
+ *     what it owes people (loans, bills they paid);
+ *   - between the two: what the company charged its projects (a cost), and,
+ *     shown apart because it is a transfer and not a cost, the funding it
+ *     sent them and what they sent back;
+ *   - the projects alone: their direct spend, less the charged shares they
+ *     paid themselves, which are already counted as charged.
+ */
+import { fundingByProject } from './loans';
+import { summarizeCompanyExpenses, balancesWithCompany, type CompanyExpense, type ExpenseAllocation, type IntercompanyEntry } from './company-ledger';
+import { needsAttention } from '@/pages/dashboard/dashboardFigures';
+import type { ProjectStatus } from '@/types/project';
+
+export interface MapProjectInput {
+  id: string; name: string; group: string; status: ProjectStatus;
+  contract: number; planned: number; actual: number; collected: number;
+  /** The portfolio the group stands for; absent for projects outside any portfolio. */
+  groupId?: string | null;
+}
+
+export type MapHealth = 'good' | 'warn' | 'bad' | 'idle';
+
+export interface MapProject extends MapProjectInput {
+  health: MapHealth;
+  /** Spend against budget, 0–100+ (null without a budget). */
+  spendPct: number | null;
+  funded: number;
+  charged: number;
+  /** Everything the company sent it: funding and charges together. */
+  sent: number;
+  returned: number;
+  /** What the project still owes the company (negative: the company owes it). */
+  owes: number;
+  /** Width of the company→project and project→company bars, 0–1 of the largest flow on the map. */
+  outScale: number;
+  backScale: number;
+}
+
+/** A portfolio (or the projects outside any) with what passed between the company and its projects. */
+export interface MapGroup {
+  name: string;
+  /** The portfolio's id; null for the projects outside any portfolio. */
+  id: string | null;
+  projects: MapProject[];
+  /** Funding and charges the company sent the group's projects, and what they returned. */
+  sent: number;
+  returned: number;
+}
+
+export interface CompanyMap {
+  projects: MapProject[];
+  groups: MapGroup[];
+  /** The largest flow on any line of the structure view (a group's or a project's), at least 1. */
+  flowMax: number;
+  company: {
+    ownSpend: number; charged: number; retained: number;
+    fundedOut: number; returned: number;
+    owedToCompany: number; owedByCompany: number;
+    /** The part of owedToCompany that projects owe (the rest is people). */
+    owedByProjects: number;
+  };
+  /** The three columns of «what belongs to whom». */
+  split: { companyOnly: number; between: number; projectOnly: number };
+}
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const FINISHED: ProjectStatus[] = ['completed', 'archived', 'cancelled'];
+
+export function healthOf(p: MapProjectInput): MapHealth {
+  if (FINISHED.includes(p.status)) return 'idle';
+  if (p.status === 'on-hold') return 'warn';            // before "no spend": a paused project needs a decision
+  if (p.planned === 0 && p.actual === 0) return 'idle';
+  if (p.planned === 0) return 'warn';                   // spending with no budget to hold it against
+  if (p.planned > 0 && p.actual > p.planned) return 'bad';
+  return needsAttention({ status: p.status }, p.actual, p.planned, p.contract - p.planned) ? 'warn' : 'good';
+}
+
+export function buildCompanyMap(
+  projects: MapProjectInput[],
+  ledger: { entries: IntercompanyEntry[]; allocations: ExpenseAllocation[]; expenses: CompanyExpense[] } | null,
+  /**
+   * Every project of the company, when `projects` is a filtered view of them.
+   * The company's own figures (the hub and the split) always cover the whole
+   * company: taken from the visible projects only, "sent to projects" fell
+   * to zero for a hidden finished project while "owed to us" still counted it.
+   */
+  all: MapProjectInput[] = projects,
+): CompanyMap {
+  const entries = ledger?.entries ?? [];
+  const funding = new Map(fundingByProject(entries).map((f) => [f.projectId, f]));
+  const balances = new Map(balancesWithCompany(entries, ledger?.expenses ?? []).map((b) => [b.node.kind === 'project' ? b.node.id : `x:${b.node.id}`, b.owesCompany]));
+  const summary = summarizeCompanyExpenses(ledger?.expenses ?? [], ledger?.allocations ?? []);
+
+  const base = projects.map((p) => {
+    const f = funding.get(p.id);
+    return {
+      ...p,
+      health: healthOf(p),
+      spendPct: p.planned > 0 ? r2((p.actual / p.planned) * 100) : null,
+      funded: f?.funded ?? 0,
+      returned: f?.returned ?? 0,
+      charged: summary.byProject.get(p.id) ?? 0,
+      owes: balances.get(p.id) ?? 0,
+    };
+  });
+  const maxFlow = Math.max(1, ...base.map((p) => Math.max(p.funded + p.charged, p.returned)));
+  const mapped: MapProject[] = base.map((p) => ({ ...p, sent: r2(p.funded + p.charged), outScale: r2((p.funded + p.charged) / maxFlow), backScale: r2(p.returned / maxFlow) }));
+
+  // Grouped by the portfolio itself where the caller says which it is: two
+  // portfolios of one name were merged into one box that linked to the first.
+  // A caller that gives only the name is still grouped by it.
+  const keyOf = (p: MapProjectInput) => (p.groupId !== undefined ? `id:${p.groupId ?? ''}` : `name:${p.group}`);
+  const groups: MapGroup[] = [...new Set(mapped.map(keyOf))].map((key) => {
+    const own = mapped.filter((p) => keyOf(p) === key);
+    const flows = projectFlows(own);
+    return { name: own[0].group, id: own[0].groupId ?? null, projects: own, sent: flows.sent, returned: flows.returned };
+  });
+  const owedToCompany = r2([...balances.values()].filter((v) => v > 0).reduce((s, v) => s + v, 0));
+  const owedByCompany = r2([...balances.values()].filter((v) => v < 0).reduce((s, v) => s - v, 0));
+  const owedByProjects = r2(balancesWithCompany(entries, ledger?.expenses ?? [])
+    .filter((b) => b.node.kind === 'project' && b.owesCompany > 0).reduce((s, b) => s + b.owesCompany, 0));
+  const fundedOut = r2([...funding.values()].reduce((s, f) => s + f.funded, 0));
+  const returned = r2([...funding.values()].reduce((s, f) => s + f.returned, 0));
+  // A share a project paid from its own spend is in that project's actual
+  // and in what the company charged: counted once, on the charged side.
+  const ownExpenses = new Set((ledger?.expenses ?? []).map((e) => e.id));
+  const settled = r2((ledger?.allocations ?? []).filter((a) => a.settledInProject && ownExpenses.has(a.expenseId)).reduce((s, a) => s + a.amount, 0));
+
+  return {
+    projects: mapped,
+    groups,
+    flowMax: Math.max(1, ...groups.map((g) => Math.max(g.sent, g.returned))),
+    company: { ownSpend: summary.total, charged: summary.allocated, retained: summary.retained, fundedOut, returned, owedToCompany, owedByCompany, owedByProjects },
+    // Cost only, each riyal once. Funding is a transfer, not a cost: the
+    // project's spend from it is already in projectOnly, so it is not here.
+    split: {
+      companyOnly: summary.retained,
+      between: summary.allocated,
+      projectOnly: Math.max(0, r2(all.reduce((s, p) => s + p.actual, 0) - settled)),
+    },
+  };
+}
+
+/**
+ * What passed between the company and the projects given: sent to them
+ * (funding and charges), returned by them, and what they still owe it. Read
+ * off the map's own rows, so a filtered list gives the filtered flows.
+ */
+export function projectFlows(projects: MapProject[]): { sent: number; returned: number; owed: number } {
+  let sent = 0, returned = 0, owed = 0;
+  for (const p of projects) { sent += p.sent; returned += p.returned; owed += Math.max(p.owes, 0); }
+  return { sent: r2(sent), returned: r2(returned), owed: r2(owed) };
+}
+
+// The label is in the body colour so it always reads; the colour rides on
+// the symbol and the border, and the symbol alone carries the meaning.
+export const HEALTH: Record<MapHealth, { symbol: string; label: string; tone: string; mark: string }> = {
+  good: { symbol: '✓', label: 'على المسار', tone: 'border-success/40', mark: 'text-success' },
+  warn: { symbol: '▲', label: 'يحتاج انتباه', tone: 'border-warning/50', mark: 'text-warning' },
+  bad: { symbol: '✕', label: 'تجاوز الموازنة', tone: 'border-destructive/50', mark: 'text-destructive' },
+  idle: { symbol: '○', label: 'لا صرف جارٍ', tone: 'border-border', mark: 'text-muted-foreground' },
+};
+
+/**
+ * «المنظومات» on the dashboard: each company's projects counted by health,
+ * with its spend against plan, from the same healthOf the company map uses.
+ */
+export interface CompanyHealthRow {
+  companyId: string; name: string;
+  counts: Record<MapHealth, number>;
+  total: number; planned: number; actual: number;
+  /** Spend against plan, % (null without a plan). */
+  spendPct: number | null;
+}
+
+export function companiesOverview(
+  companies: { id: string; name: string }[],
+  projects: (MapProjectInput & { companyId: string })[],
+): CompanyHealthRow[] {
+  return companies.map((c) => {
+    const mine = projects.filter((p) => p.companyId === c.id);
+    const counts: Record<MapHealth, number> = { bad: 0, warn: 0, good: 0, idle: 0 };
+    for (const p of mine) counts[healthOf(p)] += 1;
+    const planned = r2(mine.reduce((s, p) => s + p.planned, 0));
+    const actual = r2(mine.reduce((s, p) => s + p.actual, 0));
+    return { companyId: c.id, name: c.name, counts, total: mine.length, planned, actual, spendPct: planned > 0 ? r2((actual / planned) * 100) : null };
+  }).sort((a, b) => b.counts.bad - a.counts.bad || b.counts.warn - a.counts.warn || b.actual - a.actual);
+}

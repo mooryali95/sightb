@@ -31,6 +31,7 @@ vi.mock('@/hooks/useRole', () => ({
   }),
 }));
 vi.mock('@/hooks/useAppData', () => ({ useCoreData: () => undefined }));
+vi.mock('@/hooks/useCompanyLedger', () => ({ useCompanyLedger: () => ({ data: undefined }) }));
 vi.mock('@/components/AppLayout', () => ({ AppLayout: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('@/components/project/RisksSection', () => ({
   RisksSection: ({ risks }: { risks: { title: string }[] }) => <p>مخاطر في النطاق: {risks.length}</p>,
@@ -137,7 +138,8 @@ describe('the figures at the top', () => {
 
   it('puts the project in trouble first in the table and names why', () => {
     renderPage();
-    const rows = screen.getAllByRole('row').slice(1);
+    // The comparison table only: the statements panel above has a table of its own.
+    const rows = within(rowFor('مشروع الوزارة').closest('table')!).getAllByRole('row').slice(1);
     expect(within(rows[0]).getByText('مشروع البلدية')).toBeInTheDocument();
     expect(within(rows[0]).getByText('حرج')).toBeInTheDocument();
     expect(within(rowFor('مشروع الوزارة')).getByText('سليم')).toBeInTheDocument();

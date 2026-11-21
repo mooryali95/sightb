@@ -88,6 +88,11 @@ export function useProjectData(projectId: string | undefined) {
 /** Company indirect costs + every project underneath it. */
 export function useCompanyData(companyId: string | undefined) {
   const loadCompanyData = useStore((s) => s.loadCompanyData);
+  // The loader walks the company's projects, so it waits for the project
+  // list. Started before it (a company opened by its link, or reloaded), it
+  // found no projects, loaded nothing and stayed "fresh" for five minutes:
+  // every project on the page showed no spend.
+  const coreLoaded = useStore((s) => s._lastLoadedAt !== undefined);
   const { user, loading: authLoading } = useAuth();
 
   return useQuery({
@@ -96,7 +101,7 @@ export function useCompanyData(companyId: string | undefined) {
       await loadCompanyData(companyId as string);
       return true;
     },
-    enabled: !!companyId && !authLoading && !!user,
+    enabled: !!companyId && !authLoading && !!user && coreLoaded,
     staleTime: FIVE_MINUTES,
     meta: STORE_LOADER,
   });

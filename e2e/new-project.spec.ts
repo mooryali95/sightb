@@ -15,7 +15,7 @@ const posted = (wire: { writes: { method: string; table: string; body: unknown }
 async function fillProject(page: import('@playwright/test').Page, query: string) {
   await page.goto(`/project/new${query}`);
   await expect(page.getByRole('heading', { name: 'إنشاء مشروع جديد' })).toBeVisible();
-  await page.getByPlaceholder('مثال: مشروع الرواد — ألبانيا 2026').fill('مشروع الرواد');
+  await page.getByPlaceholder('مثال: مشروع الأفق — تبوك 2026').fill('مشروع الأفق');
   await page.getByPlaceholder('230,000').fill('230000');
 }
 
@@ -33,7 +33,7 @@ test('a VAT-inclusive contract is stored net of the tax', async ({ page }) => {
   await expect.poll(() => posted(wire).length).toBe(1);
   const row = posted(wire)[0];
   expect(row).toMatchObject({
-    user_id: USER_ID, company_id: COMPANY_ID, portfolio_id: null, name: 'مشروع الرواد', status: 'planning',
+    user_id: USER_ID, company_id: COMPANY_ID, portfolio_id: null, name: 'مشروع الأفق', status: 'planning',
     currency: 'SAR', contract_type: 'lump_sum', duration_months: 10, resource_count: 1, vat_inclusive: false,
   });
   expect(Number(row.contract_value)).toBe(200000);

@@ -150,6 +150,14 @@ export interface Expense {
   sourcePaymentRequestId?: string;
   /** مصروف يُسدِّد ذمة مدينة (Vendor Payable) — يُقفلها تلقائياً في DB. */
   reimbursesPayableId?: string;
+  /**
+   * An invoice in another currency (20261121090000): what it said, and the
+   * rate used. All three together or none. `amount` stays in the project's
+   * currency and is what every figure reads. See src/lib/finance/fx.ts.
+   */
+  originalAmount?: number;
+  originalCurrency?: string;
+  exchangeRate?: number;
 }
 
 export type RevenueType = 'advance' | 'milestone' | 'final' | 'retention' | 'variation' | 'deduction';

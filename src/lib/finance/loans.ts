@@ -145,7 +145,7 @@ export function dueLoans(loans: Loan[], today: string): (Loan & { days: number }
 
 /**
  * Who owes whom, in sentences anyone can read: «منظومة عليها لمحمود 80,000»,
- * «مشروع ألبانيا عليه لمنظومة 70,000». The largest first; the rest counted.
+ * «مشروع تبوك عليه لمنظومة 70,000». The largest first; the rest counted.
  */
 export function plainSummary(
   balances: { name: string; owesCompany: number }[], fmt: (n: number) => string, max = 3,

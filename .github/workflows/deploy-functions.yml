@@ -32,6 +32,11 @@ concurrency:
   group: supabase-functions-production
   cancel-in-progress: false
 
+# Read-only token: no job here writes to the repository. Kept explicit
+# so a public fork's pull request can never get more.
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

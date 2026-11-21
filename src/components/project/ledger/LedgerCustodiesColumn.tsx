@@ -3,7 +3,7 @@
  * spent from it (split into direct and request-driven) and its expenses,
  * expandable per custody.
  */
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import {
   PAYMENT_REQUEST_TYPE_LABELS,
   type CashTransfer,
@@ -46,7 +46,7 @@ export function LedgerCustodiesColumn({ funds, custodies, expenses, payReqs, tra
         const available = bd.availableAmount;
         const remaining = bd.remaining;
         const fromPR = linked.filter((e) => expenseToPayReq.has(e.id));
-        const fromPRTotal = fromPR.reduce((s, e) => s + e.amount, 0);
+        const fromPRTotal = sumMoney(fromPR);
         const directTotal = spent - fromPRTotal;
 
         const isOpen = open.isOpen(c.id);

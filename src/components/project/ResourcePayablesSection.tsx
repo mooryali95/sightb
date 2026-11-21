@@ -13,13 +13,13 @@ import {
 import { Download, FileSpreadsheet, FileDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import { getResourceBalance } from '@/lib/resource-payables';
 import { exportPayablesSummaryCSV } from '@/lib/payables-export';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { getFundRemaining, getCustodyCashTransfersIn, getCustodyOutstandingAdvances } from '@/lib/funds';
+import { getFundRemaining, availableCustodiesOf, getProjectOutstandingAdvances } from '@/lib/funds';
 import { HandCoins } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -119,17 +119,7 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
 
   // Active custodies with remaining balance (يشمل التحويلات الواردة ويخصم السلف القائمة) — توحيد مع availableFunds
   const availableCustodies = useMemo(() => {
-    return custodies
-      .filter((c) => c.projectId === projectId && c.status === 'active')
-      .map((c) => {
-        const spent = expenses
-          .filter((e) => e.custodyId === c.id)
-          .reduce((s, e) => s + e.amount, 0);
-        const transfersIn = getCustodyCashTransfersIn(c.id, projTransfers);
-        const outstandingAdv = getCustodyOutstandingAdvances(c.id, projReqs);
-        return { custody: c, remaining: (c.amount + transfersIn) - spent - outstandingAdv };
-      })
-      .filter((x) => x.remaining > 0);
+    return availableCustodiesOf(projectId, custodies, expenses, projTransfers, projReqs);
   }, [custodies, expenses, projectId, projTransfers, projReqs]);
 
 
@@ -140,9 +130,8 @@ export function ResourcePayablesSection({ projectId, companyName = '', projectNa
     ),
     [projReqs],
   );
-  const outstandingAdvancesTotal = outstandingAdvances.reduce(
-    (s, r) => s + Math.max(r.amount - (r.refundedAmount ?? 0), 0), 0,
-  );
+  // The one rule for an advance still out, net of what was refunded.
+  const outstandingAdvancesTotal = getProjectOutstandingAdvances(projectId, projReqs).total;
   const oldestAdvanceDays = useMemo(() => {
     if (outstandingAdvances.length === 0) return 0;
     const now = Date.now();

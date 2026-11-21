@@ -3,7 +3,7 @@
  * budget with the contingency taken out, and the management reserve that
  * is held rather than planned.
  */
-import { formatCurrency, getTotalPlanned } from '@/lib/finance';
+import { formatCurrency, getTotalPlanned, sumMoney } from '@/lib/finance';
 import type { BudgetItem, Expense } from '@/types/project';
 
 interface Props {
@@ -20,7 +20,7 @@ export function ReservesCard({ budgetItems, countedExpenses, totalPlanned, manag
       <h3 className="text-sm font-semibold mb-4">تحليل الاحتياطيات</h3>
       {(() => {
         const contingencyPlanned = getTotalPlanned(budgetItems.filter((b) => b.category === 'contingency'));
-        const contingencyActual = countedExpenses.filter((e) => e.category === 'contingency').reduce((s, e) => s + e.amount, 0);
+        const contingencyActual = sumMoney(countedExpenses.filter((e) => e.category === 'contingency'));
         const contingencyRemaining = contingencyPlanned - contingencyActual;
         const budgetWithoutReserve = totalPlanned - contingencyPlanned;
 

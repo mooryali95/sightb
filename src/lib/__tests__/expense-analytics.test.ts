@@ -14,8 +14,8 @@ const one = <T,>(row: Partial<T>): T => row as T;
 
 
 const resources = fixture<Resource>([
-  { id: 'r1', projectId: 'p1', name: 'أيمن أصلان', monthlyCost: 0 },
-  { id: 'r2', projectId: 'p1', name: 'أحمد صبري', monthlyCost: 0 },
+  { id: 'r1', projectId: 'p1', name: 'أنور أسعد', monthlyCost: 0 },
+  { id: 'r2', projectId: 'p1', name: 'أحمد سالم', monthlyCost: 0 },
 ]);
 
 const expenses = fixture<Expense>([
@@ -28,11 +28,11 @@ const expenses = fixture<Expense>([
 describe('expense-analytics', () => {
   it('groups by resource and totals each one', () => {
     const rep = buildSpendReport(expenses, 'resource', {}, { resources });
-    const ayman = rep.groups.find((g) => g.label === 'أيمن أصلان')!;
-    expect(ayman.total).toBeCloseTo(12209.16);
-    expect(ayman.approved).toBe(10000);
-    expect(ayman.pending).toBeCloseTo(2209.16);
-    expect(ayman.count).toBe(2);
+    const anwar = rep.groups.find((g) => g.label === 'أنور أسعد')!;
+    expect(anwar.total).toBeCloseTo(12209.16);
+    expect(anwar.approved).toBe(10000);
+    expect(anwar.pending).toBeCloseTo(2209.16);
+    expect(anwar.count).toBe(2);
   });
 
   it('excludes rejected amounts from totals but reports them', () => {
@@ -46,19 +46,19 @@ describe('expense-analytics', () => {
 
   it('sorts groups descending and computes share', () => {
     const rep = buildSpendReport(expenses, 'resource', {}, { resources });
-    expect(rep.groups[0].label).toBe('أحمد صبري');
+    expect(rep.groups[0].label).toBe('أحمد سالم');
     const sum = rep.groups.reduce((s, g) => s + g.share, 0);
     expect(sum).toBeCloseTo(100);
   });
 
   it('breaks each group down by category — "in what it was spent"', () => {
     const rep = buildSpendReport(expenses, 'resource', {}, { resources });
-    const ayman = rep.groups.find((g) => g.label === 'أيمن أصلان')!;
-    expect(ayman.byCategory.map((c) => c.key)).toEqual(['salary', 'other']);
+    const anwar = rep.groups.find((g) => g.label === 'أنور أسعد')!;
+    expect(anwar.byCategory.map((c) => c.key)).toEqual(['salary', 'other']);
   });
 
   it('searches across description, vendor and resource name', () => {
-    expect(filterExpenses(expenses, { query: 'أيمن' }, { resources })).toHaveLength(2);
+    expect(filterExpenses(expenses, { query: 'أنور' }, { resources })).toHaveLength(2);
     expect(filterExpenses(expenses, { query: 'مكتب أ' }, { resources })).toHaveLength(1);
     expect(filterExpenses(expenses, { query: 'قرطاسية' }, { resources })).toHaveLength(1);
   });
@@ -87,7 +87,7 @@ describe('expense-analytics', () => {
     const rep = buildSpendReport(expenses, 'resource', {}, { resources });
     const csv = buildSpendReportCSV(rep, 'مشروع تجريبي');
     expect(csv).toContain('مشروع تجريبي');
-    expect(csv).toContain('أيمن أصلان');
+    expect(csv).toContain('أنور أسعد');
     expect(csv).toContain('الإجمالي العام');
   });
 });

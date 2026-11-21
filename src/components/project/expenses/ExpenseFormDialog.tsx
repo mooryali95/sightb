@@ -34,6 +34,8 @@ import { translateDbError } from './translateDbError';
 import { bookedAmount, budgetItemRemaining, chosen, fundBlocksSubmit, resolveExpenseSource } from './expenseSource';
 import { SourcePicker, type SourceMode } from './SourcePicker';
 import { VatControls } from './VatControls';
+import { ForeignInvoiceFields } from './ForeignInvoiceFields';
+import { convertAmount, foreignInvoiceError, impliedRate } from '@/lib/finance/fx';
 import { useShallow } from 'zustand/react/shallow';
 
 interface Props {
@@ -81,6 +83,17 @@ export function ExpenseFormDialog({
   const [invoiceRef, setInvoiceRef] = useState(editing?.invoiceRef || '');
   const [isVatExempt, setIsVatExempt] = useState(editing?.isVatExempt || false);
   const [inputInclusive, setInputInclusive] = useState(false);
+  // An invoice in another currency: «المبلغ» stays in the project's currency.
+  const projectCurrency = useStore((s) => s.projects.find((p) => p.id === projectId)?.currency ?? 'SAR');
+  const [foreignOn, setForeignOn] = useState(!!editing?.originalCurrency);
+  const [fxCurrency, setFxCurrency] = useState(editing?.originalCurrency ?? '');
+  const [fxOriginal, setFxOriginal] = useState(editing?.originalAmount ? String(editing.originalAmount) : '');
+  const [fxRate, setFxRate] = useState(editing?.exchangeRate ? String(editing.exchangeRate) : '');
+  const num = (v: string) => parseFloat(v) || 0;
+  // Any two of the three give the third: invoice amount × rate = booked amount.
+  const changeOriginal = (v: string) => { setFxOriginal(v); if (num(v) > 0 && num(fxRate) > 0) setAmount(String(convertAmount(num(v), num(fxRate)))); };
+  const changeRate = (v: string) => { setFxRate(v); if (num(v) > 0 && num(fxOriginal) > 0) setAmount(String(convertAmount(num(fxOriginal), num(v)))); };
+  const changeAmount = (v: string) => { setAmount(v); if (foreignOn && num(fxOriginal) > 0 && num(v) > 0) setFxRate(String(impliedRate(num(fxOriginal), num(v)))); };
   const [sourceMode, setSourceMode] = useState<SourceMode>(
     editing ? (editing.custodyId ? 'custody' : 'fund') : (activeFund ? 'fund' : 'custody'),
   );
@@ -140,6 +153,9 @@ export function ExpenseFormDialog({
 
   const handleSubmit = async () => {
     if (!description.trim() || !amount) return;
+    const foreign = foreignOn ? { originalAmount: num(fxOriginal), originalCurrency: fxCurrency, exchangeRate: num(fxRate) } : null;
+    const foreignError = foreign && foreignInvoiceError(foreign, projectCurrency);
+    if (foreignError) { toast.error(foreignError); return; }
     const finalAmount = bookedAmount(parseFloat(amount), inputInclusive, isVatExempt, taxPercent);
     const source = sourceFor(finalAmount);
     if (source.over && excessBy) {
@@ -193,6 +209,8 @@ export function ExpenseFormDialog({
       if (editingId) {
         await updateExpense(editingId, {
           ...fields,
+          // Set it, remove one the row had, or leave a row that never had one untouched.
+          ...(foreign ? { foreign } : editing?.originalCurrency ? { foreign: null } : {}),
           resourceId: chosen(resourceId) ?? null,
           custodyId: source.custodyId ?? null,
           budgetItemId: chosen(budgetItemId) ?? null,
@@ -202,6 +220,7 @@ export function ExpenseFormDialog({
         await addExpense({
           projectId,
           ...fields,
+          ...(foreign ?? {}),
           resourceId: chosen(resourceId),
           custodyId: source.custodyId,
           budgetItemId: chosen(budgetItemId),
@@ -216,7 +235,13 @@ export function ExpenseFormDialog({
       }
       onOpenChange(false);
     } catch (err) {
-      toast.error(translateDbError(errorMessage(err, '')) || 'تعذّر حفظ المصروف');
+      const message = errorMessage(err, '');
+      // The columns arrive with migration 20261121090000; before it the database refuses the row.
+      if (foreign && /original_amount|original_currency|exchange_rate/.test(message)) {
+        toast.error('الفواتير بعملة أخرى لم تُفعَّل في قاعدة البيانات بعد. سجّل المصروف بعملة المشروع، أو فعّل الترحيل أولاً.', { duration: 8000 });
+        return;
+      }
+      toast.error(translateDbError(message) || 'تعذّر حفظ المصروف');
     }
   };
 
@@ -277,8 +302,8 @@ export function ExpenseFormDialog({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label>المبلغ</Label>
-            <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+            <Label>المبلغ{foreignOn && <span className="text-muted-foreground"> بعملة المشروع ({projectCurrency})</span>}</Label>
+            <Input type="number" inputMode="decimal" value={amount} onChange={(e) => changeAmount(e.target.value)} placeholder="0" />
           </div>
           <div className="space-y-2">
             <Label>الشهر</Label>
@@ -290,6 +315,12 @@ export function ExpenseFormDialog({
             </Select>
           </div>
         </div>
+
+        <ForeignInvoiceFields
+          on={foreignOn} onToggle={setForeignOn} projectCurrency={projectCurrency}
+          currency={fxCurrency} onCurrency={setFxCurrency}
+          original={fxOriginal} onOriginal={changeOriginal} rate={fxRate} onRate={changeRate}
+        />
 
         {!editingId && liveOver && (
           <div role="status" className="rounded-lg border border-warning/40 bg-warning/10 p-3 space-y-2 text-sm">

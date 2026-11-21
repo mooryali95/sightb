@@ -6,7 +6,7 @@ import { useCoreData, useCompanyData } from '@/hooks/useAppData';
 import { useRole } from '@/hooks/useRole';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
-import { formatCurrency, getCountedExpenses, getEffectiveContractValue } from '@/lib/finance';
+import { formatCurrency, getCountedExpenses, getEffectiveContractValue, getProjectSummary, sumMoney } from '@/lib/finance';
 import { getCompanySummary } from '@/lib/portfolio';
 import { companyNet } from '@/lib/finance/company-net';
 import { summarizeCompanyExpenses } from '@/lib/finance/company-ledger';
@@ -31,6 +31,9 @@ import { PortfolioCards } from './company/PortfolioCards';
 import { StandaloneProjectCards } from './company/StandaloneProjectCards';
 import { buildCompanyExport } from './company/buildCompanyExport';
 import { CompanyLedgerSection } from './company/ledger/CompanyLedgerSection';
+import { CompanyMap } from './company/map/CompanyMap';
+import { LedgerNotReady } from '@/services/companyLedgerService';
+import type { MapProjectInput } from '@/lib/finance/company-map';
 import { RegistrySection } from './company/registry/RegistrySection';
 import { IntegrityCard } from './company/IntegrityCard';
 import { labelledSlices, pieLegendText } from '@/components/charts/labelled-sector';
@@ -72,7 +75,6 @@ export default function CompanyDetail() {
   const exportLedger = useMemo(() => (ledger.data && net ? { net, expenses: ledger.data.expenses, allocations: ledger.data.allocations } : undefined), [ledger.data, net]);
 
   const companyProjects = useMemo(() => projects.filter(p => p.companyId === id), [projects, id]);
-  const standaloneProjects = useMemo(() => companyProjects.filter(p => !p.portfolioId), [companyProjects]);
   const registryProjects = useMemo(() => companyProjects.map((p) => ({ id: p.id, name: p.name })), [companyProjects]);
   const registryExpenses = useMemo(() => {
     const ids = new Set(companyProjects.map((p) => p.id));
@@ -104,6 +106,12 @@ export default function CompanyDetail() {
     });
   };
   const compPortfolios = useMemo(() => portfolios.filter(p => p.companyId === id), [portfolios, id]);
+  // Filed under no portfolio of this company (none, a deleted one, another company's):
+  // listed here, as getCompanySummary counts it, so the list and the totals agree.
+  const standaloneProjects = useMemo(() => {
+    const home = new Set(compPortfolios.map(p => p.id));
+    return companyProjects.filter(p => !p.portfolioId || !home.has(p.portfolioId));
+  }, [companyProjects, compPortfolios]);
   const compIndirectCosts = useMemo(() => indirectCosts.filter(ic => ic.companyId === id), [indirectCosts, id]);
   // The stat card above counts spend through the summary library, which
   // leaves out rejected expenses and advances still outstanding. The chart
@@ -115,15 +123,31 @@ export default function CompanyDetail() {
     const data: { name: string; value: number }[] = [];
     compPortfolios.forEach(p => {
       const portfolioProjectIds = companyProjects.filter(pr => pr.portfolioId === p.id).map(pr => pr.id);
-      const total = countedExpenses.filter(e => portfolioProjectIds.includes(e.projectId)).reduce((s, e) => s + e.amount, 0);
+      const total = sumMoney(countedExpenses.filter(e => portfolioProjectIds.includes(e.projectId)));
       if (total > 0) data.push({ name: p.name, value: total });
     });
-    const standaloneTotal = countedExpenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
+    const standaloneTotal = sumMoney(countedExpenses.filter(e => standaloneProjects.some(sp => sp.id === e.projectId)));
     if (standaloneTotal > 0) data.push({ name: 'مشاريع مستقلة', value: standaloneTotal });
     return data;
   }, [compPortfolios, companyProjects, standaloneProjects, countedExpenses]);
 
   const [showInactive, setShowInactive] = useState(false);
+
+  // «خريطة المنظومة»: every live project with the figures its own page shows, grouped by portfolio.
+  // Follows the page's «عرض المنتهية» toggle, like every other list here.
+  const allMapProjects = useMemo<MapProjectInput[]>(() => companyProjects
+    .map((p) => {
+      const s = getProjectSummary(p,
+        budgetItems.filter((b) => b.projectId === p.id), expenses.filter((e) => e.projectId === p.id),
+        revenues.filter((r) => r.projectId === p.id), changeOrders.filter((o) => o.projectId === p.id));
+      return {
+        id: p.id, name: p.name, status: p.status,
+        group: portfolios.find((f) => f.id === p.portfolioId)?.name ?? 'دون محفظة',
+        groupId: portfolios.find((f) => f.id === p.portfolioId)?.id ?? null,
+        contract: s.effectiveContractValue, planned: s.totalPlanned, actual: s.totalActual, collected: s.collectedRevenue,
+      };
+    }), [companyProjects, budgetItems, expenses, revenues, changeOrders, portfolios]);
+  const mapProjects = useMemo(() => allMapProjects.filter((p) => showInactive || !INACTIVE_STATUSES.includes(p.status)), [allMapProjects, showInactive]);
 
   const visibleCompanyProjects = useMemo(() => {
     if (showInactive) return companyProjects;
@@ -282,6 +306,17 @@ export default function CompanyDetail() {
           </div>
         )}
 
+        <CompanyMap
+          companyId={company.id}
+          companyName={company.name}
+          projects={mapProjects}
+          allProjects={allMapProjects}
+          ledger={ledger.error instanceof LedgerNotReady ? 'not-ready' : ledger.data ?? (ledger.isError ? 'not-ready' : null)}
+          loading={!detailsLoaded && mapProjects.length === 0}
+          net={net?.net ?? null}
+          onNewProject={isAdmin || canEdit('company', id!) ? () => navigate(`/project/new?company=${id}`) : undefined}
+        />
+
         {/* Expense Distribution Pie Chart */}
         {expensesByPortfolio.length > 0 && (
           <div className="rounded-xl border border-border bg-card p-4 mb-6">
@@ -326,7 +361,7 @@ export default function CompanyDetail() {
 
         <RegistrySection companyId={id!} projects={registryProjects} expenses={registryExpenses} canEdit={isAdmin || canEdit('company', id!)} />
 
-        <IntegrityCard projects={companyProjects} />
+        <IntegrityCard projects={companyProjects} companyId={company.id} />
 
         <CompanyLedgerSection companyId={id!} projects={ledgerProjects} collected={ledgerCollected} canEdit={isAdmin || canEdit('company', id!)} />
 

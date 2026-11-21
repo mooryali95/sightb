@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import {
   getFundSpent,
   getFundRemaining,
@@ -288,9 +288,9 @@ export function FundsSection({ projectId, expenses, readOnly = false }: FundsSec
                               title="حذف الدفعة"
                               description={(() => {
                                 const linked = projectExpenses.filter((e) => e.fundId === f.id);
-                                const linkedTotal = linked.reduce((s, e) => s + e.amount, 0);
+                                const linkedTotal = sumMoney(linked);
                                 const linkedCust = projectCustodies.filter((c) => c.sourceFundId === f.id);
-                                const custTotal = linkedCust.reduce((s, c) => s + c.amount, 0);
+                                const custTotal = sumMoney(linkedCust);
                                 const parts: string[] = [];
                                 if (linked.length > 0) parts.push(`${countAr(linked.length, 'expense')} (${formatCurrency(linkedTotal)})`);
                                 if (linkedCust.length > 0) parts.push(`${linkedCust.length} عهدة (${formatCurrency(custTotal)})`);

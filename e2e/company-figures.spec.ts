@@ -43,19 +43,21 @@ test('the standalone cards read each project\'s counted spend, hide the finished
   await stubSupabase(page, rows);
   await openCompany(page);
   await expect(page.getByRole('heading', { name: 'مشاريع مستقلة (2)' })).toBeVisible();
+  // The company map above also names each project; these checks read the cards.
+  const cards = page.locator('div.mb-6', { has: page.getByRole('heading', { name: /^مشاريع مستقلة/ }) });
   await expect(page.getByText('(1 منتهي)')).toBeVisible();
   await expect(page.getByText('مشروع منتهٍ', { exact: true })).toHaveCount(0);
-  const hold = page.getByText('مشروع معلق', { exact: true }).locator('..').locator('..').locator('..');
+  const hold = cards.getByText('مشروع معلق', { exact: true }).locator('..').locator('..').locator('..');
   await expect(hold).toContainText('40,000.00 ر.س');
   await expect(hold).toContainText('معلق');
-  const main = page.getByText('مشروع الاختبار', { exact: true }).locator('..').locator('..').locator('..');
+  const main = cards.getByText('مشروع الاختبار', { exact: true }).locator('..').locator('..').locator('..');
   await expect(main).toContainText('12,000.00 ر.س');
 
   await page.getByRole('button', { name: 'عرض المنتهية' }).click();
   await expect(page.getByRole('heading', { name: 'مشاريع مستقلة (3)' })).toBeVisible();
-  await expect(page.getByText('مشروع منتهٍ', { exact: true })).toBeVisible();
+  await expect(cards.getByText('مشروع منتهٍ', { exact: true })).toBeVisible();
   await expect(page.getByText('(1 منتهي)')).toHaveCount(0);
 
-  await page.getByText('مشروع معلق', { exact: true }).click();
+  await cards.getByText('مشروع معلق', { exact: true }).click();
   await expect(page).toHaveURL(/\/project\/p-hold$/);
 });

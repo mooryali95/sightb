@@ -8,7 +8,7 @@ import {
   startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear,
   subMonths, subQuarters, subYears, isWithinInterval, parseISO,
 } from 'date-fns';
-import { getCountedExpenses, getEffectiveContractValue, getOutstandingInvoiced, getTotalPlanned } from '@/lib/finance';
+import { getApprovedChangeImpact, getCollectedRevenue, getCountedExpenses, getEffectiveContractValue, getOutstandingInvoiced, getTotalPlanned, sumMoney } from '@/lib/finance';
 import { normalizeArabicName } from '@/lib/resource-spend';
 import {
   PROJECT_STATUS_LABELS,
@@ -147,24 +147,55 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   const cashDate = (r: Revenue) => r.collectionDate || r.date;
   const filteredChangeOrders = changeOrders.filter((co) => visibleProjectIds.has(co.projectId));
   const filteredMilestones = milestones.filter((m) => visibleProjectIds.has(m.projectId));
-  const filteredRisks = risks.filter((r) => !r.projectId || visibleProjectIds.has(r.projectId));
   const filteredPortfolios = portfolios.filter((portfolio) => filteredProjects.some((project) => project.portfolioId === portfolio.id));
+
+  // A project's risk follows its project. A portfolio's risk follows the
+  // company and portfolio filters, which are the portfolio's own attributes.
+  // Under a status or a search, which describe projects, it stays only while
+  // its portfolio still has a project on the page: otherwise the risk list
+  // named portfolios no other section showed, and listed every portfolio's
+  // risks when the filter matched no project at all. A risk tied to nothing
+  // (no project, no portfolio, or a deleted one) cannot be placed, so it
+  // shows only when nothing is narrowed.
+  const pfFilter = f.filterPortfolio ?? 'all';
+  const byProject = f.filterStatus !== 'all' || f.searchQuery.trim() !== '';
+  const narrowed = byProject || f.filterCompany !== 'all' || pfFilter !== 'all';
+  const portfolioInScope = (id: string) => {
+    const row = portfolios.find((p) => p.id === id);
+    if (!row) return !narrowed;
+    if (pfFilter === 'standalone' || (pfFilter !== 'all' && row.id !== pfFilter)) return false;
+    if (byProject && !filteredPortfolios.some((p) => p.id === row.id)) return false;
+    if (f.filterCompany !== 'all') return row.companyId === f.filterCompany;
+    return companies.find((c) => c.id === row.companyId)?.status !== 'archived';
+  };
+  const filteredRisks = risks.filter((r) => (r.projectId ? visibleProjectIds.has(r.projectId) : r.portfolioId ? portfolioInScope(r.portfolioId) : !narrowed));
+
+  // The companies and portfolios the project count stands beside. Unfiltered,
+  // every live company and every portfolio, as before; once a filter narrows
+  // the projects, only the ones those projects belong to. A chosen company
+  // counts even with no project on the page: «0 شركة» beside a selected
+  // company read as a fault.
+  const inView = new Set(filteredProjects.map((p) => p.companyId));
+  if (f.filterCompany !== 'all' && companies.some((c) => c.id === f.filterCompany)) inView.add(f.filterCompany);
+  const companiesInView = narrowed ? inView.size : companies.filter((c) => c.status !== 'archived').length;
+  const archivedCompaniesInView = narrowed ? 0 : companies.filter((c) => c.status === 'archived').length;
+  const portfoliosInView = narrowed ? filteredPortfolios.length : portfolios.length;
 
   // Stats
   const totalContractValue = filteredProjects.reduce((s, p) => s + p.contractValue, 0);
-  const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalExpenses = sumMoney(filteredExpenses);
   const totalPlanned = getTotalPlanned(filteredBudgetItems);
-  const approvedChangeImpact = filteredChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amountImpact, 0);
+  const approvedChangeImpact = getApprovedChangeImpact(filteredChangeOrders);
   const effectiveTotalContract = totalContractValue + approvedChangeImpact;
   const plannedProfit = effectiveTotalContract - totalPlanned;
   const plannedProfitMargin = effectiveTotalContract > 0 ? (plannedProfit / effectiveTotalContract) * 100 : 0;
-  const collectedRevenue = filteredAllRevenues.filter((r) => r.status === 'collected' && isInRange(cashDate(r), currentRange)).reduce((s, r) => s + r.amount, 0);
-  const prevExpenses = previousRange ? filteredAllExpenses.filter((e) => isInRange(e.date, previousRange)).reduce((s, e) => s + e.amount, 0) : 0;
-  const prevRevenue = previousRange ? filteredAllRevenues.filter((r) => r.status === 'collected' && isInRange(cashDate(r), previousRange)).reduce((s, r) => s + r.amount, 0) : 0;
+  const collectedRevenue = getCollectedRevenue(filteredAllRevenues.filter((r) => isInRange(cashDate(r), currentRange)));
+  const prevExpenses = previousRange ? sumMoney(filteredAllExpenses.filter((e) => isInRange(e.date, previousRange))) : 0;
+  const prevRevenue = previousRange ? getCollectedRevenue(filteredAllRevenues.filter((r) => isInRange(cashDate(r), previousRange))) : 0;
   const expenseChange = prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : null;
   const revenueChange = prevRevenue > 0 ? ((collectedRevenue - prevRevenue) / prevRevenue) * 100 : null;
   const attentionProjectsCount = filteredProjects.filter((project) => {
-    const spend = filteredAllExpenses.filter((expense) => expense.projectId === project.id).reduce((sum, expense) => sum + expense.amount, 0);
+    const spend = sumMoney(filteredAllExpenses.filter((expense) => expense.projectId === project.id));
     const plan = getTotalPlanned(filteredBudgetItems.filter((item) => item.projectId === project.id));
     const contract = getEffectiveContractValue(project.contractValue, filteredChangeOrders.filter((o) => o.projectId === project.id));
     return needsAttention(project, spend, plan, contract - plan);
@@ -179,15 +210,15 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
   // which nets them off the same way. With one company chosen, only its own.
   const visibleCompanyIds = new Set(filteredProjects.map((p) => p.companyId));
   if (f.filterCompany !== 'all') visibleCompanyIds.add(f.filterCompany);
-  const indirectTotal = (input.indirectCosts ?? []).filter((c) => visibleCompanyIds.has(c.companyId)).reduce((s, c) => s + c.amount, 0)
-    + (input.companyExpenses ?? []).filter((c) => visibleCompanyIds.has(c.companyId)).reduce((s, c) => s + c.amount, 0);
+  const indirectTotal = sumMoney((input.indirectCosts ?? []).filter((c) => visibleCompanyIds.has(c.companyId)))
+    + sumMoney((input.companyExpenses ?? []).filter((c) => visibleCompanyIds.has(c.companyId)));
   const netPlannedProfit = plannedProfit - indirectTotal;
   const netPlannedMargin = effectiveTotalContract > 0 ? (netPlannedProfit / effectiveTotalContract) * 100 : 0;
 
   // The same rows as the total expenses card: visible projects, counted, in the period.
   const companyData = companies.map((c) => {
     const compProjects = filteredProjects.filter((p) => p.companyId === c.id);
-    const total = filteredExpenses.filter((e) => compProjects.some((p) => p.id === e.projectId)).reduce((s, e) => s + e.amount, 0);
+    const total = sumMoney(filteredExpenses.filter((e) => compProjects.some((p) => p.id === e.projectId)));
     return { name: c.name, value: total };
   }).filter((d) => d.value > 0);
 
@@ -202,6 +233,7 @@ export function dashboardFigures(input: DashboardInput, f: DashboardFilters, now
     totalContractValue, totalExpenses, approvedChangeImpact, effectiveTotalContract, plannedProfit, plannedProfitMargin,
     collectedRevenue, expenseChange, revenueChange, attentionProjectsCount, companyData, statusData,
     netCash, receivables, indirectTotal, netPlannedProfit, netPlannedMargin,
+    companiesInView, archivedCompaniesInView, portfoliosInView,
   };
 }
 

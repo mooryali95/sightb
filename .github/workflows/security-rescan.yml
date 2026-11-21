@@ -13,6 +13,11 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
+# Read-only token: no job here writes to the repository. Kept explicit
+# so a public fork's pull request can never get more.
+permissions:
+  contents: read
+
 jobs:
   scan:
     # Skip the in-flight/failed deployment events; only scan what actually shipped.

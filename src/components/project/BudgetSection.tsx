@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useDialogSession } from '@/hooks/useDialogSession';
-import { formatCurrency, getTotalPlanned, getCountedExpenses } from '@/lib/finance';
+import { formatCurrency, getTotalPlanned, getCountedExpenses, sumMoney } from '@/lib/finance';
 import { getProjectOutstandingAdvances } from '@/lib/funds';
 import {
   EXPENSE_CATEGORY_LABELS, COST_TYPE_LABELS, type ExpenseCategory, type Resource,
@@ -53,9 +53,9 @@ export function BudgetSection({ projectId, budgetItems, expenses, revenues = [],
   const countedExpenses = getCountedExpenses(expenses);
 
   const totalPlanned = getTotalPlanned(budgetItems);
-  const totalActual = countedExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalActual = sumMoney(countedExpenses);
   const getActualForItem = (item: BudgetItem) => {
-    return countedExpenses.filter((e) => e.budgetItemId === item.id).reduce((s, e) => s + e.amount, 0);
+    return sumMoney(countedExpenses.filter((e) => e.budgetItemId === item.id));
   };
 
   const unlinkedExpenses = expenses.filter((e) => !e.budgetItemId);

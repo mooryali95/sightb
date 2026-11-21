@@ -1,3 +1,5 @@
+import { StatementsPanel } from './financial-overview/StatementsPanel';
+import { PortfolioHealth } from './portfolio/PortfolioHealth';
 import { useEffect, useMemo } from 'react';
 import { useDialogSession } from '@/hooks/useDialogSession';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -72,6 +74,11 @@ export default function PortfolioDetail() {
     () => rankProjects(portfolioProjects, budgetItems, expenses, revenues, changeOrders),
     [portfolioProjects, budgetItems, expenses, revenues, changeOrders],
   );
+
+  const healthProjects = useMemo(() => projectSummaries.map(({ project: p, summary: s }) => ({
+    id: p.id, name: p.name, status: p.status, group: '',
+    contract: s.effectiveContractValue, planned: s.totalPlanned, actual: s.totalActual, collected: s.collectedRevenue,
+  })), [projectSummaries]);
 
   const pieData = useMemo(() =>
     projectSummaries.filter(ps => ps.summary.totalActual > 0).map(ps => ({
@@ -210,6 +217,10 @@ export default function PortfolioDetail() {
             <p className="text-xs text-muted-foreground mt-1">{summary.revenueAchievement.toFixed(1)}% من المستهدف</p>
           </div>
         )}
+
+        <PortfolioHealth projects={healthProjects} />
+
+        <StatementsPanel only={{ companyId: portfolio.companyId, projectIds: portfolioProjects.map((p) => p.id) }} />
 
         <ProjectComparisonTable rows={projectSummaries} />
 

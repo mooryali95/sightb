@@ -144,7 +144,7 @@ export default function NewProject() {
 
           <div className="space-y-2">
             <Label>اسم المشروع</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مشروع الرواد — ألبانيا 2026" required />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مشروع الأفق — تبوك 2026" required />
           </div>
           <div className="space-y-2">
             <Label>وصف المشروع (اختياري)</Label>

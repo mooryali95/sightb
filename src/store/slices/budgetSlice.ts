@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { BudgetItem, Expense, Revenue } from '@/types/project';
 import { getUserId, mapBudgetItem, mapExpense, mapRevenue, upsertById } from '../helpers';
 import type { AppState } from '../useStore';
+import type { ForeignInvoice } from '@/lib/finance/fx';
 
 /**
  * What an expense edit may carry. The four link fields accept `null` so an
@@ -17,6 +18,8 @@ export type ExpenseUpdate =
     custodyId?: string | null;
     budgetItemId?: string | null;
     fundId?: string | null;
+    /** The foreign invoice behind the amount: an object sets it, `null` removes it, absent leaves it. */
+    foreign?: ForeignInvoice | null;
   };
 
 /**
@@ -110,6 +113,9 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
       resource_id: e.resourceId || null, custody_id: e.custodyId || null,
       approval_status: e.approvalStatus || 'approved',
       ...(e.partyId ? { party_id: e.partyId } : {}),
+      // Only sent for a foreign invoice, so a database without the columns never sees them.
+      ...(e.originalCurrency && e.originalAmount && e.exchangeRate
+        ? { original_amount: e.originalAmount, original_currency: e.originalCurrency, exchange_rate: e.exchangeRate } : {}),
       approved_by: e.approvedBy || null,
       vendor: e.vendor || null,
       invoice_ref: e.invoiceRef || null,
@@ -159,10 +165,19 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     if (e.isVatExempt !== undefined) updates.is_vat_exempt = e.isVatExempt;
     if (e.fundId !== undefined) updates.fund_id = e.fundId || null;
     if (e.partyId !== undefined) updates.party_id = e.partyId || null;
+    const { foreign, ...rest } = e;
+    if (foreign !== undefined) {
+      updates.original_amount = foreign?.originalAmount ?? null;
+      updates.original_currency = foreign?.originalCurrency ?? null;
+      updates.exchange_rate = foreign?.exchangeRate ?? null;
+    }
     const { error } = await db.from('expenses').update(updates).eq('id', id);
     if (error) throw error;
     const existing = get().expenses.find((x) => x.id === id);
-    set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...withoutNulls(e) } : x)) }));
+    const foreignLocal = foreign === undefined ? {} : {
+      originalAmount: foreign?.originalAmount, originalCurrency: foreign?.originalCurrency, exchangeRate: foreign?.exchangeRate,
+    };
+    set((s) => ({ expenses: s.expenses.map((x) => (x.id === id ? { ...x, ...withoutNulls(rest), ...foreignLocal } : x)) }));
     const projectId = existing?.projectId;
     if (projectId && (e.fundId !== undefined || e.amount !== undefined)) {
       try { await get().loadFundsForProject(projectId); }

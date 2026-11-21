@@ -10,6 +10,7 @@ import { AlertTriangle, CheckCircle2, Info, Loader2, ShieldCheck, XCircle } from
 import { useStore } from '@/store/useStore';
 import { formatCurrency, getEffectiveContractValue } from '@/lib/finance';
 import { checkIntegrity, type IntegritySeverity } from '@/lib/finance/integrity';
+import { useCompanyLedger } from '@/hooks/useCompanyLedger';
 import type { Project } from '@/types/project';
 
 const ICON: Record<IntegritySeverity, JSX.Element> = {
@@ -18,8 +19,9 @@ const ICON: Record<IntegritySeverity, JSX.Element> = {
   info: <Info className="w-4 h-4 text-muted-foreground shrink-0" />,
 };
 
-export function IntegrityCard({ projects }: { projects: Project[] }) {
+export function IntegrityCard({ projects, companyId }: { projects: Project[]; companyId?: string }) {
   const s = useStore();
+  const ledger = useCompanyLedger(companyId).data ?? null;
   const { loadFundsForProject, loadResourcePayablesForProject, loadCashTransfersForProject } = s;
   // Funds, payables and cash transfers load per project. No verdict until
   // all of them are in: judged on missing transfers, a custody fed by one
@@ -43,7 +45,8 @@ export function IntegrityCard({ projects }: { projects: Project[] }) {
       const p = projects.find((x) => x.id === pid);
       return p ? getEffectiveContractValue(p.contractValue, s.changeOrders.filter((c) => c.projectId === pid)) : 0;
     },
-  }), [projects, s.expenses, s.custodies, s.projectFunds, s.fundSettlements, s.revenues, s.reimbursements, s.paymentRequests, s.cashTransfers, s.changeOrders]);
+    companyLedger: ledger,
+  }), [ledger, projects, s.expenses, s.custodies, s.projectFunds, s.fundSettlements, s.revenues, s.reimbursements, s.paymentRequests, s.cashTransfers, s.changeOrders]);
 
   const problems = issues.filter((i) => i.severity !== 'info');
   const name = (pid: string) => projects.find((p) => p.id === pid)?.name ?? 'مشروع';

@@ -88,13 +88,13 @@ export function attributeExpense(e: Expense, idx: ResourceIndex): { resource?: R
 
 /**
  * A resource named in the description, on whole words: its full name, or its
- * first name when no other resource shares it ("دفعة لعمر" → عمر عبدالحميد).
+ * first name when no other resource shares it ("دفعة لعمر" → عمر عبدالكريم).
  * Two different resources named in one description credit neither rather
  * than guess.
  */
 function inDescription(description: string | null | undefined, idx: ResourceIndex): Resource | undefined {
   const words = normalizeArabicName(description).split(' ').filter(Boolean)
-    // A name written with a leading ل/ب/و ("لعمر", "وأيمن") counts too.
+    // A name written with a leading ل/ب/و ("لعمر", "وأنور") counts too.
     .flatMap((w) => (w.length > 3 && 'لبو'.includes(w[0]) ? [w, w.slice(1)] : [w]));
   if (words.length === 0) return undefined;
   const text = ` ${words.join(' ')} `;

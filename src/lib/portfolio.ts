@@ -138,6 +138,8 @@ export function getStandaloneProjectsSummary(
   allRevenues: Revenue[],
   allChangeOrders: ChangeOrder[],
   allRisks: Risk[],
+  /** The company's own portfolios: a project filed under any other one (deleted, or another company's) is standalone here. */
+  homePortfolioIds?: string[],
 ): PortfolioSummary {
   const fakePortfolio: Portfolio = {
     id: '__standalone__',
@@ -147,7 +149,7 @@ export function getStandaloneProjectsSummary(
     targetMargin: 0,
     createdAt: '',
   };
-  const standaloneProjects = allProjects.filter(p => p.companyId === companyId && !p.portfolioId);
+  const standaloneProjects = allProjects.filter(p => p.companyId === companyId && (!p.portfolioId || (homePortfolioIds !== undefined && !homePortfolioIds.includes(p.portfolioId))));
 
   return getPortfolioSummary(
     fakePortfolio,
@@ -172,13 +174,16 @@ export function getCompanySummary(
   indirectCosts: IndirectCost[],
 ): CompanySummary {
   const compPortfolios = portfolios.filter(p => p.companyId === company.id);
+  // Every project counts once, in the company it belongs to: one filed under
+  // a deleted portfolio, or another company's, used to drop out of the totals.
+  const ownProjects = allProjects.filter(p => p.companyId === company.id);
 
   const portfolioSummaries = compPortfolios.map(p =>
-    getPortfolioSummary(p, allProjects, allBudgetItems, allExpenses, allRevenues, allChangeOrders, allMilestones, allRisks)
+    getPortfolioSummary(p, ownProjects, allBudgetItems, allExpenses, allRevenues, allChangeOrders, allMilestones, allRisks)
   );
 
   const standaloneProjectsSummary = getStandaloneProjectsSummary(
-    company.id, allProjects, allBudgetItems, allExpenses, allRevenues, allChangeOrders, allRisks,
+    company.id, ownProjects, allBudgetItems, allExpenses, allRevenues, allChangeOrders, allRisks, compPortfolios.map(p => p.id),
   );
 
   const allSummaries = [...portfolioSummaries, standaloneProjectsSummary];

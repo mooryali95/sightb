@@ -60,32 +60,32 @@ test('an expense beyond the fund remainder is refused, naming the remainder, wit
 });
 
 test('the vendor is picked from the registry, so the expense is linked to the person, not just their name', async ({ page }) => {
-  const AYMAN = 'aaaaaaaa-0000-4000-8000-000000000001';
+  const ANWAR = 'aaaaaaaa-0000-4000-8000-000000000001';
   const wire = await stubSupabase(page, {
-    parties: [{ id: AYMAN, company_id: COMPANY_ID, name: 'د أيمن أصلان', kind: 'person', archived: false, role: 'مستشار', aliases: [], user_id: USER_ID, created_at: '2026-01-01T00:00:00Z' }],
+    parties: [{ id: ANWAR, company_id: COMPANY_ID, name: 'د أنور أسعد', kind: 'person', archived: false, role: 'مستشار', aliases: [], user_id: USER_ID, created_at: '2026-01-01T00:00:00Z' }],
   });
   const dialog = await openForm(page);
   await dialog.getByPlaceholder('0').fill('1000');
   await dialog.getByRole('combobox', { name: 'المورّد' }).click();
-  await page.getByRole('combobox', { name: 'بحث في سجل الموارد' }).fill('دأيمن');
-  await page.getByRole('option', { name: /د أيمن أصلان/ }).click();
+  await page.getByRole('combobox', { name: 'بحث في سجل الموارد' }).fill('دأنور');
+  await page.getByRole('option', { name: /د أنور أسعد/ }).click();
   await expect(dialog.getByRole('combobox', { name: 'المورّد' })).toContainText('من السجل');
   await dialog.getByRole('button', { name: 'إضافة', exact: true }).click();
   await expect(page.getByText('تمت إضافة المصروف')).toBeVisible();
   await expect.poll(() => posts(wire).length).toBe(1);
-  expect(posts(wire)[0]).toMatchObject({ vendor: 'د أيمن أصلان', party_id: AYMAN });
+  expect(posts(wire)[0]).toMatchObject({ vendor: 'د أنور أسعد', party_id: ANWAR });
 });
 
 test('more than the fund holds: the fund pays what it has, and the rest is owed to the project manager who paid it', async ({ page }) => {
   const MANAGER = 'bbbbbbbb-0000-4000-8000-0000000000bb';
   const wire = await stubSupabase(page, {
-    resources: [{ id: MANAGER, project_id: PROJECT_ID, name: 'عمر عبدالحميد', role: 'مدير مشروع', monthly_cost: 0, user_id: USER_ID, created_at: '2026-01-01T00:00:00Z' }],
+    resources: [{ id: MANAGER, project_id: PROJECT_ID, name: 'عمر عبدالكريم', role: 'مدير مشروع', monthly_cost: 0, user_id: USER_ID, created_at: '2026-01-01T00:00:00Z' }],
   });
   const dialog = await openForm(page);
   await dialog.getByPlaceholder('0').fill('40000');
   const note = dialog.getByRole('status').filter({ hasText: 'المبلغ أكبر مما في المصدر' });
   await expect(note).toContainText('2,000.00');
-  await expect(note.getByRole('combobox', { name: 'من دفع الزائد' })).toContainText('عمر عبدالحميد');
+  await expect(note.getByRole('combobox', { name: 'من دفع الزائد' })).toContainText('عمر عبدالكريم');
   await dialog.getByRole('button', { name: 'إضافة', exact: true }).click();
   await expect(page.getByText(/مستحقة لمن دفع الزائد/)).toBeVisible();
 
@@ -93,4 +93,37 @@ test('more than the fund holds: the fund pays what it has, and the rest is owed 
   expect(posts(wire)[0]).toMatchObject({ fund_id: FUND_ID, amount: 38000, description: 'إيجار رافعة' });
   const owed = wire.writes.find((w) => w.method === 'POST' && w.table === 'resource_reimbursements')?.body as Record<string, unknown>;
   expect(owed).toMatchObject({ resource_id: MANAGER, source_kind: 'resource', amount: 2000, status: 'approved' });
+});
+
+test('an invoice in dollars is booked in the project currency, and keeps what the invoice said and the rate', async ({ page }) => {
+  const wire = await stubSupabase(page);
+  const dialog = await openForm(page);
+  await dialog.getByLabel('الفاتورة بعملة أخرى').click();
+  await dialog.getByLabel('عملة الفاتورة').click();
+  await page.getByRole('option', { name: /USD/ }).click();
+  await dialog.getByLabel('مبلغ الفاتورة بعملتها').fill('1000');
+  await dialog.getByLabel('سعر الصرف').fill('3.75');
+  // The booked amount follows; the bank then took a little more, and the rate follows that.
+  const booked = dialog.getByRole('spinbutton').first();
+  await expect(booked).toHaveValue('3750');
+  await booked.fill('3765.5');
+  await expect(dialog.getByLabel('سعر الصرف')).toHaveValue('3.7655');
+  await dialog.getByRole('button', { name: 'إضافة', exact: true }).click();
+  await expect(page.getByText('تمت إضافة المصروف')).toBeVisible();
+
+  await expect.poll(() => posts(wire).length).toBe(1);
+  const row = posts(wire)[0];
+  expect(row).toMatchObject({ project_id: PROJECT_ID, original_currency: 'USD', fund_id: FUND_ID });
+  expect(Number(row.amount)).toBe(3765.5);
+  expect(Number(row.original_amount)).toBe(1000);
+  expect(Number(row.exchange_rate)).toBe(3.7655);
+});
+
+test('an ordinary expense never names the foreign-invoice columns', async ({ page }) => {
+  const wire = await stubSupabase(page);
+  const dialog = await openForm(page);
+  await dialog.getByPlaceholder('0').fill('500');
+  await dialog.getByRole('button', { name: 'إضافة', exact: true }).click();
+  await expect.poll(() => posts(wire).length).toBe(1);
+  for (const column of ['original_amount', 'original_currency', 'exchange_rate']) expect(posts(wire)[0]).not.toHaveProperty(column);
 });

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/finance';
+import { formatCurrency, sumMoney } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
 import {
   getProjectPayablesSummary,
@@ -32,9 +32,7 @@ export function PortfolioPayablesSection({ projects }: Props) {
     const projSettles = resourceSettlements.filter((s) => s.projectId === p.id);
     const res = getProjectPayablesSummary(p.id, resources, projReimbs, projReqs, projSettles);
     const ven = getVendorPayablesSummary(p.id, projReimbs);
-    const expected = projReqs
-      .filter((q) => PENDING_STATUSES.includes(q.status))
-      .reduce((s, q) => s + q.amount, 0);
+    const expected = sumMoney(projReqs.filter((q) => PENDING_STATUSES.includes(q.status)));
     const signedSettlements = projSettles.filter((s) => s.status === 'signed').length;
     return {
       project: p,

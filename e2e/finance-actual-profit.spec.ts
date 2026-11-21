@@ -27,7 +27,8 @@ test('the projects tab shows actual profit and margin beside the planned ones', 
   const row = page.getByRole('row').filter({ hasText: 'مشروع الاختبار' });
   // 10,000 collected (the planned 90,000 not), 12,000 spent (the rejected 50,000 not).
   const cells = row.getByRole('cell');
-  const headers = await page.getByRole('columnheader').allInnerTexts();
+  // Only the projects table: the statements panel above has a table of its own.
+  const headers = await page.getByRole('tabpanel').getByRole('columnheader').allInnerTexts();
   const at = (label: string) => cells.nth(headers.findIndex((h) => h.trim() === label));
   await expect(at('الربح الفعلي')).toHaveText('-2,000.00 ر.س');
   await expect(at('الربح الفعلي')).toHaveClass(/text-destructive/);

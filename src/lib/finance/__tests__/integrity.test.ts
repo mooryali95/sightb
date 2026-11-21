@@ -3,7 +3,7 @@ import { checkIntegrity, type IntegrityInput } from '../integrity';
 import type { Custody, Expense, FundSettlement, Project, ProjectFund, ResourceReimbursement, Revenue } from '@/types/project';
 
 const P = 'p1';
-const project = (status = 'active') => ({ id: P, name: 'ألبانيا', status } as Project);
+const project = (status = 'active') => ({ id: P, name: 'تبوك', status } as Project);
 const exp = (over: Partial<Expense>): Expense => ({ id: Math.random().toString(), projectId: P, category: 'other', description: 'x', amount: 100, date: '2026-05-01', month: 1, approvalStatus: 'approved', isVatExempt: true, ...over } as Expense);
 const fund = (over: Partial<ProjectFund> = {}): ProjectFund => ({ id: 'f1', projectId: P, fundNumber: 1, amount: 1000, transferDate: '2026-04-01', status: 'acknowledged', createdBy: 'u', createdAt: 'c', updatedAt: 'u', ...over });
 const base = (over: Partial<IntegrityInput> = {}): IntegrityInput => ({
@@ -66,5 +66,27 @@ describe('checkIntegrity', () => {
   it('keeps what is owed to people in view, errors first', () => {
     const owed = { id: 'rb', projectId: P, status: 'approved', amount: 1059.16, description: 'سكن' } as ResourceReimbursement;
     expect(rules(base({ reimbursements: [owed], expenses: [exp({})] }))).toEqual(['no_source', 'owed']);
+  });
+
+  describe('company books', () => {
+    const C = { kind: 'company' as const, id: null };
+    const ce = { id: 'e1', companyId: 'c', date: '2026-05-01', amount: 1000, description: 'رواتب', kind: 'salary' as const, partyId: null, paidByPartyId: null };
+    const lent = { id: 'l', companyId: 'c', date: '2026-05-01', amount: 500, type: 'advance' as const, from: C, to: { kind: 'project' as const, id: P }, note: '', dueDate: null, salaryExpenseId: null };
+    const ledger = (allocated: number, entries = [lent]) => ({ expenses: [ce], allocations: [{ id: 'a', expenseId: 'e1', projectId: P, amount: allocated }], entries });
+
+    it('flags a company expense charged to projects beyond its amount, by how much', () => {
+      expect(rules(base({ companyLedger: ledger(1000, []) }))).toEqual([]);
+      expect(checkIntegrity(base({ companyLedger: ledger(1250, []) }))).toEqual([expect.objectContaining({ rule: 'allocation_over', severity: 'error', amount: 250 })]);
+    });
+
+    it('flags a finished project still owing the company, and not a running one', () => {
+      expect(rules(base({ companyLedger: ledger(0) }))).toEqual([]);
+      const done = base({ projects: [project('completed')], funds: [fund({ status: 'settled' })], companyLedger: ledger(0) });
+      expect(checkIntegrity(done)).toEqual([expect.objectContaining({ rule: 'finished_owes_company', amount: 500 })]);
+    });
+
+    it('says nothing about the company books when they are not live', () => {
+      expect(rules(base({ companyLedger: null }))).toEqual([]);
+    });
   });
 });

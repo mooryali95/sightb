@@ -4,6 +4,7 @@
  * vendor/; the panel lists, totals, and says who may write.
  */
 import { useMemo, useState } from 'react';
+import { sumMoney } from '@/lib/finance';
 import { useStore } from '@/store/useStore';
 import { useRole } from '@/hooks/useRole';
 import { useDialogSession } from '@/hooks/useDialogSession';
@@ -42,9 +43,7 @@ export function VendorPayablesPanel({ projectId, readOnly }: Props) {
   // Settled is the ledger's word (status), not only the expense link one
   // path of settling leaves behind.
   const isSettled = (p: ResourceReimbursement) => p.status === 'reimbursed' || !!p.settledExpenseId;
-  const totalOutstanding = vendorPayables
-    .filter((p) => !isSettled(p))
-    .reduce((s, p) => s + Number(p.amount), 0);
+  const totalOutstanding = sumMoney(vendorPayables.filter((p) => !isSettled(p)));
 
   return (
     <Card>

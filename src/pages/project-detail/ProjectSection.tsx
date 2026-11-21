@@ -20,6 +20,8 @@ import { ExpenseSpendExplorer } from '@/components/project/ExpenseSpendExplorer'
 import { CashFlowSankey } from '@/components/project/CashFlowSankey';
 import { ChargedCostsCard } from '@/components/project/ledger/ChargedCostsCard';
 import { CompanyFundingCard } from '@/components/project/ledger/CompanyFundingCard';
+import { StatementsPanel } from '@/pages/financial-overview/StatementsPanel';
+import { ProjectCompanyLink } from '@/components/project/ledger/ProjectCompanyLink';
 import { PendingCarryCard } from '@/components/project/funds/PendingCarryCard';
 import { ResourcePayablesSection } from '@/components/project/ResourcePayablesSection';
 import { VendorPayablesPanel } from '@/components/project/VendorPayablesPanel';
@@ -64,11 +66,16 @@ export function ProjectSection({ value, data: d, navigateToTab }: ProjectSection
             unsettledFunds: 0, remainingInManagerHand: 0,
             daysRemaining, currency: project.currency,
           }} />
+          <ProjectCompanyLink companyId={project.companyId} companyName={company?.name} project={{
+            id: project.id, name: project.name, group: '', status: project.status,
+            contract: summary.effectiveContractValue, planned: summary.totalPlanned, actual: summary.totalActual, collected: summary.collectedRevenue,
+          }} />
           <ExecutiveSummary
             project={project} summary={summary} milestones={pMilestones} risks={pRisks}
             changeOrders={pChangeOrders} expenses={pExpenses} budgetItems={pBudget}
             currentMonth={currentMonth} totalCommitted={totalCommitted}
           />
+          <StatementsPanel only={{ companyId: project.companyId, projectIds: [project.id] }} />
         </>
       );
     case 'milestones':

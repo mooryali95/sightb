@@ -6,6 +6,7 @@ import type {
 } from '@/types/project';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { LifetimeNote } from './LifetimeNote';
 
 interface AttentionProjectsProps {
   filteredProjects: Project[];
@@ -16,10 +17,11 @@ interface AttentionProjectsProps {
   risks: Risk[];
   projects: Project[];
   portfolios: Portfolio[];
+  timePeriod?: string;
 }
 
 export function AttentionProjects({
-  filteredProjects, expenses, budgetItems, revenues, changeOrders, risks, projects, portfolios,
+  filteredProjects, expenses, budgetItems, revenues, changeOrders, risks, projects, portfolios, timePeriod,
 }: AttentionProjectsProps) {
   const navigate = useNavigate();
 
@@ -49,6 +51,7 @@ export function AttentionProjects({
             <AlertTriangle className="w-4 h-4 health-warning" />
             <h3 className="text-sm font-semibold">مشاريع تحتاج انتباه ({attentionProjects.length})</h3>
           </div>
+          <LifetimeNote timePeriod={timePeriod} className="mb-2" />
           <div className="space-y-2">
             {attentionProjects.slice(0, 5).map(p => {
               const s = getProjectSummary(

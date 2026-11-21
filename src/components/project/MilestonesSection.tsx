@@ -45,7 +45,8 @@ export function MilestonesSection({ projectId, milestones, project, readOnly = f
     const now = todayLocal();
     milestones.forEach(async (m) => {
       if (m.plannedEnd && m.plannedEnd < now && m.status !== 'completed' && m.status !== 'delayed') {
-        await updateMilestone(m.id, { status: 'delayed' });
+        // A refusal here must say so, not become an unhandled promise.
+        if (!(await runOrToast(() => updateMilestone(m.id, { status: 'delayed' }), `تعذّر تحويل المرحلة "${m.name}" إلى متأخرة`))) return;
         toast.info(`المرحلة "${m.name}" تحولت لـ "متأخرة" تلقائياً`);
       }
     });
