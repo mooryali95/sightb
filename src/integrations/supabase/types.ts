@@ -854,6 +854,7 @@ export type Database = {
           custody_id: string | null
           date: string
           description: string
+          exchange_rate: number | null
           fund_id: string | null
           id: string
           invoice_ref: string | null
@@ -862,6 +863,8 @@ export type Database = {
           month: number
           notes: string | null
           ocr_extracted_data: Json | null
+          original_amount: number | null
+          original_currency: string | null
           party_id: string | null
           project_id: string
           receipt_attachments: Json
@@ -883,6 +886,7 @@ export type Database = {
           custody_id?: string | null
           date: string
           description: string
+          exchange_rate?: number | null
           fund_id?: string | null
           id?: string
           invoice_ref?: string | null
@@ -891,6 +895,8 @@ export type Database = {
           month?: number
           notes?: string | null
           ocr_extracted_data?: Json | null
+          original_amount?: number | null
+          original_currency?: string | null
           party_id?: string | null
           project_id: string
           receipt_attachments?: Json
@@ -912,6 +918,7 @@ export type Database = {
           custody_id?: string | null
           date?: string
           description?: string
+          exchange_rate?: number | null
           fund_id?: string | null
           id?: string
           invoice_ref?: string | null
@@ -920,6 +927,8 @@ export type Database = {
           month?: number
           notes?: string | null
           ocr_extracted_data?: Json | null
+          original_amount?: number | null
+          original_currency?: string | null
           party_id?: string | null
           project_id?: string
           receipt_attachments?: Json
