@@ -109,6 +109,38 @@ describe('expenses', () => {
     expect(loadFundsForProject).toHaveBeenCalledWith(P);
   });
 
+  it('sends an invoice\'s own amount, currency and rate only when there is one, and reads them back', async () => {
+    answers.push({ data: [expenseRow({ id: 'uuid-1', amount: '375', original_amount: '100.00', original_currency: 'USD', exchange_rate: '3.750000' })], error: null });
+    await useStore.getState().addExpense({ projectId: P, category: 'other', description: 'x', amount: 375, date: '2026-03-01', month: 3, isVatExempt: false,
+      originalAmount: 100, originalCurrency: 'USD', exchangeRate: 3.75 } as Omit<Expense, 'id'>);
+    expect(argOf(0, 'insert')).toMatchObject({ amount: 375, original_amount: 100, original_currency: 'USD', exchange_rate: 3.75 });
+    expect(useStore.getState().expenses[0]).toMatchObject({ amount: 375, originalAmount: 100, originalCurrency: 'USD', exchangeRate: 3.75 });
+
+    // A plain expense never names the columns, so a database without them still takes it.
+    answers.push({ data: [expenseRow({ id: 'uuid-1' })], error: null });
+    await useStore.getState().addExpense({ projectId: P, category: 'other', description: 'x', amount: 100, date: '2026-03-01', month: 3, isVatExempt: false } as Omit<Expense, 'id'>);
+    for (const column of ['original_amount', 'original_currency', 'exchange_rate']) expect(argOf(1, 'insert')).not.toHaveProperty(column);
+  });
+
+  it('sets, removes or leaves the foreign invoice on an edit', async () => {
+    useStore.setState({ expenses: [{ id: 'e1', projectId: P, amount: 375, description: 'x', originalAmount: 100, originalCurrency: 'USD', exchangeRate: 3.75 } as Expense] });
+    answers.push({ error: null });
+    await useStore.getState().updateExpense('e1', { description: 'y' });
+    expect(argOf(0, 'update')).toEqual({ description: 'y' });
+    expect(useStore.getState().expenses[0]).toMatchObject({ originalCurrency: 'USD', exchangeRate: 3.75 });
+
+    answers.push({ error: null });
+    await useStore.getState().updateExpense('e1', { foreign: { originalAmount: 200, originalCurrency: 'EUR', exchangeRate: 4.1 } });
+    expect(argOf(1, 'update')).toEqual({ original_amount: 200, original_currency: 'EUR', exchange_rate: 4.1 });
+    expect(useStore.getState().expenses[0]).toMatchObject({ originalAmount: 200, originalCurrency: 'EUR', exchangeRate: 4.1 });
+    expect(useStore.getState().expenses[0]).not.toHaveProperty('foreign');
+
+    answers.push({ error: null });
+    await useStore.getState().updateExpense('e1', { foreign: null });
+    expect(argOf(2, 'update')).toEqual({ original_amount: null, original_currency: null, exchange_rate: null });
+    expect(useStore.getState().expenses[0].originalCurrency).toBeUndefined();
+  });
+
   it('deletes and reloads the funds only for a fund-backed expense', async () => {
     useStore.setState({ expenses: [{ id: 'e1', projectId: P, amount: 100, fundId: 'f1' } as Expense, { id: 'e2', projectId: P, amount: 5, custodyId: 'c1' } as Expense] });
     answers.push({ error: null });

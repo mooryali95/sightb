@@ -139,6 +139,10 @@ does not happen again.
      fails on one.
    - «المنظومات» on the dashboard: `src/components/dashboard/CompaniesOverview.tsx`,
      `e2e/companies-overview.spec.ts`. Health comes only from `healthOf`.
+   - Invoices in another currency: `src/lib/finance/fx.ts`,
+     `src/components/project/expenses/ForeignInvoiceFields.tsx`, migration
+     `20261121090000`. `expenses.amount` stays in the project's currency and
+     is the only figure the books read; never convert it or fetch a rate.
    - «القوائم المالية»: `src/lib/finance/statements.ts`,
      `src/pages/financial-overview/StatementsPanel.tsx`, `e2e/statements.spec.ts`.
      Income is by invoice date, cash by the day it moved; the company's own

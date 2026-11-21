@@ -3,6 +3,7 @@
  * row is linked to, and where its money came from.
  */
 import { formatCurrency, calcVAT, addVAT } from '@/lib/finance';
+import { describeForeignInvoice, foreignInvoiceOf } from '@/lib/finance/fx';
 import {
   EXPENSE_CATEGORY_LABELS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS,
   type ExpenseCategory, type ApprovalStatus, type Resource, type Custody, type BudgetItem, type Expense, type ProjectFund,
@@ -35,6 +36,7 @@ export function ExpenseInspector({
   const budgetItem = budgetItems.find(b => b.id === exp.budgetItemId);
   const fund = projectFunds.find((f) => f.id === exp.fundId);
   const status = exp.approvalStatus || 'approved';
+  const foreign = exp ? foreignInvoiceOf(exp) : null;
   const vatAmount = exp.isVatExempt ? 0 : calcVAT(exp.amount, taxPercent);
   const inclusive = addVAT(exp.amount, exp.isVatExempt ? 0 : taxPercent);
   return (
@@ -77,6 +79,7 @@ export function ExpenseInspector({
         <InspectorField label="المورد / المسؤول" value={resource?.name || exp.responsible || '—'} />
         <InspectorField label="الجهة المورّدة" value={exp.vendor || '—'} />
         <InspectorField label="مرجع الفاتورة" value={exp.invoiceRef || '—'} />
+        {foreign && <InspectorField label="الفاتورة بعملتها" value={describeForeignInvoice(foreign)} />}
       </InspectorSection>
 
       <InspectorSection title="مصدر التمويل">

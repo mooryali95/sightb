@@ -94,3 +94,36 @@ test('more than the fund holds: the fund pays what it has, and the rest is owed 
   const owed = wire.writes.find((w) => w.method === 'POST' && w.table === 'resource_reimbursements')?.body as Record<string, unknown>;
   expect(owed).toMatchObject({ resource_id: MANAGER, source_kind: 'resource', amount: 2000, status: 'approved' });
 });
+
+test('an invoice in dollars is booked in the project currency, and keeps what the invoice said and the rate', async ({ page }) => {
+  const wire = await stubSupabase(page);
+  const dialog = await openForm(page);
+  await dialog.getByLabel('الفاتورة بعملة أخرى').click();
+  await dialog.getByLabel('عملة الفاتورة').click();
+  await page.getByRole('option', { name: /USD/ }).click();
+  await dialog.getByLabel('مبلغ الفاتورة بعملتها').fill('1000');
+  await dialog.getByLabel('سعر الصرف').fill('3.75');
+  // The booked amount follows; the bank then took a little more, and the rate follows that.
+  const booked = dialog.getByRole('spinbutton').first();
+  await expect(booked).toHaveValue('3750');
+  await booked.fill('3765.5');
+  await expect(dialog.getByLabel('سعر الصرف')).toHaveValue('3.7655');
+  await dialog.getByRole('button', { name: 'إضافة', exact: true }).click();
+  await expect(page.getByText('تمت إضافة المصروف')).toBeVisible();
+
+  await expect.poll(() => posts(wire).length).toBe(1);
+  const row = posts(wire)[0];
+  expect(row).toMatchObject({ project_id: PROJECT_ID, original_currency: 'USD', fund_id: FUND_ID });
+  expect(Number(row.amount)).toBe(3765.5);
+  expect(Number(row.original_amount)).toBe(1000);
+  expect(Number(row.exchange_rate)).toBe(3.7655);
+});
+
+test('an ordinary expense never names the foreign-invoice columns', async ({ page }) => {
+  const wire = await stubSupabase(page);
+  const dialog = await openForm(page);
+  await dialog.getByPlaceholder('0').fill('500');
+  await dialog.getByRole('button', { name: 'إضافة', exact: true }).click();
+  await expect.poll(() => posts(wire).length).toBe(1);
+  for (const column of ['original_amount', 'original_currency', 'exchange_rate']) expect(posts(wire)[0]).not.toHaveProperty(column);
+});

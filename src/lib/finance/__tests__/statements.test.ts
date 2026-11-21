@@ -77,6 +77,13 @@ describe('receivablesAging', () => {
   });
 });
 
+describe('receivablesAging with a bad date', () => {
+  it('does not call an invoice late because its date cannot be read, or is in the future', () => {
+    const odd = [rev('nodate', 'A', 500, 'invoiced', { date: '', invoiceDate: undefined }), rev('future', 'A', 700, 'invoiced', { invoiceDate: '2026-12-25' })];
+    expect(receivablesAging(odd, '2026-03-31').map((a) => a.amount)).toEqual([1200, 0, 0, 0]);
+  });
+});
+
 describe('the company edge', () => {
   it('leaves out of the company cost the share a project already paid itself', () => {
     const e = { id: 'x', companyId: 'c', date: '2026-02-01', amount: 1000, description: '', kind: 'salary' as const, partyId: null, paidByPartyId: null };

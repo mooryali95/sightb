@@ -133,4 +133,75 @@ describe('ExpenseFormDialog', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('المصروف يتجاوز الرصيد المتبقي للدفعة #1'));
     expect(onOpenChange).not.toHaveBeenCalled();
   });
+
+  describe('an invoice in another currency', () => {
+    const turnOn = (dialog: HTMLElement) => fireEvent.click(within(dialog).getByLabelText('الفاتورة بعملة أخرى'));
+    const field = (dialog: HTMLElement, label: string) => within(dialog).getByLabelText(label);
+    const booked = (dialog: HTMLElement) => within(dialog).getAllByRole('spinbutton')[0];
+
+    it('books invoice amount × rate, and saves what the invoice said beside the amount', async () => {
+      const { dialog } = renderForm();
+      fill(dialog, '1');
+      turnOn(dialog);
+      pick(dialog, 'اختر العملة', /USD/);
+      fireEvent.change(field(dialog, 'مبلغ الفاتورة بعملتها'), { target: { value: '1000' } });
+      fireEvent.change(field(dialog, 'سعر الصرف'), { target: { value: '3.75' } });
+      expect(booked(dialog)).toHaveValue(3750);
+      submit(dialog);
+      await waitFor(() => expect(actions.addExpense).toHaveBeenCalledWith(expect.objectContaining({
+        originalAmount: 1000, originalCurrency: 'USD', exchangeRate: 3.75,
+      })));
+    });
+
+    it('works the rate out from what was actually booked', () => {
+      const { dialog } = renderForm();
+      turnOn(dialog);
+      fireEvent.change(field(dialog, 'مبلغ الفاتورة بعملتها'), { target: { value: '1000' } });
+      fireEvent.change(booked(dialog), { target: { value: '3765.5' } });
+      expect(field(dialog, 'سعر الصرف')).toHaveValue(3.7655);
+    });
+
+    it('refuses a half-filled invoice in plain words, and sends nothing foreign when the option is off', async () => {
+      const { dialog } = renderForm();
+      fill(dialog, '100');
+      turnOn(dialog);
+      submit(dialog);
+      expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/عملة الفاتورة/));
+      expect(actions.addExpense).not.toHaveBeenCalled();
+      turnOn(dialog); // off again
+      submit(dialog);
+      await waitFor(() => expect(actions.addExpense).toHaveBeenCalled());
+      expect(actions.addExpense.mock.calls[0][0]).not.toHaveProperty('originalCurrency');
+    });
+
+    it('opens a foreign row with its values, and removing the option clears them', async () => {
+      const row = expense({ id: 'e-fx', amount: 375, description: 'قطع غيار', originalAmount: 100, originalCurrency: 'USD', exchangeRate: 3.75 });
+      const { dialog } = renderForm({ editing: row });
+      expect(field(dialog, 'مبلغ الفاتورة بعملتها')).toHaveValue(100);
+      expect(field(dialog, 'سعر الصرف')).toHaveValue(3.75);
+      turnOn(dialog); // off
+      submit(dialog);
+      await waitFor(() => expect(actions.updateExpense).toHaveBeenCalledWith('e-fx', expect.objectContaining({ foreign: null })));
+    });
+
+    it('leaves a row that never had one untouched on edit', async () => {
+      const { dialog } = renderForm({ editing: expense({ id: 'e-plain', amount: 50, description: 'عادي' }) });
+      submit(dialog);
+      await waitFor(() => expect(actions.updateExpense).toHaveBeenCalled());
+      expect(actions.updateExpense.mock.calls[0][1]).not.toHaveProperty('foreign');
+    });
+
+    it('says the feature is not live yet when the database lacks the columns', async () => {
+      actions.addExpense.mockRejectedValueOnce(new Error("Could not find the 'exchange_rate' column of 'expenses' in the schema cache"));
+      const { dialog, onOpenChange } = renderForm();
+      fill(dialog, '1');
+      turnOn(dialog);
+      pick(dialog, 'اختر العملة', /EUR/);
+      fireEvent.change(field(dialog, 'مبلغ الفاتورة بعملتها'), { target: { value: '10' } });
+      fireEvent.change(field(dialog, 'سعر الصرف'), { target: { value: '4' } });
+      submit(dialog);
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/لم تُفعَّل في قاعدة البيانات/), expect.anything()));
+      expect(onOpenChange).not.toHaveBeenCalled();
+    });
+  });
 });

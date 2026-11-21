@@ -94,7 +94,15 @@ export function mapExpense(d: Tables<'expenses'>): Expense {
     commitmentId: d.commitment_id || undefined,
     sourcePaymentRequestId: d.source_payment_request_id || undefined,
     reimbursesPayableId: d.reimburses_payable_id || undefined,
+    ...foreignOf(d as ForeignColumns),
   };
+}
+
+/** Not in the generated types until Lovable regenerates them after 20261121090000; absent on a database without it. */
+type ForeignColumns = { original_amount?: number | string | null; original_currency?: string | null; exchange_rate?: number | string | null };
+function foreignOf(d: ForeignColumns): Pick<Expense, 'originalAmount' | 'originalCurrency' | 'exchangeRate'> {
+  if (!d.original_currency || d.original_amount == null || d.exchange_rate == null) return {};
+  return { originalAmount: Number(d.original_amount), originalCurrency: d.original_currency, exchangeRate: Number(d.exchange_rate) };
 }
 
 export function mapResource(d: Tables<'resources'>): Resource {

@@ -96,7 +96,8 @@ export const AGING_BUCKETS: AgingBucket[] = ['0-30', '31-60', '61-90', '90+'];
 
 export function receivablesAging(revenues: Revenue[], today: string): { bucket: AgingBucket; amount: number; count: number }[] {
   const open = revenues.filter((r) => r.status === 'invoiced');
-  const days = (d: string) => Math.floor((Date.parse(today) - Date.parse(d)) / 86_400_000);
+  // An unreadable date ages as new, and a future one as today: neither is evidence the invoice is late.
+  const days = (d: string) => { const n = Math.floor((Date.parse(today) - Date.parse(d)) / 86_400_000); return Number.isFinite(n) ? Math.max(0, n) : 0; };
   const bucketOf = (d: number): AgingBucket => (d <= 30 ? '0-30' : d <= 60 ? '31-60' : d <= 90 ? '61-90' : '90+');
   return AGING_BUCKETS.map((bucket) => {
     const rows = open.filter((r) => bucketOf(days(billedOn(r))) === bucket);
