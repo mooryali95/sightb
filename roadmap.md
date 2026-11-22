@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Done
+- [x] 2026-11-21 — Organisation settings (owner chose: saved for everyone, changed by admins only): «إعدادات المؤسسة» on «الإعدادات» holds the default VAT, currency, project duration and retention; «إنشاء مشروع جديد» starts from them without overwriting what the person typed. Existing projects keep their own values. Readable only by people holding a role; saving refused by the database for anyone but a system admin/owner, and needs the second sign-in step. Tests cover the limits, admin-only saving and the new-project defaults. Not yet seen signed-in in the browser (code step blocks the test browser); not published.
 - [x] 2026-11-20 — Settings page (/settings, «الإعدادات» in the side menu): display settings on this device (theme, text size, table density, folded menu), the tools each role may open, the person's roles and a role matrix, and read-only system rules. Tool audiences match the side menu and each page's own guard; tests cover viewer/admin/owner/loading. Not yet seen signed-in in the browser. Open question to owner: organisation-wide settings saved for everyone (e.g. default VAT, currency).
 - [x] 2026-11-13 — Motion and polish layer: tiles rise in one after another, tap feedback on buttons, shimmering loading placeholders, animated tabs and side-menu marker, fading phone menu overlay, top-bar shadow on scroll, gold line on page change, soft page backdrop, branded loading screen. All honour reduced motion. Signed-in pages not yet seen in the browser.
 - [x] Login HTTP-200 error responses and incomplete checks no longer count as successful verification. Browser confirmed the injected session's missing session identifier returns to login once, rather than repeatedly opening dashboard/code. Regression tests cover the refusal.
@@ -11,7 +12,6 @@
 - [x] 2026-10-10 — Financial labels standardized; project page now separates budget availability from manager cash, dashboard prioritizes liquidity/profitability, and company project contracts use effective values.
 
 ## Open
-- [ ] 2026-11-21 — Organisation settings (owner chose: saved for everyone, changed by admins only): default VAT, currency, project duration and retention on «الإعدادات», used as the starting values of «إنشاء مشروع جديد». Existing projects keep their own values.
 - [ ] 2026-11-01 — Confirmed QA finding `80df4e61-da79-5b5a-9888-63cdf427f69a`: company IntegrityCard can calculate without loading cash transfers. Approved handoff plan: `.lovable/plan/تصحيح-تنبيهات-سلامة-البيانات-على-صفحة-الشركة-2026-11-01.md`. Blocker: the card is protected under LOVABLE_HANDOFF and belongs to GitHub PR #150; Claude / the GitHub team must implement and verify the fix. Finding remains unresolved; no protected code changed.
 - [ ] Publish the latest frontend so the error messages and the saved cache reach sight.basserh.com. Waits on: the owner publishing.
 - [ ] `user_roles` "Admins can manage all roles" also reads its own table inside its policy. Check whether role edits hit the same recursion before changing it. Waits on: a safe test (role changes are sensitive).
