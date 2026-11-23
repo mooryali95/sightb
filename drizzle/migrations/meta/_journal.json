@@ -15,6 +15,13 @@
       "when": 1795320019458,
       "tag": "0001_organization_settings_members_only",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795400596634,
+      "tag": "0002_ssot_explain_security_invoker",
+      "breakpoints": true
     }
   ]
 }
